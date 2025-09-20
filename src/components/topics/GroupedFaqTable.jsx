@@ -164,8 +164,7 @@ export default function GroupedFaqTable({ rows = [], tableId, options, handleUpd
     return String(value);
   };
 
-  // UPDATE: grid template WITHOUT spacer column
-  const faqGridTemplate = "minmax(300px, 1.5fr) minmax(220px, 1fr) minmax(220px, 1fr) minmax(220px, 1fr)";
+  const rowPad = density === "compact" ? "0.5rem 1.0rem" : "0.75rem 1.5rem";
 
   if (!rows || rows.length === 0) {
     return <div className="text-center text-slate-500 py-10">No FAQ records found for this user.</div>;
@@ -201,13 +200,12 @@ export default function GroupedFaqTable({ rows = [], tableId, options, handleUpd
 
               {isOpen && (
                 <div className="text-sm text-slate-900">
-                  {/* Header row (updated padding-right, no spacer div) */}
                   <div
-                    className="grid text-xs font-semibold tracking-wide text-slate-600 uppercase bg-white sticky top-0 z-20 border-b border-slate-200 shadow-sm"
+                    className="grid text-xs font-semibold tracking-wide text-slate-600 uppercase bg-white sticky top-10 z-10 border-b border-slate-200 shadow-sm"
                     style={{
-                      gridTemplateColumns: faqGridTemplate,
+                      gridTemplateColumns: "minmax(300px, 1.5fr) minmax(220px, 1fr) minmax(220px, 1fr) minmax(220px, 1fr)",
                       gap: "1rem",
-                      padding: "0.75rem 1.5rem 0.75rem 1.5rem" // was left-only; now includes right padding
+                      padding: "0.75rem 1.5rem",
                     }}
                   >
                     <div>Keyword</div>
@@ -225,9 +223,10 @@ export default function GroupedFaqTable({ rows = [], tableId, options, handleUpd
                         key={row.id}
                         className={`grid items-center border-t border-slate-200 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? "bg-slate-50/60" : "bg-white"}`}
                         style={{
-                          gridTemplateColumns: faqGridTemplate,
+                          gridTemplateColumns:
+                            "minmax(300px, 1.5fr) minmax(220px, 1fr) minmax(220px, 1fr) minmax(220px, 1fr)",
                           gap: "1rem",
-                          padding: `${density === "compact" ? "0.5rem" : "0.75rem"} 1.5rem ${density === "compact" ? "0.5rem" : "0.75rem"} 1.5rem` // add real right padding
+                          padding: rowPad,
                         }}
                       >
                         <div className="min-w-0 flex items-center gap-2">
