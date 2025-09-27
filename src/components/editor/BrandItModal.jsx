@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -5,16 +6,7 @@ import { Loader2, Wand2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { BrandGuidelines } from "@/api/entities";
 import { InvokeLLM } from "@/api/integrations";
-import { callLlmWithRetry } from "./llmRetry";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-const MODEL_OPTIONS = [
-"openai:gpt-4.1",
-"openai:gpt-4o-mini",
-"anthropic:claude-3-5-sonnet-20240620",
-"google:gemini-1.5-pro",
-"auto"];
-
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 
 export default function BrandItModal({
   isOpen,
@@ -28,17 +20,10 @@ export default function BrandItModal({
   const [error, setError] = useState('');
   const [guidelines, setGuidelines] = useState(null);
   const [hasStarted, setHasStarted] = React.useState(false);
+  const { consumeTokensForFeature } = useTokenConsumption();
 
-  const [llmChoice, setLlmChoice] = React.useState(() => {
-    try {
-      const saved = localStorage.getItem("b44_llm_choice");
-      if (saved && saved !== "auto" && MODEL_OPTIONS.includes(saved)) return saved;
-    } catch {}
-    return MODEL_OPTIONS[0];
-  });
-  React.useEffect(() => {
-    try {localStorage.setItem("b44_llm_choice", llmChoice);} catch {}
-  }, [llmChoice]);
+  // Remove llmChoice state and related logic - use default model
+  const llmChoice = "openai:gpt-4.1"; // Fixed default, no user selection
 
   const stripFences = React.useCallback((s) => {
     if (!s) return "";
@@ -85,6 +70,13 @@ export default function BrandItModal({
 
   const startRewrite = async () => {
     if (!userName || !htmlContent) return;
+
+    const tokenResult = await consumeTokensForFeature('ai_brand_it');
+    if (!tokenResult.success) {
+      onClose(); // Hook handles toast, just close the modal.
+      return;
+    }
+
     setRewrittenHtml('');
     setError('');
     setIsLoading(true);
@@ -130,13 +122,7 @@ export default function BrandItModal({
     setIsLoading(false);
     setHasStarted(false);
 
-    try {
-      const saved = localStorage.getItem("b44_llm_choice");
-      if (!saved || saved === "auto" || !MODEL_OPTIONS.includes(saved)) {
-        setLlmChoice(MODEL_OPTIONS[0]);
-        localStorage.setItem("b44_llm_choice", MODEL_OPTIONS[0]);
-      }
-    } catch {}
+    // Removed model choice loading from local storage
   }, [isOpen]);
 
   const handleApplyClick = () => {
@@ -168,7 +154,7 @@ export default function BrandItModal({
           </DialogTitle>
           <DialogDescription className="text-slate-600">
             The AI can rewrite the article to match the brand voice for{" "}
-            <span className="font-bold text-cyan-600">{userName}</span>. Choose a model and click Start when ready.
+            <span className="font-bold text-cyan-600">{userName}</span>.
           </DialogDescription>
           {!guidelines &&
           <div className="mt-2 text-xs text-amber-600">
@@ -179,26 +165,9 @@ export default function BrandItModal({
 
         <div className="bg-slate-50 text-slate-800 flex flex-col flex-grow space-y-4 overflow-hidden p-4 rounded-lg">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-600">Model</span>
-              <Select value={llmChoice} onValueChange={setLlmChoice}>
-                <SelectTrigger className="h-9 w-[260px] bg-white border border-slate-300 text-slate-900">
-                  <SelectValue placeholder="Choose model" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  <SelectItem value="openai:gpt-4.1">OpenAI — gpt-4.1</SelectItem>
-                  <SelectItem value="openai:gpt-4o-mini">OpenAI — gpt-4o-mini</SelectItem>
-                  <SelectItem value="anthropic:claude-3-5-sonnet-20240620">Anthropic — Claude 3.5 Sonnet</SelectItem>
-                  <SelectItem value="google:gemini-1.5-pro">Google — Gemini 1.5 Pro</SelectItem>
-                  <SelectItem value="auto">Auto (use available key)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <Button
               onClick={startRewrite}
-              disabled={isLoading || hasStarted} className="bg-cyan-600 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 hover:bg-cyan-700">
-
+              disabled={isLoading || hasStarted} className="bg-blue-900 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 hover:bg-cyan-700">
               Start Rewrite
             </Button>
 
@@ -226,7 +195,7 @@ export default function BrandItModal({
                 {!hasStarted && !isLoading && !rewrittenHtml &&
                 <div className="text-slate-500 absolute inset-0 flex flex-col items-center justify-center gap-2">
                     <Wand2 className="w-6 h-6 text-cyan-500" />
-                    <p>Choose a model and click “Start Rewrite”.</p>
+                    <p>Click “Start Rewrite” to begin.</p>
                   </div>
                 }
                 {isLoading &&

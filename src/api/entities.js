@@ -91,6 +91,16 @@ export const WebhookPayloadTemplate = base44.entities.WebhookPayloadTemplate;
 
 export const CustomContentTemplate = base44.entities.CustomContentTemplate;
 
+export const TutorialVideo = base44.entities.TutorialVideo;
+
+export const PricingFaq = base44.entities.PricingFaq;
+
+export const OnboardingStep = base44.entities.OnboardingStep;
+
+export const Affiliate = base44.entities.Affiliate;
+
+export const AffiliatePack = base44.entities.AffiliatePack;
+
 
 
 // auth sdk:

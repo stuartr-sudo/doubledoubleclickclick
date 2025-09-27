@@ -33,11 +33,8 @@ export default function Contact() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-neutral-800 text-white">
       <header className="p-6">
         <div className="container mx-auto flex items-center justify-between">
-          <Link to={createPageUrl('Home')} className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center border border-slate-700">
-              <Layers className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold">SEWO</span>
+          <Link to={createPageUrl('Home')}>
+            <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/689715479cd170f6c2aa04f2/d056b0101_logo.png" alt="Logo" className="w-10 h-10 rounded-full" />
           </Link>
         </div>
       </header>

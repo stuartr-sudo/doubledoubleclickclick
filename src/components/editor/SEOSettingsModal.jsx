@@ -1,21 +1,23 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter } from
-"@/components/ui/dialog";
+  DialogFooter
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Globe, Search, Tag, Link, Image, Target, Sparkles } from "lucide-react";
+import { Globe, Search, Tag, Link, Image, Focus, Sparkles, Save, CheckCircle2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { InvokeLLM } from "@/api/integrations";
+import ImageLibraryModal from "./ImageLibraryModal"; // NEW: ImageLibraryModal import
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption'; // NEW: Token consumption hook import
 
 export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) {
   const [metadata, setMetadata] = useState({
@@ -25,7 +27,6 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
     focus_keyword: "",
     featured_image: "",
     tags: [],
-    // NEW
     excerpt: "",
     generated_llm_schema: ""
   });
@@ -33,31 +34,62 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
   const [autoLoading, setAutoLoading] = useState(false);
   const [genLoading, setGenLoading] = useState({ title: false, desc: false, slug: false, keyword: false, tags: false, image: false, excerpt: false });
 
+  // NEW: state for image library modal
+  const [showImageLibrary, setShowImageLibrary] = useState(false);
+
   // NEW: track one-time auto-init
-  const autoInitRef = React.useRef(false);
+  const autoInitRef = useRef(false);
+
+  // NEW: State for schema generation loading
+  const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
+
+  // NEW: Token consumption hook
+  const { consumeTokensForFeature } = useTokenConsumption();
+
+  // Helper functions that might be used in effects or handlers
+  const articleText = useMemo(() => {
+    const html = postData?.content || "";
+    return String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 6000);
+  }, [postData?.content]);
+
+  const firstImageFromContent = useCallback(() => {
+    const html = postData?.content || "";
+    const match = String(html).match(/<img[^>]+src=["']([^"']+)["']/i);
+    return match?.[1] || "";
+  }, [postData?.content]);
+
+  const makeSlug = useCallback((str) => String(str || '').
+    toLowerCase().
+    replace(/[^a-z0-9\s-]/g, '').
+    replace(/\s+/g, '-').
+    replace(/-+/g, '-').
+    replace(/^-|-$/g, ''), []);
+
 
   useEffect(() => {
     if (postData) {
+      const firstImg = firstImageFromContent();
       setMetadata({
-        meta_title: postData.meta_title || "",
-        slug: postData.slug || "",
+        meta_title: postData.meta_title || postData.title || "", // Added postData.title fallback
+        slug: postData.slug || makeSlug(postData.title || "") || "", // Added makeSlug from title fallback
         meta_description: postData.meta_description || "",
         focus_keyword: postData.focus_keyword || "",
-        featured_image: postData.featured_image || "",
+        featured_image: postData.featured_image || firstImg || "", // Auto-populate from content
         tags: postData.tags || [],
-        // NEW
         excerpt: postData.excerpt || postData.meta_description || "",
         generated_llm_schema: postData.generated_llm_schema || ""
       });
     }
-  }, [postData, isOpen]);
+    // Reset autoInitRef when postData or modal visibility changes
+    autoInitRef.current = false;
+  }, [postData, isOpen, firstImageFromContent, makeSlug]); // Added firstImageFromContent, makeSlug to dependencies
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setMetadata((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleTagsChange = (e) => {
+  const handleTagsChange = (e) => {// Kept original (e) signature, as TagsInput is not defined
     const tagsArray = e.target.value.split(',').map((tag) => tag.trim()).filter(Boolean);
     setMetadata((prev) => ({ ...prev, tags: tagsArray }));
   };
@@ -68,14 +100,15 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
     onClose();
   };
 
+  // Old generateSlug, kept for manual generation button.
   const generateSlug = () => {
     if (postData.title) {
       const newSlug = postData.title.
-      toLowerCase().
-      replace(/[^a-z0-9\s-]/g, '').
-      replace(/\s+/g, '-').
-      replace(/-+/g, '-').
-      replace(/^-|-$/g, '');
+        toLowerCase().
+        replace(/[^a-z0-9\s-]/g, '').
+        replace(/\s+/g, '-').
+        replace(/-+/g, '-').
+        replace(/^-|-$/g, '');
       setMetadata((prev) => ({
         ...prev,
         slug: newSlug
@@ -84,25 +117,14 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
     }
   };
 
-  // NEW: helpers
-  const articleText = (() => {
-    const html = postData?.content || "";
-    return String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 6000);
-  })();
-
-  const firstImageFromContent = () => {
-    const html = postData?.content || "";
-    const m = String(html).match(/<img[^>]*src=["']([^"']+)["']/i);
-    return m?.[1] || "";
+  // NEW: handle image selection from library
+  const handleImageSelectForSeo = (image) => {
+    if (image?.url) {
+      setMetadata((prev) => ({ ...prev, featured_image: image.url }));
+      toast.success("Featured image selected!");
+    }
+    setShowImageLibrary(false);
   };
-
-  // NEW: canonical helpers (only makeSlug is kept, others removed as canonical_url is no longer managed by modal)
-  const makeSlug = (str) => String(str || '').
-  toLowerCase().
-  replace(/[^a-z0-9\s-]/g, '').
-  replace(/\s+/g, '-').
-  replace(/-+/g, '-').
-  replace(/^-|-$/g, '');
 
   // NEW: one-time auto-initialize when the modal opens
   useEffect(() => {
@@ -117,7 +139,7 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
       next.featured_image = firstImg;
     }
 
-    // 2) Slug from title if empty
+    // 2) Slug from title if empty (this is also handled in initial useEffect, but kept here for AI generation context)
     if (!metadata.slug && postData?.title) {
       const s = makeSlug(postData.title);
       if (s) next.slug = s;
@@ -139,8 +161,7 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
 
     autoInitRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
-
+  }, [isOpen, metadata.meta_title, metadata.meta_description, metadata.focus_keyword, metadata.tags, metadata.excerpt, metadata.slug, metadata.featured_image, postData?.title, firstImageFromContent, makeSlug, articleText]); // Added firstImageFromContent, makeSlug, and articleText for dependencies
 
   const callLLM = async (prompt, schema) => {
     return await InvokeLLM({
@@ -152,6 +173,12 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
 
   // NEW: field-specific generators
   const genTitle = async () => {
+    const tokenResult = await consumeTokensForFeature('ai_seo_meta_title');
+    if (!tokenResult.success) {
+      toast.error(tokenResult.message);
+      return;
+    }
+
     setGenLoading((s) => ({ ...s, title: true }));
     try {
       const fx = (metadata.focus_keyword || "").trim();
@@ -174,6 +201,12 @@ Content: """${articleText}"""`,
   };
 
   const genDescription = async () => {
+    const tokenResult = await consumeTokensForFeature('ai_seo_meta_description');
+    if (!tokenResult.success) {
+      toast.error(tokenResult.message);
+      return;
+    }
+
     setGenLoading((s) => ({ ...s, desc: true }));
     try {
       const fx = (metadata.focus_keyword || "").trim();
@@ -196,6 +229,12 @@ Content: """${articleText}"""`,
   };
 
   const genSlug = async () => {
+    const tokenResult = await consumeTokensForFeature('ai_seo_slug');
+    if (!tokenResult.success) {
+      toast.error(tokenResult.message);
+      return;
+    }
+
     setGenLoading((s) => ({ ...s, slug: true }));
     try {
       const res = await callLLM(
@@ -217,6 +256,12 @@ Content: """${articleText.slice(0, 1200)}"""`,
   };
 
   const genKeyword = async () => {
+    const tokenResult = await consumeTokensForFeature('ai_seo_focus_keyword');
+    if (!tokenResult.success) {
+      toast.error(tokenResult.message);
+      return;
+    }
+
     setGenLoading((s) => ({ ...s, keyword: true }));
     try {
       const res = await callLLM(
@@ -237,6 +282,12 @@ Content: """${articleText}"""`,
   };
 
   const genTags = async () => {
+    const tokenResult = await consumeTokensForFeature('ai_seo_tags');
+    if (!tokenResult.success) {
+      toast.error(tokenResult.message);
+      return;
+    }
+
     setGenLoading((s) => ({ ...s, tags: true }));
     try {
       const res = await callLLM(
@@ -256,7 +307,10 @@ Content: """${articleText}"""`,
     }
   };
 
+  // genFeaturedImage is still available but its AI button is removed from UI as per outline
   const genFeaturedImage = async () => {
+    // No token consumption needed as this function primarily tries to find an image in content or generates a query
+    // If we later use AI to generate the image itself, we'd add token consumption here.
     setGenLoading((s) => ({ ...s, image: true }));
     try {
       const first = firstImageFromContent();
@@ -274,7 +328,6 @@ Content: """${articleText.slice(0, 1200)}"""`,
       );
       const q = encodeURIComponent(res?.query || "");
       if (q) {
-        // Use Unsplash on-the-fly featured endpoint to return a relevant image
         setMetadata((prev) => ({ ...prev, featured_image: `https://source.unsplash.com/featured/?${q}` }));
         toast.success("Featured image suggested!");
       } else {
@@ -290,6 +343,12 @@ Content: """${articleText.slice(0, 1200)}"""`,
 
   // NEW: generate excerpt from article content
   const genExcerpt = async () => {
+    const tokenResult = await consumeTokensForFeature('ai_seo_excerpt');
+    if (!tokenResult.success) {
+      toast.error(tokenResult.message);
+      return;
+    }
+
     setGenLoading((s) => ({ ...s, excerpt: true }));
     try {
       const title = postData?.title || metadata.meta_title || "";
@@ -328,6 +387,12 @@ Content: """${text}"""`,
 
   // NEW: Auto-generate SEO fields using Perplexity via InvokeLLM
   const handleAutoGenerate = async () => {
+    const tokenResult = await consumeTokensForFeature('ai_seo_auto_generate');
+    if (!tokenResult.success) {
+      toast.error(tokenResult.message);
+      return;
+    }
+
     setAutoLoading(true);
     try {
       const title = postData?.title || "";
@@ -374,6 +439,13 @@ Content: """${text}"""`,
 
   // NEW: Generate JSON-LD Schema based on current content and SEO fields
   const genSchema = async () => {
+    const tokenResult = await consumeTokensForFeature('ai_schema_generation');
+    if (!tokenResult.success) {
+      toast.error(tokenResult.message);
+      return;
+    }
+
+    setIsGeneratingSchema(true);
     try {
       const title = postData?.title || metadata.meta_title || "";
       const html = postData?.content || "";
@@ -421,288 +493,294 @@ ${text}`,
     } catch (e) {
       console.error("Schema generation failed:", e);
       toast.error("Failed to generate schema.");
+    } finally {
+      setIsGeneratingSchema(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="b44-modal max-w-4xl bg-white text-slate-900 border-slate-200">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="flex items-center gap-3 text-2xl text-slate-900">
-            <div className="p-2 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100">
-              <Globe className="w-6 h-6 text-blue-600" />
-            </div>
-            SEO & Post Settings
-            <div className="ml-auto flex gap-2">
-              <Button onClick={handleAutoGenerate} disabled={autoLoading} className="bg-purple-950 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-emerald-700">
-                {autoLoading ? "Generating..." : "Auto-generate SEO"}
-              </Button>
-              <Button onClick={genSchema} variant="outline" className="bg-white border-slate-300 text-slate-900 hover:bg-slate-50">
-                Generate Schema
-              </Button>
-            </div>
-          </DialogTitle>
-          <DialogDescription className="text-slate-600 text-lg">
-            <strong>SEO</strong> controls title, description, slug, tags, excerpt, and JSON-LD schema for search engines.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6 max-h-[60vh] overflow-y-auto px-1">
-          {/* Left Column */}
-          <div className="space-y-6">
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 relative">
-              <Label htmlFor="meta_title" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
-                <Search className="w-4 h-4 text-blue-500" />
-                Meta Title
-              </Label>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={genTitle}
-                disabled={genLoading.title}
-                className="absolute top-3 right-3 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
-
-                <Sparkles className="w-4 h-4 mr-1" /> {genLoading.title ? "..." : "Suggest"}
-              </Button>
-              <Input
-                id="meta_title"
-                name="meta_title"
-                value={metadata.meta_title}
-                onChange={handleChange}
-                placeholder="Your SEO-optimized title for search results"
-                className="bg-white border-slate-300 text-base h-12 placeholder:text-slate-500" />
-
-              <div className="flex justify-between items-center mt-2">
-                <p className="text-xs text-slate-600">This appears as the clickable title in Google</p>
-                <Badge variant={metadata.meta_title.length <= 60 ? "default" : "destructive"} className="text-xs bg-slate-200 text-slate-800">
-                  {metadata.meta_title.length}/60
-                </Badge>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="bg-white p-0 flex flex-col max-h-[90vh] w-full max-w-4xl rounded-lg shadow-2xl fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] border border-gray-200 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+          <DialogHeader className="p-6 pb-4 border-b border-slate-200 flex-shrink-0">
+            <DialogTitle className="flex items-center gap-3 text-2xl text-slate-900">
+              <div className="p-2 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100">
+                <Globe className="w-6 h-6 text-blue-600" />
               </div>
-            </div>
-
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 relative">
-              <Label htmlFor="slug" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
-                <Link className="w-4 h-4 text-green-500" />
-                URL Slug
-              </Label>
-              <div className="absolute top-3 right-3 flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={genSlug}
-                  disabled={genLoading.slug}
-                  className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
-
-                  <Sparkles className="w-4 h-4 mr-1" /> {genLoading.slug ? "..." : "Suggest"}
+              SEO & Post Settings
+              <div className="ml-auto flex gap-2">
+                <Button onClick={handleAutoGenerate} disabled={autoLoading} className="bg-gray-600 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-emerald-700">
+                  {autoLoading ? "Generating..." : "Auto-generate SEO"}
+                </Button>
+                <Button onClick={genSchema} disabled={isGeneratingSchema} variant="outline" className="bg-white border-slate-300 text-slate-900 hover:bg-slate-50">
+                  {isGeneratingSchema ? "Generating Schema..." : "Generate Schema"}
                 </Button>
               </div>
-              <div className="flex gap-2">
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 text-lg">
+              <strong>SEO</strong> controls title, description, slug, tags, excerpt, and JSON-LD schema for search engines.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Meta Title */}
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Search className="w-4 h-4 text-blue-600" />
+                    <Label htmlFor="meta-title" className="font-semibold text-slate-800">Meta Title</Label>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={genTitle}
+                    disabled={genLoading.title}
+                    className="h-8 px-2 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
+                    <Sparkles className="w-3.5 h-3.5 mr-1" /> {genLoading.title ? "..." : "Suggest"}
+                  </Button>
+                </div>
+                <Input
+                  id="meta-title"
+                  name="meta_title"
+                  value={metadata.meta_title}
+                  onChange={handleChange}
+                  placeholder="Your SEO-optimized title for search results" className="flex h-10 w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-gray-900 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm bg-white" />
+
+                <div className="flex justify-between items-center text-xs text-slate-500 mt-2">
+                  <span>This appears as the clickable title in Google</span>
+                  <span className={metadata.meta_title.length > 60 ? "text-red-500 font-medium" : ""}>
+                    {metadata.meta_title.length}/60
+                  </span>
+                </div>
+              </div>
+
+              {/* Featured Image URL */}
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Image className="w-4 h-4 text-pink-600" />
+                    <Label htmlFor="featured-image" className="font-semibold text-slate-800">Featured Image URL</Label>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => setShowImageLibrary(true)}>
+                    <Image className="w-3.5 h-3.5 mr-1" /> Import
+                  </Button>
+                </div>
+                <Input
+                  id="featured-image"
+                  name="featured_image"
+                  placeholder="Auto-detected from first image in content or manually enter"
+                  value={metadata.featured_image || ''}
+                  onChange={handleChange} className="bg-white text-slate-800 px-3 py-2 text-base flex h-10 w-full rounded-md border border-input ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+
+
+                {metadata.featured_image &&
+                  <div className="mt-3">
+                    <img
+                      src={metadata.featured_image}
+                      alt="Featured image preview"
+                      className="rounded-md max-h-32 w-auto object-cover border border-slate-200"
+                      onError={(e) => { e.target.style.display = 'none'; }} />
+                  </div>
+                }
+                <p className="text-xs text-slate-500 mt-2">Shows when shared on social media</p>
+              </div>
+
+              {/* URL Slug */}
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Link className="w-4 h-4 text-green-600" />
+                    <Label htmlFor="slug" className="font-semibold text-slate-800">URL Slug</Label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={genSlug}
+                      disabled={genLoading.slug}
+                      className="h-8 px-2 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
+                      <Sparkles className="w-3.5 h-3.5 mr-1" /> {genLoading.slug ? "..." : "Suggest"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={generateSlug}
+                      className="h-8 px-2 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
+                      Generate
+                    </Button>
+                  </div>
+                </div>
                 <Input
                   id="slug"
                   name="slug"
                   value={metadata.slug}
                   onChange={handleChange}
-                  placeholder="your-post-url"
-                  className="bg-white border-slate-300 text-base h-12 flex-1 placeholder:text-slate-500" />
+                  placeholder="your-post-url" className="bg-white text-slate-600 px-3 py-2 text-base flex h-10 w-full rounded-md border border-input ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
 
-                <Button
-                  variant="outline"
-                  onClick={generateSlug}
-                  className="bg-white border-slate-300 text-slate-900 hover:bg-slate-50 px-4">
-
-                  Generate
-                </Button>
+                <p className="text-xs text-slate-500 mt-2">Creates a clean, shareable URL</p>
               </div>
-              <p className="text-xs text-slate-600 mt-2">Creates a clean, shareable URL</p>
-            </div>
 
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 relative">
-              <Label htmlFor="meta_description" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
-                <Search className="w-4 h-4 text-purple-500" />
-                Meta Description
-              </Label>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={genDescription}
-                disabled={genLoading.desc}
-                className="absolute top-3 right-3 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
-
-                <Sparkles className="w-4 h-4 mr-1" /> {genLoading.desc ? "..." : "Suggest"}
-              </Button>
-              <Textarea
-                id="meta_description"
-                name="meta_description"
-                value={metadata.meta_description}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Write a compelling summary that encourages clicks from search results..."
-                className="bg-white border-slate-300 text-base placeholder:text-slate-500" />
-
-              <div className="flex justify-between items-center mt-2">
-                <p className="text-xs text-slate-600">This appears under your title in Google search</p>
-                <Badge variant={metadata.meta_description.length <= 160 ? "default" : "destructive"} className="text-xs bg-slate-200 text-slate-800">
-                  {metadata.meta_description.length}/160
-                </Badge>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 relative">
-              <Label htmlFor="excerpt" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
-                Excerpt
-              </Label>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={genExcerpt}
-                disabled={genLoading.excerpt}
-                className="absolute top-3 right-3 bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
-                title="Generate excerpt with AI">
-
-                <Sparkles className="w-4 h-4 mr-1" /> {genLoading.excerpt ? "..." : "AI Suggest"}
-              </Button>
-              <Textarea
-                id="excerpt"
-                name="excerpt"
-                value={metadata.excerpt}
-                onChange={(e) => setMetadata((prev) => ({ ...prev, excerpt: e.target.value }))}
-                rows={3}
-                placeholder="Short summary shown as excerpt. Defaults to Meta description."
-                className="bg-white border-slate-300 text-base placeholder:text-slate-500" />
-
-              <p className="text-xs text-slate-600 mt-2">Will be used when publishing (e.g., Shopify excerpt).</p>
-            </div>
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 relative">
-              <Label htmlFor="featured_image" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
-                <Image className="w-4 h-4 text-pink-500" />
-                Featured Image URL
-              </Label>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={genFeaturedImage}
-                disabled={genLoading.image}
-                className="absolute top-3 right-3 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
-
-                <Sparkles className="w-4 h-4 mr-1" /> {genLoading.image ? "..." : "Suggest"}
-              </Button>
-              <Input
-                id="featured_image"
-                name="featured_image"
-                value={metadata.featured_image}
-                onChange={handleChange}
-                placeholder="https://example.com/image.jpg"
-                className="bg-white border-slate-300 text-base h-12 placeholder:text-slate-500" />
-
-              {metadata.featured_image &&
-              <div className="mt-3">
-                  <img
-                  src={metadata.featured_image}
-                  alt="Featured image preview"
-                  className="rounded-md max-h-32 w-auto object-cover border border-slate-200"
-                  onError={(e) => {e.target.style.display = 'none';}} />
-
+              {/* Focus Keyword */}
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Focus className="w-4 h-4 text-orange-600" /> {/* Changed from Target to Focus */}
+                    <Label htmlFor="focus-keyword" className="font-semibold text-slate-800">Focus Keyword</Label>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={genKeyword}
+                    disabled={genLoading.keyword}
+                    className="h-8 px-2 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
+                    <Sparkles className="w-3.5 h-3.5 mr-1" /> {genLoading.keyword ? "..." : "Suggest"}
+                  </Button>
                 </div>
-              }
-              <p className="text-xs text-slate-600 mt-2">Shows when shared on social media</p>
-            </div>
+                <Input
+                  id="focus-keyword"
+                  name="focus_keyword"
+                  value={metadata.focus_keyword}
+                  onChange={handleChange}
+                  placeholder="e.g., 'content marketing strategies'" className="bg-white text-slate-700 px-3 py-2 text-base flex h-10 w-full rounded-md border border-input ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
 
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 relative">
-              <Label htmlFor="focus_keyword" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
-                <Target className="w-4 h-4 text-yellow-500" />
-                Focus Keyword
-              </Label>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={genKeyword}
-                disabled={genLoading.keyword}
-                className="absolute top-3 right-3 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
-
-                <Sparkles className="w-4 h-4 mr-1" /> {genLoading.keyword ? "..." : "Suggest"}
-              </Button>
-              <Input
-                id="focus_keyword"
-                name="focus_keyword"
-                value={metadata.focus_keyword}
-                onChange={handleChange}
-                placeholder="e.g., 'content marketing strategies'"
-                className="bg-white border-slate-300 text-base h-12 placeholder:text-slate-500" />
-
-              <p className="text-xs text-slate-600 mt-2">Main keyword you want to rank for</p>
-            </div>
-
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 relative">
-              <Label htmlFor="tags" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
-                <Tag className="w-4 h-4 text-cyan-500" />
-                Tags
-              </Label>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={genTags}
-                disabled={genLoading.tags}
-                className="absolute top-3 right-3 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
-
-                <Sparkles className="w-4 h-4 mr-1" /> {genLoading.tags ? "..." : "Suggest"}
-              </Button>
-              <Input
-                id="tags"
-                name="tags"
-                value={metadata.tags.join(', ')}
-                onChange={handleTagsChange}
-                placeholder="marketing, SEO, content, writing"
-                className="bg-white border-slate-300 text-base h-12 placeholder:text-slate-500" />
-
-              <p className="text-xs text-slate-600 mt-2">Separate with commas</p>
-            </div>
-
-            {/* Removed canonical URL section as per outline */}
-
-            {/* NEW: JSON-LD Schema editor */}
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <Label htmlFor="schema" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
-                JSON-LD Schema
-              </Label>
-              <Textarea
-                id="schema"
-                name="schema"
-                value={metadata.generated_llm_schema}
-                onChange={(e) => setMetadata((prev) => ({ ...prev, generated_llm_schema: e.target.value }))}
-                rows={8}
-                placeholder='Paste or generate a JSON object. It will be embedded as <script type="application/ld+json"> on publish.'
-                className="font-mono text-sm bg-slate-100 border-slate-300 text-slate-800" />
-
-              <div className="flex justify-end mt-2">
-                <Button variant="outline" onClick={genSchema} className="bg-white border-slate-300 text-slate-900 hover:bg-slate-50">
-                  Generate Schema
-                </Button>
+                <p className="text-xs text-slate-500 mt-2">Main keyword you want to rank for</p>
               </div>
+
+              {/* Meta Description */}
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 col-span-1 md:col-span-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-purple-600" /> {/* Changed from Search to FileText */}
+                    <Label htmlFor="meta-description" className="font-semibold text-slate-800">Meta Description</Label>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={genDescription}
+                    disabled={genLoading.desc}
+                    className="h-8 px-2 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
+                    <Sparkles className="w-3.5 h-3.5 mr-1" /> {genLoading.desc ? "..." : "Suggest"}
+                  </Button>
+                </div>
+                <Textarea
+                  id="meta-description"
+                  name="meta_description"
+                  value={metadata.meta_description}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="Write a compelling summary that encourages clicks from search results..." className="bg-white text-slate-700 px-3 py-2 text-sm flex min-h-[80px] w-full rounded-md border border-input ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+
+                <div className="flex justify-between items-center text-xs text-slate-500 mt-2">
+                  <span>This appears under your title in search results</span>
+                  <span className={metadata.meta_description.length > 160 ? "text-red-500 font-medium" : ""}>
+                    {metadata.meta_description.length}/160
+                  </span>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 col-span-1 md:col-span-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-teal-600" />
+                    <Label htmlFor="tags" className="font-semibold text-slate-800">Tags</Label>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={genTags}
+                    disabled={genLoading.tags}
+                    className="h-8 px-2 bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
+                    <Sparkles className="w-3.5 h-3.5 mr-1" /> {genLoading.tags ? "..." : "Suggest"}
+                  </Button>
+                </div>
+                <Input // Kept Input as TagsInput component was not provided in outline
+                  id="tags"
+                  name="tags"
+                  value={metadata.tags.join(', ')}
+                  onChange={handleTagsChange}
+                  placeholder="marketing, SEO, content, writing" className="bg-white text-slate-700 px-3 py-2 text-base flex h-10 w-full rounded-md border border-input ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+
+                <p className="text-xs text-slate-500 mt-2">Comma-separated tags for organization</p>
+              </div>
+
+              {/* Excerpt */}
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 col-span-1 md:col-span-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="excerpt" className="font-semibold text-slate-800">Excerpt</Label>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={genExcerpt}
+                    disabled={genLoading.excerpt}
+                    className="h-8 px-2 bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
+                    title="Generate excerpt with AI">
+                    <Sparkles className="w-3.5 h-3.5 mr-1" /> {genLoading.excerpt ? "..." : "AI Suggest"}
+                  </Button>
+                </div>
+                <Textarea
+                  id="excerpt"
+                  name="excerpt"
+                  value={metadata.excerpt}
+                  onChange={(e) => setMetadata((prev) => ({ ...prev, excerpt: e.target.value }))}
+                  rows={3}
+                  placeholder="Short summary shown as excerpt. Defaults to Meta description." className="bg-white text-slate-700 px-3 py-2 text-sm flex min-h-[80px] w-full rounded-md border border-input ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+
+                <p className="text-xs text-slate-500 mt-2">Will be used when publishing (e.g., Shopify excerpt).</p>
+              </div>
+
+              {/* JSON-LD Schema editor - Retained as per preserving functionality */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 col-span-1 md:col-span-2">
+                <Label htmlFor="schema" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
+                  JSON-LD Schema
+                </Label>
+                <Textarea
+                  id="schema"
+                  name="schema"
+                  value={metadata.generated_llm_schema}
+                  onChange={(e) => setMetadata((prev) => ({ ...prev, generated_llm_schema: e.target.value }))}
+                  rows={8}
+                  placeholder='Paste or generate a JSON object. It will be embedded as <script type="application/ld+json"> on publish.'
+                  className="font-mono text-sm bg-slate-100 border-slate-300 text-slate-800" />
+                <div className="flex justify-end mt-2">
+                  {/* Generate Schema button is already in DialogHeader, keeping it here too for context within the field */}
+                  <Button variant="outline" onClick={genSchema} disabled={isGeneratingSchema} className="bg-white border-slate-300 text-slate-900 hover:bg-slate-50">
+                    {isGeneratingSchema ? "Generating Schema..." : "Generate Schema"}
+                  </Button>
+                </div>
+              </div>
+
             </div>
           </div>
-        </div>
+          <DialogFooter className="p-6 flex justify-between border-t border-slate-200 flex-shrink-0">
+            <div className="text-xs text-slate-500 self-center">
+              {autoInitRef.current &&
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-green-500" />SEO drafted from article.</span>
+              }
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose} className="bg-white border-slate-300 text-slate-900 hover:bg-slate-50 px-6 py-3">
+                Cancel
+              </Button>
+              <Button onClick={handleSave} className="bg-blue-900 text-slate-50 px-6 py-3 text-sm font-medium [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-indigo-700">
+                <Save className="w-4 h-4 mr-2" />
+                Save SEO Settings
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <DialogFooter className="pt-6">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="bg-white border-slate-300 text-slate-900 hover:bg-slate-50 px-6 py-3">
+      <ImageLibraryModal
+        isOpen={showImageLibrary}
+        onClose={() => setShowImageLibrary(false)}
+        onInsert={handleImageSelectForSeo}
+        usernameFilter={postData?.user_name} />
 
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave} className="bg-gradient-to-r text-slate-50 px-6 py-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-primary/90 h-10 from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700">
-
-
-            <Globe className="w-4 h-4 mr-2" />
-            Save SEO Settings
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>);
+    </>
+  );
 
 }

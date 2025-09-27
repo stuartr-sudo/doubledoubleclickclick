@@ -1,247 +1,303 @@
 
-import React, { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Video as VideoIcon, Plus, ExternalLink } from "lucide-react";
-import { GeneratedVideo } from "@/api/entities"; // Keep import for type inference if needed elsewhere, though not used in component logic
+import React, { useState, useEffect } from "react";
 import { YouTubeVideo } from "@/api/entities";
 import { TikTokVideo } from "@/api/entities";
 import { User } from "@/api/entities";
-import { Username } from "@/api/entities";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle } from
+"@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Plus, ExternalLink, Video } from "lucide-react";
 import { toast } from "sonner";
-import { getTikTokOembed } from "@/api/functions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
-export default function VideoLibraryModal(props) {
+export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
+  const [youtubeVideos, setYoutubeVideos] = useState([]);
+  const [tiktokVideos, setTiktokVideos] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
-  const [assignmentUsernames, setAssignmentUsernames] = useState([]);
-  const [selectedUsername, setSelectedUsername] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [localSelectedUsername, setLocalSelectedUsername] = useState("all"); // Renamed to localSelectedUsername
+  const [availableUsernames, setAvailableUsernames] = useState([]);
+  const { consumeTokensForFeature } = useTokenConsumption();
 
-  // Removed searchGen and genVideos state as Generated tab is removed
-  const [searchYT, setSearchYT] = useState("");
-  const [searchTT, setSearchTT] = useState("");
+  const { selectedUsername: globalUsername } = useWorkspace(); // Get selectedUsername from workspace context
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping'); // Feature flag for workspace scoping
 
-  // Removed genVideos state as Generated tab is removed
-  const [ytVideos, setYtVideos] = useState([]);
-  const [ttVideos, setTtVideos] = useState([]);
+  // Determine the active username for filtering based on feature flag
+  const activeUsername = useWorkspaceScoping ? (globalUsername || "all") : localSelectedUsername;
 
   useEffect(() => {
-    if (!props.isOpen) return;
-    const load = async () => {
-      try {
-        const user = await User.me();
-        setCurrentUser(user);
+    if (isOpen) {
+      loadVideos();
+    } else {
+      setSearchTerm("");
+      setLocalSelectedUsername("all"); // Reset local state when modal closes
+    }
+  }, [isOpen]);
 
-        let names = [];
-        if (user.role === "admin") {
-          const allUsernames = await Username.list("-created_date").catch(() => []);
-          names = (allUsernames || []).
-          filter((u) => u.is_active !== false && !!u.user_name).
-          map((u) => u.user_name).
-          sort((a, b) => a.localeCompare(b));
-        } else {
-          names = user.assigned_usernames || [];
-        }
-        setAssignmentUsernames(names);
+  const loadVideos = async () => {
+    setIsLoading(true);
+    try {
+      const user = await User.me();
+      setCurrentUser(user);
 
-        // EDIT: Only load YouTube and TikTok
-        await Promise.all([loadYouTube(user), loadTikTok(user)]);
-      } catch (e) {
-        console.error(e);
-        toast.error("Failed to load video library.");
+      // Load YouTube videos
+      const ytVideos = await YouTubeVideo.list("-created_date");
+
+      // Load TikTok videos  
+      const ttVideos = await TikTokVideo.list("-created_date");
+
+      // Get unique usernames for filtering
+      const allUsernames = new Set();
+      [...ytVideos, ...ttVideos].forEach((video) => {
+        if (video.user_name) allUsernames.add(video.user_name);
+      });
+
+      // Filter by assigned usernames if user has them
+      const assigned = Array.isArray(user.assigned_usernames) ? user.assigned_usernames : [];
+      let visibleUsernames = [];
+      if (assigned.length > 0) {
+        visibleUsernames = assigned.filter((name) => allUsernames.has(name)).sort();
+      } else {
+        visibleUsernames = Array.from(allUsernames).sort();
       }
-    };
-    load();
-  }, [props.isOpen]);
 
-  // Removed loadGenerated function as Generated tab is removed
-  const loadYouTube = async (user) => {
-    const all = await YouTubeVideo.list("-created_date");
-    const filtered = user.role === "admin" ?
-    all :
-    all.filter((v) => !v.user_name || (user.assigned_usernames || []).includes(v.user_name));
-    setYtVideos(filtered);
-  };
-  const loadTikTok = async (user) => {
-    const all = await TikTokVideo.list("-created_date");
-    const filtered = user.role === "admin" ?
-    all :
-    all.filter((v) => !v.user_name || (user.assigned_usernames || []).includes(v.user_name));
-    setTtVideos(filtered);
+      setAvailableUsernames(visibleUsernames);
+      setYoutubeVideos(ytVideos);
+      setTiktokVideos(ttVideos);
+    } catch (error) {
+      console.error("Error loading videos:", error);
+      toast.error("Failed to load video library.");
+    }
+    setIsLoading(false);
   };
 
-  const filterByUsername = (arr) =>
-  arr.
-  filter((v) => selectedUsername === "all" || v.user_name === selectedUsername);
+  const handleInsertYouTube = async (video) => {
+    // Check and consume tokens before inserting
+    const result = await consumeTokensForFeature('video_library_insert');
+    if (!result.success) {
+      return; // Error toast is handled by the hook
+    }
 
-  // Removed handleInsertGenerated function as Generated tab is removed
-
-  const insertYouTubeHtml = (videoId, title = "YouTube video player") => {
-    const html = `
+    const videoHtml = `
 <div class="youtube-video-container" style="position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 2rem 0;">
   <iframe 
-    src="https://www.youtube.com/embed/${videoId}" 
-    title="${title}" 
+    src="https://www.youtube.com/embed/${video.video_id}" 
+    title="${video.title}" 
     frameborder="0" 
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-    referrerpolicy="strict-origin-when-cross-origin"
+    referrerpolicy="strict-origin-when-cross-origin" 
     allowfullscreen
     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 8px;"
   ></iframe>
 </div>`;
-    props.onInsert(html);
-    props.onClose();
-  };
-
-  const handleInsertYouTube = (video) => {
-    insertYouTubeHtml(video.video_id, video.title);
+    onInsert(videoHtml);
+    onClose();
+    toast.success("YouTube video inserted!");
   };
 
   const handleInsertTikTok = async (video) => {
-    try {
-      const safeUrl = String(video.url || "").trim();
-      if (!safeUrl) {
-        toast.error("Invalid TikTok URL.");
-        return;
-      }
-      const { data } = await getTikTokOembed({ url: safeUrl });
-      if (!data?.success || !data?.html) {
-        throw new Error(data?.error || "TikTok oEmbed failed: No HTML returned.");
-      }
-      // Insert exactly what the endpoint returns (blockquote + script)
-      props.onInsert(data.html);
-      props.onClose();
-    } catch (e) {
-      console.error("TikTok oEmbed insert error:", e);
-      toast.error("Could not embed TikTok video. Please try another URL.");
+    // Check and consume tokens before inserting
+    const result = await consumeTokensForFeature('video_library_insert');
+    if (!result.success) {
+      return; // Error toast is handled by the hook
     }
+
+    // Use cached oEmbed HTML if available, otherwise create a basic embed
+    const tiktokHtml = video.oembed_html || `
+<blockquote class="tiktok-embed" cite="${video.url}" data-video-id="${video.video_id}" style="max-width: 605px;min-width: 325px; margin: 2rem auto; border: 1px solid #00f2ea; border-radius: 12px; padding: 0;">
+  <section>
+    <a target="_blank" title="${video.title}" href="${video.url}">
+      <p style="margin: 1rem; text-align: center; font-weight: bold;">${video.title}</p>
+      <p style="margin: 1rem; text-align: center; color: #666;">View on TikTok</p>
+    </a>
+  </section>
+</blockquote>`;
+
+    onInsert(tiktokHtml);
+    onClose();
+    toast.success("TikTok video inserted!");
   };
 
-  // EDIT: avoid unused var and 'Generated' list (no longer used)
-  const filteredGen = []; // replaced previous computed list
+  const filterVideosByUsername = (videos) => {
+    return videos.filter((video) =>
+      activeUsername === "all" || video.user_name === activeUsername
+    );
+  };
 
-  const filteredYT = filterByUsername(ytVideos).filter((v) =>
-  (v.title || v.description || "").toLowerCase().includes(searchYT.toLowerCase())
-  );
-  const filteredTT = filterByUsername(ttVideos).filter((v) =>
-  (v.title || v.author_name || "").toLowerCase().includes(searchTT.toLowerCase())
-  );
+  const filterVideosBySearch = (videos) => {
+    if (!searchTerm.trim()) return videos;
+    const term = searchTerm.toLowerCase();
+    return videos.filter((video) =>
+    video.title?.toLowerCase().includes(term) ||
+    video.author_name?.toLowerCase().includes(term)
+    );
+  };
+
+  const getFilteredVideos = (videos) => {
+    return filterVideosBySearch(filterVideosByUsername(videos));
+  };
+
+  const filteredYouTubeVideos = getFilteredVideos(youtubeVideos);
+  const filteredTikTokVideos = getFilteredVideos(tiktokVideos);
 
   return (
-    <Dialog open={props.isOpen} onOpenChange={props.onClose}>
-      {/* EDIT: Switch to light theme with b44-modal class */}
-      <DialogContent className="b44-modal max-w-5xl rounded-2xl shadow-2xl p-0 max-h-[85vh] overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="b44-modal max-w-6xl max-h-[90vh]">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-slate-900">
-            <VideoIcon className="w-5 h-5 text-indigo-600" />
+            <Video className="w-5 h-5 text-purple-600" />
             Video Library
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-4">
-          {(assignmentUsernames.length > 0 || currentUser?.role === "admin") &&
-          <div className="mb-2">
-              <Label className="block text-sm font-medium mb-2 text-slate-700">Filter by Username</Label>
-              <Select value={selectedUsername} onValueChange={setSelectedUsername}>
-                <SelectTrigger className="bg-white border-slate-300 text-slate-900">
-                  <SelectValue placeholder="All" />
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <div className="flex-1 relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search videos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
+            </div>
+            {!useWorkspaceScoping && availableUsernames.length > 0 && // Conditionally render the Select if workspace scoping is NOT enabled
+            <Select value={localSelectedUsername} onValueChange={setLocalSelectedUsername}>
+                <SelectTrigger className="w-48 bg-white border-slate-300 text-slate-900">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  <SelectItem value="all">{currentUser?.role === "admin" ? "All Users" : "All Assigned"}</SelectItem>
-                  {assignmentUsernames.map((u) =>
-                <SelectItem key={u} value={u}>{u}</SelectItem>
+                  <SelectItem value="all">All Users</SelectItem>
+                  {availableUsernames.map((username) =>
+                <SelectItem key={username} value={username}>
+                      {username}
+                    </SelectItem>
                 )}
                 </SelectContent>
               </Select>
-            </div>
-          }
+            }
+          </div>
 
-          {/* EDIT: Only YouTube and TikTok tabs; default to YouTube */}
           <Tabs defaultValue="youtube" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
-              <TabsTrigger value="youtube" className="rounded-md text-slate-700 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-lg">
+              <TabsTrigger
+                value="youtube"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-600">
+
                 YouTube
               </TabsTrigger>
-              <TabsTrigger value="tiktok" className="rounded-md text-slate-700 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+              <TabsTrigger
+                value="tiktok"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-600">
+
                 TikTok
               </TabsTrigger>
             </TabsList>
 
-            {/* REMOVED: Generated tab and its content */}
-
             <TabsContent value="youtube" className="space-y-4">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <Input
-                  placeholder="Search YouTube videos..."
-                  value={searchYT}
-                  onChange={(e) => setSearchYT(e.target.value)}
-                  className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
-
-              </div>
-              <div className="max-h-[55vh] overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredYT.length === 0 ?
-                <div className="text-center py-10 text-slate-500 col-span-2">
-                    <VideoIcon className="w-10 h-10 mx-auto mb-3 text-slate-400" />
-                    No YouTube videos found.
-                  </div> :
-                filteredYT.map((v) =>
-                <div key={v.id} className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white hover:bg-slate-50 transition">
-                    {v.thumbnail && <img src={v.thumbnail} alt={v.title} className="w-full h-36 object-cover rounded" />}
-                    <div className="font-medium line-clamp-2 text-slate-900">{v.title}</div>
-                    <div className="text-xs text-slate-500">{v.user_name ? `Username: ${v.user_name}` : ""}</div>
-                    <div className="flex items-center justify-between">
-                      <a href={v.url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 inline-flex items-center gap-1 hover:text-indigo-700">
-                        <ExternalLink className="w-3 h-3" /> Open
-                      </a>
-                      <Button size="sm" onClick={() => handleInsertYouTube(v)} className="bg-indigo-600 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-indigo-700">
-                        <Plus className="w-4 h-4 mr-2" /> Insert
-                      </Button>
+              {isLoading ? (
+                <div className="text-center py-8 text-slate-500">Loading YouTube videos...</div>
+              ) : filteredYouTubeVideos.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Video className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                  <p>No YouTube videos found.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                  {filteredYouTubeVideos.map((video) => (
+                    <div key={video.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3">
+                      <img
+                        src={video.thumbnail}
+                        alt={video.title}
+                        className="w-full h-32 object-cover rounded"
+                      />
+                      <h4 className="font-medium line-clamp-2 h-12 text-slate-800">{video.title}</h4>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-500">Username: {video.user_name}</span>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleInsertYouTube(video)}
+                            size="sm"
+                            className="bg-blue-900 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-red-700"
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Insert
+                          </Button>
+                          <Button
+                            onClick={() => window.open(video.url, '_blank')}
+                            size="sm"
+                            variant="outline"
+                            className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="tiktok" className="space-y-4">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <Input
-                  placeholder="Search TikTok videos..."
-                  value={searchTT}
-                  onChange={(e) => setSearchTT(e.target.value)}
-                  className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
-
-              </div>
-              <div className="max-h-[55vh] overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredTT.length === 0 ?
-                <div className="text-center py-10 text-slate-500 col-span-2">
-                    <VideoIcon className="w-10 h-10 mx-auto mb-3 text-slate-400" />
-                    No TikTok videos found.
-                  </div> :
-                filteredTT.map((v) =>
-                <div key={v.id} className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white hover:bg-slate-50 transition">
-                    {v.cover_url && <img src={v.cover_url} alt={v.title} className="w-full h-36 object-cover rounded" />}
-                    <div className="font-medium line-clamp-2 text-slate-900">{v.title}</div>
-                    <div className="text-xs text-slate-500">{v.author_name ? `By: ${v.author_name}` : ""}</div>
-                    <div className="flex items-center justify-between">
-                      <a href={v.url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 inline-flex items-center gap-1 hover:text-indigo-700">
-                        <ExternalLink className="w-3 h-3" /> Open
-                      </a>
-                      <Button size="sm" onClick={() => handleInsertTikTok(v)} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                        <Plus className="w-4 h-4 mr-2" /> Insert
-                      </Button>
+              {isLoading ? (
+                <div className="text-center py-8 text-slate-500">Loading TikTok videos...</div>
+              ) : filteredTikTokVideos.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Video className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                  <p>No TikTok videos found.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
+                  {filteredTikTokVideos.map((video) => (
+                    <div key={video.id} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 space-y-3">
+                      <div className="aspect-[9/16] relative">
+                        <img
+                          src={video.cover_url}
+                          alt={video.title}
+                          className="w-full h-full object-cover rounded"
+                        />
+                      </div>
+                      <h4 className="font-medium line-clamp-3 text-sm text-slate-800">{video.title}</h4>
+                      <div className="space-y-2">
+                        <span className="text-xs text-slate-500 block">Username: {video.user_name}</span>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleInsertTikTok(video)}
+                            size="sm"
+                            className="bg-blue-900 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-gray-800 flex-1"
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Insert
+                          </Button>
+                          <Button
+                            onClick={() => window.open(video.url, '_blank')}
+                            size="sm"
+                            variant="outline"
+                            className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
       </DialogContent>
-    </Dialog>);
-
+    </Dialog>
+  );
 }

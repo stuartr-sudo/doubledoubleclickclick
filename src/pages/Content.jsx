@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, Filter, FileText, Link as LinkIcon, ChevronRight, ClipboardPaste, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Loader2, Search, Filter, FileText, Link as LinkIcon, ChevronRight, ClipboardPaste, Trash2, Clock, Calendar as CalendarIcon, SortAsc } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import PasteContentModal from "@/components/content/PasteContentModal";
 import {
@@ -23,17 +23,33 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
 export default function Content() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [allowedUsernames, setAllowedUsernames] = useState([]);
-  const [selectedUsername, setSelectedUsername] = useState("all");
+
+  // OLD STATE renamed for local control
+  const [localSelectedUsername, setLocalSelectedUsername] = useState("all");
+
   const [statusFilter, setStatusFilter] = useState("all");
   const [q, setQ] = useState("");
   const [items, setItems] = useState([]); // unified: posts + webhooks
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null); // state for delete confirmation
+  const [sortByCountdown, setSortByCountdown] = useState(true); // Changed default to true
+  const [autoReadPaste, setAutoReadPaste] = useState(false); // New state for auto-paste
+
+  // NEW: Workspace context
+  const { selectedUsername: globalUsername } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
+
+  // Derive the actual selectedUsername based on feature flag
+  const selectedUsername = useWorkspaceScoping ? globalUsername : localSelectedUsername;
+
+  const navigate = useNavigate(); // Initialize useNavigate
 
   // Generate a sensible default username for paste modal
   const defaultPasteUsername = useMemo(() => {
@@ -41,74 +57,44 @@ export default function Content() {
     return allowedUsernames && allowedUsernames.length > 0 ? allowedUsernames[0] : "";
   }, [selectedUsername, allowedUsernames]);
 
+  // Modified handlePasteSubmit to use navigate and add error handling
   const handlePasteSubmit = async ({ title, content, user_name }) => {
-    // Create draft record and open editor
-    const newPost = await BlogPost.create({
-      title: title?.trim() || "Pasted Content",
-      content,
-      status: "draft",
-      user_name
-    });
-    // Navigate to editor for immediate editing
-    window.location.href = createPageUrl(`Editor?post=${newPost.id}`);
+    try {
+      // Create draft record and open editor
+      const newPost = await BlogPost.create({
+        title: title?.trim() || "Pasted Content",
+        content,
+        status: "draft",
+        user_name
+      });
+      // Navigate to editor for immediate editing
+      if (newPost?.id) {
+        const newUrl = createPageUrl(`Editor?post=${newPost.id}`);
+        navigate(newUrl);
+      } else {
+        throw new Error("Failed to create post, no ID returned.");
+      }
+    } catch (error) {
+      toast.error("Failed to create post from pasted content.");
+      console.error("Error creating post from paste:", error);
+    } finally {
+      setShowPasteModal(false);
+      setAutoReadPaste(false); // Reset autoReadPaste after submission attempt
+    }
   };
 
-  // NEW: fast loader with capped concurrency + incremental updates
-  const loadScopedContentFast = async (me, usernames) => {
+  const handlePasteContent = () => {
+    setAutoReadPaste(true);
+    setShowPasteModal(true);
+  };
+
+  // Improved rate limit handling with batch fetching
+  const loadScopedContentFast = async (usernames) => {
     if (!Array.isArray(usernames) || usernames.length === 0) {
       setItems([]);
       setLoading(false);
       return;
     }
-
-    const withRetry = async (fn, tries = 4, baseDelay = 200) => {
-      let attempt = 0;
-      // jittered exponential backoff on 429
-      while (true) {
-        try {
-          return await fn();
-        } catch (err) {
-          attempt += 1;
-          const msg = String(err?.message || "");
-          const is429 = /429|rate limit/i.test(msg);
-          if (attempt >= tries || !is429) throw err;
-          const delay = baseDelay * Math.pow(2, attempt - 1) + Math.round(Math.random() * 120);
-          await new Promise((r) => setTimeout(r, delay));
-        }
-      }
-    };
-
-    // Minimal p-limit (concurrency limiter)
-    const createLimiter = (concurrency = 6) => {
-      let active = 0;
-      const queue = [];
-      const next = () => {
-        if (active >= concurrency) return;
-        const job = queue.shift();
-        if (!job) return;
-        active++;
-        job()
-          .catch(() => {}) // errors handled in the job itself
-          .finally(() => {
-            active--;
-            next();
-          });
-      };
-      return (task) =>
-        new Promise((resolve, reject) => {
-          queue.push(async () => {
-            try {
-              const res = await task();
-              resolve(res);
-            } catch (e) {
-              reject(e);
-            }
-          });
-          next();
-        });
-    };
-
-    const limit = createLimiter(6);
 
     // Smart dedupe (post vs webhook preference, recency)
     const dedupeSmart = (arr) => {
@@ -158,48 +144,29 @@ export default function Content() {
       processing_id: w.processing_id || w.id
     });
 
-    let firstPushed = false;
-    const push = (batch) => {
-      if (!batch?.length) return;
-      setItems((prev) => {
-        const merged = dedupeSmart([...(prev || []), ...batch]);
-        return merged.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
-      });
-      if (!firstPushed) {
-        setLoading(false); // show results as soon as the first batch lands
-        firstPushed = true;
-      }
-    };
+    try {
+      // Fetch all posts and webhooks for the given usernames in parallel
+      const [posts, hooks] = await Promise.all([
+        BlogPost.filter({ user_name: usernames }, "-updated_date"),
+        WebhookReceived.filter({ user_name: usernames }, "-updated_date"),
+      ]);
 
-    // Build tasks per-username (BlogPost + WebhookReceived) and run with limited concurrency
-    const tasks = [];
-    for (const uname of usernames) {
-      tasks.push(
-        limit(async () => {
-          try {
-            const posts = await withRetry(() => BlogPost.filter({ user_name: uname }, "-updated_date"));
-            push((posts || []).map(normalizePost));
-          } catch (e) {
-            console.error(`Error fetching posts for ${uname}:`, e);
-            // ignore this username's posts on error
-          }
-        })
-      );
-      tasks.push(
-        limit(async () => {
-          try {
-            const hooks = await withRetry(() => WebhookReceived.filter({ user_name: uname }, "-updated_date"));
-            push((hooks || []).map(normalizeWebhook));
-          } catch (e) {
-            console.error(`Error fetching webhooks for ${uname}:`, e);
-            // ignore this username's webhooks on error
-          }
-        })
-      );
+      const normalizedContent = [
+        ...(posts || []).map(normalizePost),
+        ...(hooks || []).map(normalizeWebhook),
+      ];
+      
+      const deduped = dedupeSmart(normalizedContent);
+      deduped.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+
+      setItems(deduped);
+    } catch (e) {
+      console.error("Error fetching content:", e);
+      toast.error("Failed to load content.");
+      setItems([]);
+    } finally {
+      setLoading(false);
     }
-
-    await Promise.allSettled(tasks);
-    setLoading(false); // ensure loading ends even if nothing returned, or if tasks array was empty
   };
 
   useEffect(() => {
@@ -214,22 +181,42 @@ export default function Content() {
 
         usernames.sort((a, b) => a.localeCompare(b));
         setAllowedUsernames(usernames);
-        setSelectedUsername(usernames.length === 1 ? usernames[0] : "all");
 
-        // Load data with strict scoping using the new fast loader
-        await loadScopedContentFast(me, usernames);
+        // If workspace scoping is not active, set the local default username
+        if (!useWorkspaceScoping) {
+          setLocalSelectedUsername(usernames.length === 1 ? usernames[0] : "all");
+        }
+        // If useWorkspaceScoping is true, `selectedUsername` is controlled by `globalUsername`
+        // and should not be set here.
+
+        // Load data with strict scoping using the new fast loader.
+        // This will load all content relevant to the allowed usernames,
+        // then the `filtered` useMemo will apply the actual `selectedUsername` filter.
+        await loadScopedContentFast(usernames);
       } catch (e) {
         console.error("Failed to load initial data:", e);
         setAllowedUsernames([]);
         setItems([]);
         setLoading(false); // Ensure loading state is reset on error
       }
-      // The finally block for setLoading(false) is handled within loadScopedContentFast and catch.
     })();
-  }, []);
+  }, [useWorkspaceScoping]); // Added useWorkspaceScoping to dependencies to react to its changes.
 
+  // Add countdown calculation helper
+  const calculateDaysFromPublish = (item) => {
+    // Only calculate for published items
+    if (item.status !== 'published') return null;
+
+    const publishDate = new Date(item.updated_at || item.created_at);
+    const now = new Date();
+    const diffTime = now.getTime() - publishDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  };
+
+  // Update filtered items with sorting
   const filtered = useMemo(() => {
-    return items.filter((it) => {
+    let result = items.filter((it) => {
       const byUser = selectedUsername === "all" ? true : it.user_name === selectedUsername;
       const byStatus = statusFilter === "all" ? true : it.status === statusFilter;
       const byQuery = q.trim() ?
@@ -237,7 +224,18 @@ export default function Content() {
         true;
       return byUser && byStatus && byQuery;
     });
-  }, [items, q, statusFilter, selectedUsername]);
+
+    // Apply countdown sorting if enabled
+    if (sortByCountdown) {
+      result.sort((a, b) => {
+        const daysA = calculateDaysFromPublish(a) ?? Infinity; // Use Infinity for non-published items
+        const daysB = calculateDaysFromPublish(b) ?? Infinity;
+        return daysA - daysB; // Ascending order (least days first, i.e. newest)
+      });
+    }
+
+    return result;
+  }, [items, q, statusFilter, selectedUsername, sortByCountdown]);
 
   const onOpenItem = (row) => {
     if (row.type === "post") {
@@ -282,80 +280,88 @@ export default function Content() {
     { key: "archived", label: "archived" }];
 
 
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-          <div>
-            <h1 className="text-3xl font-semibold text-slate-900">Content Management</h1>
-            <p className="text-slate-600 mt-1">Manage your blog posts and webhook content. Only your brands are shown.</p>
+        
+        {/* Combined filters and actions row */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+
+          {/* Filters section (left-aligned) */}
+          <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[200px]">
+            <div className="relative flex-grow min-w-[200px]">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search content..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="pl-10 bg-white border border-slate-300 text-slate-900 placeholder:text-slate-500" />
+            </div>
+
+            <div className="min-w-[180px]">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full bg-white border border-slate-300 text-slate-900">
+                  <Filter className="w-4 h-4 mr-2 text-slate-500" />
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border border-slate-200 text-slate-900 shadow-xl">
+                  {allStatuses.map((s) =>
+                    <SelectItem
+                      key={s.key}
+                      value={s.key}
+                      className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                      {s.label}
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {!useWorkspaceScoping &&
+              <div className="min-w-[180px]">
+                <Select value={localSelectedUsername} onValueChange={setLocalSelectedUsername}>
+                  <SelectTrigger className="w-full bg-white border border-slate-300 text-slate-900">
+                    <SelectValue placeholder="All Usernames" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border border-slate-200 text-slate-900 shadow-xl">
+                    <SelectItem
+                      value="all"
+                      className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                      All Usernames
+                    </SelectItem>
+                    {allowedUsernames.map((u) =>
+                      <SelectItem
+                        key={u}
+                        value={u}
+                        className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                        {u}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            }
           </div>
+
+          {/* Actions section (right-aligned) */}
           <div className="flex items-center gap-2">
             <Button
+              variant={sortByCountdown ? "default" : "outline"}
+              onClick={() => setSortByCountdown(!sortByCountdown)} className="bg-slate-50 text-cyan-600 px-4 py-2 text-sm font-medium border-2 border-cyan-600 inline-flex items-center justify-center whitespace-nowrap rounded-md ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 gap-2 hover:border-cyan-500 hover:text-cyan-500 hover:shadow-md"
+
+              title="Sort by days since publish">
+              <SortAsc className="w-4 h-4" />
+              {sortByCountdown ? 'Days Sorted' : 'Sort by Days'}
+            </Button>
+            <Button
               variant="outline"
-              onClick={() => setShowPasteModal(true)}
+              onClick={handlePasteContent}
               className="gap-2 bg-white border-slate-300 text-slate-900 hover:bg-slate-100"
               title="Paste content to create a draft">
               <ClipboardPaste className="w-4 h-4" />
               Paste Content
             </Button>
-          </div>
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="relative md:col-span-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="Search content..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="pl-10 bg-white border border-slate-300 text-slate-900 placeholder:text-slate-500" />
-          </div>
-
-          {/* Status filter */}
-          <div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full bg-white border border-slate-300 text-slate-900">
-                <Filter className="w-4 h-4 mr-2 text-slate-500" />
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              {/* Stronger hover/highlight contrast */}
-              <SelectContent className="bg-white border border-slate-200 text-slate-900 shadow-xl">
-                {allStatuses.map((s) =>
-                  <SelectItem
-                    key={s.key}
-                    value={s.key}
-                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
-                    {s.label}
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Username filter */}
-          <div>
-            <Select value={selectedUsername} onValueChange={setSelectedUsername}>
-              <SelectTrigger className="w-full bg-white border border-slate-300 text-slate-900">
-                <SelectValue placeholder="All Usernames" />
-              </SelectTrigger>
-              {/* Stronger hover/highlight contrast */}
-              <SelectContent className="bg-white border border-slate-200 text-slate-900 shadow-xl">
-                <SelectItem
-                  value="all"
-                  className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
-                  All Usernames
-                </SelectItem>
-                {allowedUsernames.map((u) =>
-                  <SelectItem
-                    key={u}
-                    value={u}
-                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
-                    {u}
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
@@ -380,10 +386,12 @@ export default function Content() {
                 {filtered.map((row) => {
                   const isWebhook = row.type === "webhook";
                   const dotClass = isWebhook ? "bg-cyan-500" : "bg-blue-600";
+                  const daysFromPublish = calculateDaysFromPublish(row);
+
                   return (
                     <div
                       key={`${row.type}-${row.id}`}
-                      className="px-4 py-3 hover:bg-slate-50 grid items-center gap-3 grid-cols-[16px_1fr_120px_auto_auto_20px]">
+                      className="px-4 py-3 hover:bg-slate-50 grid items-center gap-3 grid-cols-[16px_1fr_120px_100px_auto_auto_20px]">
                       {/* Left dot */}
                       <div className={`h-3 w-3 rounded-full ${dotClass}`} />
 
@@ -415,10 +423,30 @@ export default function Content() {
                         </span>
                       </div>
 
+                      {/* 60-day Countdown */}
+                      <div className="justify-self-end">
+                        {daysFromPublish !== null ?
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                            daysFromPublish <= 20 ? 'bg-green-50 text-green-700 border border-green-200' :
+                              daysFromPublish <= 40 ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                                daysFromPublish <= 50 ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                                  'bg-red-50 text-red-700 border border-red-200'}`
+                          }>
+                            <Clock className="w-3 h-3" />
+                            <span>{daysFromPublish}d</span>
+                          </div> :
+
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-slate-400 bg-slate-50 border border-slate-200">
+                            <Clock className="w-3 h-3" />
+                            <span>--</span>
+                          </div>
+                        }
+                      </div>
+
                       {/* Open */}
                       <div className="justify-self-end">
                         <Button
-                          variant="ghost" className="bg-indigo-800 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:text-slate-900 hover:bg-slate-100"
+                          variant="ghost" className="bg-blue-900 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:text-slate-900 hover:bg-blue-100"
                           onClick={() => onOpenItem(row)}
                           title="Open in Editor">
                           Open
@@ -430,7 +458,7 @@ export default function Content() {
                         <Button
                           variant="destructive"
                           size="icon"
-                          onClick={() => setItemToDelete(row)} className="bg-violet-700 text-slate-50 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 w-9 h-9 hover:bg-red-100 border border-red-200"
+                          onClick={() => setItemToDelete(row)} className="bg-pink-500 text-white px-4 py-2 text-sm font-bold inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-pink-400 hover:shadow-[0_0_30px_rgba(236,72,153,0.7)] shadow-[0_0_15px_rgba(236,72,153,0.4)] border border-pink-400"
                           title={`Delete "${row.title}"`}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -455,10 +483,16 @@ export default function Content() {
 
       <PasteContentModal
         isOpen={showPasteModal}
-        onClose={() => setShowPasteModal(false)}
+        onClose={() => {
+          setShowPasteModal(false);
+          setAutoReadPaste(false); // Reset autoReadPaste on close
+        }}
         allowedUsernames={allowedUsernames}
         defaultUsername={defaultPasteUsername}
-        onSubmit={handlePasteSubmit} />
+        onSubmit={handlePasteSubmit}
+        autoReadClipboard={autoReadPaste} // New prop for auto-reading clipboard
+        initialRaw="" // New prop for initial raw content
+      />
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!itemToDelete} onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}>

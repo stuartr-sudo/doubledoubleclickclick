@@ -13,8 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
   SelectContent,
-  SelectItem
-} from "@/components/ui/select";
+  SelectItem } from
+"@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Save, Trash2, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
@@ -38,7 +38,7 @@ export default function FaqEndpointAdmin() {
     notes: "faq",
     is_active: true,
     timeout_ms: 30000,
-    markAsFaq: true,
+    markAsFaq: true
   };
   const [form, setForm] = React.useState(emptyForm);
   const [testHtml, setTestHtml] = React.useState("<p>Paste a small sample of your article HTML here…</p>");
@@ -83,7 +83,7 @@ export default function FaqEndpointAdmin() {
       notes: ep.notes || "",
       is_active: ep.is_active !== false,
       timeout_ms: ep.timeout_ms || 30000,
-      markAsFaq: /\bfac|faq\b/i.test((ep.name || "") + " " + (ep.notes || "")),
+      markAsFaq: /\bfac|faq\b/i.test((ep.name || "") + " " + (ep.notes || ""))
     });
     setSuccessMsg("");
     setErrorMsg("");
@@ -135,7 +135,7 @@ export default function FaqEndpointAdmin() {
       headers: headersObj,
       notes,
       is_active: !!form.is_active,
-      timeout_ms: Number(form.timeout_ms) || 30000,
+      timeout_ms: Number(form.timeout_ms) || 30000
     };
 
     try {
@@ -163,7 +163,7 @@ export default function FaqEndpointAdmin() {
     try {
       const { data } = await callFaqEndpoint({
         endpoint_id: form.id || undefined,
-        custom_url: form.id ? undefined : (form.url || undefined),
+        custom_url: form.id ? undefined : form.url || undefined,
         method: form.method,
         headers: form.headersText ? JSON.parse(form.headersText) : undefined,
         html: testHtml,
@@ -173,9 +173,9 @@ export default function FaqEndpointAdmin() {
 
       setTestResult({
         ok: true,
-        faqs: Array.isArray(data?.faqs) ? data.faqs : [],
+        faqs: Array.isArray(data?.faqs) ? data.faqs : []
       });
-      if (!(data?.faqs) || data.faqs.length === 0) {
+      if (!data?.faqs || data.faqs.length === 0) {
         setSuccessMsg("Test succeeded, but no FAQs were returned. Check your endpoint format.");
       }
     } catch (e) {
@@ -192,8 +192,8 @@ export default function FaqEndpointAdmin() {
           <Loader2 className="w-4 h-4 animate-spin" />
           Loading…
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (!isSuperadmin) {
@@ -205,17 +205,17 @@ export default function FaqEndpointAdmin() {
             This page is only available to superadmins.
           </div>
         </Card>
-      </div>
-    );
+      </div>);
+
   }
 
-  const visibleEndpoints = filterFaqOnly
-    ? endpoints.filter((e) => {
-        const n = (e.name || "").toLowerCase();
-        const notes = (e.notes || "").toLowerCase();
-        return e.is_active !== false && (n.includes("faq") || notes.includes("faq"));
-      })
-    : endpoints;
+  const visibleEndpoints = filterFaqOnly ?
+  endpoints.filter((e) => {
+    const n = (e.name || "").toLowerCase();
+    const notes = (e.notes || "").toLowerCase();
+    return e.is_active !== false && (n.includes("faq") || notes.includes("faq"));
+  }) :
+  endpoints;
 
   return (
     <div className="min-h-screen p-6">
@@ -241,8 +241,8 @@ export default function FaqEndpointAdmin() {
               <input
                 type="checkbox"
                 checked={filterFaqOnly}
-                onChange={(e) => setFilterFaqOnly(e.target.checked)}
-              />
+                onChange={(e) => setFilterFaqOnly(e.target.checked)} />
+
               Show FAQ-tagged only
             </label>
           </div>
@@ -260,18 +260,18 @@ export default function FaqEndpointAdmin() {
                 </tr>
               </thead>
               <tbody>
-                {visibleEndpoints.map((ep) => (
-                  <tr key={ep.id} className="border-b last:border-0">
+                {visibleEndpoints.map((ep) =>
+                <tr key={ep.id} className="border-b last:border-0">
                     <td className="py-2 pr-3">
                       <button
-                        className="text-slate-900 hover:underline"
-                        onClick={() => editEndpoint(ep)}
-                      >
+                      className="text-slate-900 hover:underline"
+                      onClick={() => editEndpoint(ep)}>
+
                         {ep.name || "(untitled)"}
                       </button>
-                      {/faq/i.test((ep.name||"") + " " + (ep.notes||"")) && (
-                        <Badge className="ml-2 bg-indigo-100 text-indigo-800">FAQ</Badge>
-                      )}
+                      {/faq/i.test((ep.name || "") + " " + (ep.notes || "")) &&
+                    <Badge className="ml-2 bg-indigo-100 text-indigo-800">FAQ</Badge>
+                    }
                     </td>
                     <td className="py-2 pr-3">{(ep.method || "POST").toUpperCase()}</td>
                     <td className="py-2 pr-3 break-all">{ep.url}</td>
@@ -279,27 +279,27 @@ export default function FaqEndpointAdmin() {
                     <td className="py-2 pr-3 text-slate-600">{ep.notes}</td>
                     <td className="py-2 pr-3">
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => editEndpoint(ep)}>Edit</Button>
+                        <Button size="sm" variant="outline" onClick={() => editEndpoint(ep)} className="bg-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:text-accent-foreground h-9 rounded-md">Edit</Button>
                         <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteEndpoint(ep.id)}
-                          disabled={saving}
-                          className="gap-1"
-                        >
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteEndpoint(ep.id)}
+                        disabled={saving}
+                        className="gap-1">
+
                           <Trash2 className="w-4 h-4" /> Delete
                         </Button>
                       </div>
                     </td>
                   </tr>
-                ))}
-                {visibleEndpoints.length === 0 && (
-                  <tr>
+                )}
+                {visibleEndpoints.length === 0 &&
+                <tr>
                     <td colSpan={6} className="py-6 text-center text-slate-500">
                       No endpoints found.
                     </td>
                   </tr>
-                )}
+                }
               </tbody>
             </table>
           </div>
@@ -308,16 +308,16 @@ export default function FaqEndpointAdmin() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="p-5 bg-white border border-slate-200 text-slate-900">
             <div className="text-lg font-semibold mb-4">{form.id ? "Edit Endpoint" : "New Endpoint"}</div>
-            {errorMsg && (
-              <div className="mb-3 text-sm text-red-600 flex items-center gap-2">
+            {errorMsg &&
+            <div className="mb-3 text-sm text-red-600 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" /> {errorMsg}
               </div>
-            )}
-            {successMsg && (
-              <div className="mb-3 text-sm text-emerald-600 flex items-center gap-2">
+            }
+            {successMsg &&
+            <div className="mb-3 text-sm text-emerald-600 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" /> {successMsg}
               </div>
-            )}
+            }
 
             <div className="space-y-3">
               <div>
@@ -326,8 +326,8 @@ export default function FaqEndpointAdmin() {
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="e.g., N8N FAQ Builder"
-                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                />
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
               </div>
               <div>
                 <Label>URL</Label>
@@ -335,16 +335,16 @@ export default function FaqEndpointAdmin() {
                   value={form.url}
                   onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
                   placeholder="https://your-service.example.com/faq"
-                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                />
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Method</Label>
                   <Select
                     value={form.method}
-                    onValueChange={(v) => setForm((f) => ({ ...f, method: v }))}
-                  >
+                    onValueChange={(v) => setForm((f) => ({ ...f, method: v }))}>
+
                     <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                       <SelectValue />
                     </SelectTrigger>
@@ -362,8 +362,8 @@ export default function FaqEndpointAdmin() {
                     type="number"
                     value={form.timeout_ms}
                     onChange={(e) => setForm((f) => ({ ...f, timeout_ms: e.target.value }))}
-                    className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                  />
+                    className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
                 </div>
               </div>
               <div>
@@ -372,8 +372,8 @@ export default function FaqEndpointAdmin() {
                   value={form.headersText}
                   onChange={(e) => setForm((f) => ({ ...f, headersText: e.target.value }))}
                   rows={6}
-                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                />
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
               </div>
               <div>
                 <Label>Notes</Label>
@@ -382,24 +382,24 @@ export default function FaqEndpointAdmin() {
                   onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                   rows={3}
                   placeholder="Add 'faq' here to make it available in the Generate FAQs modal"
-                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                />
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
               </div>
               <div className="flex items-center gap-4">
                 <label className="text-sm flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={form.markAsFaq}
-                    onChange={(e) => setForm((f) => ({ ...f, markAsFaq: e.target.checked }))}
-                  />
+                    onChange={(e) => setForm((f) => ({ ...f, markAsFaq: e.target.checked }))} />
+
                   Mark as FAQ endpoint
                 </label>
                 <label className="text-sm flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={form.is_active}
-                    onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
-                  />
+                    onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))} />
+
                   Active
                 </label>
               </div>
@@ -422,25 +422,25 @@ export default function FaqEndpointAdmin() {
                 <Textarea value={testHtml} onChange={(e) => setTestHtml(e.target.value)} rows={8} className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
               </div>
               <div className="flex gap-2">
-                <Button onClick={runTest} disabled={testing || (!form.id && !form.url)} className="gap-2 bg-white border border-slate-300 text-slate-900 hover:bg-slate-50" variant="outline">
+                <Button onClick={runTest} disabled={testing || !form.id && !form.url} className="gap-2 bg-white border border-slate-300 text-slate-900 hover:bg-slate-50" variant="outline">
                   {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   Send Test
                 </Button>
-                {testResult?.ok && (
-                  <Badge className="bg-emerald-100 text-emerald-800">OK</Badge>
-                )}
-                {testResult && !testResult.ok && (
-                  <Badge className="bg-red-100 text-red-800">Error</Badge>
-                )}
+                {testResult?.ok &&
+                <Badge className="bg-emerald-100 text-emerald-800">OK</Badge>
+                }
+                {testResult && !testResult.ok &&
+                <Badge className="bg-red-100 text-red-800">Error</Badge>
+                }
               </div>
               <div className="border rounded-md p-3 bg-slate-50 max-h-64 overflow-auto text-xs text-slate-800">
-                {testResult
-                  ? testResult.ok
-                    ? (testResult.faqs?.length
-                        ? <pre className="whitespace-pre-wrap">{JSON.stringify(testResult.faqs, null, 2)}</pre>
-                        : "No FAQs returned.")
-                    : testResult.error
-                  : "Run a test to see the response here."}
+                {testResult ?
+                testResult.ok ?
+                testResult.faqs?.length ?
+                <pre className="whitespace-pre-wrap">{JSON.stringify(testResult.faqs, null, 2)}</pre> :
+                "No FAQs returned." :
+                testResult.error :
+                "Run a test to see the response here."}
               </div>
               <p className="text-xs text-slate-600">
                 The Generate FAQs modal will send html and selected_html to the chosen endpoint and only format the returned FAQs with your selected template.
@@ -449,6 +449,6 @@ export default function FaqEndpointAdmin() {
           </Card>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }

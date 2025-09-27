@@ -2,424 +2,433 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { ImageLibraryItem } from "@/api/entities";
 import { Username } from "@/api/entities";
+import { User } from "@/api/entities"; // Added import
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Search, Plus, Image, Copy, Edit, Check, Trash2, Info, Loader2, Library, PlusCircle, CheckSquare, X, User } from "lucide-react";
+import { Search, Loader2, X, Trash2, Copy, Check, Edit, CheckSquare, Sparkles, Download, Plus } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { saveImageFromString } from "@/api/functions";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
-function UsernameSelect({ selectedUsername, onUsernameChange, allUsernames, className, collapsed = false }) {
-  return (
-    <Select value={selectedUsername} onValueChange={onUsernameChange}>
-      {/* Trigger */}
-      <SelectTrigger
-        className={[
-          collapsed
-            ? "w-10 px-0 justify-center"
-            : "w-full px-3",
-          "h-10 bg-white text-slate-900 border border-slate-300 rounded-md shadow-sm",
-          "focus:ring-2 focus:ring-blue-300 focus:outline-none [&>svg]:text-slate-600 [&>svg]:opacity-80",
-          className || ""
-        ].join(" ")}
-        aria-label="Filter by username"
-        title={collapsed ? "Filter by username" : undefined}
-      >
-        {collapsed ? (
-          <div className="flex items-center justify-center w-full">
-            <User className="w-4 h-4 text-slate-600" />
-            {/* No text when collapsed */}
-          </div>
-        ) : (
-          <SelectValue placeholder="All Usernames" />
-        )}
-      </SelectTrigger>
-
-      {/* Dropdown content */}
-      <SelectContent className="z-[1000] bg-white text-slate-900 border border-slate-200 shadow-2xl rounded-md">
-        {allUsernames.map((opt) => (
-          <SelectItem
-            key={opt.value}
-            value={opt.value}
-            className="hover:bg-blue-50 focus:bg-blue-50 text-slate-900 cursor-pointer"
-          >
-            {opt.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-export default function ImageLibraryModal({
-  isOpen,
-  onClose,
-  onInsert,
-}) {
-  // Force single view: library only
-  const [currentView, setCurrentView] = React.useState("library");
-  const [loading, setLoading] = useState(false);
+export default function ImageLibraryModal({ isOpen, onClose, onInsert, usernameFilter: preselectedUsername }) {
+  const [loading, setLoading] = useState(true);
   const [allImages, setAllImages] = useState([]);
-  const [allUsernames, setAllUsernames] = useState([{ value: "all", label: "All Usernames" }]);
-
-  // Filtering and Selection State
+  const [allUsernames, setAllUsernames] = useState([]); // This will now store Username objects
   const [query, setQuery] = useState("");
-  const [usernameFilter, setUsernameFilter] = useState("all");
+  const [localUsernameFilter, setLocalUsernameFilter] = useState("all"); // Renamed for local control
   const [selectedImage, setSelectedImage] = useState(null);
-  // multiSelectMode and selectedIds are removed as per requirements
-
-  // Details Panel State
   const [editAltText, setEditAltText] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-
-  // Dialog State
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [imageToDelete, setImageToDelete] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [showImportFromUrl, setShowImportFromUrl] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [importAltText, setImportAltText] = useState("");
+  const [importUsername, setImportUsername] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const { consumeTokensForFeature } = useTokenConsumption();
 
-  // NEW: hard-disable any multi-select control in the UI
-  const modalRootRef = React.useRef(null);
-  React.useEffect(() => {
-    const root = modalRootRef.current;
-    if (!root) return;
-    // Hide any button that contains "Select Multiple" (defensive: unknown structure)
-    const btns = root.querySelectorAll('button, [role="button"]');
-    btns.forEach((el) => {
-      const t = (el.textContent || '').trim().toLowerCase();
-      if (t.includes('select multiple')) {
-        el.style.display = 'none';
-      }
-    });
-  }, [isOpen]);
+  const { selectedUsername: globalUsername } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
 
-  // Expanding search state and ref
-  const [searchOpen, setSearchOpen] = useState(false);
-  const searchInputRef = React.useRef(null);
+  // Determine active username filter based on workspace scoping
+  const usernameFilter = useWorkspaceScoping ? (globalUsername || "all") : localUsernameFilter;
 
-  // Focus when search expands
-  useEffect(() => {
-    if (searchOpen) {
-      setTimeout(() => searchInputRef.current?.focus(), 0);
-    }
-  }, [searchOpen]);
-
-  // Data Loading Effect
+  // --- DATA LOADING ---
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [images, usernames] = await Promise.all([
-      ImageLibraryItem.list("-created_date", 500),
-      Username.list()]
-      );
-      setAllImages(Array.isArray(images) ? images : []);
-      const options = [{ value: "all", label: "All Usernames" }, ...(usernames || []).map((r) => ({ value: r.user_name, label: r.user_name }))];
-      setAllUsernames(options);
+      const user = await User.me();
+
+      let availableUsernames = [];
+      if (user.role === 'admin') {
+        availableUsernames = await Username.list();
+      } else {
+        const assignedNames = new Set(user.assigned_usernames || []);
+        if (assignedNames.size > 0) {
+          const all = await Username.list();
+          availableUsernames = (all || []).filter((u) => assignedNames.has(u.user_name));
+        }
+      }
+      setAllUsernames(availableUsernames);
+
+      const allImagesResponse = await ImageLibraryItem.list("-created_date", 1000);
+      let displayImages = [];
+      if (user.role === 'admin') {
+        displayImages = allImagesResponse;
+      } else {
+        const allowedUsernamesSet = new Set(availableUsernames.map((u) => u.user_name));
+        displayImages = (allImagesResponse || []).filter((img) => img.user_name && allowedUsernamesSet.has(img.user_name));
+      }
+      setAllImages(Array.isArray(displayImages) ? displayImages : []);
+
+      // Set default username for import
+      if (availableUsernames && availableUsernames.length > 0) {
+        setImportUsername(availableUsernames[0].user_name);
+      }
     } catch (error) {
-      toast.error("Could not load image library.");
+      toast.error("Failed to load image library.");
+      console.error(error);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isOpen) { // Simplified condition as currentView is always 'library'
+    if (isOpen) {
       loadData();
-    }
-    if (!isOpen) {
-      // Reset state on close
+      if (preselectedUsername) {
+        setLocalUsernameFilter(preselectedUsername); // Use local filter for preselected
+      }
+    } else {
       setSelectedImage(null);
-      // Removed setMultiSelectMode(false) and setSelectedIds(new Set())
       setQuery("");
-      setSearchOpen(false); // Reset search state on close
+      setLocalUsernameFilter("all"); // Reset local filter
+      setShowImportFromUrl(false);
+      setImportUrl("");
+      setImportAltText("");
     }
-  }, [isOpen, loadData]); // Removed currentView from dependencies
+  }, [isOpen, loadData, preselectedUsername]);
 
-  // Memoized Filtering Logic
-  const filtered = useMemo(() => {
-    let list = allImages;
-    if (usernameFilter !== "all") {
-      list = list.filter((i) => i.user_name === usernameFilter);
+  // --- FILTERING ---
+  const filteredImages = useMemo(() => {
+    let items = allImages;
+    if (usernameFilter !== 'all') { // Use the dynamically determined usernameFilter
+      items = items.filter((img) => img.user_name === usernameFilter);
     }
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter((i) => (i.alt_text || "").toLowerCase().includes(q));
+    if (query) {
+      const lowerQuery = query.toLowerCase();
+      items = items.filter((img) => (img.alt_text || '').toLowerCase().includes(lowerQuery));
     }
-    return list;
-  }, [allImages, query, usernameFilter]);
+    return items;
+  }, [allImages, query, usernameFilter]); // Dependency includes the derived usernameFilter
 
-  // Handlers
-  const handleSelectImage = (img) => {
-    // Simplified to always single-select behavior
-    setSelectedImage(img);
-    setEditAltText(img.alt_text || "");
+  // --- HANDLERS ---
+  const handleSelectImage = (image) => {
+    setSelectedImage(image);
+    setEditAltText(image.alt_text || "");
   };
 
   const handleUpdateAltText = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage || editAltText === selectedImage.alt_text) return;
     setIsUpdating(true);
     try {
       await ImageLibraryItem.update(selectedImage.id, { alt_text: editAltText });
-      setAllImages((imgs) => imgs.map((i) => i.id === selectedImage.id ? { ...i, alt_text: editAltText } : i));
-      setSelectedImage((prev) => prev ? { ...prev, alt_text: editAltText } : null);
-      toast.success("Alt text updated.");
-    } catch (e) {
+      toast.success("Alt text updated!");
+      setSelectedImage((prev) => ({ ...prev, alt_text: editAltText }));
+      setAllImages((prev) => prev.map((img) => img.id === selectedImage.id ? { ...img, alt_text: editAltText } : img));
+    } catch (error) {
       toast.error("Failed to update alt text.");
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const handleInsert = (imgToInsert) => {
-    const altText = imgToInsert && selectedImage && imgToInsert.id === selectedImage.id ? editAltText : imgToInsert?.alt_text || "";
-    // Added specific inline styles to prevent text wrap on image alignment when inserted
-    const html = `<img src="${imgToInsert.url}" alt="${altText}" style="max-width:100%;height:auto;border-radius:8px;margin:1rem 0;display: block;clear: both;" />`;
-    onInsert(html);
-    // Always close after inserting a single image
-    onClose();
-  };
-
-  // handleInsertMultiple function removed as multi-select is disabled
-
-  const handleDeleteClick = (img) => {
-    setImageToDelete(img);
+  const handleDeleteImage = () => {
+    if (!selectedImage) return;
     setShowDeleteConfirm(true);
   };
 
   const confirmDelete = async () => {
-    if (!imageToDelete) return;
+    if (!selectedImage) return;
+    setIsDeleting(true);
     try {
-      await ImageLibraryItem.delete(imageToDelete.id);
-      setAllImages((imgs) => imgs.filter((i) => i.id !== imageToDelete.id));
-      if (selectedImage?.id === imageToDelete.id) setSelectedImage(null);
+      await ImageLibraryItem.delete(selectedImage.id);
       toast.success("Image deleted.");
-    } catch (e) {
+      setAllImages((prev) => prev.filter((img) => img.id !== selectedImage.id));
+      setSelectedImage(null);
+    } catch (error) {
       toast.error("Failed to delete image.");
     } finally {
+      setIsDeleting(false);
       setShowDeleteConfirm(false);
-      setImageToDelete(null);
     }
   };
 
-  return (
-    <Dialog open={!!isOpen} onOpenChange={onClose}>
-      <DialogContent
-        ref={modalRootRef}
-        className="max-w-[1200px] w-[96vw] h-[86vh] overflow-hidden p-0 rounded-2xl border border-slate-800 bg-[#0b1630] text-slate-100 shadow-2xl">
+  const handleCopyUrl = () => {
+    if (!selectedImage) return;
+    navigator.clipboard.writeText(selectedImage.url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-        <div className="grid grid-cols-12 h-full">
-          {/* LEFT PANE: Library only (dark) */}
-          <div className="col-span-7 lg:col-span-7 xl:col-span-7 min-w-0 min-h-0 flex flex-col">
-            {/* Header - remove tabs, show simple label */}
-            <div className="bg-slate-50 pt-5 px-5">
-              <div className="inline-flex items-center rounded-full bg-white text-slate-900 px-4 py-2 border border-white/10 text-sm font-medium shadow-sm">
-                Library
+  const handleInsert = async () => {
+    if (!selectedImage) return;
+
+    const result = await consumeTokensForFeature('image_library_access');
+    if (!result.success) {
+      return; // Error toast is handled by the hook
+    }
+    
+    // Pass the entire selected image object to the onInsert callback.
+    onInsert(selectedImage);
+    onClose();
+  };
+
+  const handleImportFromUrl = async () => {
+    if (!importUrl.trim() || !importUsername.trim()) {
+      toast.error("Please provide a URL and select a username.");
+      return;
+    }
+
+    // Prevent multiple clicks by checking if already importing
+    if (isImporting) return;
+
+    const result = await consumeTokensForFeature('image_library_access');
+    if (!result.success) {
+      return; // Stop if tokens are insufficient
+    }
+
+    setIsImporting(true);
+    try {
+      const { data } = await saveImageFromString({
+        value: importUrl.trim(),
+        user_name: importUsername,
+        alt_text: importAltText.trim() || "Imported image",
+        source: "upload"
+      });
+
+      if (data.success) {
+        toast.success("Image imported successfully!");
+        setImportUrl("");
+        setImportAltText("");
+        setShowImportFromUrl(false);
+        await loadData(); // Refresh the image list
+      } else {
+        toast.error(data.error || "Failed to import image.");
+      }
+    } catch (error) {
+      toast.error("Failed to import image.");
+      console.error(error);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // --- RENDER ---
+  return (
+    <>
+      <Dialog open={!!isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-7xl w-[90vw] h-[85vh] p-0 flex flex-col bg-slate-50 text-slate-900 rounded-lg shadow-2xl">
+          {/* Header */}
+          <div className="flex-shrink-0 p-4 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-800">Image Library</h2>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setShowImportFromUrl(!showImportFromUrl)} className="bg-blue-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-green-700">
+
+
+                <Download className="w-4 h-4 mr-2" />
+                Import from URL
+              </Button>
+              <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-500 hover:bg-slate-200 hover:text-slate-800">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Import from URL Section */}
+          {showImportFromUrl &&
+          <div className="bg-slate-50 p-4 flex-shrink-0 border-b border-slate-200">
+              <div className="space-y-3">
+                <h3 className="font-medium text-slate-800">Import Image from URL</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Input
+                  placeholder="https://example.com/image.jpg"
+                  value={importUrl}
+                  onChange={(e) => setImportUrl(e.target.value)}
+                  className="bg-white border-slate-300"
+                  disabled={isImporting} />
+
+                  <Input
+                  placeholder="Alt text (optional)"
+                  value={importAltText}
+                  onChange={(e) => setImportAltText(e.target.value)}
+                  className="bg-white border-slate-300"
+                  disabled={isImporting} />
+
+                  <Select value={importUsername} onValueChange={setImportUsername} disabled={isImporting}>
+                    <SelectTrigger className="bg-white border-slate-300">
+                      <SelectValue placeholder="Select username" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allUsernames.map((u) => // Modified: Removed filter and changed accessors
+                    <SelectItem key={u.id} value={u.user_name}>
+                          {u.display_name || u.user_name}
+                        </SelectItem>
+                    )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                  onClick={handleImportFromUrl}
+                  disabled={isImporting || !importUrl.trim() || !importUsername.trim()}
+                  className="bg-purple-900 text-primary-foreground px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-green-700">
+
+
+                    {isImporting ?
+                  <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Importing...
+                      </> :
+
+                  <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Import Image
+                      </>
+                  }
+                  </Button>
+                  <Button
+                  variant="outline"
+                  onClick={() => setShowImportFromUrl(false)}
+                  className="bg-white border-slate-300"
+                  disabled={isImporting}>
+
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          }
+
+          {/* Main Content (Grid + Editor) */}
+          <div className="flex-1 flex min-h-0">
+            {/* Left: Scrollable Grid */}
+            <div className="w-2/3 border-r border-slate-200 flex flex-col">
+              {/* Toolbar - FIXED BACKGROUND COLOR */}
+              <div className="flex-shrink-0 p-3 border-b border-slate-200 flex items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Search images by alt text..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="pl-9 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" />
+
+                </div>
+                {/* Conditionally render username filter based on feature flag */}
+                {!useWorkspaceScoping && (
+                  <Select value={localUsernameFilter} onValueChange={setLocalUsernameFilter} disabled={!!preselectedUsername}>
+                    <SelectTrigger className="w-[180px] bg-white border-slate-300 text-slate-900">
+                      <SelectValue placeholder="All Usernames" /> {/* Added placeholder */}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Usernames</SelectItem> {/* Manually added 'All' option */}
+                      {allUsernames.map((u) => // Modified: Changed accessors
+                      <SelectItem key={u.id} value={u.user_name}>
+                          {u.display_name || u.user_name}
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Scrollable Image Grid */}
+              <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                {loading ?
+                <div className="flex items-center justify-center h-full">
+                    <Loader2 className="h-8 w-8 text-slate-400 animate-spin" />
+                  </div> :
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {filteredImages.map((image) =>
+                  <button
+                    key={image.id}
+                    onClick={() => handleSelectImage(image)}
+                    className={cn(
+                      "aspect-w-16 aspect-h-10 rounded-lg overflow-hidden group relative focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+                      selectedImage?.id === image.id && "ring-2 ring-offset-2 ring-blue-500"
+                    )}>
+
+                        <img src={image.url} alt={image.alt_text || ""} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <p className="text-white text-xs p-2 text-center truncate">{image.alt_text || "No alt text"}</p>
+                        </div>
+                        {selectedImage?.id === image.id &&
+                    <div className="absolute inset-0 bg-blue-500/30 flex items-center justify-center">
+                            <CheckSquare className="h-8 w-8 text-white" />
+                          </div>
+                    }
+                      </button>
+                  )}
+                  </div>
+                }
               </div>
             </div>
 
-            {/* Sticky filter bar */}
-            <div className="bg-slate-50 p-5 pt-3 sticky top-0 z-10 border-b border-white/10">
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch">
-                  {/* Expanding Search */}
-                  <div className={["transition-all duration-300", "flex-1"].join(" ")}>
-                    <div
-                      className={[
-                        "flex items-center rounded-full border transition-all duration-300 overflow-hidden",
-                        searchOpen
-                          ? "bg-white text-slate-900 border-slate-300 pl-3 pr-2 w-full"
-                          : "bg-white/90 text-slate-900 border-slate-300 pl-2 pr-2 w-10"
-                      ].join(" ")}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") {
-                          setSearchOpen(false);
-                        }
-                      }}
-                    >
-                      <button
-                        type="button"
-                        aria-label="Search images"
-                        className="h-8 w-8 flex items-center justify-center text-slate-600 hover:text-slate-800"
-                        onClick={() => setSearchOpen(true)}
-                        tabIndex={0}
-                      >
-                        <Search className="w-4 h-4" />
-                      </button>
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        placeholder="Search images..."
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        className={[
-                          "bg-transparent outline-none text-sm",
-                          "transition-all duration-300",
-                          searchOpen ? "w-full ml-2 opacity-100" : "w-0 ml-0 opacity-0 pointer-events-none"
-                        ].join(" ")}
-                      />
-                      {searchOpen && (
-                        <button
-                          type="button"
-                          aria-label="Clear search"
-                          className="h-8 w-8 ml-1 flex items-center justify-center text-slate-500 hover:text-slate-700"
-                          onClick={() => {
-                            setQuery("");
-                            setSearchOpen(false);
-                          }}
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
+            {/* Right: Editor Pane */}
+            <div className="w-1/3 flex flex-col">
+              {selectedImage ?
+              <>
+                  <div className="flex-1 p-6 flex flex-col gap-4 min-h-0">
+                    <div className="aspect-w-16 aspect-h-10 rounded-md overflow-hidden ring-1 ring-slate-200">
+                      <img src={selectedImage.url} alt="Selected" className="w-full h-full object-contain bg-slate-100" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="alt-text" className="font-semibold">Alt Text</Label>
+                      <Textarea
+                      id="alt-text"
+                      value={editAltText}
+                      onChange={(e) => setEditAltText(e.target.value)}
+                      onBlur={handleUpdateAltText}
+                      placeholder="Describe the image..."
+                      className="h-28 bg-white border-slate-300" />
+
                     </div>
                   </div>
-
-                  {/* Username filter shrinks to icon when search is open */}
-                  <UsernameSelect
-                    selectedUsername={usernameFilter}
-                    onUsernameChange={setUsernameFilter}
-                    allUsernames={allUsernames}
-                    collapsed={searchOpen}
-                    className={searchOpen ? "w-10 flex-none" : "min-w-[180px]"}
-                  />
-                </div>
-              </div>
-
-            {/* Library grid */}
-            <div className="flex-1 min-h-0">
-                <ScrollArea className="h-full">
-                  <div className="bg-slate-50 pr-4 p-5 grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {loading ?
-                  Array.from({ length: 12 }).map((_, i) =>
-                  <div key={i} className="aspect-[4/3] rounded-xl bg-slate-200 animate-pulse" />
-                  ) :
-                  filtered.length > 0 ?
-                  filtered.map((img) => {
-                    const isSelected = selectedImage?.id === img.id;
-                    return (
-                      <div
-                        key={img.id}
-                        onClick={() => handleSelectImage(img)}
-                        className={[
-                        "group relative rounded-xl overflow-hidden cursor-pointer aspect-[4/3] transition-all",
-                        "ring-1 ring-slate-200 hover:ring-blue-300/50 hover:shadow-xl",
-                        isSelected ? "outline outline-2 outline-blue-300 shadow-lg" : ""].
-                        join(" ")}>
-
-                            <img
-                          src={img.url}
-                          alt={img.alt_text || "Image"}
-                          loading="lazy"
-                          className="block w-full h-full object-cover transition-transform duration-200 group-hover:scale-[1.02]" />
-
-                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 via-black/10 to-transparent">
-                              <div className="text-white/90 text-xs font-medium line-clamp-2">
-                                {img.alt_text || "No alt text"}
-                              </div>
-                            </div>
-                            <Button
-                          size="sm"
-                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-slate-900 hover:bg-white shadow-lg"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleInsert(img);
-                          }}>
-
-                              <Plus className="w-4 h-4 mr-1" /> Insert
-                            </Button>
-                          </div>);
-
-                  }) :
-
-                  <div className="col-span-full text-center text-slate-500 py-12">
-                        No images found for this filter.
-                      </div>
-                  }
-                  </div>
-                </ScrollArea>
-              </div>
-
-          </div>
-
-          {/* RIGHT PANE: Details (light) */}
-          <div className="col-span-5 lg:col-span-5 xl:col-span-5 bg-white text-slate-900 border-l border-slate-200 flex flex-col">
-            {selectedImage ?
-            <>
-                <div className="p-5 border-b border-slate-200">
-                  <h3 className="font-semibold text-slate-900">Image Details</h3>
-                  <p className="text-sm text-slate-500">Preview, edit alt text, or insert into your post.</p>
-                </div>
-
-                <div className="flex-1 p-5 space-y-4 overflow-y-auto">
-                  <div className="rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm">
-                    <img src={selectedImage.url} alt="Selected" className="w-full object-contain" />
-                  </div>
-                  <div>
-                    <Label htmlFor="alt-text" className="text-slate-700">Alt Text (for SEO)</Label>
-                    <Textarea
-                    id="alt-text"
-                    value={editAltText}
-                    onChange={(e) => setEditAltText(e.target.value)}
-                    className="bg-white border-slate-300 min-h-[90px]"
-                    placeholder="Describe the image briefly for accessibility and SEO" />
-
-                  </div>
-                </div>
-
-                <div className="p-5 border-t border-slate-200 flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <Button
-                    onClick={handleUpdateAltText}
-                    disabled={isUpdating}
-                    className="flex-1 bg-slate-900 hover:bg-slate-800 text-white">
-
-                      {isUpdating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving</> : "Save Alt Text"}
+                  <div className="flex-shrink-0 p-4 border-t border-slate-200 bg-slate-100/50 space-y-3">
+                    <Button onClick={handleInsert} className="bg-blue-900 text-primary-foreground px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 w-full hover:bg-blue-700">
+                      <Sparkles className="mr-2 h-4 w-4" /> Insert Image
                     </Button>
-                    <Button
-                    onClick={() => handleInsert(selectedImage)}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700">
-
-                      <PlusCircle className="w-4 h-4 mr-2" /> Insert into Post
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" onClick={handleCopyUrl} className="bg-white border-slate-300">
+                        {copied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Copy className="mr-2 h-4 w-4" />}
+                        {copied ? 'Copied!' : 'Copy URL'}
+                      </Button>
+                      <Button variant="destructive" onClick={handleDeleteImage} className="bg-purple-900 text-destructive-foreground px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-red-700">
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                      </Button>
+                    </div>
                   </div>
-                  <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-center border-slate-300 text-slate-700 hover:bg-slate-100"
-                  onClick={() => handleDeleteClick(selectedImage)}>
+                </> :
 
-                    <Trash2 className="w-4 h-4 mr-2 text-red-500" /> Delete from Library
-                  </Button>
+              <div className="flex items-center justify-center h-full text-slate-400">
+                  <p>Select an image to edit</p>
                 </div>
-              </> :
-
-            <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                <Image className="w-12 h-12 text-slate-300 mb-3" />
-                <h4 className="font-semibold text-slate-800">Select an image</h4>
-                <p className="text-sm text-slate-500">Choose an image from the library to see details, edit, or insert it.</p>
-              </div>
-            }
+              }
+            </div>
           </div>
-        </div>
+        </DialogContent>
+      </Dialog>
 
-        {/* Delete confirm dialog (unchanged) */}
-        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete this image?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete the image from your library. This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </DialogContent>
-    </Dialog>);
-
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the image from your library. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-red-600 hover:bg-red-700">
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }

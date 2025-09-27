@@ -1,18 +1,21 @@
+
 import React, { useEffect, useState, useRef } from "react";
 import { agentSDK } from "@/agents";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Megaphone, Loader2, Check, Copy, Wand2, RefreshCw } from "lucide-react";
+import { Megaphone, Loader2, Wand2, RefreshCw } from "lucide-react";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 
 export default function AffilifyModal({ isOpen, onClose, originalHtml, selectedText, onApply, onInsert }) {
   const [conversation, setConversation] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [outputHtml, setOutputHtml] = useState("");
-  const [copied, setCopied] = useState(false);
+  // removed copied state
   const [tone, setTone] = useState("neutral");
   const subRef = useRef(null);
+  const { consumeTokensForFeature } = useTokenConsumption();
 
   const tonePrompts = {
     neutral: "Keep tone neutral and objective.",
@@ -39,12 +42,19 @@ export default function AffilifyModal({ isOpen, onClose, originalHtml, selectedT
     setConversation(null);
     setIsRunning(false);
     setOutputHtml("");
-    setCopied(false);
+    // removed setCopied(false);
     setTone("neutral");
   };
 
   const runAffilify = async () => {
     if (isRunning) return;
+
+    // Check and consume tokens before starting Affilify
+    const result = await consumeTokensForFeature('ai_affilify');
+    if (!result.success) {
+      return; // Error toast is handled by the hook
+    }
+
     setIsRunning(true);
     setOutputHtml("");
 
@@ -118,12 +128,7 @@ export default function AffilifyModal({ isOpen, onClose, originalHtml, selectedT
     onClose();
   };
 
-  const handleCopy = async () => {
-    if (!outputHtml) return;
-    await navigator.clipboard.writeText(outputHtml);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+  // removed handleCopy function
 
   const handleClose = () => {
     cleanup();
@@ -182,8 +187,7 @@ export default function AffilifyModal({ isOpen, onClose, originalHtml, selectedT
           <div className="flex flex-wrap gap-3">
             <Button
               onClick={runAffilify}
-              disabled={isRunning} className="bg-gradient-to-r text-slate-100 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-primary/90 h-10 flex-1 from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-
+              disabled={isRunning} className="bg-gradient-to-r text-slate-100 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 flex-1 from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
 
               {isRunning ?
               <>
@@ -207,20 +211,11 @@ export default function AffilifyModal({ isOpen, onClose, originalHtml, selectedT
               <RefreshCw className="w-4 h-4 mr-2" />
               Re-run
             </Button>
-            <Button
-              onClick={handleCopy}
-              disabled={!outputHtml || isRunning}
-              variant="outline"
-              className="flex-none bg-white border-slate-300 text-slate-700 hover:bg-slate-100">
-
-              {copied ? <Check className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
-              Copy HTML
-            </Button>
+            {/* removed Copy HTML button */}
             <div className="flex-1" />
             <Button
               onClick={handleApply}
-              disabled={!outputHtml || isRunning}
-              className="flex-none bg-cyan-600 hover:bg-cyan-700 text-white">
+              disabled={!outputHtml || isRunning} className="bg-blue-900 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 flex-none hover:bg-cyan-700">
 
               Apply to Editor
             </Button>

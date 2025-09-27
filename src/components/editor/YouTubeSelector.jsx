@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { YouTubeVideo } from "@/api/entities";
 import { User } from "@/api/entities";
@@ -6,8 +7,8 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle } from
+"@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +18,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { youtubeSearch } from "@/api/functions";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useWorkspace } from "@/components/hooks/useWorkspace"; // Added
+import useFeatureFlag from "@/components/hooks/useFeatureFlag"; // Added
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,15 +29,15 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AlertDialogTitle } from
+"@/components/ui/alert-dialog";
 
 export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
   const [videos, setVideos] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedUsername, setSelectedUsername] = useState("all");
+  const [localSelectedUsername, setLocalSelectedUsername] = useState("all"); // Renamed
   const [availableUsernames, setAvailableUsernames] = useState([]);
 
   // URL Tab State
@@ -56,6 +60,14 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
   // Assignment for saving searched videos
   const [assignmentUsernames, setAssignmentUsernames] = useState([]);
   const [assignToUsername, setAssignToUsername] = useState("");
+  const { consumeTokensForFeature } = useTokenConsumption();
+
+  // Added hooks for workspace context and feature flag
+  const { selectedUsername: globalUsername } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
+
+  // Determine active username filter based on workspace scoping
+  const selectedUsername = useWorkspaceScoping ? (globalUsername || "all") : localSelectedUsername;
 
   const loadVideos = useCallback(async (user, allowedUsernames) => {
     setIsLoading(true);
@@ -66,7 +78,7 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
       // UPDATED: if allowedUsernames provided (assigned list), restrict to those; else allow all
       if (Array.isArray(allowedUsernames) && allowedUsernames.length > 0) {
         const allow = new Set(allowedUsernames);
-        filteredVideos = allVideos.filter(video => video.user_name && allow.has(video.user_name));
+        filteredVideos = allVideos.filter((video) => video.user_name && allow.has(video.user_name));
       } else {
         filteredVideos = allVideos;
       }
@@ -87,21 +99,26 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
       setCurrentUser(user);
 
       const allUsernames = await Username.list("-created_date").catch(() => []);
-      const activeUsernames = (allUsernames || []).filter(u => u.is_active !== false && !!u.user_name);
-      const activeUsernameSet = new Set(activeUsernames.map(u => u.user_name));
+      const activeUsernames = (allUsernames || []).filter((u) => u.is_active !== false && !!u.user_name);
+      const activeUsernameSet = new Set(activeUsernames.map((u) => u.user_name));
 
       // UPDATED: show only assigned usernames if present (even for admins/superadmins)
       const assigned = Array.isArray(user.assigned_usernames) ? user.assigned_usernames : [];
       let visibleUsernames = [];
       if (assigned.length > 0) {
-        visibleUsernames = assigned.filter(name => activeUsernameSet.has(name)).sort();
+        visibleUsernames = assigned.filter((name) => activeUsernameSet.has(name)).sort();
       } else {
         // fallback to all active usernames if none assigned
         visibleUsernames = Array.from(activeUsernameSet).sort();
       }
 
       setAssignmentUsernames(visibleUsernames);
-      setAssignToUsername(visibleUsernames[0] || "");
+      // Set assignToUsername based on workspace scoping or the first available username
+      if (useWorkspaceScoping) {
+          setAssignToUsername(globalUsername || "");
+      } else {
+          setAssignToUsername(visibleUsernames[0] || "");
+      }
       setAvailableUsernames(visibleUsernames);
 
       await loadVideos(user, visibleUsernames);
@@ -111,7 +128,7 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
     } finally {
       setIsLoading(false);
     }
-  }, [loadVideos]);
+  }, [loadVideos, useWorkspaceScoping, globalUsername]);
 
   useEffect(() => {
     if (isOpen) {
@@ -122,7 +139,7 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
       setVideoTitle("");
       setIsUrlValid(false);
       setEditingVideo(null); // Reset editing state on close
-      setSelectedUsername("all"); // Reset selected username on close
+      setLocalSelectedUsername("all"); // Reset selected username on close
       setYtQuery(""); // Reset YouTube search query
       setYtResults([]); // Reset YouTube search results
       setIsSearching(false); // Reset YouTube search loading state
@@ -157,7 +174,7 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
   const extractVideoId = (url) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
-    const videoId = (match && match[2].length === 11) ? match[2] : null;
+    const videoId = match && match[2].length === 11 ? match[2] : null;
     setIsUrlValid(!!videoId);
     return videoId;
   };
@@ -170,7 +187,7 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
   const handleEmbedFromUrl = async () => {
     const videoId = extractVideoId(url);
     if (videoId) {
-      if (!assignToUsername) {
+      if (!useWorkspaceScoping && !assignToUsername && assignmentUsernames.length > 0) { // Check if dropdown was present and selection needed
         toast.error("You must have a username assigned to add videos.");
         return;
       }
@@ -182,7 +199,7 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
           title: videoTitle || "YouTube Video",
           video_id: videoId,
           url: url.trim(),
-          user_name: assignToUsername,
+          user_name: useWorkspaceScoping ? (globalUsername || "unknown") : (assignToUsername || "unknown") // If no assignment dropdown and not workspace scoped, use "unknown"
         };
 
         await YouTubeVideo.create(payload);
@@ -210,23 +227,23 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
     if (!editingVideo) return;
 
     try {
-        await YouTubeVideo.update(editingVideo.id, {
-            title: editedTitle,
-            description: editedDescription,
-        });
-        toast.success("Video details updated and inserted!");
-        // Update the video in the local state immediately
-        setVideos((prev) =>
-          prev.map((vid) =>
-            vid.id === editingVideo.id
-              ? { ...vid, title: editedTitle, description: editedDescription }
-              : vid
-          )
-        );
-        insertVideoHtml(editingVideo.video_id, editedTitle);
+      await YouTubeVideo.update(editingVideo.id, {
+        title: editedTitle,
+        description: editedDescription
+      });
+      toast.success("Video details updated and inserted!");
+      // Update the video in the local state immediately
+      setVideos((prev) =>
+      prev.map((vid) =>
+      vid.id === editingVideo.id ?
+      { ...vid, title: editedTitle, description: editedDescription } :
+      vid
+      )
+      );
+      insertVideoHtml(editingVideo.video_id, editedTitle);
     } catch (error) {
-        console.error("Error updating video details:", error);
-        toast.error("Failed to update video details. Please try again.");
+      console.error("Error updating video details:", error);
+      toast.error("Failed to update video details. Please try again.");
     }
   };
 
@@ -256,7 +273,7 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
   };
 
   const handleInsertSearchAndSave = async (res) => {
-    if (!assignToUsername) {
+    if (!useWorkspaceScoping && !assignToUsername) {
       toast.error("You must have a username assigned to save videos.");
       return;
     }
@@ -266,7 +283,7 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
       url: res.url,
       thumbnail: res.thumbnail,
       description: res.description,
-      user_name: assignToUsername,
+      user_name: useWorkspaceScoping ? (globalUsername || "unknown") : assignToUsername
     };
 
     try {
@@ -290,6 +307,11 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
     setIsSearching(true);
     setYtResults([]); // Clear previous results
     try {
+      const tokenResult = await consumeTokensForFeature('ai_youtube');
+      if (!tokenResult.success) {
+        setIsSearching(false);
+        return;
+      }
       const { data } = await youtubeSearch({ q: ytQuery.trim(), maxResults: ytMax });
       setYtResults(data?.results || []);
       if ((data?.results || []).length === 0) {
@@ -302,13 +324,13 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
     setIsSearching(false);
   };
 
-  const filteredLibraryVideos = videos
-    .filter(video =>
-      selectedUsername === "all" || video.user_name === selectedUsername
-    )
-    .filter(video =>
-      video.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      video.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredLibraryVideos = videos.
+  filter((video) =>
+  selectedUsername === "all" || video.user_name === selectedUsername
+  ).
+  filter((video) =>
+  video.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  video.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -334,93 +356,93 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder="Search videos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                />
+                    placeholder="Search videos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
               </div>
-              {(availableUsernames.length > 0) && (
-                 <div>
+              {!useWorkspaceScoping && availableUsernames.length > 0 && // Conditionally rendered
+                <div>
                     <Label className="sr-only">Filter by Username</Label>
-                    <Select value={selectedUsername} onValueChange={setSelectedUsername}>
+                    <Select value={localSelectedUsername} onValueChange={setLocalSelectedUsername}> {/* Uses localSelectedUsername */}
                         <SelectTrigger className="bg-white border-slate-300 text-slate-900">
-                            <SelectValue placeholder="Filter by username..."/>
+                            <SelectValue placeholder="Filter by username..." />
                         </SelectTrigger>
                         <SelectContent className="bg-white border-slate-200 text-slate-900">
                             <SelectItem value="all" className="hover:bg-slate-100">
                                 All Usernames
                             </SelectItem>
-                            {availableUsernames.map(username => (
-                                <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
-                            ))}
+                            {availableUsernames.map((username) =>
+                      <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
+                      )}
                         </SelectContent>
                     </Select>
                 </div>
-              )}
+                }
             </div>
 
             <div className="max-h-96 overflow-y-auto">
-              {isLoading ? (
-                <div className="text-center py-8 text-slate-500">Loading videos...</div>
-              ) : filteredLibraryVideos.length === 0 ? (
+              {isLoading ?
+                <div className="text-center py-8 text-slate-500">Loading videos...</div> :
+                filteredLibraryVideos.length === 0 ?
                 <div className="text-center py-8 text-slate-500">
                   <Video className="w-12 h-12 mx-auto mb-4 text-slate-300" />
                   <p>No videos found for the selected criteria.</p>
-                </div>
-              ) : (
+                </div> :
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredLibraryVideos.map((video) => (
-                    <div key={video.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3">
+                  {filteredLibraryVideos.map((video) =>
+                  <div key={video.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3">
                       <img
-                        src={video.thumbnail}
-                        alt={video.title}
-                        className="w-full h-32 object-cover rounded"
-                      />
-                      {editingVideo?.id === video.id ? (
-                        <div className="space-y-3">
+                      src={video.thumbnail}
+                      alt={video.title}
+                      className="w-full h-32 object-cover rounded" />
+
+                      {editingVideo?.id === video.id ?
+                    <div className="space-y-3">
                           <Input
-                            placeholder="Video Title"
-                            value={editedTitle}
-                            onChange={(e) => setEditedTitle(e.target.value)}
-                            className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                          />
+                        placeholder="Video Title"
+                        value={editedTitle}
+                        onChange={(e) => setEditedTitle(e.target.value)}
+                        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
                           <Textarea
-                            placeholder="Video Description"
-                            value={editedDescription}
-                            onChange={(e) => setEditedDescription(e.target.value)}
-                            rows={3}
-                            className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                          />
+                        placeholder="Video Description"
+                        value={editedDescription}
+                        onChange={(e) => setEditedDescription(e.target.value)}
+                        rows={3}
+                        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
                           <div className="flex gap-2">
-                            <Button onClick={handleCancelEdit} variant="ghost" size="sm" className="w-full text-slate-700 hover:bg-slate-200"><X className="w-4 h-4"/></Button>
-                            <Button onClick={handleUpdateAndInsert} size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"><Save className="w-4 h-4 mr-1"/>Save & Insert</Button>
+                            <Button onClick={handleCancelEdit} variant="ghost" size="sm" className="w-full text-slate-700 hover:bg-slate-200"><X className="w-4 h-4" /></Button>
+                            <Button onClick={handleUpdateAndInsert} size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"><Save className="w-4 h-4 mr-1" />Save & Insert</Button>
                           </div>
-                        </div>
-                      ) : (
-                        <>
+                        </div> :
+
+                    <>
                           <h4 className="font-medium line-clamp-2 h-12 text-slate-800">{video.title}</h4>
                           <p className="text-sm text-slate-600 line-clamp-2 h-10">{video.description}</p>
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-slate-500">Username: {video.user_name}</span>
                             <div className="flex gap-1">
-                              <Button onClick={() => handleInsertFromLibrary(video)} size="sm" className="bg-red-600 hover:bg-red-700 text-white"><Plus className="w-4 h-4 mr-1"/>Insert</Button>
-                              <Button onClick={() => handleStartEdit(video)} size="sm" variant="outline" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"><Edit className="w-4 h-4 mr-1"/>Edit</Button>
-                              <Button onClick={() => handleDeleteVideo(video)} size="sm" variant="destructive" className="bg-red-600 hover:bg-red-700 text-white"><Trash2 className="w-4 h-4"/></Button>
+                              <Button onClick={() => handleInsertFromLibrary(video)} size="sm" className="bg-indigo-900 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-red-700"><Plus className="w-4 h-4 mr-1" />Insert</Button>
+                              <Button onClick={() => handleStartEdit(video)} size="sm" variant="outline" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"><Edit className="w-4 h-4 mr-1" />Edit</Button>
+                              <Button onClick={() => handleDeleteVideo(video)} size="sm" variant="destructive" className="bg-purple-700 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-red-700"><Trash2 className="w-4 h-4" /></Button>
                             </div>
                           </div>
                         </>
-                      )}
+                    }
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+                }
             </div>
           </TabsContent>
 
           <TabsContent value="search" className="space-y-4 pt-2">
-            {/* Assignment selection for saving to library */}
-            {assignmentUsernames.length > 0 && (
+            {/* Assignment selection for saving to library - CONDITIONALLY RENDERED */}
+            {!useWorkspaceScoping && assignmentUsernames.length > 0 &&
               <div>
                 <Label className="block text-sm font-medium mb-2 text-slate-700">Assign to Username</Label>
                 <Select value={assignToUsername} onValueChange={setAssignToUsername}>
@@ -428,65 +450,65 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
                     <SelectValue placeholder="Select a username..." />
                   </SelectTrigger>
                   <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {assignmentUsernames.map(username => (
-                      <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
-                    ))}
+                    {assignmentUsernames.map((username) =>
+                    <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
-            )}
+              }
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="md:col-span-2 relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder="Search YouTube (e.g., dog training tips)"
-                  value={ytQuery}
-                  onChange={(e) => setYtQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleYouTubeSearch()}
-                  className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                />
+                    placeholder="Search YouTube (e.g., dog training tips)"
+                    value={ytQuery}
+                    onChange={(e) => setYtQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleYouTubeSearch()}
+                    className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
               </div>
               <div className="flex gap-2">
                 <Input
-                  type="number"
-                  min={1}
-                  max={25}
-                  value={ytMax}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    if (!isNaN(val) && val >= 1 && val <= 25) setYtMax(val);
-                  }}
-                  onBlur={(e) => {
-                    const val = Number(e.target.value);
-                    if (isNaN(val) || val < 1 || val > 25) setYtMax(10);
-                  }}
-                  className="w-24 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                  placeholder="Max"
-                  title="Max results (1-25)"
-                />
-                <Button onClick={handleYouTubeSearch} disabled={isSearching} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white">
+                    type="number"
+                    min={1}
+                    max={25}
+                    value={ytMax}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (!isNaN(val) && val >= 1 && val <= 25) setYtMax(val);
+                    }}
+                    onBlur={(e) => {
+                      const val = Number(e.target.value);
+                      if (isNaN(val) || val < 1 || val > 25) setYtMax(10);
+                    }}
+                    className="w-24 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
+                    placeholder="Max"
+                    title="Max results (1-25)" />
+
+                <Button onClick={handleYouTubeSearch} disabled={isSearching} className="bg-blue-900 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 flex-1 hover:bg-indigo-700">
                   {isSearching ? 'Searching...' : 'Search'}
                 </Button>
               </div>
             </div>
 
             <div className="max-h-96 overflow-y-auto">
-              {isSearching ? (
-                <div className="text-center py-8 text-slate-500">Searching YouTube...</div>
-              ) : ytResults.length === 0 ? (
+              {isSearching ?
+                <div className="text-center py-8 text-slate-500">Searching YouTube...</div> :
+                ytResults.length === 0 ?
                 <div className="text-center py-8 text-slate-500">
                   <Video className="w-12 h-12 mx-auto mb-4 text-slate-300" />
                   <p>No results yet. Try a keyword above.</p>
-                </div>
-              ) : (
+                </div> :
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {ytResults.map((res) => (
-                    <div key={res.video_id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3">
+                  {ytResults.map((res) =>
+                  <div key={res.video_id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3">
                       <img
-                        src={res.thumbnail}
-                        alt={res.title}
-                        className="w-full h-32 object-cover rounded"
-                      />
+                      src={res.thumbnail}
+                      alt={res.title}
+                      className="w-full h-32 object-cover rounded" />
+
                       <h4 className="font-medium line-clamp-2 h-12 text-slate-800">{res.title}</h4>
                       <p className="text-sm text-slate-600 line-clamp-2 h-10">{res.description}</p>
                       <div className="flex justify-between items-center">
@@ -494,59 +516,45 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
                           <ExternalLink className="w-4 h-4" /> Open
                         </a>
                         <div className="flex gap-2">
-                          <Button onClick={() => handleInsertSearchAndSave(res)} size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                          <Button onClick={() => handleInsertSearchAndSave(res)} size="sm" className="bg-blue-900 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-red-700">
                             <Plus className="w-4 h-4 mr-1" /> Insert
                           </Button>
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+                }
             </div>
           </TabsContent>
 
           <TabsContent value="url" className="space-y-4 pt-4">
-             {assignmentUsernames.length > 0 && (
-              <div className="mb-4"> {/* Added mb-4 for spacing */}
-                <Label className="block text-sm font-medium mb-2 text-slate-700">Assign to Username</Label>
-                <Select value={assignToUsername} onValueChange={setAssignToUsername}>
-                  <SelectTrigger className="bg-white border-slate-300 text-slate-900">
-                    <SelectValue placeholder="Select a username..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {assignmentUsernames.map(username => (
-                      <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+             {/* Assignment selection - Removed from here as per instructions */}
              <div>
                 <label className="block text-sm font-medium mb-2 text-slate-700">YouTube Video URL</label>
                 <Input
-                    placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                />
+                  placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
             </div>
-            {isUrlValid && (
-                <div>
+            {isUrlValid &&
+              <div>
                     <label className="block text-sm font-medium mb-2 text-slate-700">Video Title (Optional)</label>
                     <Input
-                        placeholder="Enter a title for the video embed"
-                        value={videoTitle}
-                        onChange={(e) => setVideoTitle(e.target.value)}
-                        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                    />
+                  placeholder="Enter a title for the video embed"
+                  value={videoTitle}
+                  onChange={(e) => setVideoTitle(e.target.value)}
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
                 </div>
-            )}
+              }
              <Button
-              onClick={handleEmbedFromUrl}
-              disabled={!isUrlValid || !assignToUsername}
-              className="w-full bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white"
-            >
+                onClick={handleEmbedFromUrl}
+                disabled={!isUrlValid || (!useWorkspaceScoping && !assignToUsername && assignmentUsernames.length > 0)} // Disable if username selection is required but not made
+                className="w-full bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white">
+
               <LinkIcon className="w-4 h-4 mr-2" />
               Embed Video
             </Button>
@@ -570,6 +578,6 @@ export default function YouTubeSelector({ isOpen, onClose, onInsert }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
-  );
+    </>);
+
 }

@@ -165,7 +165,7 @@ export default function CustomTemplateManager() {
                   <Button size="sm" variant="outline" onClick={() => openEdit(tpl)} className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50">
                     <Edit className="w-4 h-4 mr-1" /> Edit
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => remove(tpl)}>
+                  <Button size="sm" variant="destructive" onClick={() => remove(tpl)} className="bg-purple-900 text-destructive-foreground px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-destructive/90 h-9 rounded-md">
                     <Trash2 className="w-4 h-4 mr-1" /> Delete
                   </Button>
                 </div>

@@ -12,6 +12,7 @@ import { Username } from "@/api/entities";
 import { PromotedProduct } from "@/api/entities";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AmazonProductImporter from "./AmazonProductImporter";
+import { saveImageFromString } from "@/api/functions";
 
 // Add limits and helper at top-level in this file
 const TITLE_LIMIT = 60;
@@ -25,14 +26,14 @@ const clampText = (s, max) => {
 export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [meta, setMeta] = useState({ title: "", description: "", image: "", button_text: "View Product →", product_url: "" });
+  const [meta, setMeta] = useState({ title: "", description: "", image: "", button_text: "View Product →", product_url: "", price: "", images: [] });
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const [availableUsernames, setAvailableUsernames] = useState([]);
   const [assignToUsername, setAssignToUsername] = useState("");
   const [showAmazonImporter, setShowAmazonImporter] = useState(false);
-  const [amazonUrlToImport, setAmazonUrlToImport] = useState(""); // NEW
-  const [imageValid, setImageValid] = useState(false); // NEW: track if image actually loads
+  const [amazonUrlToImport, setAmazonUrlToImport] = useState("");
+  const [imageValid, setImageValid] = useState(false);
 
   // When image URL changes, test loadability
   React.useEffect(() => {
@@ -59,15 +60,15 @@ export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
     if (!isOpen) {
       // Reset states when the modal is closed to ensure clean slate for next open
       setUrl("");
-      setMeta({ title: "", description: "", image: "", button_text: "View Product →", product_url: "" });
+      setMeta({ title: "", description: "", image: "", button_text: "View Product →", product_url: "", price: "", images: [] });
       setError("");
       setLoading(false);
       setAssignToUsername("");
       setCurrentUser(null);
       setAvailableUsernames([]);
       setShowAmazonImporter(false);
-      setAmazonUrlToImport(""); // NEW: Reset Amazon importer URL state
-      setImageValid(false); // Reset image validity
+      setAmazonUrlToImport("");
+      setImageValid(false);
       return;
     }
 
@@ -117,9 +118,11 @@ export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
         setMeta({
           title: data.title || "",
           description: data.description || "",
-          image: data.image || "",
+          image: (data.images && data.images[0]) || data.image || "", // Use first image from array, or fallback to single image
           button_text: "View Product →",
-          product_url: data.url || url
+          product_url: data.url || url,
+          price: data.price || "",
+          images: Array.isArray(data.images) ? data.images.filter(Boolean) : (data.image ? [data.image] : [])
         });
       }
     } catch (e) {
@@ -128,14 +131,35 @@ export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
     setLoading(false);
   };
 
+  // Helper: save all images to Image Library (first is main image)
+  const saveAllImagesToLibrary = async (images, userName, titleBase) => {
+    if (!Array.isArray(images) || images.length === 0) return;
+    const unique = [...new Set(images.filter(Boolean))];
+    // Save sequentially to avoid rate issues
+    for (let i = 0; i < unique.length; i++) {
+      const imgUrl = unique[i];
+      try {
+        await saveImageFromString({
+          value: imgUrl,
+          user_name: userName || undefined,
+          alt_text: `${titleBase || "product"}${unique.length > 1 ? ` (${i + 1})` : ""}`,
+          source: "upload"
+        });
+      } catch (err) {
+        // non-fatal, continue saving others
+        console.warn("Failed to save image to library:", imgUrl, err);
+      }
+    }
+  };
+
   const handleClose = () => {
     // Reset all states and close the modal
     setUrl("");
-    setMeta({ title: "", description: "", image: "", button_text: "View Product →", product_url: "" });
+    setMeta({ title: "", description: "", image: "", button_text: "View Product →", product_url: "", price: "", images: [] });
     setError("");
     setLoading(false);
     setAssignToUsername("");
-    setImageValid(false); // Reset image validity on close
+    setImageValid(false);
     onClose();
   };
 
@@ -148,25 +172,28 @@ export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
     const limited = {
       title: clampText(meta.title, TITLE_LIMIT),
       description: clampText(meta.description, DESCRIPTION_LIMIT),
-      image: imageValid ? (meta.image || "") : "", // NEW: only use if valid
+      image: imageValid ? (meta.image || "") : (meta.image ? meta.image : ""), // Store meta.image even if not valid for saving to library/entity
       product_url: meta.product_url,
       button_text: meta.button_text || "View Product →",
+      price: meta.price || ""
     };
 
     const esc = (s) => (s || '').toString().replace(/"/g, '&quot;');
     const title = esc(limited.title);
     const description = (limited.description || '').toString();
-    const image = limited.image || '';
+    const imageForBlock = imageValid ? (limited.image || '') : ''; // Only use image in block if it loaded successfully
     const productUrl = esc(limited.product_url);
     const buttonText = esc(limited.button_text);
+    const price = esc(limited.price);
 
     // Side-by-side layout: image left, text right. Wraps on small screens.
     const block = `
 <div class="b44-promoted-product" data-b44-block="product" style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:14px 0;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,0.06);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
-    ${image ? `<img src="${esc(image)}" alt="${title || 'Product image'}" style="flex:0 0 220px;max-width:100%;height:auto;border-radius:8px;border:1px solid #eee;" />` : ``}
+    ${imageForBlock ? `<img src="${esc(imageForBlock)}" alt="${title || 'Product image'}" style="flex:0 0 220px;max-width:100%;height:auto;border-radius:8px;border:1px solid #eee;" />` : ``}
     <div style="flex:1 1 300px;min-width:240px;">
       <h3 style="margin:0 0 8px 0;color:#2c3e50;font-size:1.35rem;font-weight:700;line-height:1.25;">${title || "Product"}</h3>
+      ${price ? `<div style="margin:0 0 8px 0;color:#059669;font-size:1.25rem;font-weight:700;">${price}</div>` : ``}
       ${description ? `<p style="margin:0 0 12px 0;color:#555;font-size:.98rem;line-height:1.55;">${description.replace(/\n/g, '<br>')}</p>` : ``}
       <a href="${productUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#3498db;color:white;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;">${buttonText}</a>
     </div>
@@ -178,33 +205,36 @@ export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
     // Save to library ONLY if a username is selected (entity requires user_name)
     try {
       const payload = {
-        name: limited.title || "Product", // Use limited title
-        description: limited.description || "", // Use limited description
-        image_url: limited.image || "", // Use limited image (already validated)
+        name: limited.title || "Product",
+        description: limited.description || "",
+        image_url: limited.image || "", // Use limited image (which contains meta.image whether valid or not)
         product_url: limited.product_url,
-        button_url: limited.product_url, // NEW: default button link to product_url
-        price: "", // optional
+        button_url: limited.product_url,
+        price: limited.price || "",
       };
       if (assignToUsername) payload.user_name = assignToUsername;
       if (payload.user_name) {
         await PromotedProduct.create(payload);
       }
+
+      // NEW: Save ALL images to Image Library
+      const imgs = Array.isArray(meta.images) && meta.images.length ? meta.images : (limited.image ? [limited.image] : []);
+      await saveAllImagesToLibrary(imgs, assignToUsername, limited.title);
     } catch (e) {
-      // Non-fatal if saving fails; content already inserted
-      console.warn("Failed to save product to library:", e);
+      console.warn("Failed to save product/images to library:", e);
+      // Non-fatal
     }
 
     // reset and close
     setUrl("");
-    setMeta({ title: "", description: "", image: "", button_text: "View Product →", product_url: "" });
+    setMeta({ title: "", description: "", image: "", button_text: "View Product →", product_url: "", price: "", images: [] });
     setError("");
-    setImageValid(false); // Reset image validity
+    setImageValid(false);
     onClose();
   };
 
   // OPEN AMAZON IMPORTER: Do NOT close this modal here (removes the bug)
   const openAmazon = () => {
-    // onClose();  // REMOVED: this caused the whole component (and importer) to unmount
     setShowAmazonImporter(true);
   };
 
@@ -271,23 +301,27 @@ export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
                 <Input id="title" value={meta.title} onChange={(e) => setMeta({ ...meta, title: e.target.value })} />
               </div>
               <div>
+                <Label htmlFor="price">Price</Label>
+                <Input id="price" value={meta.price} onChange={(e) => setMeta({ ...meta, price: e.target.value })} placeholder="$29.99" />
+              </div>
+              <div>
                 <Label htmlFor="button_text">Button Text</Label>
                 <Input id="button_text" value={meta.button_text} onChange={(e) => setMeta({ ...meta, button_text: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="product_url">Button Link (Product URL)</Label>
+                <Input id="product_url" value={meta.product_url} onChange={(e) => setMeta({ ...meta, product_url: e.target.value })} />
               </div>
               <div className="md:col-span-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" value={meta.description} onChange={(e) => setMeta({ ...meta, description: e.target.value })} rows={4} />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <Label htmlFor="image">Image URL</Label>
                 <div className="relative">
                   <ImageIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <Input id="image" value={meta.image} onChange={(e) => setMeta({ ...meta, image: e.target.value })} className="pl-9" />
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="product_url">Button Link (Product URL)</Label>
-                <Input id="product_url" value={meta.product_url} onChange={(e) => setMeta({ ...meta, product_url: e.target.value })} />
               </div>
             </div>
 
@@ -302,6 +336,7 @@ export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
                 )}
                 <div className="flex-1">
                   <div className="font-semibold">{meta.title || "Product"}</div>
+                  {meta.price && <div className="text-lg font-bold text-green-600">{meta.price}</div>}
                   <div className="text-sm text-gray-600 line-clamp-3">{meta.description}</div>
                   <div className="mt-2">
                     <a className="text-blue-600 underline" href={meta.product_url || "#"} target="_blank" rel="noreferrer">{meta.button_text || "View Product →"}</a>
@@ -310,7 +345,7 @@ export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
               </div>
               {meta.image && !imageValid && (
                 <p className="text-xs text-red-600 mt-2">
-                  The provided image URL could not be loaded and will be omitted.
+                  The provided image URL could not be loaded and will be omitted from the inserted content.
                 </p>
               )}
             </div>
@@ -327,10 +362,10 @@ export default function ProductFromUrlModal({ isOpen, onClose, onInsert }) {
         isOpen={showAmazonImporter} 
         onClose={() => {
           setShowAmazonImporter(false);
-          setAmazonUrlToImport(""); // Reset the initial URL when closing the Amazon Importer
+          setAmazonUrlToImport("");
         }} 
         onInsert={onInsert} 
-        initialUrl={amazonUrlToImport} // Pass the URL to the Amazon Importer
+        initialUrl={amazonUrlToImport}
       />
     </>
   );

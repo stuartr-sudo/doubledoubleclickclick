@@ -5,7 +5,7 @@ import { User } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { RefreshCw, Users, ShieldAlert, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Plus, Search, Filter, Trash2, Tag, HelpCircle } from "lucide-react";
+import { RefreshCw, Users, ShieldAlert, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Plus, Search, Filter, Trash2, Tag, HelpCircle, Info, Key } from "lucide-react";
 import MiniMultiSelect from "@/components/common/MiniMultiSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import GroupedFaqTable from "@/components/topics/GroupedFaqTable";
@@ -22,6 +22,8 @@ import {
 import { airtableCreateRecord } from "@/api/functions";
 import { airtableListFields } from "@/api/functions";
 import { airtableDeleteRecord } from "@/api/functions";
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
 // --- Configuration ---
 const TABLE_IDS = {
@@ -39,16 +41,15 @@ const KEYWORD_MAP_HEADERS = [
   "Keyword Difficulty",
   "Search Intent",
   "Target Market",
-  "Blog Category",
   "Promoted Product"
 ];
 
 
 const KEYWORD_MAP_LAYOUT =
-  "minmax(300px, 1.5fr) 140px 140px 160px 160px minmax(220px, 1fr) minmax(220px, 1fr) minmax(220px, 1fr)";
+  "minmax(300px, 1.5fr) 140px 140px 160px 160px minmax(220px, 1fr) minmax(220px, 1fr)";
 
 // Fields we require before sending to Airtable (moved outside component for stability)
-const REQUIRED_FIELDS = ["Target Market", "Blog Category", "Promoted Product"];
+const REQUIRED_FIELDS = ["Target Market", "Promoted Product"];
 
 // --- Helper Functions ---
 function getLabel(fields, tableContext = null) {
@@ -142,7 +143,7 @@ const renderFieldValue = (value) => {
 export default function TopicsPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [availableUsernames, setAvailableUsernames] = useState([]);
-  const [selectedUsername, setSelectedUsername] = useState(null);
+  const [localSelectedUsername, setLocalSelectedUsername] = useState(null); // Renamed from selectedUsername
 
   const [keywordRows, setKeywordRows] = useState([]);
   const [faqRows, setFaqRows] = useState([]);
@@ -179,6 +180,16 @@ export default function TopicsPage() {
   const [brandFieldKey, setBrandFieldKey] = useState(null);
   const [brandArray, setBrandArray] = useState([]);
 
+  // NEW: Cache auxiliary data to avoid repeated fetches
+  const [auxDataCache, setAuxDataCache] = useState({ tm: [], bc: [], pp: [], cacheTime: 0 });
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  const { selectedUsername: globalUsername, assignedUsernames: globalUsernames, isLoading: isWorkspaceLoading } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
+
+  // Determine active username based on workspace scoping
+  const selectedUsername = useWorkspaceScoping ? globalUsername : localSelectedUsername;
+
   // Helper: pick the first existing field from candidates (case-insensitive)
   const pickField = useCallback((fieldsArr, candidates) => {
     const lowerMap = new Map((fieldsArr || []).map((f) => [String(f).toLowerCase(), f]));
@@ -214,20 +225,26 @@ export default function TopicsPage() {
         const user = await User.me();
         setCurrentUser(user);
 
-        if (user.role === "admin") {
-          const allUsers = await User.list();
-          const usernames = new Set();
-          allUsers.forEach((u) => {
-            if (Array.isArray(u.assigned_usernames)) {
-              u.assigned_usernames.forEach((name) => usernames.add(name));
-            }
-            if (u.username) {
-              usernames.add(u.username);
-            }
-          });
-          setAvailableUsernames(Array.from(usernames).sort());
+        if (useWorkspaceScoping) {
+          // With workspace, available usernames come from the provider
+          setAvailableUsernames(globalUsernames || []);
         } else {
-          setAvailableUsernames(user.assigned_usernames || []);
+          // Original logic for non-workspace mode
+          if (user.role === "admin") {
+            const allUsers = await User.list();
+            const usernames = new Set();
+            allUsers.forEach((u) => {
+              if (Array.isArray(u.assigned_usernames)) {
+                u.assigned_usernames.forEach((name) => usernames.add(name));
+              }
+              if (u.username) {
+                usernames.add(u.username);
+              }
+            });
+            setAvailableUsernames(Array.from(usernames).sort());
+          } else {
+            setAvailableUsernames(user.assigned_usernames || []);
+          }
         }
       } catch (e) {
         setError("Failed to load user data. Please refresh.");
@@ -237,7 +254,7 @@ export default function TopicsPage() {
       }
     };
     getInitialData();
-  }, []);
+  }, [useWorkspaceScoping, globalUsernames]);
 
   // Persist activeTab to sessionStorage on change
   useEffect(() => {
@@ -267,7 +284,6 @@ export default function TopicsPage() {
     setError(null);
     setKeywordRows([]);
     setFaqRows([]);
-    setOptions({ tm: [], bc: [], pp: [] });
 
     try {
       const listWithFilter = async (tableIdOrName, formula) => {
@@ -280,70 +296,87 @@ export default function TopicsPage() {
 
       const sanitizedUsername = username.replace(/'/g, "\\'");
       const mainFormula = `{Username} = '${sanitizedUsername}'`;
-      // NEW: fetch keywords with strict server-side filter (Search Volume > 500 AND Username match)
-      const keywordFormula = `AND({Search Volume} > 500, ${mainFormula})`;
+      const keywordFormula = `AND({Search Volume} > 500, {Username} = '${sanitizedUsername}')`;
+      const productFormula = `{Client Username} = '${sanitizedUsername}'`; // Specific formula for Company Products
 
-      // Fetch main tables with appropriate formulas
-      const [keywords, faqs] = await Promise.all([
-        listWithFilter(TABLE_IDS.keywordMap, keywordFormula), // strict filter applied here
-        listWithFilter(TABLE_IDS.faq, mainFormula) // keep FAQ filter as-is
+      // Start main data fetch immediately
+      const mainDataPromise = Promise.all([
+        listWithFilter(TABLE_IDS.keywordMap, keywordFormula),
+        listWithFilter(TABLE_IDS.faq, mainFormula)
       ]);
 
-      // Fetch auxiliary tables WITHOUT Airtable-side filters
-      const [tmRes, bcRes, ppRes] = await Promise.allSettled([
-        listWithFilter(TABLE_IDS.targetMarket, null),
-        listWithFilter(TABLE_IDS.blogCategories, null),
-        listWithFilter(TABLE_IDS.companyProducts, null)
-      ]);
+      // Check if we need to fetch auxiliary data or use cache
+      const now = Date.now();
+      const shouldRefreshCache = (now - auxDataCache.cacheTime) > CACHE_DURATION || auxDataCache.tm.length === 0;
 
-      const rawTm = tmRes.status === "fulfilled" ? tmRes.value || [] : [];
-      const rawBc = bcRes.status === "fulfilled" ? bcRes.value || [] : [];
-      let rawPp = ppRes.status === "fulfilled" ? ppRes.value || [] : [];
+      let auxDataPromise;
+      if (shouldRefreshCache) {
+        // Fetch auxiliary data with optimized concurrent requests AND server-side filtering
+        auxDataPromise = Promise.allSettled([
+          listWithFilter(TABLE_IDS.targetMarket, mainFormula),
+          listWithFilter(TABLE_IDS.blogCategories, mainFormula),
+          listWithFilter(TABLE_IDS.companyProducts, productFormula)
+        ]).then(async (results) => {
+          let tmArr = results[0].status === "fulfilled" ? results[0].value || [] : [];
+          let bcArr = results[1].status === "fulfilled" ? results[1].value || [] : [];
+          let ppArr = results[2].status === "fulfilled" ? results[2].value || [] : [];
 
-      // Fallbacks for different table names
-      if (!rawPp || rawPp.length === 0) {
-        try { rawPp = await listWithFilter("Company Products", null); } catch (e) { console.warn("Fallback to 'Company Products' table name failed:", e.message); }
-      }
-      if (!rawPp || rawPp.length === 0) {
-        try { rawPp = await listWithFilter("Products", null); } catch (e) { console.warn("Fallback to 'Products' table name failed:", e.message); }
-      }
-
-      // Helper to scope TM/BC by username
-      const byUser = (arr) => {
-        return (arr || []).filter((r) => {
-          const f = r?.fields || {};
-          const lower = Object.fromEntries(Object.entries(f).map(([k, v]) => [String(k).toLowerCase(), v]));
-          const candidate =
-            lower["username"] ||
-            lower["user_name"] ||
-            lower["user"] ||
-            lower["client_username"] ||
-            lower["client username"];
-          // Use the original, unescaped 'username' for client-side comparison
-          if (Array.isArray(candidate)) return candidate.includes(username);
-          return (candidate || "") === username;
-        });
-      };
-
-      // NEW: Filter products by client_username (or close variants) matching the selected username.
-      const filterProductsByClientUsername = (records, uname) => {
-        const keyCandidates = ["client_username", "client username", "username", "user_name", "user"];
-        return (records || []).filter((r) => {
-          const f = r?.fields || {};
-          const lower = Object.fromEntries(Object.entries(f).map(([k, v]) => [String(k).toLowerCase(), v]));
-          let val = null;
-          for (const k of keyCandidates) {
-            if (lower.hasOwnProperty(k)) { val = lower[k]; break; }
+          // Fallback attempt for products table if the primary formula fails (e.g., field name variation)
+          if (ppArr.length === 0 && results[2].status === "rejected") {
+            try {
+              ppArr = await listWithFilter(TABLE_IDS.companyProducts, mainFormula); // Try with 'Username' field
+            } catch {
+              // Ignore, ppArr remains empty
+            }
           }
-          if (Array.isArray(val)) return val.includes(uname);
-          return String(val || "") === uname;
+
+          // If we still have no products, try fetching by table name as a last resort
+          if (ppArr.length === 0) {
+              try {
+                const allProducts = await listWithFilter("Company Products", null); // Fetch all and filter client-side
+                const keyCandidates = ["client_username", "client username", "username", "user_name", "user"];
+                ppArr = (allProducts || []).filter((r) => {
+                  const f = r?.fields || {};
+                  const lower = Object.fromEntries(Object.entries(f).map(([k,v]) => [String(k).toLowerCase(), v]));
+                  let val = null;
+                  for (const k of keyCandidates) {
+                    if (lower.hasOwnProperty(k)) { val = lower[k]; break; }
+                  }
+                  if (Array.isArray(val)) return val.includes(username);
+                  return String(val || "") === username;
+                });
+              } catch {
+                // Keep empty array
+              }
+          }
+
+          return { tmArr, bcArr, ppArr };
         });
-      };
+      } else {
+        // Use cached data
+        auxDataPromise = Promise.resolve({
+          tmArr: auxDataCache.tm,
+          bcArr: auxDataCache.bc,
+          ppArr: auxDataCache.pp
+        });
+      }
 
-      const tmArr = byUser(rawTm);
-      const bcArr = byUser(rawBc);
-      const ppArr = filterProductsByClientUsername(rawPp, username); // IMPORTANT: products filtered strictly by client_username
+      // Wait for both main data and auxiliary data
+      const [mainData, auxData] = await Promise.all([mainDataPromise, auxDataPromise]);
+      const [keywords, faqs] = mainData;
+      const { tmArr, bcArr, ppArr } = auxData;
 
+      // Update cache if we fetched fresh auxiliary data
+      if (shouldRefreshCache) {
+        setAuxDataCache({
+          tm: tmArr,
+          bc: bcArr,
+          pp: ppArr,
+          cacheTime: now
+        });
+      }
+
+      // Set processed data
       setKeywordRows(keywords);
       setFaqRows(faqs);
       setOptions({
@@ -352,7 +385,7 @@ export default function TopicsPage() {
         pp: ppArr.map((r) => ({ value: r.id, label: getLabel(r.fields, "companyProducts") }))
       });
 
-      // NEW: derive Brand field and value array from existing rows (prefer Keyword Map, then FAQ)
+      // Derive brand info (optimized)
       const deriveBrand = (rows) => {
         const candidates = ["Brand ID", "Brand Name", "Brand"];
         for (const row of rows || []) {
@@ -386,29 +419,43 @@ export default function TopicsPage() {
     } catch (e) {
       console.error(`Failed to load data for ${username}:`, e);
       setError(e.message || "An unknown error occurred.");
-      // Reset brand on error
       setBrandFieldKey(null);
       setBrandArray([]);
     } finally {
       setLoadingData(false);
     }
-  }, []);
+  }, [auxDataCache.cacheTime, auxDataCache.tm, auxDataCache.bc, auxDataCache.pp, CACHE_DURATION]);
+
+  // When selectedUsername (from any source) changes, load data
+  useEffect(() => {
+    if (selectedUsername) {
+      loadDataForUser(selectedUsername);
+    } else {
+      // Clear data if no username is selected
+      setKeywordRows([]);
+      setFaqRows([]);
+    }
+  }, [selectedUsername, loadDataForUser]);
 
   // Memoize to prevent changing reference in effects
   const handleUsernameSelect = React.useCallback((username) => {
-    setSelectedUsername(username);
-    loadDataForUser(username);
-  }, [loadDataForUser]);
+    setLocalSelectedUsername(username); // Set local state for non-workspace mode
+  }, []);
 
   // When usernames are available, auto-select the pending username (if valid)
   useEffect(() => {
     if (!pendingUsername || !availableUsernames || availableUsernames.length === 0) return;
     if (availableUsernames.includes(pendingUsername)) {
-      handleUsernameSelect(pendingUsername);
-      setSelectedUsername(pendingUsername);
+      if (useWorkspaceScoping) {
+        // In workspace mode, we assume the provider handles this.
+        // This logic is primarily for the old system.
+      } else {
+        handleUsernameSelect(pendingUsername);
+      }
       setPendingUsername(null);
     }
-  }, [availableUsernames, pendingUsername, handleUsernameSelect]);
+  }, [availableUsernames, pendingUsername, handleUsernameSelect, useWorkspaceScoping]);
+
 
   // After FAQ data and tab are ready, highlight and scroll to the focused question
   useEffect(() => {
@@ -431,14 +478,12 @@ export default function TopicsPage() {
     return () => clearTimeout(t);
   }, [activeTab, faqRows, loadingData, focusQuestion, searchQuery]);
 
-  // Helper to know if a row has all assignments (same as in DataTable)
-  const hasAllThree = (fields) => {
+  // Helper to know if a row has all required assignments
+  const isComplete = (fields) => {
     const tm = fields?.["Target Market"] || [];
-    const bc = fields?.["Blog Category"] || [];
     const ppKey = getLinkedProductFieldName(fields || {});
     const pp = fields?.[ppKey] || [];
     return Array.isArray(tm) && tm.length > 0 &&
-      Array.isArray(bc) && bc.length > 0 &&
       Array.isArray(pp) && pp.length > 0;
   };
 
@@ -463,47 +508,44 @@ export default function TopicsPage() {
 
     // Map UI "Promoted Product" to the actual linked field if needed
     const canonicalLower = String(fieldName).toLowerCase();
-    const isRequiredSpecial = ["target market", "blog category", "promoted product", "link to company products"].includes(canonicalLower);
+    const isRequiredSpecial = ["target market", "promoted product", "link to company products"].includes(canonicalLower);
 
     // For Promoted Product, ensure we write to the real linked field (often "Link to Company Products")
     let writeFieldName = fieldName;
     if (canonicalLower.includes("promoted") || canonicalLower.includes("company products")) {
       const ppKey = getLinkedProductFieldName(fullyUpdatedRowFields || {});
-      // Only override writeFieldName if getLinkedProductFieldName returns something valid and different
+      // Only override writeFieldName if ppKey returns something valid and different from fieldName
       if (ppKey && ppKey !== fieldName) {
         writeFieldName = ppKey;
       }
     }
 
-    // For the three special dropdown fields, check if we should batch-write to Airtable.
+    // For the two special dropdown fields, check if we should batch-write to Airtable.
     if (isRequiredSpecial) {
       if (fullyUpdatedRowFields) {
         // Dynamically get the exact field names, as they might vary slightly
         const tmKey = Object.keys(fullyUpdatedRowFields).find((k) => k.toLowerCase() === "target market") || "Target Market";
-        const bcKey = Object.keys(fullyUpdatedRowFields).find((k) => k.toLowerCase() === "blog category") || "Blog Category";
         const ppKey = getLinkedProductFieldName(fullyUpdatedRowFields || {}); // Use the helper for Promoted Product
 
-        const hasAllThreeNow =
+        const isNowComplete =
           Array.isArray(fullyUpdatedRowFields[tmKey]) && fullyUpdatedRowFields[tmKey].length > 0 &&
-          Array.isArray(fullyUpdatedRowFields[bcKey]) && fullyUpdatedRowFields[bcKey].length > 0 &&
           Array.isArray(fullyUpdatedRowFields[ppKey]) && fullyUpdatedRowFields[ppKey].length > 0;
 
-        if (hasAllThreeNow) {
-          // All three are selected, so write the batch update to Airtable.
+        if (isNowComplete) {
+          // All required fields are selected, so write the batch update to Airtable.
           await airtableSync({
             action: "updateRecord",
             tableId,
             recordId,
             fields: {
               [tmKey]: fullyUpdatedRowFields[tmKey],
-              [bcKey]: fullyUpdatedRowFields[bcKey],
               [ppKey]: fullyUpdatedRowFields[ppKey]
             }
           });
           return; // Batch update performed, no need for single field update below
         }
       }
-      // If not all three are complete, proceed with the single field update
+      // If not all required fields are complete, proceed with the single field update
       await airtableSync({
         action: "updateRecord",
         tableId,
@@ -523,6 +565,8 @@ export default function TopicsPage() {
   }, []);
 
   const refreshData = () => {
+    // Clear cache to force a full refresh on next loadDataForUser call
+    setAuxDataCache({ tm: [], bc: [], pp: [], cacheTime: 0 });
     if (selectedUsername) {
       loadDataForUser(selectedUsername);
     }
@@ -590,7 +634,6 @@ export default function TopicsPage() {
             ...data.record.fields,
             // Ensure optional arrays exist for UI (important for MiniMultiSelect)
             "Target Market": data.record.fields["Target Market"] || [],
-            "Blog Category": data.record.fields["Blog Category"] || [],
             [getLinkedProductFieldName(data.record.fields)]: data.record.fields[getLinkedProductFieldName(data.record.fields)] || []
           }
         };
@@ -674,7 +717,6 @@ export default function TopicsPage() {
           fields: {
             ...data.record.fields,
             "Target Market": data.record.fields["Target Market"] || [],
-            "Blog Category": data.record.fields["Blog Category"] || [],
             [getLinkedProductFieldName(data.record.fields)]: data.record.fields[getLinkedProductFieldName(data.record.fields)] || []
           }
         };
@@ -736,7 +778,7 @@ export default function TopicsPage() {
       rows = rows.filter((r) => !!r?.fields?.["Select Keyword"]);
     }
     if (showCompleteOnly) {
-      rows = rows.filter((r) => hasAllThree(r?.fields || {}));
+      rows = rows.filter((r) => isComplete(r?.fields || {}));
     }
     return rows;
   }, [keywordRows, searchQuery, showSelectedOnly, showCompleteOnly]);
@@ -750,9 +792,16 @@ export default function TopicsPage() {
     return rows;
   }, [faqRows, searchQuery]);
 
+  // REPLACE the previous capture/bubble-phase listener with a no-op to allow dropdowns to open normally
+  React.useEffect(() => {
+    // no-op: let Radix Select and DropdownMenu handle their own events
+  }, []);
+
+
+  // Derived rows for current filters
   // REPLACE the nested PageContent component with an inline-render variable to avoid remounts
   const renderPageBody = (() => {
-    if (loadingInitial) {
+    if (loadingInitial || (useWorkspaceScoping && isWorkspaceLoading)) {
       return (
         <div className="text-center py-12 text-slate-600 flex justify-center items-center gap-2">
           <Loader2 className="w-5 h-5 animate-spin" />
@@ -761,7 +810,7 @@ export default function TopicsPage() {
 
     }
 
-    if (availableUsernames.length === 0 && currentUser?.role !== "admin") {
+    if (!useWorkspaceScoping && availableUsernames.length === 0 && currentUser?.role !== "admin") {
       return (
         <div className="text-center py-12 text-amber-700 bg-amber-50 rounded-2xl border border-amber-200">
           <ShieldAlert className="w-12 h-12 mx-auto mb-4" />
@@ -777,8 +826,8 @@ export default function TopicsPage() {
       return (
         <div className="text-center py-12 text-slate-600 bg-white rounded-2xl border border-slate-200">
           <Users className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-          <h3 className="text-xl font-semibold text-slate-900">Select a User</h3>
-          <p className="text-slate-600">Choose a username from the dropdown above to view their topics.</p>
+          <h3 className="text-xl font-semibold text-slate-900">Select a Workspace</h3>
+          <p className="text-slate-600">Choose a workspace from the top navigation to view topics.</p>
         </div>);
 
     }
@@ -873,28 +922,30 @@ export default function TopicsPage() {
             {/* Divider */}
             <div className="h-5 w-px bg-slate-200" />
 
-            {/* Username selector (slightly narrower to keep everything on one row) */}
-            <div className="flex items-center gap-1">
-              <Users className="w-4 h-4 text-slate-500" />
-              <Select
-                value={selectedUsername || ""}
-                onValueChange={handleUsernameSelect}
-                disabled={loadingInitial}>
-                <SelectTrigger className="w-40 h-8 bg-white border-slate-300 text-slate-900 text-sm">
-                  <SelectValue placeholder={loadingInitial ? "Loading..." : "Select username"} />
-                </SelectTrigger>
-                <SelectContent className="bg-white border border-slate-200">
-                  {availableUsernames.map((name) =>
-                    <SelectItem key={name} value={name} className="text-slate-900 hover:bg-slate-100">
-                      {name}
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Username selector - now conditionally rendered */}
+            {!useWorkspaceScoping && (
+              <div className="flex items-center gap-1">
+                <Users className="w-4 h-4 text-slate-500" />
+                <Select
+                  value={localSelectedUsername || ""}
+                  onValueChange={handleUsernameSelect}
+                  disabled={loadingInitial}>
+                  <SelectTrigger className="w-40 h-8 bg-white border-slate-300 text-slate-900 text-sm">
+                    <SelectValue placeholder={loadingInitial ? "Loading..." : "Select username"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border border-slate-200">
+                    {availableUsernames.map((name) =>
+                      <SelectItem key={name} value={name} className="text-slate-900 hover:bg-slate-100">
+                        {name}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            {/* Divider */}
-            <div className="h-5 w-px bg-slate-200" />
+            {/* Divider (only if workspace scoping is off) */}
+            {!useWorkspaceScoping && <div className="h-5 w-px bg-slate-200" />}
 
             {/* Search keywords (slightly narrower) */}
             <div className="relative">
@@ -934,27 +985,8 @@ export default function TopicsPage() {
               </div>
             </div>
 
-            {/* Actions (small) */}
+            {/* Actions (only refresh button now) */}
             <div className="ml-auto flex items-center gap-1">
-              <Button
-                onClick={() => setShowAddKeyword(true)}
-                disabled={!selectedUsername || loadingData || loadingInitial}
-                size="sm"
-                className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-xs"
-                title={selectedUsername ? "Add keyword to Keyword Map" : "Select a username first"}>
-                <Plus className="w-4 h-4 mr-1" />
-                Add Keyword
-              </Button>
-              <Button
-                onClick={() => setShowAddFaq(true)}
-                disabled={!selectedUsername || loadingData || loadingInitial}
-                size="sm"
-                variant="outline"
-                className="h-8 px-3 bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 text-xs"
-                title={selectedUsername ? "Add keyword to FAQs" : "Select a username first"}>
-                <Plus className="w-4 h-4 mr-1" />
-                Add FAQ
-              </Button>
               <Button
                 onClick={refreshData}
                 disabled={!selectedUsername || loadingData}
@@ -962,6 +994,7 @@ export default function TopicsPage() {
                 variant="outline"
                 className="h-8 w-8 bg-white border border-slate-300 text-slate-900 hover:bg-slate-50"
                 title="Refresh">
+
                 <RefreshCw className={`w-4 h-4 ${loadingData ? "animate-spin" : ""}`} />
               </Button>
             </div>
@@ -1101,13 +1134,11 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
     return n.toLocaleString();
   };
 
-  const hasAllThree = (fields) => {
+  const isComplete = (fields) => {
     const tm = fields?.["Target Market"] || [];
-    const bc = fields?.["Blog Category"] || [];
     const ppKey = getLinkedProductFieldName(fields || {});
     const pp = fields?.[ppKey] || [];
     return Array.isArray(tm) && tm.length > 0 &&
-      Array.isArray(bc) && bc.length > 0 &&
       Array.isArray(pp) && pp.length > 0;
   };
 
@@ -1293,7 +1324,7 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
         <div className="text-sm text-slate-900">
           {sortedRows.map((row, idx) => {
             const fields = row.fields || {};
-            const complete = hasAllThree(fields);
+            const complete = isComplete(fields);
             const productField = getLinkedProductFieldName(fields); // Determine the actual product field name here
             return (
               <div
@@ -1338,17 +1369,12 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
                             value={fields["Target Market"] || []}
                             onChange={(selected) => handleUpdate(tableId, row.id, "Target Market", selected)} /> :
 
-                          header === "Blog Category" ?
-                            <MiniMultiSelect
-                              options={options.bc}
-                              value={fields["Blog Category"] || []}
-                              onChange={(selected) => handleUpdate(tableId, row.id, "Blog Category", selected)} /> :
-
                             header === "Promoted Product" ?
                               <MiniMultiSelect
                                 options={options.pp}
                                 value={fields[productField] || []} // use actual linked field for display
                                 onChange={(selected) => handleUpdate(tableId, row.id, productField, selected)} // write to actual field name
+                                itemVariant="pill" // Added itemVariant for bordered pills
                               /> :
                               header === "Search Intent" ?
                                 intentBadge(fields[header]) :

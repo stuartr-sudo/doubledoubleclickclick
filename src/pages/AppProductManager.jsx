@@ -8,7 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, CheckCircle2, XCircle, Search, Sparkles } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, XCircle, Search, Sparkles, HelpCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function AppProductManager() {
   const [me, setMe] = React.useState(null);
@@ -100,9 +102,16 @@ export default function AppProductManager() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold text-slate-900">App Products</h1>
-          <Button onClick={() => {setEditing(null);setShowForm(true);}}>
-            <Plus className="w-4 h-4 mr-2" /> New Product
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to={createPageUrl('PricingFaqManager')}>
+              <Button variant="outline" className="bg-blue-900 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:text-accent-foreground h-10">
+                <HelpCircle className="w-4 h-4 mr-2" /> Manage FAQs
+              </Button>
+            </Link>
+            <Button onClick={() => {setEditing(null);setShowForm(true);}}>
+              <Plus className="w-4 h-4 mr-2" /> New Product
+            </Button>
+          </div>
         </div>
 
         <div className="relative mb-4">
@@ -121,20 +130,20 @@ export default function AppProductManager() {
                 <CardTitle className="flex items-center justify-between gap-2">
                   <span className="truncate">{p.name}</span>
                   <div className="flex items-center gap-2">
-                    {p.is_best_value && (
-                      <Badge className="bg-amber-100 text-amber-800 flex items-center gap-1">
+                    {p.is_best_value &&
+                  <Badge className="bg-amber-100 text-amber-800 flex items-center gap-1">
                         <Sparkles className="w-3 h-3" /> Best value
                       </Badge>
-                    )}
+                  }
                     {p.is_active ?
-                <Badge className="bg-green-100 text-green-700 flex items-center gap-1">
+                  <Badge className="bg-green-100 text-green-700 flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" /> Active
                     </Badge> :
 
-                <Badge variant="outline" className="text-slate-600 flex items-center gap-1">
+                  <Badge variant="outline" className="text-slate-600 flex items-center gap-1">
                       <XCircle className="w-3 h-3" /> Inactive
                     </Badge>
-                }
+                  }
                   </div>
                 </CardTitle>
               </CardHeader>
@@ -157,12 +166,12 @@ export default function AppProductManager() {
                   <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {setEditing(p);setShowForm(true);}} className="bg-teal-600 text-slate-100 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground h-9 rounded-md border-slate-300 hover:bg-slate-50">
+                  onClick={() => {setEditing(p);setShowForm(true);}} className="bg-blue-900 text-slate-100 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground h-9 rounded-md border-slate-300 hover:bg-blue-900/80">
 
 
                     <Edit className="w-4 h-4 mr-1" /> Edit
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(p)} className="bg-green-200 text-slate-700 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-destructive/90 h-9 rounded-md">
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(p)} className="bg-violet-900 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-navy-900 h-9 rounded-md">
                     <Trash2 className="w-4 h-4 mr-1" /> Delete
                   </Button>
                 </div>

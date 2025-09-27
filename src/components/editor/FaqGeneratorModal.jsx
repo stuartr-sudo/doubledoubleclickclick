@@ -1,16 +1,17 @@
 
-import React from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Wand2, Check } from "lucide-react";
 import { CustomContentTemplate } from "@/api/entities";
 import { generateArticleFaqs } from "@/api/functions"; // Keep this import for original purpose, even if no longer used as fallback
 import { InvokeLLM } from "@/api/integrations";
 import { ContentEndpoint } from "@/api/entities";
 import { callFaqEndpoint } from "@/api/functions";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 
 // Basic HTML-safe replacer for text nodes
 const escapeHtml = (s) =>
@@ -27,7 +28,7 @@ function renderFaqWithTemplate(template, faqs, { title = "Frequently Asked Quest
       // Support multiple placeholder variants for robustness
       let html = itemTpl.
         replace(/\{\{\s*QUESTION\s*\}\}/g, escapeHtml(f.question || "")).
-        replace(/\{\{\s*ANSWER\s*\}\}/g, escapeHtml(f.answer || "").replace(/\n/g, "<br />")).
+        replace(/\{\{\s*ANSWER\s*\}\}/g, escapeHtml(f.answer || "")). // Removed .replace(/\n/g, "<br />")
         replace(/\{\{\s*(ITEM_)?INDEX\s*\}\}/g, String(idx)).
         replace(/\{\{\s*OPEN_FIRST_CHECKED_ATTRIBUTE\s*\}\}/g, checked);
       return html;
@@ -72,8 +73,8 @@ function renderDefaultAccordion(faqs, { title = "Frequently Asked Questions", op
     <div class="${scope}-q">${escapeHtml(f.question || "")}</div>
     <label class="${scope}-chev" for="${scope}-i-${i}" aria-label="Toggle FAQ"></label>
   </div>
-  <div class="${scope}-content"><p>${escapeHtml(f.answer || "").replace(/\n/g, "<br />")}</p></div>
-</div>`.trim();
+  <div class="${scope}-content"><p>${escapeHtml(f.answer || "")}</p></div>
+</div>`.trim(); // Removed .replace(/\n/g, "<br />")
     }).
     join("\n");
 
@@ -117,20 +118,20 @@ function renderDefaultAccordion(faqs, { title = "Frequently Asked Questions", op
 }
 
 export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onInsert }) {
-  const [loading, setLoading] = React.useState(false);
-  const [templates, setTemplates] = React.useState([]);
-  const [templateId, setTemplateId] = React.useState("default");
-  const [title, setTitle] = React.useState("Frequently Asked Questions");
-  const [openFirst, setOpenFirst] = React.useState(true);
-  const [includeJsonLd, setIncludeJsonLd] = React.useState(true);
-  const [previewHtml, setPreviewHtml] = React.useState("");
-  const [templateWarning, setTemplateWarning] = React.useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState("default");
+  const [title, setTitle] = useState("Frequently Asked Questions");
+  const [error, setError] = useState(null); // Used for general errors and warnings
+  const [examplePreviewHtml, setExamplePreviewHtml] = useState("");
 
   // HIDDEN: selected endpoint from admin page (no UI exposed)
-  const [selectedEndpointId, setSelectedEndpointId] = React.useState("");
+  const [selectedEndpointId, setSelectedEndpointId] = useState("");
+
+  const { consumeTokensForFeature } = useTokenConsumption();
 
   // NEW: helper to grab full editor HTML if selection is small/empty
-  const getEditorHtml = React.useCallback(() => {
+  const getEditorHtml = useCallback(() => {
     try {
       const quill = document.querySelector(".ql-editor");
       if (quill?.innerHTML) return quill.innerHTML;
@@ -150,7 +151,7 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
 
   // Add a tiny validator to ensure templates are single-item blueprints, not full sections with many items
   // and auto-fallback to the default template if invalid.
-  const isItemTemplate = React.useCallback((html) => {
+  const isItemTemplate = useCallback((html) => {
     const s = String(html || "");
     const qCount = (s.match(/\{\{\s*QUESTION\s*\}\}/g) || []).length;
     const aCount = (s.match(/\{\{\s*ANSWER\s*\}\}/g) || []).length;
@@ -160,28 +161,28 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
     return qCount === 1 && aCount === 1 && !hardcodedMulti;
   }, []);
 
-  const getTemplate = React.useCallback(() => {
-    if (templateId === "default") {
-      setTemplateWarning("");
+  const getTemplate = useCallback(() => {
+    if (selectedTemplateKey === "default") {
+      setError(null); // Clear specific template warnings if default is selected
       return null;
     }
-    const tpl = templates.find((t) => t.id === templateId) || null;
+    const tpl = templates.find((t) => t.id === selectedTemplateKey) || null;
     if (!tpl) {
-      setTemplateWarning("");
+      setError(null);
       return null;
     }
     if (!isItemTemplate(tpl.html_structure)) {
-      setTemplateWarning(
+      setError(
         "Selected template appears to contain a full multi-item section. Using the Default item template instead. Please provide a single-item blueprint with {{QUESTION}}, {{ANSWER}}, and optional {{ITEM_INDEX}}."
       );
       return null; // fall back to default renderer
     }
-    setTemplateWarning("");
+    setError(null);
     return tpl;
-  }, [templateId, templates, isItemTemplate]);
+  }, [selectedTemplateKey, templates, isItemTemplate]);
 
   // Load templates and auto-pick active FAQ endpoint (hidden)
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOpen) return;
     (async () => {
       // Load templates
@@ -204,52 +205,133 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
       }
     })();
   }, [isOpen]);
+  
+  // Update example preview when template changes
+  useEffect(() => {
+      if (!isOpen) return;
+      const sampleFaqs = [
+          { question: "What are the main benefits of this product?", answer: "This product offers three key benefits: improved efficiency, cost savings, and better user experience." },
+          { question: "How long does shipping typically take?", answer: "Standard shipping takes 3-5 business days, while express shipping arrives in 1-2 business days." },
+          { question: "Is there a money-back guarantee?", answer: "Yes, we offer a 30-day money-back guarantee if you're not completely satisfied with your purchase." }
+      ];
 
-  const doGenerate = async () => {
-    setLoading(true);
-    setTemplateWarning(""); // Clear previous warnings
-    setPreviewHtml(""); // Clear previous preview
-
-    try {
-      // Require an admin-configured endpoint
-      if (!selectedEndpointId) {
-        setTemplateWarning("No active FAQ endpoint is configured. Ask an admin to add one in Admin → FAQ Endpoints.");
-        return;
-      }
-
-      // Prefer selection if substantial; otherwise, use full editor HTML
-      const selection = (selectedText || "").trim();
-      const selectionIsRichEnough = selection.length > 120;
-      const articleHtml = selectionIsRichEnough ? selection : (getEditorHtml() || selection);
-
-      // Call the configured endpoint and only format returned FAQs
-      const { data } = await callFaqEndpoint({
-        endpoint_id: selectedEndpointId,
-        html: articleHtml,
-        selected_html: selectionIsRichEnough ? selection : ""
-      });
-
-      const faqs = Array.isArray(data?.faqs) ? data.faqs : [];
-      if (!faqs.length) {
-        setTemplateWarning("The FAQ endpoint returned no FAQs. Please verify your endpoint logic in Admin → FAQ Endpoints.");
-        return;
-      }
-
-      // Render via template (with validation fallback)
       const tpl = getTemplate();
       const html = tpl
-        ? renderFaqWithTemplate(tpl, faqs, { title, openFirst, includeJsonLd })
-        : renderDefaultAccordion(faqs, { title, openFirst, includeJsonLd }); // Fixed typo here
+          ? renderFaqWithTemplate(tpl, sampleFaqs, { title: "Example FAQs", openFirst: true, includeJsonLd: false })
+          : renderDefaultAccordion(sampleFaqs, { title: "Example FAQs", openFirst: true, includeJsonLd: false });
 
-      setPreviewHtml(html);
-    } finally {
-      setLoading(false);
+      setExamplePreviewHtml(html);
+  }, [selectedTemplateKey, templates, isOpen, getTemplate]);
+
+
+  const handleGenerateFaqs = async () => {
+    setIsGenerating(true);
+    setError(null); // Clear previous errors/warnings
+
+    try {
+      const tokenResult = await consumeTokensForFeature('ai_faq');
+      if (!tokenResult.success) {
+        setError(tokenResult.message || "Failed to consume tokens for FAQ generation.");
+        setIsGenerating(false);
+        return;
+      }
+
+      let faqs = [];
+      const selection = (selectedText || "").trim();
+      const selectionIsRichEnough = selection.length > 120;
+      const articleHtml = selectionIsRichEnough ? selection : getEditorHtml() || selection;
+
+      // If an endpoint is configured, use it.
+      if (selectedEndpointId) {
+        const { data } = await callFaqEndpoint({
+          endpoint_id: selectedEndpointId,
+          html: articleHtml,
+          selected_html: selectionIsRichEnough ? selection : "",
+        });
+        faqs = Array.isArray(data?.faqs) ? data.faqs : [];
+        if (!faqs.length) {
+          setError("The configured FAQ endpoint returned no FAQs. Please verify the endpoint logic.");
+          setIsGenerating(false);
+          return;
+        }
+      } else {
+        // Fallback to default InvokeLLM if no endpoint is configured
+        
+        const baseText = toPlain(articleHtml);
+        const prompt = `Based on the following article content, generate 3 to 5 relevant Frequently Asked Questions (FAQs).
+
+Rules:
+- Questions should be questions an average reader might have.
+- Answers should be concise, directly sourcing information from the article.
+- Do NOT invent information. If an answer isn't in the text, don't create the FAQ.
+- Output ONLY a valid JSON object with a single key "faqs" which is an array of objects, each with "question" and "answer" string properties. Do not add any other text or markdown.
+
+Example: { "faqs": [{ "question": "What is the main topic?", "answer": "The main topic is..." }] }
+
+Article Content:
+"""
+${baseText.slice(0, 12000)}
+"""`;
+
+        const response = await InvokeLLM({
+          prompt: prompt,
+          response_json_schema: {
+            type: "object",
+            properties: {
+              faqs: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    question: { type: "string" },
+                    answer: { type: "string" },
+                  },
+                  required: ["question", "answer"],
+                },
+              },
+            },
+            required: ["faqs"],
+          },
+        });
+        
+        faqs = response?.faqs || [];
+        if (!faqs.length) {
+          setError("The default AI model did not return any FAQs. Please try again.");
+          setIsGenerating(false);
+          return;
+        }
+      }
+
+      if (!faqs.length) {
+          setIsGenerating(false);
+          return; // Stop if no FAQs were generated
+      }
+
+      // Sanitize the answers to remove extra spacing and newlines.
+      const sanitizedFaqs = faqs.map(faq => ({
+          ...faq,
+          question: (faq.question || '').trim(),
+          answer: (faq.answer || '').trim().replace(/[\s\r\n]+/g, ' ')
+      }));
+
+      // Render via template (with validation fallback)
+      const tpl = getTemplate(); // getTemplate will also manage any template-specific errors
+      const html = tpl
+        ? renderFaqWithTemplate(tpl, sanitizedFaqs, { title, openFirst: true, includeJsonLd: true })
+        : renderDefaultAccordion(sanitizedFaqs, { title, openFirst: true, includeJsonLd: true });
+
+      // Insert directly and close modal
+      onInsert(html);
+      onClose();
+    } catch (e) {
+        setError(`An error occurred: ${e.message}`);
+        setIsGenerating(false);
     }
   };
 
   // AI-generate section title from article content
   const aiWriteTitle = async () => {
-    setLoading(true);
+    setIsGenerating(true);
     try {
       const baseHtml = getEditorHtml() || selectedText || "";
       const text = toPlain(baseHtml).slice(0, 6000);
@@ -271,121 +353,97 @@ Article: """${text}"""`,
       });
       if (res?.title) setTitle(res.title.trim());
     } finally {
-      setLoading(false);
+      setIsGenerating(false);
     }
   };
 
-  const handleInsert = () => {
-    if (!previewHtml) return;
-    onInsert(previewHtml);
-    onClose();
-  };
+  // handleInsert function removed as content is inserted directly on generation
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b">
           <h2 className="text-xl font-semibold">Generate FAQs</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Dynamic Template */}
-          <div>
-            <Label className="text-slate-700">Dynamic Template</Label>
-            <Select value={templateId} onValueChange={setTemplateId}>
-              <SelectTrigger className="bg-slate-50 mt-1 px-3 py-2 text-sm flex h-10 w-full items-center justify-between rounded-md border border-input ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1">
-                <SelectValue placeholder="Select template" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Default (Accordion)</SelectItem>
-                {templates.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name || `Template ${t.id}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-slate-500 mt-1">
-              Manage templates in Assets → Templates. Only active FAQ templates are listed.
-            </p>
-          </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-6">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column: Controls */}
+              <div className="space-y-6">
+                
+                <div className="space-y-2">
+                  <Label className="text-slate-700">Dynamic Template</Label>
+                   <div className="border border-slate-200 rounded-md bg-slate-50 max-h-48 overflow-y-auto">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTemplateKey("default")}
+                      className={`w-full text-left px-3 py-3 hover:bg-slate-100 transition-colors border-b border-slate-200 ${
+                        selectedTemplateKey === 'default' ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
+                      }`}
+                    >
+                      <div className="font-medium text-slate-900">Default (Accordion)</div>
+                      <div className="text-xs text-slate-500 mt-1">Simple, clean, built-in style.</div>
+                    </button>
+                    {templates.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setSelectedTemplateKey(t.id)}
+                        className={`w-full text-left px-3 py-3 hover:bg-slate-100 transition-colors border-b border-slate-200 last:border-b-0 ${
+                          selectedTemplateKey === t.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
+                        }`}
+                      >
+                        <div className="font-medium text-slate-900">{t.name || `Template ${t.id}`}</div>
+                        {t.description && <div className="text-xs text-slate-500 mt-1">{t.description}</div>}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Manage templates in Assets → Templates. Only active FAQ templates are listed.
+                  </p>
+                </div>
 
-          <div className="flex items-end justify-start gap-6">
-            <label className="flex items-center gap-2 mt-6 text-sm">
-              <input
-                type="checkbox"
-                checked={openFirst}
-                onChange={(e) => setOpenFirst(e.target.checked)}
-              />
-              Open first
-            </label>
-            <label className="flex items-center gap-2 mt-6 text-sm">
-              <input
-                type="checkbox"
-                checked={includeJsonLd}
-                onChange={(e) => setIncludeJsonLd(e.target.checked)}
-              />
-              Include JSON‑LD
-            </label>
-          </div>
+                <div>
+                  <Label className="text-slate-700">Section Title</Label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Input value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={aiWriteTitle}
+                      disabled={isGenerating}
+                      className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 gap-2"
+                      title="AI Write title from article content"
+                    >
+                      {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      AI Write
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2 pt-4">
+                  <Button onClick={handleGenerateFaqs} disabled={isGenerating} className="bg-indigo-600 hover:bg-indigo-700 text-white w-full">
+                    {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                    {isGenerating ? "Generating..." : "Generate & Insert FAQs"}
+                  </Button>
+                </div>
+                {error && <p className="text-sm text-red-600">{error}</p>}
+              </div>
 
-          <div className="md:col-span-2 -mt-2">
-            <p className="text-xs text-slate-500">
-              JSON‑LD adds hidden structured data so search engines understand your FAQs and may show rich results in Google.
-            </p>
-          </div>
-
-          <div className="md:col-span-2">
-            <Label className="text-slate-700">Section Title</Label>
-            <div className="mt-1 flex items-center gap-2">
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1" />
-              {/* NEW: AI Write button */}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={aiWriteTitle}
-                disabled={loading}
-                className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 gap-2"
-                title="AI Write title from article content"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                AI Write
-              </Button>
+              {/* Right Column: Preview Example */}
+              <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg p-4">
+                <div className="text-xs font-semibold text-slate-500 mb-3 text-center">TEMPLATE PREVIEW</div>
+                <div className="overflow-y-auto max-h-80">
+                  <div dangerouslySetInnerHTML={{ __html: examplePreviewHtml }} />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        {templateWarning && (
-            <p className="text-sm text-amber-600 mt-4">{templateWarning}</p>
-        )}
-
-        <div className="mt-4 flex items-center gap-2">
-          <Button onClick={doGenerate} disabled={loading} className="gap-2">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {loading ? "Generating…" : "Generate"}
-          </Button>
-          <Button
-            onClick={handleInsert}
-            disabled={!previewHtml}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
-            title={previewHtml ? "Insert this FAQ section into the article" : "Generate a preview first to enable Insert"}
-          >
-            Insert
-          </Button>
-        </div>
-
-        <Separator className="my-4" />
-
-        <div className="max-h-80 overflow-auto border rounded-lg p-3 bg-slate-50">
-          {previewHtml ? (
-            <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-          ) : (
-            <p className="text-sm text-slate-500">Preview will appear here after generation.</p>
-          )}
         </div>
       </div>
     </div>

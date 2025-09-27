@@ -1,5 +1,6 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +10,21 @@ import { Testimonial } from "@/api/entities";
 import { CustomContentTemplate } from "@/api/entities";
 import { Username } from "@/api/entities";
 import { User } from "@/api/entities";
-import { ExternalLink, Star, CheckCircle2, Loader2, Eye, Save, Search } from "lucide-react";
+import { ExternalLink, Star, CheckCircle2, Loader2, Eye, Save, Search, ShoppingBag, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { createPageUrl } from "@/utils";
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function makeStars(n) {
   const x = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
@@ -66,26 +80,57 @@ export default function TestimonialLibrary() {
   const [usernames, setUsernames] = useState(["all"]);
   const [filters, setFilters] = useState({ username: "all", asin: "", q: "" });
   const [previewMap, setPreviewMap] = useState({}); // id -> boolean
+  const [currentUser, setCurrentUser] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [testimonialToDelete, setTestimonialToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+
+  const { selectedUsername: globalUsername, isLoading: isWorkspaceLoading } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
+
+  // Determine active username filter based on workspace scoping
+  const activeUsernameFilter = useWorkspaceScoping ? (globalUsername || "all") : filters.username;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const me = await User.me().catch(() => null);
-      const allUsernames = await Username.list("-created_date").catch(() => []);
-      const active = (allUsernames || []).filter(u => u.is_active !== false).map(u => u.user_name);
-      let allowed = active;
-      if (!(me && (me.role === "admin" || me.access_level === "full"))) {
-        const assigned = Array.isArray(me?.assigned_usernames) ? me.assigned_usernames : [];
-        const set = new Set(active);
-        allowed = assigned.filter(n => set.has(n));
-      }
-      setUsernames(["all", ...Array.from(new Set(allowed)).sort()]);
+      const me = await User.me();
+      setCurrentUser(me);
 
-      const ts = await Testimonial.list("-updated_date", 200);
-      setRows(ts || []);
+      const [allTestimonials, allActiveUsernames] = await Promise.all([
+        Testimonial.list("-updated_date", 200),
+        Username.list("-created_date").then(usernames =>
+          (usernames || []).filter(u => u.is_active !== false).map(u => u.user_name)
+        )
+      ]);
+
+      let visibleTestimonials = [];
+      let visibleUsernames = [];
+
+      if (me && (me.role === "admin" || me.is_superadmin)) {
+        // Admins and superadmins see everything
+        visibleTestimonials = allTestimonials || [];
+        visibleUsernames = ["all", ...allActiveUsernames];
+      } else {
+        // Regular users only see testimonials for their assigned usernames
+        const assigned = new Set(me?.assigned_usernames || []);
+        visibleTestimonials = (allTestimonials || []).filter(t => assigned.has(t.user_name));
+        visibleUsernames = ["all", ...Array.from(assigned).filter(name => allActiveUsernames.includes(name))];
+      }
+
+      setRows(visibleTestimonials);
+      setUsernames(visibleUsernames);
 
       const tpls = await CustomContentTemplate.filter({ associated_ai_feature: "testimonial", is_active: true }, "name", 200);
       setTemplates(tpls || []);
+    } catch (error) {
+      console.error("Failed to load testimonials or user data:", error);
+      toast.error("Failed to load data. Please try again.");
+      setCurrentUser(null);
+      setRows([]);
+      setUsernames(["all"]);
+      setTemplates([]);
     } finally {
       setLoading(false);
     }
@@ -95,8 +140,9 @@ export default function TestimonialLibrary() {
 
   const filtered = useMemo(() => {
     let arr = rows || [];
-    if (filters.username !== "all") {
-      arr = arr.filter(t => (t.user_name || "").toLowerCase() === filters.username.toLowerCase());
+    // Use activeUsernameFilter instead of filters.username
+    if (activeUsernameFilter !== "all") {
+      arr = arr.filter(t => (t.user_name || "").toLowerCase() === activeUsernameFilter.toLowerCase());
     }
     if (filters.asin.trim()) {
       arr = arr.filter(t => (t.asin || "").toLowerCase().includes(filters.asin.trim().toLowerCase()));
@@ -110,7 +156,7 @@ export default function TestimonialLibrary() {
       );
     }
     return arr;
-  }, [rows, filters]);
+  }, [rows, filters, activeUsernameFilter]);
 
   const setTemplateForRow = async (row, templateId) => {
     setSavingId(row.id);
@@ -125,11 +171,44 @@ export default function TestimonialLibrary() {
     setPreviewMap(prev => ({ ...prev, [row.id]: !prev[row.id] }));
   };
 
+  const handleDeleteClick = (testimonial) => {
+    setTestimonialToDelete(testimonial);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!testimonialToDelete) return;
+
+    setDeleting(true);
+    try {
+      await Testimonial.delete(testimonialToDelete.id);
+      toast.success("Testimonial deleted successfully");
+
+      // Remove from local state
+      setRows(prevRows => prevRows.filter(row => row.id !== testimonialToDelete.id));
+    } catch (error) {
+      console.error("Error deleting testimonial:", error);
+      toast.error("Failed to delete testimonial");
+    } finally {
+      setDeleting(false);
+      setDeleteConfirmOpen(false);
+      setTestimonialToDelete(null);
+    }
+  };
+
+  const pageIsLoading = loading || (useWorkspaceScoping && isWorkspaceLoading);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Testimonials Library</h1>
+          <Button asChild className="bg-indigo-600 hover:bg-indigo-700">
+            <Link to={createPageUrl("AmazonTestimonials")}>
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Import from Amazon
+            </Link>
+          </Button>
         </div>
 
         <Card className="bg-white border border-slate-200">
@@ -138,32 +217,35 @@ export default function TestimonialLibrary() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div>
-                <Label className="text-slate-700">Brand</Label>
-                <Select value={filters.username} onValueChange={(v) => setFilters(f => ({ ...f, username: v }))}>
-                  <SelectTrigger className="bg-white border-slate-300 text-slate-900">
-                    <SelectValue placeholder="All brands" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {usernames.map(u => <SelectItem key={u} value={u}>{u === "all" ? "All brands" : u}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Brand dropdown - conditionally rendered */}
+              {!useWorkspaceScoping && (
+                <div>
+                  <Label className="text-slate-700">Brand</Label>
+                  <Select value={filters.username} onValueChange={(v) => setFilters(f => ({ ...f, username: v }))}>
+                    <SelectTrigger className="h-9 bg-white border-slate-300 text-slate-900 text-sm">
+                      <SelectValue placeholder="All brands" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 text-slate-900">
+                      {usernames.map(u => <SelectItem key={u} value={u}>{u === "all" ? "All brands" : u}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label className="text-slate-700">ASIN</Label>
                 <Input
                   value={filters.asin}
                   onChange={(e) => setFilters(f => ({ ...f, asin: e.target.value }))}
                   placeholder="e.g., B07ZPKN6YR"
-                  className="bg-white border-slate-300 text-slate-900"
+                  className="h-9 bg-white border-slate-300 text-slate-900 text-sm"
                 />
               </div>
-              <div className="md:col-span-2">
+              <div className={useWorkspaceScoping ? "md:col-span-3" : "md:col-span-2"}>
                 <Label className="text-slate-700">Search</Label>
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                   <Input
-                    className="pl-8 bg-white border-slate-300 text-slate-900"
+                    className="h-9 pl-8 bg-white border-slate-300 text-slate-900 text-sm"
                     placeholder="Title, comment, or author…"
                     value={filters.q}
                     onChange={(e) => setFilters(f => ({ ...f, q: e.target.value }))}
@@ -173,7 +255,7 @@ export default function TestimonialLibrary() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {loading ? (
+              {pageIsLoading ? (
                 <div className="col-span-full flex items-center justify-center py-10 text-slate-600">
                   <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading…
                 </div>
@@ -194,14 +276,23 @@ export default function TestimonialLibrary() {
                             <div className="text-amber-500">{makeStars(t.review_star_rating)}</div>
                             <CardTitle className="text-slate-900 mt-1 text-base">{t.review_title || "Untitled review"}</CardTitle>
                             <div className="text-xs text-slate-500 mt-1">
-                              — {t.review_author || "Anonymous"}{t.review_date ? ` • ${t.review_date}` : ""}{t.is_verified_purchase ? " • Verified Purchase" : ""}
+                              — {t.review_author || "Anonymous"}{t.review_date ? ` • ${t.review_date}` : ""} {t.is_verified_purchase ? " • Verified Purchase" : ""}
                             </div>
                           </div>
-                          {t.review_link && (
-                            <a href={t.review_link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1">
-                              <ExternalLink className="w-3.5 h-3.5" /> Open
-                            </a>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {t.review_link && (
+                              <a href={t.review_link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 p-1 hover:bg-blue-50 rounded">
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                            <button
+                              onClick={() => handleDeleteClick(t)}
+                              className="text-xs text-red-600 inline-flex items-center gap-1 p-1 hover:bg-red-50 rounded transition-colors"
+                              title="Delete testimonial"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
@@ -260,6 +351,50 @@ export default function TestimonialLibrary() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent className="bg-white border border-slate-200 text-slate-900">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-slate-900">Delete Testimonial</AlertDialogTitle>
+              <AlertDialogDescription className="text-slate-600">
+                Are you sure you want to delete this testimonial? This action cannot be undone.
+                {testimonialToDelete && (
+                  <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
+                    <strong>"{testimonialToDelete.review_title || "Untitled review"}"</strong>
+                    <br />
+                    by {testimonialToDelete.review_author || "Anonymous"}
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                disabled={deleting}
+                className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

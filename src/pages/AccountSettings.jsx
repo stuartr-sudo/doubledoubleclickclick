@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User } from '@/api/entities';
 import { Button } from '@/components/ui/button';
@@ -57,7 +58,7 @@ export default function AccountSettings() {
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white mt-12 rounded-2xl shadow-lg border border-slate-200">
-      <h1 className="text-3xl font-bold text-slate-900 mb-2">Account Settings</h1>
+      <h1 className="text-3xl font-bold text-blue-900 mb-2">Account Settings</h1>
       <p className="text-slate-600 mb-8">Manage your profile and account details.</p>
       
       <form onSubmit={handleSave} className="space-y-6">

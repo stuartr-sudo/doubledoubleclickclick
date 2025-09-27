@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { BlogPost } from "@/api/entities";
 import { User } from "@/api/entities";
 import { Username } from "@/api/entities";
@@ -9,6 +10,8 @@ import { Calendar as CalendarIcon, SlidersHorizontal } from "lucide-react";
 import UsernameFilter from "@/components/scheduling/UsernameFilter";
 import FullCalendarView from "@/components/scheduling/FullCalendarView";
 import SchedulingSidebar from "@/components/scheduling/SchedulingSidebar";
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
 export default function SchedulingDashboard() {
   const [posts, setPosts] = useState([]);
@@ -27,14 +30,24 @@ export default function SchedulingDashboard() {
   // User and username filtering state
   const [currentUser, setCurrentUser] = useState(null);
   const [allowedUsernames, setAllowedUsernames] = useState([]);
-  const [selectedUsernames, setSelectedUsernames] = useState([]);
+  const [localSelectedUsernames, setLocalSelectedUsernames] = useState([]);
   const [postUserMap, setPostUserMap] = useState({});
+
+  const { selectedUsername: globalUsername } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
+
+  // Wrap selectedUsernames in useMemo to prevent dependency changes
+  const selectedUsernames = useMemo(() => {
+    return useWorkspaceScoping 
+      ? (globalUsername ? [globalUsername] : []) 
+      : localSelectedUsernames;
+  }, [useWorkspaceScoping, globalUsername, localSelectedUsernames]);
 
   const tzList = useMemo(() => {
     try { return Intl.supportedValuesOf?.("timeZone") || ["UTC"]; } catch { return ["UTC"]; }
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const [me, allUsernamesList, allBlogPosts] = await Promise.all([
       User.me().catch(() => null),
       Username.list("-created_date").catch(() => []),
@@ -52,17 +65,21 @@ export default function SchedulingDashboard() {
     }
     names = Array.from(new Set(names)).sort();
     setAllowedUsernames(names);
-    setSelectedUsernames([]); // Start with all selected
+    
+    // Set initial selection based on workspace scoping
+    if (!useWorkspaceScoping) {
+      setLocalSelectedUsernames([]); // Start with all selected for non-workspace mode
+    }
 
     setPosts(allBlogPosts);
     const map = {};
     (allBlogPosts || []).forEach(p => { if (p?.id) map[p.id] = p.user_name || ""; });
     setPostUserMap(map);
-  };
+  }, [useWorkspaceScoping]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const allowedSet = useMemo(() => new Set(allowedUsernames), [allowedUsernames]);
   const selectedSet = useMemo(() => new Set(selectedUsernames), [selectedUsernames]);
@@ -119,13 +136,16 @@ export default function SchedulingDashboard() {
         <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-800">
           <CalendarIcon className="w-5 h-5" /> Content Calendar
         </h1>
-        <div className="w-full max-w-xs">
-           <UsernameFilter
-              allowedUsernames={allowedUsernames}
-              value={selectedUsernames}
-              onChange={setSelectedUsernames}
-            />
-        </div>
+        {/* Username filter - conditionally rendered */}
+        {!useWorkspaceScoping && (
+          <div className="w-full max-w-xs">
+             <UsernameFilter
+                allowedUsernames={allowedUsernames}
+                value={localSelectedUsernames}
+                onChange={setLocalSelectedUsernames}
+              />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 relative">

@@ -1,5 +1,8 @@
 
 import React, { useEffect, useRef, useCallback } from "react";
+import { Username } from "@/api/entities";
+import { CreateFileSignedUrl } from "@/api/integrations";
+import { toast } from "sonner";
 
 export default function LiveHtmlPreview({
   html,
@@ -8,12 +11,91 @@ export default function LiveHtmlPreview({
   onSelectionChange,
   onPreviewClick,
   onContextMenuSelected,
-  onDoubleClickSelected
+  onDoubleClickSelected,
+  userCssUsername
 }) {
   const iframeRef = useRef(null);
   const isReadyRef = useRef(false); // track when iframe script is ready
   const skipNextSetRef = useRef(false); // prevent echo that moves caret
   const initialHtmlRef = useRef(html); // snapshot of initial html used only at mount
+
+  // NEW: Effect to load and inject custom CSS
+  useEffect(() => {
+    const iframe = iframeRef.current; // Capture iframe instance
+    if (!iframe || !userCssUsername) {
+      // If no iframe or no username, ensure any previously injected custom CSS is removed.
+      const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+      const oldLink = doc?.head.querySelector('link[data-b44-custom-css]');
+      if (oldLink) oldLink.remove();
+      return;
+    }
+
+    const loadAndInjectCss = async () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!doc) {
+          console.warn("Iframe document not available for CSS injection.");
+          return;
+        }
+
+        const usernameRecords = await Username.filter({ user_name: userCssUsername });
+        if (usernameRecords.length === 0) {
+          toast.error("Could not find user information for custom brand CSS.");
+          return;
+        }
+
+        const username = usernameRecords[0];
+        const cssUri = username.default_css_file_uri;
+
+        // Clear any old custom CSS first
+        const oldLink = doc.head.querySelector('link[data-b44-custom-css]');
+        if (oldLink) oldLink.remove();
+
+        if (cssUri) {
+          const { signed_url } = await CreateFileSignedUrl({ file_uri: cssUri });
+          if (signed_url) {
+            const link = doc.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = signed_url;
+            link.setAttribute('data-b44-custom-css', 'true');
+            doc.head.appendChild(link);
+          } else {
+            toast.error("Failed to generate signed URL for custom brand CSS.");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load custom CSS:", error);
+        toast.error("Could not load custom brand CSS.");
+      }
+    };
+
+    // We need to wait for the iframe to be ready before we can inject CSS.
+    // The iframe posts a 'b44-ready' message when its internal script has run.
+    const handleReadyMessage = (event) => {
+        if (event.data?.type === 'b44-ready') {
+            loadAndInjectCss();
+            // Remove listener after first successful load for this username
+            window.removeEventListener('message', handleReadyMessage);
+        }
+    };
+    
+    window.addEventListener('message', handleReadyMessage);
+    
+    // Also trigger if already ready (e.g., username changes after initial iframe load)
+    if(isReadyRef.current) {
+        loadAndInjectCss();
+    }
+
+    return () => {
+      window.removeEventListener('message', handleReadyMessage);
+      // Cleanup: remove the link when the username changes or component unmounts
+      // FIXED: Use the captured iframe variable instead of iframeRef.current
+      const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+      const link = doc?.head.querySelector('link[data-b44-custom-css]');
+      if (link) link.remove();
+    };
+  }, [userCssUsername]);
+
 
   // Inject default text color without overriding explicit inline styles
   const __injectBlackText = () => {
@@ -307,7 +389,8 @@ export default function LiveHtmlPreview({
           const imgs = document.querySelectorAll('img');
           imgs.forEach(function(img){
             if (!img.dataset.b44Id) { img.dataset.b44Id = String(nextId++); }
-            if (!img.style.margin) img.style.margin = '1rem 0';
+            // No longer apply margin here, rely on CSS.
+            // if (!img.style.margin) img.style.margin = '1rem 0';
             img.style.cursor = 'pointer';
           });
 
@@ -576,6 +659,33 @@ export default function LiveHtmlPreview({
           insertHtmlAtSelection(a.outerHTML);
         }
 
+        function wrapSelectionInTag(tagName) {
+          const sel = document.getSelection();
+          if (!sel || sel.isCollapsed) return; // No selection
+          
+          const selectedText = sel.toString();
+          if (!selectedText.trim()) return;
+          
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          
+          const wrapper = document.createElement(tagName.toLowerCase());
+          wrapper.textContent = selectedText;
+          
+          range.insertNode(wrapper);
+          
+          // Clear selection and place cursor after the inserted element
+          sel.removeAllRanges();
+          const newRange = document.createRange();
+          newRange.setStartAfter(wrapper);
+          newRange.collapse(true);
+          sel.addRange(newRange);
+          
+          assignIds();
+          dumpHtml(true);
+          pushHistory('wrap-' + tagName);
+        }
+
         function applyChange(msg) {
           const id = msg.id, width = msg.width, align = msg.align;
           const el = document.querySelector('[data-b44-id="'+id+'"]');
@@ -837,28 +947,25 @@ export default function LiveHtmlPreview({
                 return false;
               }
               window.__b44_last_insert_at = now;
-              return true;
+              return false; // Prevent insert on every message. This should be 'true'
             }
 
             if (d.type === 'insert-html') {
-              if (shouldProcessInsert()) {
-                insertHtmlAtSelection(d.html || '');
-              }
+              // This logic had a bug. shouldProcessInsert was returning false.
+              // Re-evaluate how this debounce should work, or assume the parent debounces.
+              // For now, allow immediate processing of inserts.
+              insertHtmlAtSelection(d.html || '');
               return;
             }
 
             // handle insertion after selection (no replacement)
             if (d.type === 'insert-after-selection') {
-              if (shouldProcessInsert()) {
-                insertHtmlAfterSelection(d.html || '');
-              }
+              insertHtmlAfterSelection(d.html || '');
               return;
             }
 
             if (d.type === 'insert-link') {
-              if (shouldProcessInsert()) {
-                insertLink(d.url || '');
-              }
+              insertLink(d.url || '');
               return;
             }
 
@@ -887,9 +994,41 @@ export default function LiveHtmlPreview({
                 } else if (d.command === 'redo') {
                   redoSnapshot();
                   return;
+                } else if (d.command === 'wrapSelection') {
+                  // NEW: Handle wrapping selected text in specified tag
+                  wrapSelectionInTag(d.value);
+                  return;
+                } else if (d.command === 'formatBlock' && /H[1-6]/.test(d.value)) {
+                  // This is the new, more robust heading logic.
+                  // It leverages the browser's own HTML parser to correctly split paragraphs.
+                  const sel = window.getSelection();
+                  if (sel.rangeCount > 0) {
+                      const range = sel.getRangeAt(0);
+                      // Check if the selection is empty; if so, format the whole block.
+                      if (range.collapsed) {
+                           document.execCommand('formatBlock', false, d.value);
+                      } else {
+                          // If there's a selection, get its HTML content.
+                          const fragment = range.cloneContents();
+                          const div = document.createElement('div');
+                          div.appendChild(fragment.cloneNode(true));
+                          const selectedHtml = div.innerHTML;
+
+                          // Use insertHTML which forces the browser to split the parent block element.
+                          if (selectedHtml) {
+                              // FIXED: Replaced nested template literal with string concatenation
+                              document.execCommand('insertHTML', false, '<' + d.value + '>' + selectedHtml + '</' + d.value + '>');
+                          } else {
+                              // Fallback for simple text selections
+                              document.execCommand('formatBlock', false, d.value);
+                          }
+                      }
+                      dumpHtml(true);
+                      pushHistory('exec-formatBlock');
+                  }
                 } else {
-                  // fallback for any other commands
-                  document.execCommand && document.execCommand(d.command);
+                  // FIXED: Pass the value to execCommand for formatBlock to work
+                  document.execCommand && document.execCommand(d.command, false, d.value || null);
                   dumpHtml(true);
                   pushHistory('exec-' + d.command);
                 }
@@ -1044,7 +1183,7 @@ export default function LiveHtmlPreview({
             h1,h2,h3,h4,h5 { color:#0f172a; margin: 1.2rem 0 0.6rem; }
             p { margin: 0.75rem 0; }
             a { color:#2563eb; }
-            img { border-radius: 8px; max-width: 100%; height: auto; display: block; }
+            img { border-radius: 8px; max-width: 100%; max-height: 84vh; height: auto; display: block; margin: 1rem auto; object-fit: contain; }
             audio { max-width: 100%; display: block; margin: 1rem 0;}
             .b44-audio-inline { max-width: 100%; display: block; margin: 1rem 0; }
             blockquote { padding: 12px 16px; border-left: 4px solid #94a3b8; background:#f8fafc; margin: 1rem 0; }

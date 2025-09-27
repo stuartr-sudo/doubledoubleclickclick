@@ -1,124 +1,112 @@
 import React, { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Loader2, Download } from "lucide-react";
-import { toast } from "sonner";
 import { exportPosts } from "@/api/functions";
-import { UploadFile, SendEmail } from "@/api/integrations";
+import { Download, FileText, Code } from "lucide-react";
+import { toast } from "sonner";
 
-export default function ExportDialog({ postIds = [], onClose }) {
-  const [format, setFormat] = useState("pdf");
-  const [includeMetadata, setIncludeMetadata] = useState(true);
-  const [includeAnalytics, setIncludeAnalytics] = useState(false);
-  const [includeImages, setIncludeImages] = useState(true);
-  const [imageHandling, setImageHandling] = useState("link"); // embed|link|separate (we currently output links)
-  const [emailTo, setEmailTo] = useState("");
+export default function ExportDialog({ isOpen, onClose, selectedItems, usernames }) {
+  const [format, setFormat] = useState("html");
+  const [username, setUsername] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
-
-  const getExt = (fmt) => ({ pdf:"pdf", docx:"docx", markdown:"md", html:"html", json:"json" }[fmt] || "bin");
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const options = { includeMetadata, includeAnalytics, includeImages, imageHandling };
-      const { data, headers } = await exportPosts({ postIds, format, options });
-      const contentType = headers?.["content-type"] || "application/octet-stream";
-      const blob = new Blob([data], { type: contentType });
+      const payload = {
+        format,
+        username: username === "all" ? undefined : username,
+        selectedIds: selectedItems?.length > 0 ? selectedItems : undefined
+      };
 
-      if (emailTo) {
-        const fileName = `export-${Date.now()}.${postIds.length > 1 ? "zip" : getExt(format)}`;
-        const file = new File([blob], fileName, { type: blob.type });
-        const { file_url } = await UploadFile({ file });
-        await SendEmail({
-          to: emailTo,
-          subject: "Your requested export is ready",
-          body: `Download your export here: ${file_url}`
-        });
-        toast.success(`Export emailed to ${emailTo}`);
-      } else {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `export-${Date.now()}.${postIds.length > 1 ? "zip" : getExt(format)}`;
+      const { data } = await exportPosts(payload);
+
+      if (data?.download_url) {
+        // Create download link
+        const a = document.createElement('a');
+        a.href = data.download_url;
+        a.download = `export_${format}_${Date.now()}.${format}`;
         document.body.appendChild(a);
         a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-        toast.success("Export downloaded");
+        document.body.removeChild(a);
+        
+        toast.success(`${format.toUpperCase()} file downloaded successfully!`);
+        onClose();
+      } else {
+        toast.error("Failed to generate export file");
       }
-      onClose();
-    } catch (e) {
-      toast.error(e?.message || "Export failed");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Export failed: " + (error.message || "Unknown error"));
+    } finally {
+      setIsExporting(false);
     }
-    setIsExporting(false);
   };
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-white border-slate-200 text-slate-900">
         <DialogHeader>
-          <DialogTitle>Export Content</DialogTitle>
-          <DialogDescription>Export {postIds.length} {postIds.length === 1 ? "post" : "posts"} in your preferred format.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <Download className="w-5 h-5" />
+            Export Content
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="space-y-4 py-4">
           <div>
-            <Label className="mb-2 block">Format</Label>
-            <RadioGroup value={format} onValueChange={setFormat} className="grid grid-cols-2 gap-2">
-              {["pdf","docx","markdown","html","json"].map(f => (
-                <div key={f} className="flex items-center space-x-2">
-                  <RadioGroupItem id={`fmt-${f}`} value={f} />
-                  <Label htmlFor={`fmt-${f}`} className="capitalize">{f}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Include metadata</Label>
-              <Switch checked={includeMetadata} onCheckedChange={setIncludeMetadata} />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Include analytics</Label>
-              <Switch checked={includeAnalytics} onCheckedChange={setIncludeAnalytics} />
-            </div>
-            {format !== "json" && (
-              <>
-                <div className="flex items-center justify-between">
-                  <Label>Include images</Label>
-                  <Switch checked={includeImages} onCheckedChange={setIncludeImages} />
-                </div>
-                <div>
-                  <Label className="mb-2 block">Image handling</Label>
-                  <Select value={imageHandling} onValueChange={setImageHandling}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="link">Links (recommended)</SelectItem>
-                      <SelectItem value="embed">Embed (limited)</SelectItem>
-                      <SelectItem value="separate">Separate (zip-only; not implemented)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
+            <Label htmlFor="format" className="text-slate-700">Export Format</Label>
+            <Select value={format} onValueChange={setFormat}>
+              <SelectTrigger id="format" className="bg-white border-slate-300 text-slate-900">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200 text-slate-900">
+                <SelectItem value="html" className="hover:bg-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Code className="w-4 h-4" />
+                    HTML File (.html)
+                  </div>
+                </SelectItem>
+                <SelectItem value="txt" className="hover:bg-slate-100">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Text File (.txt)
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
-            <Label className="mb-2 block">Email export (optional)</Label>
-            <Input placeholder="name@company.com" type="email" value={emailTo} onChange={(e) => setEmailTo(e.target.value)} />
+            <Label htmlFor="username" className="text-slate-700">Filter by Username</Label>
+            <Select value={username} onValueChange={setUsername}>
+              <SelectTrigger id="username" className="bg-white border-slate-300 text-slate-900">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200 text-slate-900">
+                <SelectItem value="all" className="hover:bg-slate-100">All Usernames</SelectItem>
+                {usernames.map((u) => (
+                  <SelectItem key={u} value={u} className="hover:bg-slate-100">{u}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {selectedItems?.length > 0 && (
+            <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-md">
+              Exporting {selectedItems.length} selected item{selectedItems.length === 1 ? '' : 's'}
+            </div>
+          )}
         </div>
 
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleExport} disabled={isExporting}>
-            {isExporting ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Exporting...</>) : (<><Download className="w-4 h-4 mr-2" />Export</>)}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50">
+            Cancel
+          </Button>
+          <Button onClick={handleExport} disabled={isExporting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            {isExporting ? "Exporting..." : `Export ${format.toUpperCase()}`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -140,6 +140,21 @@ export default function HomePage() {
         fetchContent();
     }, []);
 
+    useEffect(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get('ref');
+      
+      if (ref) {
+        // Store in localStorage - survives everything including OAuth
+        localStorage.setItem('affiliate_ref', ref);
+        localStorage.setItem('affiliate_ref_date', new Date().toISOString());
+        console.log('Affiliate code stored:', ref);
+        
+        // Clean the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }, []);
+
     // This effect handles the login redirect flow.
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -239,14 +254,12 @@ export default function HomePage() {
             <header className="absolute top-0 left-0 right-0 z-50 p-6">
                 <div className="container mx-auto flex justify-between items-center">
                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center border border-slate-700">
-                            <Layers className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
+                        <Link to={createPageUrl('Home')} className="flex items-center gap-3">
+                            <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/689715479cd170f6c2aa04f2/d056b0101_logo.png" alt="Logo" className="w-10 h-10 rounded-full" />
                             <h1 className="text-xl font-bold text-white">
                                 SEWO
                             </h1>
-                        </div>
+                        </Link>
                     </div>
                     {isLoadingUser ? (
                         <Button variant="outline" className="bg-transparent text-white/80 border-white/20 opacity-50 cursor-not-allowed">

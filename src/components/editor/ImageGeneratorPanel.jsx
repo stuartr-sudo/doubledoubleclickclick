@@ -14,18 +14,18 @@ const PROVIDERS = {
   fal_ai: {
     label: "Fal AI (Fast)",
     models: [
-      { id: "fal-ai/sdxl", label: "Stable Diffusion XL" },
-      { id: "fal-ai/anything-v4.0", label: "Anything v4 (Anime)" },
-    ],
+    { id: "fal-ai/sdxl", label: "Stable Diffusion XL" },
+    { id: "fal-ai/anything-v4.0", label: "Anything v4 (Anime)" }]
+
   },
   midjourney: {
     label: "Midjourney (High Quality)",
-    models: [{ id: "midjourney/v6", label: "Midjourney v6" }],
+    models: [{ id: "midjourney/v6", label: "Midjourney v6" }]
   },
   infographic: {
     label: "Infographics (Kie)",
-    models: [{ id: "infographic-v1", label: "Infographic Generator" }],
-  },
+    models: [{ id: "infographic-v1", label: "Infographic Generator" }]
+  }
 };
 
 export default function ImageGeneratorPanel({ onQueueJob, seedPrompt = "", defaultProvider, onInsert, onClose }) {
@@ -57,7 +57,7 @@ export default function ImageGeneratorPanel({ onQueueJob, seedPrompt = "", defau
       if (provider === "infographic") {
         const { data } = await generateKeiImage({
           prompt,
-          endpointPath: "/v1/infographics/generate",
+          endpointPath: "/v1/infographics/generate"
         });
 
         if (data?.url) {
@@ -72,7 +72,7 @@ export default function ImageGeneratorPanel({ onQueueJob, seedPrompt = "", defau
             type: 'image',
             taskId: data.job_id,
             prompt,
-            altText: prompt,
+            altText: prompt
           });
           onClose();
         } else {
@@ -87,7 +87,7 @@ export default function ImageGeneratorPanel({ onQueueJob, seedPrompt = "", defau
         type: 'image',
         modelName: model,
         prompt,
-        altText: prompt,
+        altText: prompt
       });
       onClose(); // Close modal immediately after queueing.
     } catch (error) {
@@ -99,7 +99,7 @@ export default function ImageGeneratorPanel({ onQueueJob, seedPrompt = "", defau
   };
 
   return (
-    <div className="flex flex-col h-full p-1">
+    <div className="bg-slate-50 p-1 flex flex-col h-full">
       <div className="p-4 border-b border-slate-200">
         <h3 className="text-lg font-semibold text-slate-800">Generate AI Image</h3>
         <p className="text-sm text-slate-500">Describe the image you want to create.</p>
@@ -113,9 +113,9 @@ export default function ImageGeneratorPanel({ onQueueJob, seedPrompt = "", defau
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(PROVIDERS).map(([key, { label }]) => (
-                <SelectItem key={key} value={key}>{label}</SelectItem>
-              ))}
+              {Object.entries(PROVIDERS).map(([key, { label }]) =>
+              <SelectItem key={key} value={key}>{label}</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -126,10 +126,10 @@ export default function ImageGeneratorPanel({ onQueueJob, seedPrompt = "", defau
             id="prompt-input"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g., A cinematic shot of a robot drinking coffee on a rainy day"
-            className="h-32 bg-white"
-            required
-          />
+            placeholder="e.g., A cinematic shot of a robot drinking coffee on a rainy day" className="bg-slate-50 text-slate-600 px-3 py-2 text-sm flex min-h-[80px] w-full rounded-md border border-input ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 h-32"
+
+            required />
+
         </div>
         
         <div className="mt-auto pt-4 border-t border-slate-200">
@@ -139,6 +139,6 @@ export default function ImageGeneratorPanel({ onQueueJob, seedPrompt = "", defau
           </Button>
         </div>
       </form>
-    </div>
-  );
+    </div>);
+
 }

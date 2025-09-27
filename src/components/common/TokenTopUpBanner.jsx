@@ -1,59 +1,88 @@
-
-import React from "react";
-import { User } from "@/api/entities";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
-import useFeatureFlag from "@/components/hooks/useFeatureFlag";
+import React, { useState, useEffect } from 'react';
+import { AlertTriangle, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { User } from '@/api/entities';
+import { createPageUrl } from '@/utils';
+import { useNavigate } from 'react-router-dom';
 
 export default function TokenTopUpBanner() {
-  const [show, setShow] = React.useState(false);
-  const [balance, setBalance] = React.useState(null);
+  const [user, setUser] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+  const navigate = useNavigate();
 
-  // NEW: Only show this banner if the token system is active (feature flag)
-  const { enabled: tokensActive } = useFeatureFlag("token_system_active", { defaultEnabled: false });
-  const { enabled: showTokenBalance } = useFeatureFlag("show_token_balance", { defaultEnabled: false });
-
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
+  useEffect(() => {
+    const checkTokenBalance = async () => {
       try {
-        const u = await User.me();
-        const b = typeof u?.token_balance === "number" ? u.token_balance : 0;
-        if (!mounted) return;
-        setBalance(b);
-        // Only show when token feature is ON and user has no tokens
-        setShow((tokensActive || showTokenBalance) && b <= 0);
-      } catch {
-        // Not logged in or public page – don't show banner
-        if (mounted) setShow(false);
+        const currentUser = await User.me();
+        setUser(currentUser);
+        
+        // Check if user is new (created within the last 24 hours)
+        const isNewUser = (() => {
+          if (!currentUser.created_date) return false;
+          const createdAt = new Date(currentUser.created_date);
+          const now = new Date();
+          const hoursSinceCreation = (now - createdAt) / (1000 * 60 * 60);
+          return hoursSinceCreation < 24; // Consider user "new" for first 24 hours
+        })();
+        
+        // Only show banner if:
+        // 1. User has 0 tokens
+        // 2. User is NOT new
+        // 3. Banner hasn't been dismissed
+        const shouldShow = (
+          (currentUser.token_balance === 0 || currentUser.token_balance == null) &&
+          !isNewUser &&
+          !isDismissed
+        );
+        
+        setIsVisible(shouldShow);
+      } catch (error) {
+        console.error('Error checking token balance:', error);
+        setIsVisible(false);
       }
-    })();
-    return () => { mounted = false; };
-  }, [tokensActive, showTokenBalance]);
+    };
 
-  if (!show) return null;
+    checkTokenBalance();
+  }, [isDismissed]);
+
+  const handleTopUp = () => {
+    navigate(createPageUrl('TokenPacketsTopUp'));
+  };
+
+  const handleDismiss = () => {
+    setIsDismissed(true);
+    setIsVisible(false);
+  };
+
+  if (!isVisible || !user) {
+    return null;
+  }
 
   return (
-    <div className="w-full bg-amber-50 border-b border-amber-200">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <Alert className="border-0 bg-transparent p-0">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-            <div>
-              <AlertTitle className="text-amber-900">You’re out of tokens</AlertTitle>
-              <AlertDescription className="text-amber-800">
-                Your current balance is {balance ?? 0}. Top up to continue using AI features without interruptions.
-              </AlertDescription>
-            </div>
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 m-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600" />
+          <div>
+            <h4 className="text-amber-800 font-medium">You're out of tokens</h4>
+            <p className="text-amber-700 text-sm">
+              Your current balance is {user.token_balance || 0}. Top up to continue using AI features without interruptions.
+            </p>
           </div>
-        </Alert>
-        <div className="sm:ml-auto">
-          <Link to={createPageUrl("TokenPacketsTopUp")}>
-            <Button className="bg-amber-600 hover:bg-amber-700">Top up tokens</Button>
-          </Link>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleTopUp} size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+            Top up tokens
+          </Button>
+          <Button
+            onClick={handleDismiss}
+            variant="ghost"
+            size="sm"
+            className="text-amber-600 hover:text-amber-700 hover:bg-amber-100"
+          >
+            <X className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>

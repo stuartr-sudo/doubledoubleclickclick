@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Wand2, RefreshCw, Copy, Check } from "lucide-react";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 
 export default function AIRewriterModal({ isOpen, onClose, selectedText, onRewrite }) {
   const [style, setStyle] = useState("improve");
@@ -25,6 +26,7 @@ export default function AIRewriterModal({ isOpen, onClose, selectedText, onRewri
   const [rewrittenText, setRewrittenText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const { consumeTokensForFeature } = useTokenConsumption();
 
   const styles = {
     improve: "Improve the clarity and flow of this text while keeping the same meaning",
@@ -41,6 +43,16 @@ export default function AIRewriterModal({ isOpen, onClose, selectedText, onRewri
     
     setIsLoading(true);
     try {
+      // Check tokens before making the API call
+      const tokenResult = await consumeTokensForFeature('ai_rewrite');
+      if (!tokenResult.success) {
+        setIsLoading(false);
+        // Optionally, provide user feedback about token consumption failure
+        console.warn("Token consumption failed. User may not have enough tokens or feature is disabled.");
+        setRewrittenText("Sorry, you don't have enough tokens for this operation. Please check your plan.");
+        return; // Token consumption failed, stop here
+      }
+
       const prompt = style === "custom" && customPrompt
         ? `${customPrompt}\n\nText to rewrite: "${selectedText}"`
         : `${styles[style]}\n\nText to rewrite: "${selectedText}"`;

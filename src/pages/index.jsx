@@ -104,13 +104,33 @@ import TokenPacketsTopUp from "./TokenPacketsTopUp";
 
 import ContentStructureBuilder from "./ContentStructureBuilder";
 
-import PostPayment from "./PostPayment";
-
 import CustomTemplateManager from "./CustomTemplateManager";
 
 import FaqEndpointAdmin from "./FaqEndpointAdmin";
 
 import TestimonialLibrary from "./TestimonialLibrary";
+
+import DoubleClickTutorials from "./DoubleClickTutorials";
+
+import ImageLibrary from "./ImageLibrary";
+
+import post-payment from "./post-payment";
+
+import PricingFaqManager from "./PricingFaqManager";
+
+import Welcome from "./Welcome";
+
+import OnboardingStepManager from "./OnboardingStepManager";
+
+import AffiliateManager from "./AffiliateManager";
+
+import AffiliateSignup from "./AffiliateSignup";
+
+import AffiliateLogin from "./AffiliateLogin";
+
+import AffiliateDashboard from "./AffiliateDashboard";
+
+import AffiliatePackManager from "./AffiliatePackManager";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -220,13 +240,33 @@ const PAGES = {
     
     ContentStructureBuilder: ContentStructureBuilder,
     
-    PostPayment: PostPayment,
-    
     CustomTemplateManager: CustomTemplateManager,
     
     FaqEndpointAdmin: FaqEndpointAdmin,
     
     TestimonialLibrary: TestimonialLibrary,
+    
+    DoubleClickTutorials: DoubleClickTutorials,
+    
+    ImageLibrary: ImageLibrary,
+    
+    post-payment: post-payment,
+    
+    PricingFaqManager: PricingFaqManager,
+    
+    Welcome: Welcome,
+    
+    OnboardingStepManager: OnboardingStepManager,
+    
+    AffiliateManager: AffiliateManager,
+    
+    AffiliateSignup: AffiliateSignup,
+    
+    AffiliateLogin: AffiliateLogin,
+    
+    AffiliateDashboard: AffiliateDashboard,
+    
+    AffiliatePackManager: AffiliatePackManager,
     
 }
 
@@ -359,13 +399,33 @@ function PagesContent() {
                 
                 <Route path="/ContentStructureBuilder" element={<ContentStructureBuilder />} />
                 
-                <Route path="/PostPayment" element={<PostPayment />} />
-                
                 <Route path="/CustomTemplateManager" element={<CustomTemplateManager />} />
                 
                 <Route path="/FaqEndpointAdmin" element={<FaqEndpointAdmin />} />
                 
                 <Route path="/TestimonialLibrary" element={<TestimonialLibrary />} />
+                
+                <Route path="/DoubleClickTutorials" element={<DoubleClickTutorials />} />
+                
+                <Route path="/ImageLibrary" element={<ImageLibrary />} />
+                
+                <Route path="/post-payment" element={<post-payment />} />
+                
+                <Route path="/PricingFaqManager" element={<PricingFaqManager />} />
+                
+                <Route path="/Welcome" element={<Welcome />} />
+                
+                <Route path="/OnboardingStepManager" element={<OnboardingStepManager />} />
+                
+                <Route path="/AffiliateManager" element={<AffiliateManager />} />
+                
+                <Route path="/AffiliateSignup" element={<AffiliateSignup />} />
+                
+                <Route path="/AffiliateLogin" element={<AffiliateLogin />} />
+                
+                <Route path="/AffiliateDashboard" element={<AffiliateDashboard />} />
+                
+                <Route path="/AffiliatePackManager" element={<AffiliatePackManager />} />
                 
             </Routes>
         </Layout>

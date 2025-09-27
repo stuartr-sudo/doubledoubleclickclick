@@ -10,10 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Globe, Languages, Loader2, Wand2, Check } from "lucide-react"; // Removed RotateCcw
+import { Globe, Languages, Loader2, Wand2, Check } from "lucide-react";
 import { InvokeLLM } from "@/api/integrations";
 import { User } from "@/api/entities";
 import { callLlmWithRetry } from "./llmRetry";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 
 export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLocalized }) {
   const [language, setLanguage] = useState("German");
@@ -23,14 +24,9 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
   const [chunkIndex, setChunkIndex] = useState(0);
   const [chunkTotal, setChunkTotal] = useState(0);
   const [progressPct, setProgressPct] = useState(0);
-  // Removed: const [showLogs, setShowLogs] = useState(false);
-  // Removed: const [logs, setLogs] = useState([]);
-  // Removed: const [skipVerification, setSkipVerification] = useState(false);
-  // Removed: const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  // Removed: const [llmChoice, setLlmChoice] = useState(() => {
-  // Removed:   try {return localStorage.getItem("b44_llm_choice") || "auto";} catch {return "auto";}
-  // Removed: });
+
+  const { consumeTokensForFeature } = useTokenConsumption();
 
   const stripFences = (s) => {
     if (!s) return "";
@@ -43,7 +39,6 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
   };
 
   const logLine = (msg) => {
-    // Removed setLogs related logic
     try { console.log("[Localize]", `[${new Date().toLocaleTimeString()}] ${msg}`); } catch (e) { }
   };
 
@@ -52,11 +47,6 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
       onClose();
     }
   };
-
-  // Removed: useEffect for llmChoice storage
-  // useEffect(() => {
-  //   try {localStorage.setItem("b44_llm_choice", llmChoice);} catch {}
-  // }, [llmChoice]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -67,25 +57,8 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
       setChunkIndex(0);
       setChunkTotal(0);
       setProgressPct(0);
-      // Removed: setLogs([]);
-      // Removed: setShowLogs(false);
     }
   }, [isOpen]);
-
-  // Removed: useEffect for isSuperadmin check
-  // useEffect(() => {
-  //   if (!isOpen) return;
-  //   (async () => {
-  //     try {
-  //       const me = await User.me();
-  //       setIsSuperadmin(!!me?.is_superadmin);
-  //       if (!me?.is_superadmin) setShowLogs(false);
-  //     } catch {
-  //       setIsSuperadmin(false);
-  //       setShowLogs(false);
-  //     }
-  //   })();
-  // }, [isOpen]);
 
   const buildPrompt = useMemo(() => {
     return (lang, html) => {
@@ -182,7 +155,6 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
   const CHUNK_GLUE = "\n";
 
   const ensureFullLanguage = async (lang, html) => {
-    // Removed: if (skipVerification) { logLine("Final verification skipped by user choice."); return html; }
     if (!html?.trim()) return html;
 
     const prompt = [
@@ -206,7 +178,7 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
             onRetry: ({ attempt, delay }) => {
               logLine(`Final verification rate-limited. Retry #${attempt} in ${Math.round(delay / 1000)}s`);
             },
-            model: undefined // Changed to use default/auto LLM choice
+            model: undefined
           }
         );
         return stripFences(typeof resp === "string" ? resp : String(resp || ""));
@@ -214,8 +186,8 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
 
       const timed = await Promise.race([
         verifyPromise,
-        new Promise((resolve) => setTimeout(() => resolve("__TIMEOUT__"), 30000))]
-      );
+        new Promise((resolve) => setTimeout(() => resolve("__TIMEOUT__"), 30000))
+      ]);
 
       if (timed === "__TIMEOUT__") {
         logLine("Final verification timed out after 30s. Proceeding without further verification.");
@@ -255,7 +227,7 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
             onRetry: ({ attempt, delay }) => {
               logLine(`Chunk ${i + 1}/${chunks.length} rate-limited. Retry #${attempt} in ${Math.round(delay / 1000)}s`);
             },
-            model: undefined // Changed to use default/auto LLM choice
+            model: undefined
           }
         );
         piece = stripFences(typeof res === "string" ? res : String(res || ""));
@@ -275,7 +247,7 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
               onRetry: ({ attempt, delay }) => {
                 logLine(`Chunk ${i + 1}/${chunks.length} ensure-full retry #${attempt} in ${Math.round(delay / 1000)}s`);
               },
-              model: undefined // Changed to use default/auto LLM choice
+              model: undefined
             }
           );
           piece = stripFences(typeof res2 === "string" ? res2 : String(res2 || "")) || chunks[i];
@@ -304,8 +276,13 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
   const startLocalization = async () => {
     if (!language || !originalHtml?.trim() || isLoading) return;
 
+    // Check and consume tokens before starting localization
+    const result = await consumeTokensForFeature('ai_localize');
+    if (!result.success) {
+      return; // Error toast is handled by the hook
+    }
+
     setLocalizedHtml("");
-    // Removed: setLogs([]);
     setPhase("translating");
     setIsLoading(true);
     setIsVerifying(false);
@@ -314,11 +291,10 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
     setChunkTotal(0);
 
     try {
-      logLine(`Starting localization to ${language}...`); // Simplified log message
+      logLine(`Starting localization to ${language}...`);
       const assembledHtml = await chunkedLocalize(language, originalHtml);
 
       let finalHtml = assembledHtml;
-      // Final verification always runs, removed superadmin/skipVerification condition
       setPhase("verifying");
       finalHtml = await ensureFullLanguage(language, assembledHtml);
 
@@ -340,20 +316,6 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
     handleClose(false);
   };
 
-  // Removed: handleReset function
-  // const handleReset = () => {
-  //   setLocalizedHtml("");
-  //   setIsLoading(false);
-  //   setIsVerifying(false);
-  //   setPhase("idle");
-  //   setChunkIndex(0);
-  //   setChunkTotal(0);
-  //   setProgressPct(0);
-  //   setLogs([]);
-  //   setShowLogs(false);
-  //   setSkipVerification(false); // Reset skip verification for next use
-  // };
-
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="b44-modal max-w-3xl bg-white text-slate-900 border-slate-200">
@@ -372,7 +334,7 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
                 <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                   <SelectValue placeholder="Choose language" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
+                <SelectContent className="bg-white border-slate-200 text-slate-900 z-[999]">
                   {[
                     "German", "Spanish", "French", "Italian", "Portuguese (Brazil)", "Portuguese (Portugal)",
                     "Dutch", "Polish", "Swedish", "Danish", "Norwegian", "Finnish",
@@ -388,25 +350,6 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
               </Select>
             </div>
 
-            {/* Removed: Model selector */}
-            {/*
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-700">Model</span>
-              <Select value={llmChoice} onValueChange={setLlmChoice}>
-                <SelectTrigger className="h-8 w-[220px] bg-white border-slate-300 text-slate-900">
-                  <SelectValue placeholder="Auto" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  <SelectItem value="auto">Auto (use available key)</SelectItem>
-                  <SelectItem value="openai:gpt-4o-mini">OpenAI — gpt-4o-mini</SelectItem>
-                  <SelectItem value="openai:gpt-4.1">OpenAI — gpt-4.1</SelectItem>
-                  <SelectItem value="anthropic:claude-3-5-sonnet-20240620">Anthropic — Claude 3.5 Sonnet</SelectItem>
-                  <SelectItem value="google:gemini-1.5-pro">Google — Gemini 1.5 Pro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            */}
-
             <div className="flex items-center gap-2 ml-auto">
               {phase !== "idle" &&
                 <div className="px-3 py-1.5 rounded-md bg-slate-100 text-slate-800 text-xs">
@@ -415,40 +358,6 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
                   {phase === "done" && "Done"}
                 </div>
               }
-              {/* Removed: Superadmin controls (Skip verification, View logs) */}
-              {/*
-              {isSuperadmin &&
-                <>
-                  <label className="flex items-center gap-2 text-xs text-slate-700">
-                    <input
-                      type="checkbox"
-                      className="accent-emerald-600"
-                      checked={skipVerification}
-                      onChange={(e) => setSkipVerification(e.target.checked)}
-                      disabled={isLoading || isVerifying} />
-                    Skip verification
-                  </label>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowLogs((v) => !v)}
-                    className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
-                    disabled={isLoading && !showLogs}>
-                    {showLogs ? "Hide logs" : "View logs"}
-                  </Button>
-                </>
-              }
-              */}
-              {/* Removed: Reset button */}
-              {/*
-              <Button
-                variant="outline"
-                onClick={handleReset}
-                className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
-                disabled={isLoading || isVerifying}>
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Reset
-              </Button>
-              */}
               <Button
                 onClick={startLocalization}
                 disabled={!originalHtml?.trim() || !language || isLoading || isVerifying} className="bg-blue-950 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-slate-800">
@@ -481,25 +390,6 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
               </div>
             </div>
           )}
-
-          {/* Removed: Logs panel toggle & panel */}
-          {/*
-          {isSuperadmin && showLogs &&
-            <div className="bg-slate-100 border border-slate-200 rounded-md p-3 max-h-48 overflow-auto text-xs text-slate-800">
-              <pre className="whitespace-pre-wrap leading-relaxed">{logs.join("\n") || "No logs yet."}</pre>
-              <div className="mt-2 flex justify-end">
-                <Button
-                  variant="outline"
-                  className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
-                  onClick={() => {
-                    navigator.clipboard.writeText(logs.join("\n") || "");
-                  }}>
-                  Copy logs
-                </Button>
-              </div>
-            </div>
-          }
-          */}
 
           <div className="space-y-2">
             <div className="text-sm text-slate-700">Localized HTML</div>

@@ -177,3 +177,13 @@ export const verifyStripePayment = base44.functions.verifyStripePayment;
 
 export const callFaqEndpoint = base44.functions.callFaqEndpoint;
 
+export const uploadUserCss = base44.functions.uploadUserCss;
+
+export const manualUserFix = base44.functions.manualUserFix;
+
+export const listStripeCoupons = base44.functions.listStripeCoupons;
+
+export const trackAffiliateReferral = base44.functions.trackAffiliateReferral;
+
+export const syncStripeDiscounts = base44.functions.syncStripeDiscounts;
+

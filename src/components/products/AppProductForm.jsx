@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AppProductForm({ initial = {}, onSubmit, onCancel, submitting }) {
   const [form, setForm] = React.useState({
@@ -21,12 +22,17 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
     tokens_granted: 0,
     is_best_value: false,
     best_value_bg_color: "",
-    best_value_border_color: "", // NEW
+    best_value_border_color: "",
+    // NEW FIELDS
+    plan_key: initial?.plan_key || "growth",
+    billing_interval: initial?.billing_interval || "month",
+    annual_price_per_month: initial?.annual_price_per_month || "",
+    // End NEW FIELDS
     ...initial,
     features_text: Array.isArray(initial?.features) ? initial.features.join("\n") : (initial?.features_text || ""),
     is_best_value: !!initial?.is_best_value,
     best_value_bg_color: initial?.best_value_bg_color || "",
-    best_value_border_color: initial?.best_value_border_color || "" // NEW
+    best_value_border_color: initial?.best_value_border_color || ""
   });
 
   const update = (k, v) => setForm((s) => ({ ...s, [k]: v }));
@@ -46,7 +52,12 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
       tokens_granted: Number(form.tokens_granted || 0),
       is_best_value: !!form.is_best_value,
       best_value_bg_color: (form.best_value_bg_color || "").trim(),
-      best_value_border_color: (form.best_value_border_color || "").trim(), // NEW
+      best_value_border_color: (form.best_value_border_color || "").trim(),
+      // NEW FIELDS
+      plan_key: form.plan_key,
+      billing_interval: form.billing_interval,
+      annual_price_per_month: form.annual_price_per_month?.trim() || null,
+      // End NEW FIELDS
       features: (form.features_text || "")
         .split("\n")
         .map((s) => s.trim())
@@ -75,12 +86,41 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
             className="bg-white text-slate-900 placeholder:text-slate-400 border border-slate-300"
           />
         </div>
+
+        {/* NEW Plan Key */}
+        <div>
+            <Label htmlFor="plan_key" className="text-slate-800">Plan Key</Label>
+            <Select required value={form.plan_key} onValueChange={(v) => update("plan_key", v)}>
+                <SelectTrigger id="plan_key" className="bg-white text-slate-900 border-slate-300">
+                    <SelectValue placeholder="Select plan key" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="growth">Growth</SelectItem>
+                    <SelectItem value="brand">Brand</SelectItem>
+                    <SelectItem value="agency">Agency</SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
+        {/* NEW Billing Interval */}
+        <div>
+            <Label htmlFor="billing_interval" className="text-slate-800">Billing Interval</Label>
+            <Select required value={form.billing_interval} onValueChange={(v) => update("billing_interval", v)}>
+                <SelectTrigger id="billing_interval" className="bg-white text-slate-900 border-slate-300">
+                    <SelectValue placeholder="Select interval" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="month">Monthly</SelectItem>
+                    <SelectItem value="year">Yearly</SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
+
         <div>
           <Label className="text-slate-800">Display Price</Label>
           <Input
             value={form.display_price}
             onChange={(e) => update("display_price", e.target.value)}
-            placeholder="$29/mo"
+            placeholder="$247"
             className="bg-white text-slate-900 placeholder:text-slate-400 border border-slate-300"
           />
         </div>
@@ -93,6 +133,17 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
             required
             className="bg-white text-slate-900 placeholder:text-slate-400 border border-slate-300"
           />
+        </div>
+        {/* NEW Annual Price Per Month */}
+        <div>
+            <Label className="text-slate-800">Annual Price Per Month (Optional)</Label>
+            <Input
+                value={form.annual_price_per_month}
+                onChange={(e) => update("annual_price_per_month", e.target.value)}
+                placeholder="$197"
+                className="bg-white text-slate-900 placeholder:text-slate-400 border border-slate-300"
+            />
+            <p className="text-xs text-slate-500 mt-1">For yearly plans, sets the 'per month' marketing price.</p>
         </div>
         <div>
           <Label className="text-slate-800">Image URL</Label>

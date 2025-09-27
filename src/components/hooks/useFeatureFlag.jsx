@@ -1,75 +1,61 @@
-import React from "react";
-import { FeatureFlag } from "@/api/entities";
-import { User } from "@/api/entities";
+import { useMemo } from 'react';
+import { useFeatureFlagData } from '@/components/providers/FeatureFlagProvider';
 
-// NEW: simple in-memory cache with 60s TTL
-const FLAG_CACHE = new Map(); // key: featureName -> { enabled, isComingSoon, ts }
+export default function useFeatureFlag(featureName, { currentUser, defaultEnabled = false } = {}) {
+  const { flags, products, loading } = useFeatureFlagData();
 
-export default function useFeatureFlag(featureName, opts = {}) {
-  const { currentUser = null, defaultEnabled = true } = opts;
-  const [enabled, setEnabled] = React.useState(!!defaultEnabled);
-  const [loading, setLoading] = React.useState(true);
-  const [isComingSoon, setIsComingSoon] = React.useState(false);
+  const result = useMemo(() => {
+    if (loading) {
+      return { enabled: false, isComingSoon: false, isLoading: true };
+    }
 
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      // Check cache first
-      const now = Date.now();
-      const cached = FLAG_CACHE.get(featureName);
-      if (cached && now - cached.ts < 60_000) {
-        if (mounted) {
-          setEnabled(cached.enabled);
-          setIsComingSoon(cached.isComingSoon);
-          setLoading(false);
+    const flag = flags.find(f => f.name === featureName);
+
+    // If flag doesn't exist in the DB, use the default passed to the hook.
+    if (!flag) {
+      return { enabled: defaultEnabled, isComingSoon: false, isLoading: false };
+    }
+
+    // Master switch: if disabled globally, it's off for everyone except superadmins.
+    if (!flag.enabled_globally && !currentUser?.is_superadmin) {
+        return { enabled: false, isComingSoon: false, isLoading: false };
+    }
+    
+    // Superadmins bypass all checks except 'coming soon' (and can see disabled flags)
+    if (currentUser?.is_superadmin) {
+        if (flag.is_coming_soon) {
+            return { enabled: false, isComingSoon: true, isLoading: false };
         }
-        return;
+        return { enabled: true, isComingSoon: false, isLoading: false };
+    }
+
+    // User-specific overrides are the next highest priority
+    if (currentUser && flag.user_overrides && typeof flag.user_overrides[currentUser.id] === 'boolean') {
+      return { enabled: flag.user_overrides[currentUser.id], isComingSoon: flag.is_coming_soon, isLoading: false };
+    }
+
+    // 'Coming soon' hides the feature for all non-admins.
+    if (flag.is_coming_soon) {
+      return { enabled: false, isComingSoon: true, isLoading: false };
+    }
+
+    // Plan-based restriction is the final check.
+    const requiredPlans = flag.required_plan_keys;
+    if (Array.isArray(requiredPlans) && requiredPlans.length > 0) {
+      if (!currentUser || !currentUser.plan_price_id) {
+        return { enabled: false, isComingSoon: false, isLoading: false }; // No plan, no access.
       }
 
-      // Fallbacks
-      let effective = !!defaultEnabled;
-      let comingSoon = false;
-
-      try {
-        const flags = await FeatureFlag.filter({ name: featureName });
-        if (flags && flags.length > 0) {
-          const flag = flags[0];
-          effective = !!flag.enabled_globally;
-          comingSoon = !!flag.is_coming_soon;
-
-          // Respect per-user override if available
-          let uid = currentUser?.id || null;
-          if (!uid) {
-            try {
-              const me = await User.me();
-              uid = me?.id || null;
-            } catch {
-              uid = null;
-            }
-          }
-          const overrides = flag.user_overrides || {};
-          if (uid && Object.prototype.hasOwnProperty.call(overrides, uid)) {
-            effective = !!overrides[uid];
-          }
-        }
-      } catch {
-        // keep defaults on error
-        effective = !!defaultEnabled;
-        comingSoon = false;
+      const userProduct = products.find(p => p.stripe_price_id === currentUser.plan_price_id);
+      if (!userProduct || !requiredPlans.includes(userProduct.plan_key)) {
+        return { enabled: false, isComingSoon: false, isLoading: false }; // Wrong plan, no access.
       }
+    }
 
-      // Save to cache
-      FLAG_CACHE.set(featureName, { enabled: effective, isComingSoon: comingSoon, ts: Date.now() });
+    // If it passed all the checks (globally enabled, not coming soon, and met plan requirements), it's enabled.
+    return { enabled: true, isComingSoon: false, isLoading: false };
 
-      if (mounted) {
-        setEnabled(effective);
-        setIsComingSoon(comingSoon);
-        setLoading(false);
-      }
-    })();
+  }, [featureName, currentUser, defaultEnabled, flags, products, loading]);
 
-    return () => { mounted = false; };
-  }, [featureName, currentUser?.id, defaultEnabled]);
-
-  return { enabled, loading, isComingSoon };
+  return result;
 }

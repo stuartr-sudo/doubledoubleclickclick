@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react"; // Added useCallback explicitly
 import { TikTokVideo } from "@/api/entities";
 import { User } from "@/api/entities";
 import {
@@ -7,8 +7,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
-} from "@/components/ui/dialog";
+  DialogDescription } from
+"@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Link as LinkIcon, Edit, Save, X, Trash2, ExternalLink } from "lucide-react";
@@ -26,14 +26,17 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AlertDialogTitle } from
+"@/components/ui/alert-dialog";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useWorkspace } from "@/components/hooks/useWorkspace"; // NEW IMPORT
+import useFeatureFlag from "@/components/hooks/useFeatureFlag"; // NEW IMPORT
 
-const TikTokIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-black bg-white rounded-full p-0.5">
-      <path d="M16 8.5c-2.43 0-4.63.85-6.32 2.34-.3.26-.6.54-.88.84a3.5 3.5 0 0 1-4.8-4.8l1.64 1.64c.22-.22.45-.42.7-.62C8.38 5.76 11.23 4 14.5 4v5c-1.38 0-2.7.4-3.88 1.15a3.5 3.5 0 0 0-1.22 5.35A3.5 3.5 0 0 0 14.5 14v5a10.5 10.5 0 0 1-10-10.5c0-1.8.46-3.5 1.28-5.02"/>
-    </svg>
-);
+const TikTokIcon = () =>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-black bg-white rounded-full p-0.5">
+      <path d="M16 8.5c-2.43 0-4.63.85-6.32 2.34-.3.26-.6.54-.88.84a3.5 3.5 0 0 1-4.8-4.8l1.64 1.64c.22-.22.45-.42.7-.62C8.38 5.76 11.23 4 14.5 4v5c-1.38 0-2.7.4-3.88 1.15a3.5 3.5 0 0 0-1.22 5.35A3.5 3.5 0 0 0 14.5 14v5a10.5 10.5 0 0 1-10-10.5c0-1.8.46-3.5 1.28-5.02" />
+    </svg>;
+
 
 
 export default function TikTokSelector({ isOpen, onClose, onInsert }) {
@@ -41,7 +44,7 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedUsername, setSelectedUsername] = useState("all");
+  const [localSelectedUsername, setLocalSelectedUsername] = useState("all"); // Renamed from selectedUsername
   const [availableUsernames, setAvailableUsernames] = useState([]);
 
   const [url, setUrl] = useState("");
@@ -53,14 +56,22 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [videoToDelete, setVideoToDelete] = useState(null);
 
-  const [ytQuery, setYtQuery, ] = useState("");
+  const [ytQuery, setYtQuery] = useState("");
   const [ytResults, setYtResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [ytMax, setYtMax] = useState(10); // Added for TikTok search count
 
   const [assignmentUsernames, setAssignmentUsernames] = useState([]);
   const [assignToUsername, setAssignToUsername] = useState("");
 
-  const loadVideos = React.useCallback(async (user) => {
+  const { consumeTokensForFeature } = useTokenConsumption();
+  const { selectedUsername: globalUsername } = useWorkspace(); // NEW HOOK CALL
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping'); // NEW HOOK CALL
+
+  // Determine active username filter based on workspace scoping
+  const selectedUsername = useWorkspaceScoping ? (globalUsername || "all") : localSelectedUsername;
+
+  const loadVideos = useCallback(async (user) => {
     setIsLoading(true);
     try {
       const allVideos = await TikTokVideo.list("-created_date");
@@ -69,10 +80,10 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
 
       if (user.role === 'admin') {
         filteredVideos = allVideos;
-        usernames = [...new Set(allVideos.map(vid => vid.user_name).filter(Boolean))];
+        usernames = [...new Set(allVideos.map((vid) => vid.user_name).filter(Boolean))];
       } else if (user.assigned_usernames && user.assigned_usernames.length > 0) {
-        filteredVideos = allVideos.filter(video =>
-          video.user_name && user.assigned_usernames.includes(video.user_name)
+        filteredVideos = allVideos.filter((video) =>
+        video.user_name && user.assigned_usernames.includes(video.user_name)
         );
         usernames = user.assigned_usernames;
       }
@@ -84,9 +95,9 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
       toast.error("Failed to load TikTok library.");
     }
     setIsLoading(false);
-  }, []); // Dependencies: State setters (setVideos, setAvailableUsernames) are stable. TikTokVideo.list is stable.
+  }, []);
 
-  const loadCurrentUser = React.useCallback(async () => {
+  const loadCurrentUser = useCallback(async () => {
     setIsLoading(true);
     try {
       const user = await User.me();
@@ -95,9 +106,9 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
       if (user.role === 'admin') {
         const allUsers = await User.list();
         const allUsernames = new Set();
-        allUsers.forEach(u => {
+        allUsers.forEach((u) => {
           if (Array.isArray(u.assigned_usernames)) {
-            u.assigned_usernames.forEach(name => allUsernames.add(name));
+            u.assigned_usernames.forEach((name) => allUsernames.add(name));
           }
         });
         availableForAssignment = Array.from(allUsernames).sort();
@@ -105,7 +116,12 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
         availableForAssignment = user.assigned_usernames || [];
       }
       setAssignmentUsernames(availableForAssignment);
-      setAssignToUsername(availableForAssignment[0] || "");
+      // Set assignToUsername based on workspace scoping or the first available username
+      if (useWorkspaceScoping) {
+        setAssignToUsername(globalUsername || "");
+      } else {
+        setAssignToUsername(availableForAssignment[0] || "");
+      }
       await loadVideos(user);
     } catch (error) {
       console.error("Error loading current user:", error);
@@ -113,7 +129,7 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
     } finally {
       setIsLoading(false);
     }
-  }, [loadVideos]); // Dependencies: loadVideos
+  }, [loadVideos, useWorkspaceScoping, globalUsername]); // Dependencies: loadVideos, useWorkspaceScoping, globalUsername
 
   useEffect(() => {
     if (isOpen) {
@@ -122,15 +138,16 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
       setUrl("");
       setParsedUrlData(null);
       setEditingVideo(null);
-      setSelectedUsername("all");
+      setLocalSelectedUsername("all"); // Reset local state
       setYtQuery("");
       setYtResults([]);
       setIsSearching(false);
       setAssignToUsername("");
       setShowDeleteConfirm(false);
       setVideoToDelete(null);
+      setYtMax(10); // Reset ytMax
     }
-  }, [isOpen, loadCurrentUser]); // Dependencies: isOpen, loadCurrentUser
+  }, [isOpen, loadCurrentUser]);
 
   useEffect(() => {
     const data = extractVideoDataFromUrl(url);
@@ -155,22 +172,30 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
     try {
       const { data } = await getTikTokOembed({ url: videoUrl });
       if (!data?.success || !data?.html) throw new Error("TikTok oEmbed failed");
-      onInsert(data.html); // Insert the raw oEmbed HTML (blockquote + script)
+      
+      // Generate a unique ID and add data attributes for proper selection
+      const elId = `tiktok-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const processedHtml = data.html.replace(
+        /<blockquote([^>]*)>/i,
+        `<blockquote$1 data-b44-id="${elId}" data-b44-type="video">`
+      );
+      
+      onInsert(processedHtml);
       onClose();
     } catch (error) {
       console.error("TikTok oEmbed insert error:", error);
       toast.error("Could not embed TikTok video. Please try another URL.");
     }
   };
-  
+
   const handleInsertFromLibrary = (video) => {
     if (video.url) {
       insertTikTokHtml(video.url, video.title);
     } else {
-        toast.error("Video data is incomplete and cannot be inserted.");
+      toast.error("Video data is incomplete and cannot be inserted.");
     }
   };
-  
+
   const handleEmbedFromUrl = async () => {
     if (!url) {
       toast.error("Invalid TikTok URL. Please check and try again.");
@@ -180,8 +205,10 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
     // Also save to library so it appears in Video Library
     try {
       const parsed = extractVideoDataFromUrl(url) || {};
-      let userNameToSave = assignToUsername;
-      if (!userNameToSave && currentUser) {
+      let userNameToSave = assignToUsername; // Default to current assignToUsername
+      if (useWorkspaceScoping && globalUsername) { // If workspace scoping is active, the globalUsername takes precedence
+          userNameToSave = globalUsername;
+      } else if (!userNameToSave && currentUser) { // Fallback for non-scoping or if assignToUsername is empty
         if (Array.isArray(currentUser.assigned_usernames) && currentUser.assigned_usernames.length > 0) {
           userNameToSave = currentUser.assigned_usernames[0];
         }
@@ -221,13 +248,13 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
   const handleUpdateAndInsert = async () => {
     if (!editingVideo) return;
     try {
-        await TikTokVideo.update(editingVideo.id, { title: editedTitle });
-        setVideos(prev => prev.map(vid => vid.id === editingVideo.id ? { ...vid, title: editedTitle } : vid));
-        // Use the video URL from the library item for the oEmbed call
-        await insertTikTokHtml(editingVideo.url, editedTitle);
-        toast.success("Video details updated and inserted!");
+      await TikTokVideo.update(editingVideo.id, { title: editedTitle });
+      setVideos((prev) => prev.map((vid) => vid.id === editingVideo.id ? { ...vid, title: editedTitle } : vid));
+      // Use the video URL from the library item for the oEmbed call
+      await insertTikTokHtml(editingVideo.url, editedTitle);
+      toast.success("Video details updated and inserted!");
     } catch (error) {
-        toast.error("Failed to update or insert video.");
+      toast.error("Failed to update or insert video.");
     }
   };
 
@@ -256,9 +283,14 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
       video_id: res.video_id,
       url: res.web_video_url,
       cover_url: res.cover_url,
-      author_name: res.author_name,
+      author_name: res.author_name
     };
-    if (assignToUsername) payload.user_name = assignToUsername;
+
+    if (useWorkspaceScoping && globalUsername) {
+        payload.user_name = globalUsername;
+    } else if (assignToUsername) {
+        payload.user_name = assignToUsername;
+    }
 
     let savedSuccessfully = false;
     try {
@@ -268,33 +300,45 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
     } catch (e) {
       console.error("Failed to save TikTok to library:", e);
     }
-    
+
     // Use the web_video_url from the search result for the oEmbed call
     await insertTikTokHtml(res.web_video_url, res.title);
 
     if (savedSuccessfully) {
-        toast.success("Saved to library and inserted!");
+      toast.success("Saved to library and inserted!");
     } else {
-        toast.warning("Video inserted, but failed to save to library.");
+      toast.warning("Video inserted, but failed to save to library.");
     }
   };
 
   const handleTikTokSearch = async () => {
-    if (!ytQuery.trim()) return;
+    if (!ytQuery.trim()) {
+      toast.info("Please enter a search query.");
+      return;
+    }
     setIsSearching(true);
     setYtResults([]);
     try {
-      const { data } = await tiktokSearch({ q: ytQuery.trim() });
-      setYtResults(data?.results || []);
+      const tokenResult = await consumeTokensForFeature('ai_tiktok');
+      if (!tokenResult.success) {
+        setIsSearching(false);
+        return;
+      }
+      // Reverted to 'keywords' to match the rebuilt backend function
+      const { data } = await tiktokSearch({ keywords: ytQuery.trim(), count: ytMax });
+      setYtResults(data?.videos || []); // Changed 'results' to 'videos'
+      if ((data?.videos || []).length === 0) {
+        toast.info("No TikTok videos found for your query.");
+      }
     } catch (e) {
       toast.error("TikTok search failed: " + e.message);
     }
     setIsSearching(false);
   };
 
-  const filteredLibraryVideos = videos
-    .filter(video => selectedUsername === "all" || video.user_name === selectedUsername)
-    .filter(video => video.title?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredLibraryVideos = videos.
+  filter((video) => selectedUsername === "all" || video.user_name === selectedUsername).
+  filter((video) => video.title?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <>
@@ -320,92 +364,105 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <Input placeholder="Search titles..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
                 </div>
-                {(availableUsernames.length > 0 || currentUser?.role === 'admin') && (
-                  <div>
+                {!useWorkspaceScoping && (availableUsernames.length > 0 || currentUser?.role === 'admin') && // Conditional rendering for filter
+                <div>
                     <Label className="sr-only">Filter by Username</Label>
-                    <Select value={selectedUsername} onValueChange={setSelectedUsername}>
-                        <SelectTrigger className="bg-white border-slate-300 text-slate-900"><SelectValue/></SelectTrigger>
+                    <Select value={localSelectedUsername} onValueChange={setLocalSelectedUsername}>
+                        <SelectTrigger className="bg-white border-slate-300 text-slate-900"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-white border-slate-200 text-slate-900">
                             <SelectItem value="all" className="hover:bg-slate-100">{currentUser?.role === 'admin' ? 'All Users' : 'All Assigned'}</SelectItem>
-                            {availableUsernames.map(username => <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>)}
+                            {availableUsernames.map((username) => <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
-              )}
+                }
              </div>
             <div className="max-h-96 overflow-y-auto">
-              {isLoading ? <div className="text-center py-8 text-slate-500">Loading...</div>
-              : filteredLibraryVideos.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">No videos found.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredLibraryVideos.map((video) => (
-                    <div key={video.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3">
-                      <img src={video.cover_url} alt={video.title} className="w-full h-40 object-cover rounded" />
-                      {editingVideo?.id === video.id ? (
-                        <div className="space-y-3">
-                          <Input value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
-                          <div className="flex gap-2">
-                            <Button onClick={handleCancelEdit} variant="ghost" size="sm" className="w-full text-slate-700 hover:bg-slate-200"><X className="w-4 h-4"/></Button>
-                            <Button onClick={handleUpdateAndInsert} size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"><Save className="w-4 h-4 mr-1"/>Save & Insert</Button>
+              {isLoading ? <div className="text-center py-8 text-slate-500">Loading...</div> :
+                filteredLibraryVideos.length === 0 ?
+                <div className="text-center py-8 text-slate-500">No videos found.</div> :
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {filteredLibraryVideos.map((video) =>
+                  <div key={video.id} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 flex flex-col justify-between">
+                      <div className="space-y-3">
+                        {video.cover_url &&
+                          <div className="aspect-[9/16] relative mb-2">
+                            <img src={video.cover_url} alt={video.title} className="w-full h-full object-cover rounded" />
                           </div>
+                        }
+                        {editingVideo?.id === video.id ?
+                      <div className="space-y-3">
+                            <Input value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+                          </div> :
+                      <>
+                            <h4 className="font-medium line-clamp-3 text-sm h-16 text-slate-800">{video.title}</h4>
+                            <span className="text-xs text-slate-500 block truncate">By: {video.author_name}</span>
+                          </>
+                      }
+                      </div>
+
+                      {editingVideo?.id === video.id ? (
+                        <div className="flex gap-2 mt-2">
+                          <Button onClick={handleCancelEdit} variant="ghost" size="icon" className="w-full text-slate-700 hover:bg-slate-200 h-8"><X className="w-4 h-4" /></Button>
+                          <Button onClick={handleUpdateAndInsert} size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-8 text-xs"><Save className="w-3.5 h-3.5 mr-1" />Save & Insert</Button>
                         </div>
                       ) : (
-                        <>
-                          <h4 className="font-medium line-clamp-2 h-12 text-slate-800">{video.title}</h4>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-slate-500">By: {video.author_name}</span>
-                            <div className="flex gap-1">
-                              <Button onClick={() => handleInsertFromLibrary(video)} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white"><Plus className="w-4 h-4 mr-1"/>Insert</Button>
-                              <Button onClick={() => handleStartEdit(video)} size="sm" variant="outline" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"><Edit className="w-4 h-4 mr-1"/>Edit</Button>
-                              <Button onClick={() => handleDeleteVideo(video)} size="sm" variant="destructive" className="bg-red-600 hover:bg-red-700 text-white"><Trash2 className="w-4 h-4"/></Button>
-                            </div>
-                          </div>
-                        </>
+                        <div className="flex gap-1 mt-2">
+                          <Button onClick={() => handleInsertFromLibrary(video)} size="sm" className="bg-blue-900 text-slate-50 px-2 text-xs font-medium inline-flex items-center justify-center gap-1 whitespace-nowrap h-8 flex-1 hover:bg-blue-700"><Plus className="w-3.5 h-3.5" />Insert</Button>
+                          <Button onClick={() => handleStartEdit(video)} size="icon" variant="outline" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100 h-8 w-8"><Edit className="w-3.5 h-3.5" /></Button>
+                          <Button onClick={() => handleDeleteVideo(video)} size="icon" variant="destructive" className="bg-violet-900 text-slate-50 px-2 h-8 w-8 hover:bg-red-700"><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
                       )}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+                }
             </div>
           </TabsContent>
 
           <TabsContent value="search" className="space-y-4 pt-2">
-            {assignmentUsernames.length > 0 && (
+            {!useWorkspaceScoping && assignmentUsernames.length > 0 && // Conditional rendering for assignment select
               <div>
                 <Label className="block text-sm font-medium mb-2 text-slate-700">Assign to Username when saving</Label>
                 <Select value={assignToUsername} onValueChange={setAssignToUsername}>
                   <SelectTrigger className="bg-white border-slate-300 text-slate-900"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {assignmentUsernames.map(username => <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>)}
+                    {assignmentUsernames.map((username) => <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-            )}
+              }
             <div className="flex gap-2">
                 <Input placeholder="Search TikTok..." value={ytQuery} onChange={(e) => setYtQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleTikTokSearch()} className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
-                <Button onClick={handleTikTokSearch} disabled={isSearching} className="bg-indigo-600 hover:bg-indigo-700 text-white">{isSearching ? 'Searching...' : 'Search'}</Button>
+                <Button onClick={handleTikTokSearch} disabled={isSearching} className="bg-indigo-600 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-indigo-700">{isSearching ? 'Searching...' : 'Search'}</Button>
             </div>
             <div className="max-h-96 overflow-y-auto">
-              {isSearching ? <div className="text-center py-8 text-slate-500">Searching...</div>
-              : ytResults.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">Search for TikTok videos above.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {ytResults.map((res) => (
-                    <div key={res.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3">
-                      <img src={res.cover_url} alt={res.title} className="w-full h-40 object-cover rounded" />
-                      <h4 className="font-medium line-clamp-2 h-12 text-slate-800">{res.title}</h4>
-                      <div className="flex justify-between items-center">
-                        <a href={res.web_video_url} target="_blank" rel="noreferrer" className="text-sm text-blue-600 inline-flex items-center gap-1 hover:underline">
-                          <ExternalLink className="w-4 h-4" /> By: {res.author_name}
+              {isSearching ? <div className="text-center py-8 text-slate-500">Searching...</div> :
+                ytResults.length === 0 ?
+                <div className="text-center py-8 text-slate-500">Search for TikTok videos above.</div> :
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {ytResults.map((res) =>
+                  <div key={res.video_id} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 flex flex-col justify-between">
+                      <div className="space-y-3">
+                        {res.cover_url &&
+                          <div className="aspect-[9/16] relative mb-2">
+                            <img src={res.cover_url} alt={res.title} className="w-full h-full object-cover rounded" />
+                          </div>
+                        }
+                        <h4 className="font-medium line-clamp-3 text-sm h-16 text-slate-800">{res.title}</h4>
+                      </div>
+                      <div className="flex justify-between items-center mt-2">
+                        <a href={res.web_video_url} target="_blank" rel="noreferrer" className="text-sm text-blue-600 inline-flex items-center gap-1 hover:underline truncate">
+                          <ExternalLink className="w-4 h-4 flex-shrink-0" /> <span className="truncate">By: {res.author_name}</span>
                         </a>
-                        <Button onClick={() => handleInsertSearchAndSave(res)} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white"><Plus className="w-4 h-4 mr-1"/> Insert & Save</Button>
+                        <Button onClick={() => handleInsertSearchAndSave(res)} size="sm" className="bg-blue-900 text-slate-50 px-2 text-xs font-medium inline-flex items-center justify-center gap-1 whitespace-nowrap h-8 flex-shrink-0 hover:bg-blue-700"><Plus className="w-3.5 h-3.5" /> Insert</Button>
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+                }
             </div>
           </TabsContent>
 
@@ -432,6 +489,6 @@ export default function TikTokSelector({ isOpen, onClose, onInsert }) {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-    </>
-  );
+    </>);
+
 }

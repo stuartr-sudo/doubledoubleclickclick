@@ -1,370 +1,163 @@
-
-import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// Removed: import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Wand2, Link as LinkIcon, Search } from "lucide-react";
-import { InvokeLLM } from "@/api/integrations";
-import { Sitemap } from "@/api/entities";
+import { Label } from "@/components/ui/label";
+import { Link, Wand2 } from "lucide-react";
+import SitemapLinkerModal from "./SitemapLinkerModal";
+import { agentSDK } from "@/agents";
+import { toast } from "sonner";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 
 export default function CtaTemplateFillModal({ isOpen, onCancel, onSubmit, template, pageHtml, pageTitle, preferredUsername }) {
-  const [headline, setHeadline] = React.useState("");
-  const [subtext, setSubtext] = React.useState("");
-  const [buttonText, setButtonText] = React.useState("Learn more");
-  const [buttonUrl, setButtonUrl] = React.useState("#");
+  const [headline, setHeadline] = useState("");
+  const [subtext, setSubtext] = useState("");
+  const [buttonText, setButtonText] = useState("Learn more");
+  const [buttonUrl, setButtonUrl] = useState("#");
+  const [isGenerating, setIsGenerating] = useState({ headline: false, subtext: false, button_text: false });
+  const [isSitemapOpen, setIsSitemapOpen] = useState(false);
+  const { consumeTokensForFeature } = useTokenConsumption();
 
-  // AI loading flags
-  const [loadingHeadline, setLoadingHeadline] = React.useState(false);
-  const [loadingSubtext, setLoadingSubtext] = React.useState(false);
-  const [loadingButton, setLoadingButton] = React.useState(false);
-
-  // Sitemaps / pages search
-  const [pages, setPages] = React.useState([]);
-  const [pageSearch, setPageSearch] = React.useState("");
-  const [sitesOpen, setSitesOpen] = React.useState(false);
-  const [loadingSites, setLoadingSites] = React.useState(false);
-  const [usernames, setUsernames] = React.useState([]);
-  const [selectedUsername, setSelectedUsername] = React.useState("all");
-
-  // Helpers
-  const normalizeUrl = (u) => {
-    if (!u) return "#";
-    let s = String(u).trim();
-    if (s === "" || s === "#") return "#";
-    // Check if it's a relative path starting with /
-    if (s.startsWith('/')) {
-        return s; // Keep as relative path
+  useEffect(() => {
+    if (isOpen) {
+      if (template?.preview_data) {
+        setHeadline(template.preview_data.headline || "");
+        setSubtext(template.preview_data.subtext || "");
+        setButtonText(template.preview_data.button_text || "Learn more");
+        setButtonUrl(template.preview_data.button_url || "#");
+      } else {
+        setHeadline("");
+        setSubtext("");
+        setButtonText("Learn more");
+        setButtonUrl("#");
+      }
     }
-    // Check if it's already an absolute URL
-    if (!/^https?:\/\//i.test(s)) {
-        s = "https://" + s; // Prepend https:// if not present
+  }, [isOpen, template]);
+
+  const handleGenerateAI = async (field) => {
+    const costResult = await consumeTokensForFeature('ai_cta_generate_text');
+    if (!costResult.success) return;
+
+    setIsGenerating(prev => ({ ...prev, [field]: true }));
+    try {
+      const conv = await agentSDK.createConversation({ agent_name: "cta_text_generator" });
+      if (!conv?.id) throw new Error("Failed to create AI conversation.");
+
+      const prompt = `Based on the article titled "${pageTitle}" and the context of the page, generate a compelling ${field.replace('_', ' ')} for a call-to-action.
+Page content context (first 5000 chars): ${String(pageHtml || "").substring(0, 5000)}`;
+
+      await agentSDK.addMessage(conv, { role: "user", content: prompt });
+
+      const pollTimeout = 45000;
+      const pollInterval = 2000;
+      const startTime = Date.now();
+      let generatedText = "";
+
+      while (Date.now() - startTime < pollTimeout) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        const updatedConv = await agentSDK.getConversation(conv.id);
+        const lastMsg = updatedConv.messages?.[updatedConv.messages.length - 1];
+
+        if (lastMsg?.role === 'assistant' && (lastMsg.is_complete || lastMsg.content)) {
+          generatedText = (lastMsg.content || "").replace(/["']+/g, "").trim();
+          if (generatedText) break;
+        }
+      }
+      
+      if (generatedText) {
+        if (field === 'headline') setHeadline(generatedText);
+        else if (field === 'subtext') setSubtext(generatedText);
+        else if (field === 'button_text') setButtonText(generatedText);
+        toast.success(`AI generated ${field.replace('_', ' ')}.`);
+      } else {
+        toast.error("AI text generation timed out.");
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to generate AI text.");
+    } finally {
+      setIsGenerating(prev => ({ ...prev, [field]: false }));
     }
-    return s;
   };
 
-  const pagePlain = React.useMemo(() => {
-    const html = String(pageHtml || "");
-    return html.replace(/<style[\s\S]*?<\/style>/gi, "")
-               .replace(/<script[\s\S]*?<\/script>/gi, "")
-               .replace(/<[^>]+>/g, " ")
-               .replace(/\s+/g, " ")
-               .trim()
-               .slice(0, 8000); // keep prompt compact
-  }, [pageHtml]);
-
-  // Prefill from template preview_data if present
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const pd = template?.preview_data || {};
-    setHeadline(pd.title || "");
-    setSubtext(pd.content || "");
-    setButtonText(pd.button_text || "Learn more"); // Ensure default if not present
-    setButtonUrl(pd.button_url || "#"); // Ensure default if not present
-    setSelectedUsername(preferredUsername || "all");
-
-    // Load sitemaps/pages
-    (async () => {
-      setLoadingSites(true);
-      try {
-        // Fetch most recent sitemaps and flatten to pages
-        const maps = await Sitemap.list("-updated_date", 50); // Fetch more sitemaps
-        const flattened = [];
-        const unameSet = new Set();
-        (maps || []).forEach((m) => {
-          const owner = m.user_name || "unknown";
-          unameSet.add(owner);
-          (m?.pages || []).forEach((p) => {
-            if (p?.url) {
-              flattened.push({
-                title: p.title || p.url,
-                url: p.url,
-                domain: m.domain || "",
-                user_name: owner // Add user_name to each page
-              });
-            }
-          });
-        });
-        setPages(flattened);
-        setUsernames(["all", ...Array.from(unameSet).sort((a, b) => String(a).localeCompare(String(b)))]);
-      } finally {
-        setLoadingSites(false);
-      }
-    })();
-  }, [isOpen, template, preferredUsername]);
-
-  // Filtering logic
-  const filteredPages = React.useMemo(() => {
-    const q = (pageSearch || "").toLowerCase();
-    return (pages || [])
-      .filter((p) => selectedUsername === "all" || p.user_name === selectedUsername)
-      .filter((p) =>
-        !q || // If query is empty, don't filter by query
-        (p.title || "").toLowerCase().includes(q) ||
-        (p.url || "").toLowerCase().includes(q) ||
-        (p.domain || "").toLowerCase().includes(q)
-      );
-  }, [pages, pageSearch, selectedUsername]);
-
+  const handleLinkFromSitemap = (url) => {
+    setButtonUrl(url);
+    setIsSitemapOpen(false);
+  };
 
   const handleSubmit = (e) => {
-    e?.preventDefault?.();
-    onSubmit({
-      headline,
-      subtext,
-      button_text: buttonText,
-      button_url: normalizeUrl(buttonUrl)
-    });
-  };
-
-  // AI generators
-  const ctxHint = React.useMemo(() => {
-    // Build a small context string for better AI CTA
-    const tName = template?.name ? `Template: ${template.name}.` : "";
-    const tDesc = template?.description ? ` ${template.description}` : "";
-    return `${tName}${tDesc}`.trim();
-  }, [template]);
-
-  const generateHeadline = async () => {
-    setLoadingHeadline(true);
-    try {
-      const res = await InvokeLLM({
-        prompt: `Write a short, high-conversion CTA headline for the following page.
-Rules:
-- 3–7 words, strong verb, no punctuation.
-- Fit naturally above a CTA button.
-- Output ONLY the headline text.
-Page title: ${pageTitle || "(untitled)"}
-Context (excerpt): ${pagePlain}
-${ctxHint ? "Template context: " + ctxHint : ""}`
-      });
-      setHeadline(String(res || "").trim().replace(/^["'“”‘’]|["'“”‘’]$/g, ""));
-    } finally {
-      setLoadingHeadline(false);
-    }
-  };
-
-  const generateSubtext = async () => {
-    setLoadingSubtext(true);
-    try {
-      const res = await InvokeLLM({
-        prompt: `Write a concise CTA supporting sentence for this page.
-Rules:
-- 12–24 words, clear value proposition, reduce friction.
-- No quotes; output only the sentence.
-Page title: ${pageTitle || "(untitled)"}
-Context (excerpt): ${pagePlain}
-${ctxHint ? "Template context: " + ctxHint : ""}`
-      });
-      setSubtext(String(res || "").trim().replace(/^["'“”‘’]|["'“”‘’]$/g, ""));
-    } finally {
-      setLoadingSubtext(false);
-    }
-  };
-
-  const generateButton = async () => {
-    setLoadingButton(true);
-    try {
-      const res = await InvokeLLM({
-        prompt: `Return a perfect short CTA button label for this page.
-Rules:
-- 1–3 words, ≤16 characters.
-- Strong action verb, no emojis, no punctuation.
-- Examples: "Get Quote", "Shop Now", "Start Free Trial".
-- Output ONLY the label.
-Page title: ${pageTitle || "(untitled)"}
-Context (excerpt): ${pagePlain}
-${ctxHint ? "Template context: " + ctxHint : ""}`
-      });
-      setButtonText(String(res || "").trim().replace(/^["'“”‘’]|["'“”‘’]$/g, ""));
-    } finally {
-      setLoadingButton(false);
-    }
+    e.preventDefault();
+    onSubmit({ headline, subtext, button_text: buttonText, button_url: buttonUrl, name: template?.name });
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onCancel?.(); }}>
-      <DialogContent className="max-w-lg bg-white text-slate-900 border border-slate-200 shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-slate-900">Fill CTA Details</DialogTitle>
-          <DialogDescription className="text-slate-600">
-            Set the button text and link; optional headline and subtext will also be inserted if the template uses them.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Headline */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm text-slate-600">Headline (optional)</label>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-8 px-2 py-1 text-xs bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-                onClick={generateHeadline}
-                disabled={loadingHeadline}
-              >
-                {loadingHeadline ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Wand2 className="w-3.5 h-3.5 mr-1" />}
-                AI generate
-              </Button>
-            </div>
-            <Input
-              className="bg-white text-slate-900 border border-slate-300 placeholder:text-slate-500"
-              placeholder="e.g., Get your free quote"
-              value={headline}
-              onChange={(e) => setHeadline(e.target.value)}
-            />
-          </div>
-
-          {/* Subtext */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm text-slate-600">Subtext (optional)</label>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-8 px-2 py-1 text-xs bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-                onClick={generateSubtext}
-                disabled={loadingSubtext}
-              >
-                {loadingSubtext ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Wand2 className="w-3.5 h-3.5 mr-1" />}
-                AI generate
-              </Button>
-            </div>
-            <Textarea
-              className="bg-white text-slate-900 border border-slate-300 placeholder:text-slate-500"
-              placeholder="One or two sentences to support the CTA"
-              value={subtext}
-              onChange={(e) => setSubtext(e.target.value)}
-            />
-          </div>
-
-          {/* Button row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm text-slate-600">Button Text</label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-8 px-2 py-1 text-xs bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-                  onClick={generateButton}
-                  disabled={loadingButton}
-                >
-                  {loadingButton ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Wand2 className="w-3.5 h-3.5 mr-1" />}
-                  AI generate
-                </Button>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+        <DialogContent className="sm:max-w-2xl bg-white text-slate-900 border border-slate-200">
+          <DialogHeader>
+            <DialogTitle>Fill CTA Details</DialogTitle>
+            <DialogDescription>
+              Set the button text and link; optional headline and subtext will also be inserted if the template uses them.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4 py-4">
+              <div>
+                <Label htmlFor="headline" className="flex justify-between items-center mb-1">
+                  <span>Headline (optional)</span>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => handleGenerateAI('headline')} disabled={isGenerating.headline}>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    {isGenerating.headline ? 'Generating...' : 'AI generate'}
+                  </Button>
+                </Label>
+                <Input id="headline" value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="e.g., Get your free quote" className="bg-white text-slate-900" />
               </div>
-              <Input
-                className="bg-white text-slate-900 border border-slate-300 placeholder:text-slate-500"
-                placeholder="e.g., Call Us"
-                value={buttonText}
-                onChange={(e) => setButtonText(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Button URL with sitemap picker */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm text-slate-600">Button URL</label>
-                <Popover open={sitesOpen} onOpenChange={setSitesOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-8 px-2 py-1 text-xs bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-                    >
-                      <LinkIcon className="w-3.5 h-3.5 mr-1" /> From Sitemap
+              <div>
+                <Label htmlFor="subtext" className="flex justify-between items-center mb-1">
+                  <span>Subtext (optional)</span>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => handleGenerateAI('subtext')} disabled={isGenerating.subtext}>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    {isGenerating.subtext ? 'Generating...' : 'AI generate'}
+                  </Button>
+                </Label>
+                <Textarea id="subtext" value={subtext} onChange={(e) => setSubtext(e.target.value)} placeholder="One or two sentences to support the CTA" className="bg-white text-slate-900" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="button-text" className="flex justify-between items-center mb-1">
+                    <span>Button Text</span>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => handleGenerateAI('button_text')} disabled={isGenerating.button_text}>
+                      <Wand2 className="w-4 h-4 mr-2" />
+                      {isGenerating.button_text ? '...' : 'AI'}
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[min(90vw,28rem)] p-3 bg-white text-slate-900 border border-slate-200 shadow-xl max-h-[70vh] overflow-hidden">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
-                      <div className="md:col-span-2 relative">
-                        <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          placeholder="Search pages by title, URL, or domain"
-                          value={pageSearch}
-                          onChange={(e) => setPageSearch(e.target.value)}
-                          className="pl-8 bg-white text-slate-900 border border-slate-300 placeholder:text-slate-500"
-                        />
-                      </div>
-                      <div>
-                        <Select value={selectedUsername} onValueChange={setSelectedUsername}>
-                          <SelectTrigger className="bg-white text-slate-900 border border-slate-300">
-                            <SelectValue placeholder="All brands" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white text-slate-900 border border-slate-200">
-                            {usernames.map((u) => (
-                              <SelectItem key={u} value={u}>{u === "all" ? "All brands" : u}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Scrollable list: supports mouse wheel and scrollbar drag */}
-                    <div
-                      className="h-[48vh] overflow-y-auto rounded-md border border-slate-200 bg-white touch-pan-y"
-                      onWheel={(e) => { e.stopPropagation(); }}
-                    >
-                      {loadingSites ? (
-                        <div className="p-3 text-sm text-slate-500 flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" /> Loading sitemap…
-                        </div>
-                      ) : filteredPages.length === 0 ? (
-                        <div className="p-3 text-sm text-slate-500">No pages found. Try changing brand or search.</div>
-                      ) : (
-                        <div className="divide-y divide-slate-100">
-                          {filteredPages.map((p, idx) => (
-                            <button
-                              key={idx}
-                              className="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-900"
-                              onClick={() => {
-                                setButtonUrl(p.url);
-                                setSitesOpen(false);
-                              }}
-                            >
-                              <div className="text-sm font-medium">{p.title}</div>
-                              <div className="text-xs text-slate-600 truncate">{p.url}</div>
-                              {p.domain && <div className="text-[11px] text-slate-400 mt-0.5">{p.domain} • {p.user_name}</div>}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                  </Label>
+                  <Input id="button-text" value={buttonText} onChange={(e) => setButtonText(e.target.value)} className="bg-white text-slate-900" />
+                </div>
+                <div>
+                  <Label htmlFor="button-url" className="flex justify-between items-center mb-1">
+                    <span>Button URL</span>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setIsSitemapOpen(true)} className="bg-white text-slate-900">
+                      <Link className="w-4 h-4 mr-2" />
+                      From Sitemap
+                    </Button>
+                  </Label>
+                  <Input id="button-url" value={buttonUrl} onChange={(e) => setButtonUrl(e.target.value)} className="bg-white text-slate-900" />
+                </div>
               </div>
-              <Input
-                className="bg-white text-slate-900 border border-slate-300 placeholder:text-slate-500"
-                placeholder="https://example.com/contact"
-                value={buttonUrl}
-                onChange={(e) => setButtonUrl(e.target.value)}
-                required
-              />
             </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              Insert CTA
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+              <Button type="submit">Insert CTA</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <SitemapLinkerModal
+        isOpen={isSitemapOpen}
+        onClose={() => setIsSitemapOpen(false)}
+        onLinkInsert={handleLinkFromSitemap}
+        usernameFilter={preferredUsername}
+      />
+    </>
   );
 }

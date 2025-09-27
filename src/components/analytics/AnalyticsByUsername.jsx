@@ -10,7 +10,7 @@ export default function AnalyticsByUsername({ usernames = [], isSavingMap = {}, 
   const [local, setLocal] = React.useState([]);
 
   React.useEffect(() => {
-    setLocal((usernames || []).filter(u => u.is_active !== false).map(u => ({
+    setLocal((usernames || []).filter((u) => u.is_active !== false).map((u) => ({
       id: u.id,
       user_name: u.user_name,
       display_name: u.display_name,
@@ -20,7 +20,7 @@ export default function AnalyticsByUsername({ usernames = [], isSavingMap = {}, 
   }, [usernames]);
 
   const updateField = (id, key, value) => {
-    setLocal(prev => prev.map(r => r.id === id ? { ...r, [key]: value } : r));
+    setLocal((prev) => prev.map((r) => r.id === id ? { ...r, [key]: value } : r));
   };
 
   const handleSave = (row) => {
@@ -44,12 +44,12 @@ export default function AnalyticsByUsername({ usernames = [], isSavingMap = {}, 
         </Button>
       </div>
 
-      {local.length === 0 ? (
-        <div className="p-8 text-center text-slate-500">No active usernames yet.</div>
-      ) : (
-        <div className="divide-y divide-slate-200">
-          {local.map(row => (
-            <Card key={row.id} className="m-3 bg-white border-slate-200 shadow-sm">
+      {local.length === 0 ?
+      <div className="p-8 text-center text-slate-500">No active usernames yet.</div> :
+
+      <div className="divide-y divide-slate-200">
+          {local.map((row) =>
+        <Card key={row.id} className="m-3 bg-white border-slate-200 shadow-sm">
               <div className="p-4 grid grid-cols-1 md:grid-cols-[2fr_2fr_200px] gap-3 items-end">
                 <div>
                   <div className="text-slate-900 font-medium">{row.display_name || row.user_name}</div>
@@ -60,37 +60,37 @@ export default function AnalyticsByUsername({ usernames = [], isSavingMap = {}, 
                   <div>
                     <Label className="text-slate-700 text-sm mb-1 block">GA4 Property ID</Label>
                     <Input
-                      placeholder="e.g., 123456789"
-                      value={row.ga4_property_id}
-                      onChange={(e) => updateField(row.id, "ga4_property_id", e.target.value)}
-                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                    />
+                  placeholder="e.g., 123456789"
+                  value={row.ga4_property_id}
+                  onChange={(e) => updateField(row.id, "ga4_property_id", e.target.value)}
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
                   </div>
                   <div>
                     <Label className="text-slate-700 text-sm mb-1 block">GSC Site URL</Label>
                     <Input
-                      placeholder="https://example.com/"
-                      value={row.gsc_site_url}
-                      onChange={(e) => updateField(row.id, "gsc_site_url", e.target.value)}
-                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                    />
+                  placeholder="https://example.com/"
+                  value={row.gsc_site_url}
+                  onChange={(e) => updateField(row.id, "gsc_site_url", e.target.value)}
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
                   </div>
                 </div>
 
                 <div className="text-right">
                   <Button
-                    onClick={() => handleSave(row)}
-                    disabled={!!isSavingMap[row.id]}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
+                onClick={() => handleSave(row)}
+                disabled={!!isSavingMap[row.id]} className="bg-slate-700 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-emerald-700">
+
+
                     {isSavingMap[row.id] ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save"}
                   </Button>
                 </div>
               </div>
             </Card>
-          ))}
+        )}
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }

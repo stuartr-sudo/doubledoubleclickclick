@@ -8,18 +8,28 @@ import {
   DialogTitle } from
 "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Sparkles, RefreshCw, Check, Loader2 } from "lucide-react";
+import { Sparkles, Check, Loader2 } from "lucide-react";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 
 export default function HTMLCleanupModal({ isOpen, onClose, currentContent, onContentUpdate }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cleanedContent, setCleanedContent] = useState("");
   const [error, setError] = useState(null);
+  const [hasStarted, setHasStarted] = useState(false);
+  const { consumeTokensForFeature } = useTokenConsumption();
 
   const handleCleanup = useCallback(async () => {
+    const tokenResult = await consumeTokensForFeature('ai_html_cleanup');
+    if (!tokenResult.success) {
+      onClose(); // Hook handles toast, just close the modal.
+      return;
+    }
+
     if (!currentContent?.trim()) {
       setError("There is no content to clean up.");
       return;
     }
+    setHasStarted(true);
     setIsProcessing(true);
     setCleanedContent("");
     setError(null);
@@ -82,18 +92,17 @@ ${currentContent}
     } finally {
       setIsProcessing(false);
     }
-  }, [currentContent]);
+  }, [currentContent, consumeTokensForFeature, onClose]);
 
   useEffect(() => {
-    if (isOpen) {
-      handleCleanup();
-    } else {
+    if (!isOpen) {
       // Reset state when modal closes
       setIsProcessing(false);
       setCleanedContent("");
       setError(null);
+      setHasStarted(false);
     }
-  }, [isOpen, handleCleanup]);
+  }, [isOpen]);
 
 
   const handleUseCleanedContent = () => {
@@ -116,18 +125,29 @@ ${currentContent}
         </DialogHeader>
 
         <div className="mt-4 space-y-4">
-          {isProcessing ?
-          <div className="flex flex-col items-center justify-center text-center p-8 space-y-3">
+          {!hasStarted && !isProcessing ? (
+            <div className="flex flex-col items-center justify-center text-center p-8 space-y-4">
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-blue-600" />
+              </div>
+              <p className="text-slate-700 font-medium">Ready to clean up your HTML?</p>
+              <Button onClick={handleCleanup} className="bg-slate-900 text-slate-50 hover:bg-slate-800">
+                <Check className="w-4 h-4 mr-2" />
+                Start Cleanup
+              </Button>
+            </div>
+          ) : isProcessing ? (
+            <div className="flex flex-col items-center justify-center text-center p-8 space-y-3">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
               <p className="text-slate-700 font-medium">Cleaning HTML...</p>
               <p className="text-slate-500 text-sm">Please wait, this may take a moment.</p>
-            </div> :
-          error ?
-          <div className="text-center p-4 text-red-600 bg-red-50 border border-red-200 rounded-md">
+            </div>
+          ) : error ? (
+            <div className="text-center p-4 text-red-600 bg-red-50 border border-red-200 rounded-md">
               {error}
-            </div> :
-          cleanedContent ?
-          <div className="space-y-4 pt-4">
+            </div>
+          ) : cleanedContent ? (
+            <div className="space-y-4 pt-4">
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-600" />
                 <h4 className="font-medium text-slate-900">Cleaned HTML Ready</h4>
@@ -158,8 +178,8 @@ ${currentContent}
                   Use Cleaned HTML
                 </Button>
               </div>
-            </div> :
-          null}
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>);

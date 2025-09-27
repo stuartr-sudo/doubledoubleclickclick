@@ -1,166 +1,194 @@
-
-import React, { useState, useEffect } from "react";
-import { Sitemap } from "@/api/entities";
-import { User } from "@/api/entities";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link as LinkIcon, Search, Globe, Loader2 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Search, Link, Globe } from "lucide-react";
+import { Sitemap } from "@/api/entities";
+import { Username } from "@/api/entities";
+import { User } from "@/api/entities";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { createPageUrl } from "@/utils";
+import { useNavigate } from "react-router-dom";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
-export default function SitemapLinkerModal({ isOpen, onClose, onLinkInsert }) {
-  const [pages, setPages] = useState([]);
+export default function SitemapLinkerModal({ isOpen, onClose, onLinkInsert, usernameFilter }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [sitemaps, setSitemaps] = useState([]);
+  const [usernames, setUsernames] = useState([]);
+  const [localSelectedUsername, setLocalSelectedUsername] = useState(usernameFilter || "all");
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [filterUsername, setFilterUsername] = useState("all");
-  const [availableUsernames, setAvailableUsernames] = useState([]);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadInitialData();
-    }
-  }, [isOpen]);
+  const navigate = useNavigate();
+  const { consumeTokensForFeature } = useTokenConsumption();
+  const { selectedUsername: globalUsername } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
 
-  const loadInitialData = async () => {
+  // Determine active username filter
+  const selectedUsername = useWorkspaceScoping ? (globalUsername || "all") : (usernameFilter || localSelectedUsername);
+  
+  // Decide whether to show the dropdown
+  const showUsernameDropdown = !useWorkspaceScoping && !usernameFilter;
+
+  const loadSitemapsAndUsernames = useCallback(async () => {
     setIsLoading(true);
     try {
       const user = await User.me();
-      setCurrentUser(user);
-
-      let usernames = [];
+      let usernameData = [];
       if (user.role === 'admin') {
-        const allUsers = await User.list();
-        const allUsernamesSet = new Set();
-        allUsers.forEach(u => {
-            if(Array.isArray(u.assigned_usernames)) {
-                u.assigned_usernames.forEach(name => allUsernamesSet.add(name));
-            }
-        });
-        usernames = Array.from(allUsernamesSet).sort();
+        usernameData = await Username.list("user_name", 500).catch(() => []);
       } else {
-        usernames = user.assigned_usernames || [];
+        const assignedNames = user.assigned_usernames || [];
+        if (assignedNames.length > 0) {
+            const allUsernames = await Username.list("user_name", 500).catch(() => []);
+            usernameData = allUsernames.filter(u => assignedNames.includes(u.user_name));
+        }
       }
-      setAvailableUsernames(usernames);
 
-      const allSitemaps = await Sitemap.list("-created_date");
-      let sitemapsForUser = [];
+      const sitemapData = await Sitemap.list("-updated_date", 200).catch(() => []);
       
-      if (user.role === 'admin') {
-        sitemapsForUser = allSitemaps;
-      } else if (user.assigned_usernames) {
-        sitemapsForUser = allSitemaps.filter(s => user.assigned_usernames.includes(s.user_name));
-      }
-      
-      const allPages = sitemapsForUser.flatMap(sitemap => 
-        sitemap.pages.map(page => ({ ...page, domain: sitemap.domain, user_name: sitemap.user_name }))
-      );
-      
-      setPages(allPages);
-      
+      setSitemaps(sitemapData || []);
+      const activeUsernames = (usernameData || []).filter(u => u.is_active !== false);
+      setUsernames(activeUsernames);
     } catch (error) {
-      console.error("Failed to load sitemap data", error);
+      console.error("Error loading sitemaps or usernames:", error);
+      toast.error("Failed to load link data.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const filteredPages = pages.filter(page => {
-    const usernameMatch = filterUsername === 'all' || page.user_name === filterUsername;
-    const searchTermMatch = page.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            page.url.toLowerCase().includes(searchTerm.toLowerCase());
-    return usernameMatch && searchTermMatch;
-  });
+  useEffect(() => {
+    if (isOpen) {
+      // If a filter is passed, make sure the local state is in sync
+      if (usernameFilter) {
+        setLocalSelectedUsername(usernameFilter);
+      }
+      loadSitemapsAndUsernames();
+    }
+  }, [isOpen, loadSitemapsAndUsernames, usernameFilter]);
 
-  const handleClose = () => {
-    setSearchTerm("");
-    setFilterUsername("all");
+  const filteredPages = useMemo(() => {
+    const s = searchTerm.toLowerCase();
+    const allPages = sitemaps.flatMap((sitemap) =>
+      sitemap.pages?.map((page) => ({ ...page, sitemapDomain: sitemap.domain, sitemapUsername: sitemap.user_name })) || []
+    );
+
+    return allPages.filter(
+      (page) =>
+        (!searchTerm ||
+          page.title?.toLowerCase().includes(s) ||
+          page.url?.toLowerCase().includes(s) ||
+          page.sitemapDomain?.toLowerCase().includes(s)) &&
+        (selectedUsername === "all" || page.sitemapUsername === selectedUsername)
+    );
+  }, [sitemaps, searchTerm, selectedUsername]);
+
+  const handleLinkInsertClick = async (page) => {
+    const result = await consumeTokensForFeature('ai_sitemap_link');
+    if (!result.success) {
+      return;
+    }
+
+    onLinkInsert(page.url);
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[min(92vw,920px)] max-w-none bg-white border border-slate-200 text-slate-900 rounded-lg shadow-2xl">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl bg-white text-slate-900 border border-slate-200">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-slate-800">
-            <Globe className="w-5 h-5 text-indigo-600" />
-            Internal Link Finder
+          <DialogTitle className="flex items-center gap-2 text-slate-900">
+            <Link className="w-5 h-5 text-blue-600" />
+            Add Internal Link
           </DialogTitle>
+          <DialogDescription className="text-slate-600">
+            Search for a page from your sitemaps to insert a link.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="Search pages by title or URL..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-              />
-            </div>
-            <div className="relative z-10">
-              <Label htmlFor="username-filter-linker" className="sr-only">Filter by Username</Label>
-              <Select value={filterUsername} onValueChange={setFilterUsername}>
-                <SelectTrigger id="username-filter-linker" className="bg-white border-slate-300 text-slate-900">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  <SelectItem value="all">All Usernames</SelectItem>
-                  {availableUsernames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="flex gap-4 mb-4">
+          <div className="relative flex-grow">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Search pages by title, URL, or domain..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-white text-slate-900 border border-slate-300 placeholder:text-slate-500"
+            />
           </div>
-          
-          <div className="max-h-96 overflow-y-auto pr-2 space-y-2 rounded-md border border-slate-200 p-2 bg-slate-50/50">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-48">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-              </div>
-            ) : filteredPages.length > 0 ? (
-              filteredPages.map((page, index) => (
-                <div
-                  key={index}
-                  className="group grid grid-cols-[1fr_auto] items-center gap-3 p-3 rounded-lg bg-white hover:bg-slate-50 transition-colors overflow-hidden border border-slate-200"
-                >
-                  <div className="min-w-0">
-                    <h4 className="font-semibold text-slate-800 truncate">
-                      {page.title}
-                    </h4>
-                    <p className="text-sm text-slate-500 truncate">
-                      {page.url}
-                    </p>
-                    <span className="text-xs inline-flex items-center gap-1 mt-1 text-indigo-600">
-                      <Globe className="w-3 h-3" /> {page.domain}
-                    </span>
-                  </div>
+          {showUsernameDropdown && (
+            <Select value={localSelectedUsername} onValueChange={setLocalSelectedUsername}>
+              <SelectTrigger className="w-[180px] bg-white text-slate-900 border border-slate-300">
+                <SelectValue placeholder="All Brands" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200 text-slate-900">
+                <SelectItem value="all">All Brands</SelectItem>
+                {usernames.map((u) => (
+                  <SelectItem key={u.id} value={u.user_name}>
+                    {u.display_name || u.user_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
 
-                  <div className="flex items-center">
-                    <Button
-                      onClick={() => onLinkInsert(page.url)}
-                      size="sm"
-                      className="flex-shrink-0 bg-indigo-600 text-white hover:bg-indigo-700"
-                      style={{ position: 'static' }}
-                    >
-                      <LinkIcon className="w-4 h-4 mr-2" />
-                      Link
-                    </Button>
+        <div className="h-96 overflow-y-auto border border-slate-200 rounded-lg bg-slate-50/50">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full text-slate-500">
+              Loading sitemaps...
+            </div>
+          ) : filteredPages.length > 0 ? (
+            <ul className="divide-y divide-slate-200">
+              {filteredPages.map((page, index) => (
+                <li
+                  key={`${page.url}-${index}`}
+                  className="p-3 hover:bg-slate-100 flex justify-between items-center gap-4"
+                >
+                  <div className="flex-grow overflow-hidden">
+                    <p className="font-medium truncate text-slate-800">{page.title}</p>
+                    <p className="text-sm text-slate-500 truncate">{page.url}</p>
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12 text-slate-500">
-                No pages found for this user or search term.
-              </div>
-            )}
-          </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleLinkInsertClick(page)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
+                  >
+                    Insert Link
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex flex-col justify-center items-center h-full text-center text-slate-500 p-4">
+              <Globe className="w-12 h-12 mb-4 text-slate-300" />
+              <p className="font-medium text-slate-700">No pages found.</p>
+              <p className="text-sm">Try changing brand or search.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 bg-white border-slate-300"
+                onClick={() => navigate(createPageUrl('SitemapManager'))}
+              >
+                Go to Sitemap Manager
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

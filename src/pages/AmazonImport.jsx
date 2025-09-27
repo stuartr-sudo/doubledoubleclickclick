@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, ShoppingBag, Copy, ExternalLink, Loader2, CheckCircle2, Wand2 } from "lucide-react";
+import { Search, ShoppingBag, ExternalLink, Loader2, Wand2 } from "lucide-react";
 import { amazonProduct } from "@/api/functions";
 import { PromotedProduct } from "@/api/entities";
 import { User } from "@/api/entities";
@@ -16,6 +16,9 @@ import { toast } from "sonner";
 import { InvokeLLM } from "@/api/integrations";
 import { Badge } from "@/components/ui/badge";
 import { CustomContentTemplate } from "@/api/entities";
+import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
 const TITLE_LIMIT = 60;
 const DESCRIPTION_LIMIT = 240;
@@ -110,9 +113,17 @@ export default function AmazonImport() {
   const [overrides, setOverrides] = useState({ title: "", description: "", price: "" });
   const [fieldLoading, setFieldLoading] = useState({ title: false, description: false });
 
-  // NEW: templates state
+  // templates state
   const [templates, setTemplates] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const { consumeTokensForFeature } = useTokenConsumption();
+  const { selectedUsername: globalUsername } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
+
+  // Determine active username based on workspace scoping
+  const activeUsername = useWorkspaceScoping ? globalUsername : selectedUsername;
 
   const meta = useMemo(() => {
     if (!data) return null;
@@ -139,53 +150,67 @@ export default function AmazonImport() {
   }, [meta, overrides]);
 
   useEffect(() => {
-    (async () => {
+    const loadInitialData = async () => {
       try {
-        const me = await User.me();
+        const user = await User.me();
+        setCurrentUser(user);
+
         const all = await Username.list("-created_date").catch(() => []);
         const active = (all || []).filter((u) => u.is_active !== false).map((u) => u.user_name);
-        const isSuperAdmin = me?.role === "admin" || me?.access_level === "full";
+        const isSuperAdmin = user?.role === "admin" || user?.access_level === "full";
         let names = [];
         if (isSuperAdmin) {
           names = active;
         } else {
-          const assigned = Array.isArray(me?.assigned_usernames) ? me.assigned_usernames : [];
+          const assigned = Array.isArray(user?.assigned_usernames) ? user.assigned_usernames : [];
           const activeSet = new Set(active);
           names = assigned.filter((n) => activeSet.has(n));
         }
         names = Array.from(new Set(names)).sort();
         setUsernames(names);
-        setSelectedUsername(names[0] || "");
-      } catch (e) {
-        console.error("Failed to load usernames:", e);
-        setUsernames([]);
-        setSelectedUsername("");
-      }
-    })();
-  }, []);
 
-  useEffect(() => {
-    // Load active product templates for selection
-    (async () => {
-      try {
-        const tpls = await CustomContentTemplate.filter({
-          associated_ai_feature: "product",
-          is_active: true
-        });
+        // Set selectedUsername based on workspace scoping
+        if (useWorkspaceScoping) {
+          setSelectedUsername(globalUsername || "");
+        } else if (names.length > 0) {
+          setSelectedUsername(names[0]);
+        }
+
+        // Fetch only product templates, as per the outline, removing `is_active: true`
+        const tpls = await CustomContentTemplate.filter({ associated_ai_feature: 'product' });
         setTemplates(tpls || []);
         if ((tpls || []).length > 0) {
           setSelectedTemplateId(tpls[0].id);
+        } else {
+          setSelectedTemplateId(""); // Ensure it's reset if no templates are found
         }
-      } catch (e) {
-        console.error("Failed to load templates:", e);
+      } catch (error) {
+        toast.error("Failed to load initial data.");
+        console.error(error);
+        setUsernames([]);
+        setSelectedUsername("");
         setTemplates([]);
         setSelectedTemplateId("");
       }
-    })();
-  }, []);
+    };
+    loadInitialData();
+  }, [useWorkspaceScoping, globalUsername]);
+
+  // Sync selectedUsername with workspace selection when feature is on
+  useEffect(() => {
+    if (useWorkspaceScoping && globalUsername) {
+      setSelectedUsername(globalUsername);
+    }
+  }, [useWorkspaceScoping, globalUsername]);
 
   const rewriteTitle = async () => {
     if (!meta) return;
+
+    const tokenResult = await consumeTokensForFeature('ai_amazon_title_rewrite');
+    if (!tokenResult.success) {
+      return;
+    }
+
     setFieldLoading((f) => ({ ...f, title: true }));
     try {
       const prompt = `Rewrite ONLY the product title to be concise, compelling, and SEO-friendly while preserving factual meaning and brand terms.
@@ -206,6 +231,12 @@ Description (for context): "${String(finalMeta?.description || meta.description 
 
   const summarizeDescription = async () => {
     if (!meta) return;
+
+    const tokenResult = await consumeTokensForFeature('ai_amazon_description_summarize');
+    if (!tokenResult.success) {
+      return;
+    }
+
     setFieldLoading((f) => ({ ...f, description: true }));
     try {
       const prompt = `Summarize the product description into 3–5 crisp bullet points.
@@ -236,6 +267,14 @@ ${String(meta.description || "").slice(0, 4000)}`;
       setError("Please enter an Amazon URL or ASIN.");
       return;
     }
+
+    // Check and consume tokens before making the API call
+    const tokenResult = await consumeTokensForFeature('amazon_product_import'); // This was already present
+    if (!tokenResult.success) {
+      // Error toast is handled by the hook
+      return;
+    }
+
     setLoading(true);
     try {
       // Send either ASIN or full URL – backend handles both
@@ -250,18 +289,7 @@ ${String(meta.description || "").slice(0, 4000)}`;
     setLoading(false);
   };
 
-  const handleCopyHtml = async () => {
-    if (!finalMeta) return;
-    let html;
-    const tpl = templates.find(t => t.id === selectedTemplateId);
-    if (tpl) {
-      html = applyCustomTemplateToMeta(tpl, finalMeta);
-    } else {
-      html = buildProductHtml(finalMeta); // fallback to legacy builder
-    }
-    await navigator.clipboard.writeText(html);
-    toast.success("HTML copied to clipboard!");
-  };
+  // Removed handleCopyHtml as per instructions
 
   const handleOpenInEditor = () => {
     if (!finalMeta) return;
@@ -273,7 +301,9 @@ ${String(meta.description || "").slice(0, 4000)}`;
   const handleSaveToLibrary = async () => {
     if (!finalMeta) return;
     setError("");
-    if (!selectedUsername) {
+
+    const usernameToUse = useWorkspaceScoping ? globalUsername : selectedUsername;
+    if (!usernameToUse) {
       setError("Please select a username to save this product.");
       return;
     }
@@ -285,8 +315,8 @@ ${String(meta.description || "").slice(0, 4000)}`;
         throw new Error("Could not determine product URL from Amazon data. Please try a different ASIN/URL.");
       }
       const priceStr = finalMeta.price ?
-      String(finalMeta.price).trim().startsWith("$") ? String(finalMeta.price).trim() : `$${String(finalMeta.price).trim()}` :
-      "";
+        String(finalMeta.price).trim().startsWith("$") ? String(finalMeta.price).trim() : `$${String(finalMeta.price).trim()}` :
+        "";
 
       await PromotedProduct.create({
         name: clampText(finalMeta.title, TITLE_LIMIT) || "Amazon Product",
@@ -294,9 +324,9 @@ ${String(meta.description || "").slice(0, 4000)}`;
         image_url: finalMeta.image || "",
         product_url: productUrlToSave,
         price: priceStr,
-        user_name: selectedUsername,
+        user_name: usernameToUse,
         category: "amazon",
-        template_key: "gradient",
+        template_key: "gradient", // This might need to be dynamic if the template system replaces it
         custom_template_id: selectedTemplateId || null
       });
 
@@ -322,7 +352,7 @@ ${String(meta.description || "").slice(0, 4000)}`;
                 Amazon Import
               </CardTitle>
               {!!meta?.asin &&
-              <Badge variant="outline" className="border-slate-200 text-slate-600">
+                <Badge variant="outline" className="border-slate-200 text-slate-600">
                   ASIN: {meta.asin}
                 </Badge>
               }
@@ -347,11 +377,11 @@ ${String(meta.description || "").slice(0, 4000)}`;
                   className="min-w-[110px] h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
 
                   {loading ?
-                  <>
+                    <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fetch
                     </> :
 
-                  <>
+                    <>
                       <Search className="w-4 h-4 mr-2" /> Fetch
                     </>
                   }
@@ -362,35 +392,34 @@ ${String(meta.description || "").slice(0, 4000)}`;
 
             {/* Result Grid */}
             {finalMeta &&
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Preview Panel */}
                 <div className="space-y-3">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     {finalMeta.image ?
-                  <div className="relative w-full rounded-lg overflow-hidden bg-white border border-slate-200">
+                      <div className="relative w-full h-60 rounded-lg overflow-hidden bg-white border border-slate-200">
                         <img
-                      src={finalMeta.image}
-                      alt={finalMeta.title}
-                      className="w-full h-auto object-contain" />
-
+                          src={finalMeta.image}
+                          alt={finalMeta.title}
+                          className="w-full h-full object-contain" />
                       </div> :
 
-                  <div className="w-full h-60 rounded-lg border border-slate-200 grid place-items-center text-slate-400">
+                      <div className="w-full h-60 rounded-lg border border-slate-200 grid place-items-center text-slate-400">
                         No image
                       </div>
-                  }
+                    }
                   </div>
 
                   {finalMeta.product_url &&
-                <a
-                  href={finalMeta.product_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700">
+                    <a
+                      href={finalMeta.product_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700">
 
                       View on Amazon <ExternalLink className="w-4 h-4" />
                     </a>
-                }
+                  }
                 </div>
 
                 {/* Meta editor */}
@@ -400,31 +429,31 @@ ${String(meta.description || "").slice(0, 4000)}`;
                     <Label className="text-slate-700">Title</Label>
                     <div className="relative">
                       <Input
-                      value={overrides.title || finalMeta.title}
-                      onChange={(e) =>
-                      setOverrides((o) => ({ ...o, title: e.target.value }))
-                      }
-                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 pr-24" />
+                        value={overrides.title || finalMeta.title}
+                        onChange={(e) =>
+                          setOverrides((o) => ({ ...o, title: e.target.value }))
+                        }
+                        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 pr-24" />
 
                       <Button
-                      type="button"
-                      variant="outline"
-                      onClick={rewriteTitle}
-                      disabled={fieldLoading.title} className="bg-slate-300 text-slate-700 px-3 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground absolute right-1.5 top-1/2 -translate-y-1/2 h-8 border-slate-300 hover:bg-indigo-50"
+                        type="button"
+                        variant="outline"
+                        onClick={rewriteTitle}
+                        disabled={fieldLoading.title} className="bg-slate-300 text-slate-700 px-3 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground absolute right-1.5 top-1/2 -translate-y-1/2 h-8 border-slate-300 hover:bg-indigo-50"
 
-                      title="Improve title with AI">
+                        title="Improve title with AI">
 
                         {fieldLoading.title ?
-                      <>
+                          <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Magic
                           </> :
 
-                      <>
+                          <>
                             <Wand2 className="w-4 h-4 mr-2" />
                             Magic
                           </>
-                      }
+                        }
                       </Button>
                     </div>
                     <div className="mt-1 text-xs text-slate-500">
@@ -436,12 +465,12 @@ ${String(meta.description || "").slice(0, 4000)}`;
                   <div>
                     <Label className="text-slate-700">Price</Label>
                     <Input
-                    value={overrides.price || finalMeta.price}
-                    onChange={(e) =>
-                    setOverrides((o) => ({ ...o, price: e.target.value }))
-                    }
-                    className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
-                    placeholder="$29.99" />
+                      value={overrides.price || finalMeta.price}
+                      onChange={(e) =>
+                        setOverrides((o) => ({ ...o, price: e.target.value }))
+                      }
+                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+                      placeholder="$29.99" />
 
                   </div>
 
@@ -450,32 +479,32 @@ ${String(meta.description || "").slice(0, 4000)}`;
                     <Label className="text-slate-700">Description (AI summarized)</Label>
                     <div className="relative">
                       <Textarea
-                      value={overrides.description || finalMeta.description}
-                      onChange={(e) =>
-                      setOverrides((o) => ({ ...o, description: e.target.value }))
-                      }
-                      rows={7}
-                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 pr-28" />
+                        value={overrides.description || finalMeta.description}
+                        onChange={(e) =>
+                          setOverrides((o) => ({ ...o, description: e.target.value }))
+                        }
+                        rows={7}
+                        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 pr-28" />
 
                       <Button
-                      type="button"
-                      variant="outline"
-                      onClick={summarizeDescription}
-                      disabled={fieldLoading.description} className="bg-slate-300 text-gray-800 px-3 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground absolute right-1.5 top-1.5 h-8 border-slate-300 hover:bg-indigo-50"
+                        type="button"
+                        variant="outline"
+                        onClick={summarizeDescription}
+                        disabled={fieldLoading.description} className="bg-slate-300 text-gray-800 px-3 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground absolute right-1.5 top-1.5 h-8 border-slate-300 hover:bg-indigo-50"
 
-                      title="Summarize with AI">
+                        title="Summarize with AI">
 
                         {fieldLoading.description ?
-                      <>
+                          <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Summarize
                           </> :
 
-                      <>
+                          <>
                             <Wand2 className="w-4 h-4 mr-2" />
                             Summarize
                           </>
-                      }
+                        }
                       </Button>
                     </div>
                     <div className="mt-1 text-xs text-slate-500">
@@ -488,15 +517,9 @@ ${String(meta.description || "").slice(0, 4000)}`;
 
             {/* Actions */}
             {finalMeta &&
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div className="flex gap-2 flex-1">
-                  <Button
-                  variant="outline"
-                  onClick={handleCopyHtml} className="bg-slate-300 text-slate-800 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground h-10 border-slate-300 hover:bg-slate-100">
-                    <Copy className="w-4 h-4 mr-2" /> Copy HTML
-                  </Button>
-
-                  {/* NEW: Dynamic Template selector replaces the old "Open in Editor" button */}
+                  {/* Dynamic Template selector */}
                   <div className="min-w-[220px]">
                     <Select value={selectedTemplateId || "__none__"} onValueChange={(v) => setSelectedTemplateId(v === "__none__" ? "" : v)}>
                       <SelectTrigger className="bg-white border-slate-300 text-slate-900">
@@ -513,22 +536,32 @@ ${String(meta.description || "").slice(0, 4000)}`;
                 </div>
 
                 <div className="flex gap-2">
-                  <Select value={selectedUsername} onValueChange={setSelectedUsername}>
-                    <SelectTrigger className="bg-white border-slate-300 text-slate-900 min-w-[160px]">
-                      <SelectValue placeholder="Assign to username" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border border-slate-200 text-slate-900">
-                      {usernames.map((u) =>
-                        <SelectItem key={u} value={u}>
-                          {u}
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  {/* Username selector - conditionally rendered */}
+                  {useWorkspaceScoping ? (
+                    <Input
+                      value={globalUsername || "No workspace selected"}
+                      disabled
+                      className="bg-slate-100 border-slate-300 text-slate-500 min-w-[160px]"
+                    />
+                  ) : (
+                    <Select value={selectedUsername} onValueChange={setSelectedUsername}>
+                      <SelectTrigger className="bg-white border-slate-300 text-slate-900 min-w-[160px]">
+                        <SelectValue placeholder="Assign to username" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 text-slate-900">
+                        {usernames.map((u) =>
+                          <SelectItem key={u} value={u}>
+                            {u}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+
                   <Button
-                  onClick={handleSaveToLibrary}
-                  disabled={!selectedUsername || saving}
-                  className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white min-w-[140px] shadow-sm">
+                    onClick={handleSaveToLibrary}
+                    disabled={!activeUsername || saving}
+                    className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white min-w-[140px] shadow-sm">
                     {saving ?
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...
@@ -543,5 +576,4 @@ ${String(meta.description || "").slice(0, 4000)}`;
         </Card>
       </div>
     </div>);
-
 }
