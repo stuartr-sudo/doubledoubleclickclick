@@ -43,22 +43,20 @@ const navStructure = [
 
 },
 
-// Assets Category - UPDATED: Added Amazon items and Sitemaps here
+// Assets Category
 {
   name: "Assets",
   icon: Layers3,
   items: [
   { name: "Brand Guidelines", href: "BrandGuidelinesManager", icon: Settings, featureFlag: "show_brand_guidelines_link" },
-  { name: "Products", href: "ProductManager", icon: ShoppingBag, featureFlag: "show_products_link" },
-  { name: "Amazon Import", href: "AmazonImport", icon: ShoppingCart, featureFlag: "show_amazon_import_link" },
-  { name: "Amazon Testimonials", href: "AmazonTestimonials", icon: ShoppingBag, featureFlag: "show_amazon_testimonials_link" },
   { name: "Sitemaps", href: "SitemapManager", icon: LinkIcon, featureFlag: "show_sitemaps_link" },
   { name: "Services", href: "ServiceCatalog", icon: Package, featureFlag: "show_service_catalog_link" },
+  { name: "Product Library", href: "ProductLibrary", icon: ShoppingBag, featureFlag: "product_library_link" },
   { name: "Templates", href: "CustomTemplateManager", icon: FileText, featureFlag: "show_custom_template_manager_link", requireSuperAdmin: true }]
 
 },
 
-// Media Category - UPDATED: Changed name from "Media & AI" to "AI Hub"
+// Media Category
 {
   name: "AI Hub",
   icon: ImageIcon,
@@ -66,12 +64,16 @@ const navStructure = [
   { name: "Image Library", href: "ImageLibrary", icon: ImageIcon },
   { name: "Testimonials", href: "TestimonialLibrary", icon: Quote, featureFlag: "show_testimonials_link" },
   { type: "separator" },
+  { name: "Products", href: "ProductManager", icon: ShoppingBag, featureFlag: "show_products_link" },
+  { name: "Amazon Import", href: "AmazonImport", icon: ShoppingCart, featureFlag: "show_amazon_import_link" },
+  { name: "Amazon Testimonials", href: "AmazonTestimonials", icon: ShoppingBag, featureFlag: "show_amazon_testimonials_link" },
+  { type: "separator" },
   { name: "YouTube AI", href: "YouTubeManager", icon: Youtube, featureFlag: "show_youtube_ai_link" },
   { name: "TikTok AI", href: "TiktokAIGenerator", icon: Video, featureFlag: "show_tiktok_ai_link" }]
 
 },
 
-// Growth Category - UPDATED: Now admin-only, removed Amazon items and Sitemaps
+// Growth Category
 {
   name: "Growth",
   icon: ShoppingCart,
@@ -83,7 +85,7 @@ const navStructure = [
 
 },
 
-// Admin Category (converted to feature flags)
+// Admin Category
 {
   name: "Admin",
   icon: Shield,
@@ -93,7 +95,7 @@ const navStructure = [
   { name: "Affiliate Manager", href: "AffiliateManager", icon: Users, requireSuperAdmin: true },
   { name: "Waitlist", href: "WaitlistManager", icon: ListChecks, featureFlag: "show_waitlist_link" },
   { name: "Onboarding Builder", href: "OnboardingWizardBuilder", icon: ListChecks, featureFlag: "show_onboarding_builder_link" },
-  { name: "Onboarding Steps", href: "OnboardingStepManager", icon: Settings }, // NEW: Onboarding Steps link
+  { name: "Onboarding Steps", href: "OnboardingStepManager", icon: Settings },
   { name: "Feature Flags", href: "FeatureManagement", icon: Settings, featureFlag: "show_feature_management_link" },
   { name: "Editor Workflows", href: "EditorWorkflowManager", icon: Settings, featureFlag: "show_editor_workflows_link" },
   { name: "App Products", href: "AppProductManager", icon: ShoppingBag, featureFlag: "show_app_product_manager_link" },
@@ -214,7 +216,7 @@ const GatedMobileNavItem = ({ item, currentPageName, user }) => {
   return null;
 };
 
-// NEW: Workspace Selector Component
+// NEW: Workspace Selector Component - Updated to remove dark theme
 const WorkspaceSelector = () => {
   const { assignedUsernames, selectedUsername, setSelectedUsername, isLoading } = useWorkspace();
 
@@ -225,7 +227,7 @@ const WorkspaceSelector = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="bg-indigo-950 text-slate-50 px-4 py-2 text-sm font-medium justify-center whitespace-nowrap rounded-md ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hidden lg:flex items-center gap-2 hover:bg-indigo-900 hover:text-blue-100 hover:shadow-[0_0_15px_rgba(30,58,138,0.5),0_0_30px_rgba(30,58,138,0.3)] border border-indigo-800/50 hover:border-indigo-600/50">
+        <Button variant="ghost" className="bg-slate-100 text-slate-800 px-4 py-2 text-sm font-medium justify-center whitespace-nowrap rounded-md ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hidden lg:flex items-center gap-2 hover:bg-slate-200 border border-slate-300/50 hover:border-slate-400/50">
           <Users className="w-4 h-4 text-slate-500" />
           <span className="truncate max-w-[150px]">{selectedUsername || "Select Workspace"}</span>
           <ChevronDown className="w-4 h-4" />
@@ -262,6 +264,36 @@ function LayoutContent({ children, currentPageName }) {
     currentUser: user,
     defaultEnabled: false
   });
+
+  // NEW: Prevent Editor remounts while publishing (blocks pushState/replaceState to Editor)
+  useEffect(() => {
+    if (currentPageName !== 'Editor') return;
+
+    const originalPush = history.pushState;
+    const originalReplace = history.replaceState;
+
+    const guard = (fn) => function (state, title, url) {
+      try {
+        const prevent = sessionStorage.getItem('dcPublishing') === '1';
+        const nextUrl = typeof url === 'string' ? url : (url ? String(url) : '');
+        if (prevent && nextUrl && /Editor/i.test(nextUrl)) {
+          console.debug('Blocked Editor navigation during publish to avoid full reload.');
+          return; // swallow navigation to keep editor mounted
+        }
+      } catch (e) {
+        console.error("Error in history guard:", e);
+      }
+      return fn.apply(this, arguments);
+    };
+
+    history.pushState = guard(originalPush);
+    history.replaceState = guard(originalReplace);
+
+    return () => {
+      history.pushState = originalPush;
+      history.replaceState = originalReplace;
+    };
+  }, [currentPageName]);
 
   // GLOBAL AFFILIATE REFERRAL TRACKING
   useEffect(() => {
@@ -455,7 +487,7 @@ function LayoutContent({ children, currentPageName }) {
                     <DropdownMenu key={item.name}>
                         <DropdownMenuTrigger asChild>
                           <Button
-                          variant="ghost" className="bg-slate-50 text-slate-800 px-3 py-2 text-sm font-medium justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-10 rounded-md flex items-center transition-colors duration-200 gap-2">
+                          variant="ghost" className="bg-slate-50 text-slate-800 px-3 py-2 text-sm font-medium justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-slate-100 hover:text-slate-900 h-10 rounded-md flex items-center transition-colors duration-200 gap-2">
 
                             <item.icon className="w-4 h-4" />
                             {item.name}
@@ -611,45 +643,8 @@ function LayoutContent({ children, currentPageName }) {
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
       <style>{`
-        /* Dark theme variables so shadcn outline/ghost hover states have contrast */
-        :root {
-          --background: 222 47% 11%;
-          --foreground: 210 40% 98%;
-
-          --card: 222 47% 11%;
-          --card-foreground: 210 40% 98%;
-
-          --popover: 222 47% 11%;
-          --popover-foreground: 210 40% 98%;
-
-          --primary: 245 58% 51%;
-          --primary-foreground: 210 40% 98%;
-
-          --secondary: 217 33% 17%;
-          --secondary-foreground: 210 40% 98%;
-
-          --muted: 215 16% 22%;
-          --muted-foreground: 215 20% 65%;
-
-          /* Used by outline/ghost hover:bg-accent */
-          --accent: 217 33% 17%;
-          --accent-foreground: 210 40% 98%;
-
-          --destructive: 0 72% 51%;
-          --destructive-foreground: 210 40% 98%;
-
-          --border: 217 33% 17%;
-          --input: 217 33% 17%;
-          --ring: 217 33% 17%;
-        }
-
-        /* Safety: ensure hover text stays visible if any component uses accent foreground */
-        /* EDITED: Make selector more specific to avoid over-applying */
-        .dark-theme-provider button:hover,
-        .dark-theme-provider a.button:hover {
-          color: hsl(var(--accent-foreground));
-        }
-
+        /* Light theme only - all dark theme styles removed */
+        
         /* GLOBAL: Force light popover surfaces and readable text inside any Radix portal */
         [data-radix-popper-content-wrapper] > * {
           background-color: #ffffff !important;
@@ -657,7 +652,7 @@ function LayoutContent({ children, currentPageName }) {
           border-color: #e2e8f0 !important;
         }
 
-        /* Override shadcn accent colors inside poppers so data-[highlighted] is light bg + dark text */
+        /* Light theme accent colors for highlighted items */
         [data-radix-popper-content-wrapper] {
           --accent: 210 40% 96% !important;
           --accent-foreground: 222 47% 11% !important;
@@ -707,20 +702,7 @@ function LayoutContent({ children, currentPageName }) {
           color: #0f172a !important;
         }
 
-        /* Neutralize any dark utility classes that might slip into poppers */
-        [data-radix-popper-content-wrapper] .text-white,
-        [data-radix-popper-content-wrapper] .text-white\\/80,
-        [data-radix-popper-content-wrapper] .text-white\\/70 {
-          color: #0f172a !important;
-        }
-        [data-radix-popper-content-wrapper] .bg-slate-800,
-        [data-radix-popper-content-wrapper] .bg-slate-800\\/95,
-        [data-radix-popper-content-wrapper] .bg-black\\/50,
-        [data-radix-popper-content-wrapper] .bg-white\\/10 {
-          background-color: #ffffff !important;
-        }
-
-        /* Force black-on-white dropdowns everywhere (Radix poppers, Command, Select) */
+        /* Force light theme dropdowns everywhere (Radix poppers, Command, Select) */
         [data-radix-popper-content-wrapper] .cmdk-root,
         [data-radix-popper-content-wrapper] .cmdk-list,
         [data-radix-popper-content-wrapper] .cmdk-input,
@@ -742,9 +724,14 @@ function LayoutContent({ children, currentPageName }) {
         [data-radix-popper-content-wrapper] [role="option"] * {
           color: inherit !important;
         }
-        /* Ensure popovers sit above sticky headers in Topics */
+        /* Ensure popovers sit above sticky headers AND modals */
         [data-radix-popper-content-wrapper] {
-          z-index: 100 !important;
+          z-index: 250 !important;
+        }
+
+        /* === NEW: Ensure our modals always sit above popovers === */
+        .b44-modal {
+          z-index: 200 !important; /* higher than default dialog (z-50), but lower than popovers (z-250) */
         }
 
         /* FIX: Remove unwanted borders and outlines from navigation elements */
@@ -778,6 +765,9 @@ function LayoutContent({ children, currentPageName }) {
         .hide-scrollbar {
           -ms-overflow-style: none; /* IE and Edge */
           scrollbar-width: none;    /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none; /* Chrome, Safari and Opera */
         }
         .topics-tables-scope table {
           display: block;

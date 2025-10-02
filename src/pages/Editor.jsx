@@ -33,7 +33,6 @@ import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import EditorToolbar from "../components/editor/EditorToolbar";
 import AIRewriterModal from "../components/editor/AIRewriterModal";
 import FontSelector from "../components/editor/FontSelector";
-// REMOVED: import YouTubeSelector from "../components/editor/YouTubeSelector";
 import LinkSelector from "../components/editor/LinkSelector";
 import ImageLibraryModal from "../components/editor/ImageLibraryModal";
 import PromotedProductSelector from "../components/editor/PromotedProductSelector";
@@ -48,7 +47,6 @@ import SEOSettingsModal from "../components/editor/SEOSettingsModal";
 import CtaSelector from "../components/editor/CtaSelector";
 import EmailCaptureSelector from "../components/editor/EmailCaptureSelector";
 import TldrGeneratorModal from "../components/editor/TldrGeneratorModal";
-// REMOVED: import TikTokSelector from "../components/editor/TikTokSelector";
 import VideoGeneratorModal from "../components/editor/VideoGeneratorModal";
 import VideoLibraryModal from "../components/editor/VideoLibraryModal";
 import LiveHtmlPreview from "@/components/html/LiveHtmlPreview";
@@ -145,7 +143,6 @@ export default function Editor() {
   const [selectedMedia, setSelectedMedia] = useState(null);
 
   const [showAIModal, setShowAIModal] = useState(false);
-  // REMOVED: const [showYouTubeSelector, setShowYouTubeSelector] = useState(false);
   const [showLinkSelector, setShowLinkSelector] = useState(false);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
   const [imageLibraryGenerateOnly, setImageLibraryGenerateOnly] = useState(false);
@@ -164,14 +161,12 @@ export default function Editor() {
   const [showCtaSelector, setShowCtaSelector] = useState(false);
   const [showEmailCaptureSelector, setShowEmailCaptureSelector] = useState(false);
   const [showVideoGenerator, setShowVideoGenerator] = useState(false);
-  // REMOVED: const [showTikTokSelector, setShowTikTokSelector] = useState(false); // Reordered
   const [showVideoLibrary, setShowVideoLibrary] = useState(false);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
   const [mediaLibraryInitialTab, setMediaLibraryInitialTab] = useState(undefined); // NEW STATE for MediaLibraryModal's initial tab
   const [showScheduler, setShowScheduler] = useState(false);
   const [showTestimonialLibrary, setShowTestimonialLibrary] = useState(false);
   const [showVariantLibrary, setShowVariantLibrary] = useState(false);
-  const [publishMenuOpen, setPublishMenuOpen] = useState(false);
   const [showCMSModal, setShowCMSModal] = useState(false);
   const [showAudioModal, setShowAudioModal] = useState(false);
   const [showAmazonImport, setShowAmazonImport] = useState(false);
@@ -190,12 +185,12 @@ export default function Editor() {
   const [backgroundJobs, setBackgroundJobs] = useState([]);
   const [showGoogleCreds, setShowGoogleCreds] = useState(false);
 
-  const [defaultPublish, setDefaultPublish] = useState({ method: null, credentialId: null, label: null });
-  const [defaultPublishUsername, setDefaultPublishUsername] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [showPublishDropdown, setShowPublishDropdown] = useState(false);
   const [publishCredentials, setPublishCredentials] = useState([]);
+  const [loadingCredentials, setLoadingCredentials] = useState(false);
   const [pendingAudioJobs, setPendingAudioJobs] = useState([]);
+
+  const [userPlan, setUserPlan] = useState(null); // <-- NEW STATE for user plan
 
   const [showShopifyModal, setShowShopifyModal] = React.useState(false);
   const shopifyPreset = React.useRef({ credentialId: null });
@@ -721,7 +716,7 @@ export default function Editor() {
                   // Compute width and alignment hints if present
                   let widthPct = 100;
                   const styleWidth = container.style?.width || '';
-                  const m = String(styleWidth).match(/(\\d+)%/);
+                  const m = String(styleWidth).match(/(\d+)%/);
                   if (m) { widthPct = parseInt(m[1], 10); }
 
                   const mediaType = getMediaType(container);
@@ -782,7 +777,7 @@ export default function Editor() {
             // Compute width (percentage if set) and align hints
             let widthPct = 100;
             const styleWidth = el.style?.width || "";
-            const m = String(styleWidth).match(/(\\d+)%/);
+            const m = String(styleWidth).match(/(\d+)%/);
             if (m) { widthPct = parseInt(m[1], 10); }
 
             const mediaType = getMediaType(el);
@@ -1232,8 +1227,9 @@ export default function Editor() {
   const { enabled: isAiTitleRewriteEnabled } = useFeatureFlag('ai_title_rewrite', { currentUser });
 
   const handleRewriteTitle = async () => {
-    if (!content || !isAiTitleRewriteEnabled) {
-      toast.message("Please add content to the article before rewriting the title.");
+    // Allow rewriting with title-only. Just ensure the feature is enabled.
+    if (!isAiTitleRewriteEnabled) {
+      toast.message("AI Title Rewrite is not enabled for your account.");
       return;
     }
 
@@ -1252,17 +1248,27 @@ export default function Editor() {
         throw new Error("Could not start a conversation with the AI agent.");
       }
 
-      const truncatedContent = content.substring(0, 15000);
-      const prompt = `Article Content:\n${truncatedContent}\n\nOriginal Title: ${title}`;
+      // Use article content if available, otherwise proceed with empty content (title-only rewrite)
+      const truncatedContent = (content || "").substring(0, 15000);
+      const prompt = `Rewrite the blog post title to be highly optimized for SEO while remaining natural and compelling.
+Constraints:
+- Under 60 characters
+- Include the primary keyword if it appears in the content or title
+- No quotes or emojis
+- Title Case
+
+Article Content (may be empty if not provided):
+${truncatedContent || "(no article body provided, use semantic rewriting based on the current title only)"}
+
+Current Title: ${title}`;
 
       await agentSDK.addMessage(conversation, {
         role: "user",
         content: prompt,
       });
 
-      // Improved polling with better error handling
-      const pollTimeout = 90000; // Increased to 90 seconds
-      const pollInterval = 2000; // Check every 2 seconds
+      const pollTimeout = 90000;
+      const pollInterval = 2000;
       const startTime = Date.now();
 
       let newTitle = "";
@@ -1271,83 +1277,35 @@ export default function Editor() {
 
       while (Date.now() - startTime < pollTimeout && attempts < maxAttempts) {
         attempts++;
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
-        try {
-          await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        const updatedConversation = await agentSDK.getConversation(conversation.id);
+        const lastMessage = updatedConversation?.messages?.[updatedConversation.messages.length - 1];
 
-          const updatedConversation = await agentSDK.getConversation(conversation.id);
+        if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || lastMessage.content)) {
+          let contentStr = lastMessage.content || "";
+          // Clean up response to be a single title string
+          newTitle = contentStr
+            .replace(/^["']|["']$/g, "")
+            .replace(/^\*\*|\*\*$/g, "")
+            .replace(/^#+\s*/, "")
+            .replace(/\n+/g, " ")
+            .trim();
 
-          if (!updatedConversation || !updatedConversation.messages) {
-            console.log(`Poll attempt ${attempts}: No messages found`);
-            continue;
-          }
-
-          const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
-
-          if (lastMessage?.role === 'assistant') {
-            // Check if message is complete or has content
-            if (lastMessage.is_complete === true || lastMessage.content) {
-              let content = lastMessage.content || "";
-
-              // Clean up the response - remove quotes, extra whitespace, and markdown
-              newTitle = content
-                .replace(/^["']|["']$/g, "") // Remove surrounding quotes
-                .replace(/^\*\*|\*\*$/g, "") // Remove markdown bold
-                .replace(/^#+\s*/, "") // Remove markdown headers
-                .replace(/\n+/g, " ") // Replace line breaks with spaces
-                .trim();
-
-              if (newTitle && newTitle.length > 5) { // Minimum viable title length
-                console.log(`Title generated successfully: ${newTitle}`);
-                break;
-              }
-            }
-          }
-
-          console.log(`Poll attempt ${attempts}/${maxAttempts}: Waiting for response...`);
-
-        } catch (pollError) {
-          console.error(`Poll attempt ${attempts} failed:`, pollError);
-          // Continue polling even if one attempt fails
+          if (newTitle && newTitle.length > 5) break;
         }
       }
 
       if (newTitle && newTitle.length > 5) {
         setTitle(newTitle);
         toast.success("AI successfully rewrote the title!");
-
-        // Dispatch token balance update event
-        window.dispatchEvent(new CustomEvent('tokenBalanceUpdated', {
-          detail: {
-            newBalance: result.balance - result.consumed,
-            consumed: result.consumed,
-            featureUsed: 'ai_title_rewrite'
-          }
-        }));
+        // Notify token balance update already handled in consumeTokensForFeature
       } else {
-        // More specific error messages
-        if (attempts >= maxAttempts) {
-          throw new Error("Title generation timed out after maximum attempts. Please try again.");
-        } else {
-          throw new Error("AI did not generate a valid title. Please try again or check your content.");
-        }
+        throw new Error("AI did not generate a valid title. Please try again.");
       }
-
     } catch (error) {
       console.error("AI title rewrite error:", error);
-
-      // More helpful error messages for users
-      let userMessage = "Failed to rewrite title.";
-
-      if (error.message.includes("timeout") || error.message.includes("timed out")) {
-        userMessage = "Title generation is taking longer than expected. Please try again.";
-      } else if (error.message.includes("conversation")) {
-        userMessage = "Could not connect to AI service. Please try again.";
-      } else if (error.message.includes("valid title")) {
-        userMessage = "AI couldn't generate a better title. Your current title might already be optimized.";
-      }
-
-      toast.error(userMessage);
+      toast.error(error.message || "Failed to rewrite title.");
     } finally {
       setIsRewritingTitle(false);
     }
@@ -1443,9 +1401,15 @@ export default function Editor() {
     setMediaLibraryInitialTab(undefined); // Reset initial tab on close
   };
 
-  const openImageLibrary = () => {
-    setImageLibraryDefaultProvider(undefined);
-    setImageLibraryGenerateOnly(false);
+  const openImageGenerator = () => {
+    setImageLibraryDefaultProvider("fal_ai");
+    setImageLibraryGenerateOnly(true);
+    setShowImageLibrary(true);
+  };
+
+  const openInfographicGenerator = () => {
+    setImageLibraryDefaultProvider("infographic");
+    setImageLibraryGenerateOnly(true);
     setShowImageLibrary(true);
   };
 
@@ -1507,7 +1471,6 @@ export default function Editor() {
       case "localize":
         setShowLocalize(true);
         return;
-      // Removed 'youtube' quick pick case as per merge into Media Library.
       case "tiktok":
         consumeTokensForFeature('ai_tiktok').then(result => {
           if (result.success) {
@@ -1564,7 +1527,7 @@ export default function Editor() {
         setShowProductSelector(true);
         return;
       case "manual-link":
-        setShowLinkSelector(true);
+        openLinkSelectorModal(); // Use the dedicated function to save selection
         return;
       case "testimonials":
         setShowTestimonialLibrary(true);
@@ -1599,7 +1562,6 @@ export default function Editor() {
 
   const closeAllDropdowns = () => {
     window.dispatchEvent(new CustomEvent('b44-close-dropdowns'));
-    setPublishMenuOpen(false);
     setAskAIBar((s) => ({ ...s, visible: false }));
     setQuickMenu((s) => ({ ...s, visible: false }));
     setInlineToolbar((s) => ({ ...s, visible: false, x: null, y: null }));
@@ -1617,10 +1579,9 @@ export default function Editor() {
     setShowCheatsheet,
     updateShortcut,
     resetShortcuts
-  } = useKeyboardShortcuts(
+   } = useKeyboardShortcuts(
     {
       save: () => handleSave(),
-      publish: () => handlePublish(),
       undo: () => handleUndo(),
       redo: () => handleRedo(),
       showShortcuts: () => setShowCheatsheet(true)
@@ -1628,8 +1589,8 @@ export default function Editor() {
     { enabled: true }
   );
 
-  useEffect(() => {
-  }, []);
+  // REMOVED old useEffect for currentUser (its logic is now in initializeEditor)
+
   const loadPostContent = useCallback(async (postId) => {
     try {
       const found = await BlogPost.filter({ id: postId });
@@ -1758,6 +1719,17 @@ export default function Editor() {
     insertedAudioUrlsRef.current.clear();
     insertedAudioJobKeysRef.current.clear();
 
+    // Fetch user details first
+    try {
+      const u = await User.me();
+      setCurrentUser(u);
+      setUserPlan(u?.plan_price_id || null); // <-- SET USER PLAN HERE
+    } catch (e) {
+      setCurrentUser(null);
+      setUserPlan(null);
+      console.error("Failed to load user information:", e);
+      toast.error("Failed to load user information.");
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const importHtml = urlParams.get('importHtml');
@@ -1774,11 +1746,7 @@ export default function Editor() {
         setContent(imported);
         sendToPreview({ type: "set-html", html: imported });
         localStorage.removeItem('htmlstudio_content');
-        setIsLoading(false);
-        return;
-      }
-
-      if (postId) {
+      } else if (postId) {
         await loadPostContent(postId);
       } else if (webhookId) {
         await loadWebhookContent(webhookId);
@@ -1797,11 +1765,18 @@ export default function Editor() {
     } finally {
       setIsLoading(false);
     }
-  }, [loadPostContent, loadWebhookContent, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setIsLoading, setIsTextSelected, setPriority, setTextForAction, setTitle]);
+  }, [loadPostContent, loadWebhookContent, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setIsLoading, setIsTextSelected, setPriority, setTextForAction, setTitle, setCurrentUser, setUserPlan]); // <-- Updated dependencies
 
   useEffect(() => {
     initializeEditor();
   }, [location.search, initializeEditor]);
+
+  // Check if user is on free trial plan
+  const isFreeTrial = useMemo(() => {
+    if (!userPlan) return false;
+    // These are example price IDs for free trials, adjust as needed
+    return userPlan === 'price_1S7VhHQ1L6eczTxdoaAAaAZK' || userPlan === 'sddsg';
+  }, [userPlan]);
 
   React.useEffect(() => {
     const onMsg = (e) => {
@@ -1854,84 +1829,73 @@ export default function Editor() {
     return () => window.removeEventListener("message", onMsg);
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const u = await User.me();
-        setCurrentUser(u);
-        const allow = !!(u && (u.role === "admin" || u.access_level === "full" || u.show_publish_options === true));
-        setShowPublishDropdown(allow);
-      } catch {
-        setCurrentUser(null);
-        setShowPublishDropdown(false);
+
+  const loadPublishCredentials = useCallback(async () => {
+    if (!currentUser) return;
+    
+    setLoadingCredentials(true);
+    try {
+      const assignedUsernames = Array.isArray(currentUser.assigned_usernames) 
+        ? currentUser.assigned_usernames 
+        : [];
+      
+      const postUsername = currentPost?.user_name || currentWebhook?.user_name;
+      
+      let filtered = [];
+      
+      if (postUsername) {
+        // ✅ SERVER-SIDE FILTER by user_name
+        filtered = await IntegrationCredential.filter({ user_name: postUsername }, "-updated_date");
+      } else if (assignedUsernames.length > 0) {
+        const credPromises = assignedUsernames.map(username => 
+          IntegrationCredential.filter({ user_name: username }, "-updated_date")
+        );
+        const credArrays = await Promise.all(credPromises);
+        filtered = credArrays.flat();
       }
-    })();
-  }, []);
+      
+      setPublishCredentials(filtered || []);
+    } catch (error) {
+      console.error("Failed to load credentials:", error);
+      toast.error("Failed to load publishing credentials.");
+      setPublishCredentials([]);
+    } finally {
+      setLoadingCredentials(false);
+    }
+  }, [currentUser, currentPost, currentWebhook]);
 
   useEffect(() => {
-    const uname = currentPost && currentPost.user_name || currentWebhook && currentWebhook.user_name || null;
-    let isMounted = true;
-    const loadDefaults = async () => {
-      if (!uname) {
-        if (isMounted) {
-          setDefaultPublish({ method: null, credentialId: null, label: null });
-          setDefaultPublishUsername(null);
-        }
-        return;
-      }
-      const rows = await Username.filter({ user_name: uname });
-      const u = rows && rows[0];
-      const m = u?.default_publish_method || null;
-      const c = u?.default_credential_id || null;
-      const label =
-        m === "google_docs" ? "Google Docs" :
-          m === "notion" ? "Notion" :
-            m === "shopify" ? "Shopify" :
-              m === "wordpress" ? "WordPress" :
-                m === "webflow" ? "Webflow" :
-                  m === "webhook" ? "Webhook" :
-                    null;
+    // This useEffect needs to run when currentUser changes, which is now handled within initializeEditor.
+    // However, initializeEditor runs only on location.search changes.
+    // If we want credentials to load when currentUser is set even if location.search doesn't change,
+    // this useEffect should remain, and currentUser should be in its dependency array.
+    // Since currentUser is now set inside initializeEditor, this works as intended when editor re-initializes.
+    // The previous useEffect for currentUser was removed, so this becomes the primary trigger for credentials based on currentUser state.
+    if (currentUser) {
+      loadPublishCredentials();
+    }
+  }, [currentUser, loadPublishCredentials]);
 
-      if (isMounted) {
-        setDefaultPublish({ method: m, credentialId: c, label });
-        setDefaultPublishUsername(uname);
-      }
-    };
-    loadDefaults();
-    return () => { isMounted = false; };
-  }, [currentPost, currentWebhook]);
+
+  // ✅ Refresh credentials when CMS modal closes
+  const handleCMSModalClose = useCallback(() => {
+    setShowCMSModal(false);
+    loadPublishCredentials(); // Reload to show newly created credentials
+  }, [loadPublishCredentials]);
+
 
   const extractFirstImageUrl = (html) => {
     const m = String(html || "").match(/<img[^>]*src=["']([^"']+)["']/i);
     return m && m[1] ? m[1] : "";
   };
 
-  const loadCredentialsForUsername = async () => {
-    const uname = currentPost && currentPost.user_name || currentWebhook && currentWebhook.user_name || null;
-    if (!uname) {
-      setPublishCredentials([]);
-      return;
-    }
-    const creds = await IntegrationCredential.filter({ user_name: uname });
-    setPublishCredentials(creds || []);
-  };
-
   const publishToDefaultNow = async (postToPublish) => {
-    const uname = defaultPublishUsername;
-    const provider = postToPublish._overrideProvider || defaultPublish.method;
-    const credentialId = postToPublish._overrideCredentialId || defaultPublish.credentialId;
-    const label = postToPublish._overrideLabel || defaultPublish.label;
+    const provider = postToPublish._overrideProvider;
+    const credentialId = postToPublish._overrideCredentialId;
+    const label = postToPublish._overrideLabel;
 
-    if (!provider) {
-      toast.message(uname ?
-        `No default publish method set for username "${uname}". Choose a provider once, then it'll be one‑click.` :
-        "No username context found for this post. Set a username or choose a provider once."
-      );
-      setShowCMSModal(true);
-      return;
-    }
-
-    if (provider === "google_docs") {
+    if (!provider || !credentialId) {
+      toast.error("Invalid publishing configuration.");
       return;
     }
 
@@ -1939,15 +1903,6 @@ export default function Editor() {
       shopifyPreset.current = { credentialId: credentialId || null };
       setShowShopifyModal(true);
       setIsPublishing(false);
-      return;
-    }
-
-    if (!credentialId) {
-      toast.message(uname ?
-        `No credential set for provider "${provider}" for username "${uname}". Select one in the modal.` :
-        "No credential set. Select one in the modal."
-      );
-      setShowCMSModal(true);
       return;
     }
 
@@ -1968,7 +1923,7 @@ export default function Editor() {
         });
 
         if (data?.success || data?.ok) {
-          toast.success(`Published to ${label || "Webhook"}${uname ? ` for "${uname}"` : ""}.`);
+          toast.success(`Published to ${label || "Webhook"}.`);
         } else {
           toast.error(data?.error || "Webhook publish failed.");
         }
@@ -1997,7 +1952,7 @@ export default function Editor() {
         });
 
         if (data?.success || data?.ok) {
-          toast.success(`Published to ${label || "Notion"}${uname ? ` for "${uname}"` : ""}.`);
+          toast.success(`Published to ${label || "Notion"}.`);
         } else {
           toast.error(data?.error || "Publishing to Notion failed.");
         }
@@ -2013,7 +1968,7 @@ export default function Editor() {
       });
 
       if (data?.success || data?.ok) {
-        toast.success(`Published to ${label || provider}${uname ? ` for "${uname}"` : ""}.`);
+        toast.success(`Published to ${label || provider}.`);
       } else if (provider === 'notion' && data?.code === 'COVER_REQUIRED') {
         try {
           localStorage.setItem("cms_default_provider", "notion");
@@ -2056,12 +2011,14 @@ export default function Editor() {
       return;
     }
 
+    // This command tells the iframe to wrap the saved selection with the given URL
     if (isUrl) {
-      sendToPreview({ type: "editor-command", command: "wrap-link", href: linkInput });
+      sendToPreview({ type: "editor-command", command: "wrap-link", href: linkInput, label: textForAction });
       setTimeout(() => sendToPreview({ type: "request-html" }), 50);
       return;
     }
-
+    
+    // Fallback for full HTML snippets or other content
     insertContentAtPoint(linkInput);
   };
 
@@ -2212,9 +2169,9 @@ ${truncatedHtml}`;
     savingGuardRef.current = true;
 
     const isPublishFlow = status === 'published';
-    if (isPublishFlow) setIsLoading(true);
-    else
-      setIsSaving(true);
+    // Use isPublishing for button-level feedback only, not full-screen loader
+    if (!isPublishFlow) setIsSaving(true);
+    else setIsPublishing(true);
 
     let finalContent = content;
     let postData = {
@@ -2300,7 +2257,7 @@ ${truncatedHtml}`;
               const blob = new Blob([fullHtmlForGDocs], { type: "text/html" });
               const url = URL.createObjectURL(blob);
               const win = window.open(url, "_blank");
-              toast.message("Clipboard not available. A new tab opened with the HTML; Select All and copy, then paste into Google Docs.");
+              toast.message("Clipboard not available. A new tab opened with the HTML; Select All and Copy, then paste into Google Docs.");
               if (win) return;
             }
             toast.success("Content with schema copied. A new Google Doc will open — paste (Cmd/Ctrl + V) to insert your content.");
@@ -2310,8 +2267,9 @@ ${truncatedHtml}`;
           }
           window.open("https://docs.google.com/document/create", "_blank");
         } else if (options.useDefaultProvider) {
+          // This path might become unused with the new UI.
           await publishToDefaultNow(savedPost);
-        } else if (options.publishTo) {
+        } else if (options.publishTo) { // This path is now used by `handlePublishToCredential`
           await publishToDefaultNow({
             ...savedPost,
             _overrideProvider: options.publishTo.provider,
@@ -2339,7 +2297,8 @@ ${truncatedHtml}`;
     } catch (error) {
       toast.error(`Failed to ${status === 'published' ? 'publish' : 'save'} post. ${error.message}`);
     } finally {
-      if (isPublishFlow) setIsLoading(false);
+      // Use proper state for each flow
+      if (isPublishFlow) setIsPublishing(false);
       else setIsSaving(false);
       savingGuardRef.current = false;
     }
@@ -2350,27 +2309,28 @@ ${truncatedHtml}`;
     try {
       let webhookBody = postData.webhookData;
 
-      if (typeof webhookBody === 'string') {
+      if (typeof webhookBody === "string") {
         try {
           webhookBody = JSON.parse(webhookBody);
         } catch (e) {
-          console.error("Failed to parse webhook_data string:", e, "Raw data:", webhookBody);
-          throw new Error("Original webhook data is a malformed string.");
+          // Keep completely silent for users; log for debugging
+          console.warn("Airtable: malformed webhook_data string.", e, webhookBody);
+          return; // abort silently
         }
       }
 
-      if (typeof webhookBody !== 'object' || webhookBody === null) {
-        throw new Error("Webhook data is not a valid object after processing.");
+      if (typeof webhookBody !== "object" || webhookBody === null) {
+        console.warn("Airtable: webhook data not an object after processing.");
+        return;
       }
 
       const tableId = webhookBody?.table;
-      const recordId = webhookBody?.['record-id'];
+      const recordId = webhookBody?.["record-id"];
 
-      if (!recordId) {
-        throw new Error("Could not find 'record-id' for this article. Please re-trigger the webhook from your automation tool to fix it.");
-      }
-      if (!tableId) {
-        throw new Error("Could not find 'table' ID for this article. Please ensure your automation sends a 'table' field, then re-trigger the webhook.");
+      if (!recordId || !tableId) {
+        // Missing routing info - silent
+        console.warn("Airtable: missing record-id or table id.");
+        return;
       }
 
       const payload = {
@@ -2383,33 +2343,53 @@ ${truncatedHtml}`;
       const response = await publishToAirtable(payload);
 
       if (response?.data?.success) {
-        toast.success("✅ Post published to Airtable successfully!");
+        // Silent success
+        console.debug?.("Airtable publish: success (silent).");
       } else {
-        const errorMessage = response?.data?.error || "Unknown error occurred during Airtable update.";
-        throw new Error(errorMessage);
+        // Silent failure
+        const errorMessage = response?.data?.error || "Unknown Airtable update error.";
+        console.warn("Airtable publish failed (silent):", errorMessage, response?.data);
       }
     } catch (error) {
-      toast.error(`Post saved but failed to publish to Airtable: ${error.message || error}`);
+      // Fully silent for users; log for developers
+      console.warn("Airtable publish exception (silent):", error);
     }
   };
 
   const handleSave = () => savePost('draft');
-  const handlePublish = async (method = null, credentialId = null) => {
+  
+  const handlePublishGoogleDocs = async () => {
+    setIsPublishing(true);
     try {
-      if (method === null && credentialId === null) {
-        await savePost('published', { useDefaultProvider: true });
-      } else if (method === "google_docs") {
-        await savePost('published', { useGoogleDocs: true });
-      } else {
-        await savePost('published', { publishTo: { provider: method, credentialId } });
-      }
-      setPublishMenuOpen(false);
+      await savePost('published', { useGoogleDocs: true });
+      toast.success("Content prepared for Google Docs.");
     } catch (error) {
-      console.error("Publish error:", error);
-      toast.error(`Failed to publish: ${error.message || "Unknown error"}`);
-      setPublishMenuOpen(false);
+      console.error("Publish to Google Docs error:", error);
+      toast.error(`Failed to publish to Google Docs: ${error.message || "Unknown error"}`);
+    } finally {
+      setIsPublishing(false);
     }
   };
+
+  const handlePublishToCredential = async (credential) => {
+    setIsPublishing(true);
+    try {
+      await savePost('published', {
+        publishTo: {
+          provider: credential.provider,
+          credentialId: credential.id,
+          labelOverride: credential.name
+        }
+      });
+      toast.success(`Published to ${credential.name}`);
+    } catch (error) {
+      console.error("Publish error:", error);
+      toast.error(`Failed to publish: ${error.message}`);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
 
   const handleSEOSave = (newMetadata) => {
     setCurrentPost((prev) => ({
@@ -2436,18 +2416,6 @@ ${truncatedHtml}`;
     }
   };
 
-  const openImageGenerator = () => {
-    setImageLibraryDefaultProvider("fal_ai");
-    setImageLibraryGenerateOnly(true);
-    setShowImageLibrary(true);
-  };
-
-  const openInfographicGenerator = () => {
-    setImageLibraryDefaultProvider("infographic");
-    setImageLibraryGenerateOnly(true);
-    setShowImageLibrary(true);
-  };
-
   const handleActionSelect = (actionId) => {
     switch (actionId) {
       case 'ai-rewrite': setShowAIModal(true); break;
@@ -2472,16 +2440,11 @@ ${truncatedHtml}`;
   };
 
   const handleAIRewrite = (newText) => {
-    // Check if newText is HTML
     const isHtml = /<[a-z][\s\S]*>/i.test(newText);
 
     if (isTextSelected) {
-      // If text was selected, insert the rewritten text after the selection.
-      // The user will then manually replace/delete the original selected text.
       insertContentAtPoint({ html: newText, mode: "after-selection" });
     } else {
-      // If no text was selected, just insert at the current caret position or end.
-      // The 'insert-html' type in the iframe will handle this.
       insertContentAtPoint({ html: newText, mode: "at-caret" });
     }
     setShowAIModal(false);
@@ -2614,63 +2577,121 @@ ${truncatedHtml}`;
     return currentPost?.user_name || currentWebhook?.user_name;
   };
 
-  const publishOptions = useMemo(() => {
-    const options = [];
+  // FIXED: More aggressive HTML cleaning function
+  const cleanHtmlForExport = (htmlString) => {
+    if (!htmlString) return "";
+    
+    let cleaned = String(htmlString);
+    
+    // Remove ALL HTML comments (including multi-line)
+    cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+    
+    // Remove ALL data-* attributes (multiple passes to catch everything)
+    // Pattern 1: data-attribute="value"
+    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*"[^"]*"/gi, '');
+    // Pattern 2: data-attribute='value'
+    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*'[^']*'/gi, '');
+    // Pattern 3: data-attribute=value (no quotes)
+    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*[^\s>'"]+/gi, '');
+    // Pattern 4: catch any remaining data- attributes with values
+    cleaned = cleaned.replace(/\s+data-[^\s=]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    
+    // Remove any stray data- attributes without values (e.g., data-something)
+    cleaned = cleaned.replace(/\s+data-[\w-]+(?=[\s>])/gi, '');
+    
+    // Clean up multiple spaces
+    cleaned = cleaned.replace(/\s{2,}/g, ' ');
+    
+    // Clean up space before closing tags
+    cleaned = cleaned.replace(/\s+>/g, '>');
+    
+    // Trim
+    cleaned = cleaned.trim();
+    
+    return cleaned;
+  };
 
-    options.push({
-      key: 'google_docs',
-      label: 'Google Docs (copy & paste)',
-      method: 'google_docs',
-      credential_id: null
-    });
+  const handleDownloadTxt = () => {
+    let exportContent = "";
 
-    const currentUsernameCreds = publishCredentials.filter(
-      (c) => c.user_name === (currentPost?.user_name || currentWebhook?.user_name)
-    );
+    // Add clean title
+    if (title) {
+      const cleanTitle = cleanHtmlForExport(title);
+      exportContent += `<title>${cleanTitle}</title>\n\n`;
+    }
 
-    const providers = {};
-    currentUsernameCreds.forEach((cred) => {
-      if (!providers[cred.provider]) {
-        providers[cred.provider] = [];
+    // Add SEO metadata if available (cleaned)
+    if (currentPost?.meta_title || currentPost?.meta_description || currentPost?.focus_keyword || currentPost?.tags?.length > 0 || currentPost?.slug || currentPost?.excerpt) {
+      exportContent += "<!-- SEO METADATA -->\n";
+
+      if (currentPost.meta_title) {
+        const cleanMetaTitle = cleanHtmlForExport(currentPost.meta_title);
+        exportContent += `<meta name="title" content="${cleanMetaTitle}" />\n`;
       }
-      providers[cred.provider].push(cred);
-    });
 
-    for (const provider of ["notion", "shopify", "webhook", "wordpress", "webflow"]) {
-      if (providers[provider]) {
-        providers[provider].forEach((cred) => {
-          options.push({
-            key: `${provider}-${cred.id}`,
-            label: `${provider.charAt(0).toUpperCase() + provider.slice(1)} — ${cred.name}`,
-            method: provider,
-            credential_id: cred.id
-          });
-        });
+      if (currentPost.meta_description) {
+        const cleanMetaDesc = cleanHtmlForExport(currentPost.meta_description);
+        exportContent += `<meta name="description" content="${cleanMetaDesc}" />\n`;
+      }
+
+      if (currentPost.focus_keyword) {
+        const cleanKeyword = cleanHtmlForExport(currentPost.focus_keyword);
+        exportContent += `<!-- Focus Keyword: ${cleanKeyword} -->\n`;
+      }
+
+      if (currentPost.slug) {
+        const cleanSlug = cleanHtmlForExport(currentPost.slug);
+        exportContent += `<!-- URL Slug: ${cleanSlug} -->\n`;
+      }
+
+      if (currentPost.tags && Array.isArray(currentPost.tags) && currentPost.tags.length > 0) {
+        const cleanTags = currentPost.tags.map(t => cleanHtmlForExport(String(t))).join(', ');
+        exportContent += `<meta name="keywords" content="${cleanTags}" />\n`;
+      }
+
+      if (currentPost.excerpt) {
+        const cleanExcerpt = cleanHtmlForExport(currentPost.excerpt);
+        exportContent += `<!-- Excerpt: ${cleanExcerpt} -->\n`;
+      }
+
+      exportContent += "\n";
+    }
+
+    // Add JSON-LD Schema if available
+    if (currentPost?.generated_llm_schema) {
+      try {
+        const schema = typeof currentPost.generated_llm_schema === 'string'
+          ? JSON.parse(currentPost.generated_llm_schema)
+          : currentPost.generated_llm_schema;
+
+        exportContent += '<!-- JSON-LD SCHEMA -->\n';
+        exportContent += '<script type="application/ld+json">\n';
+        exportContent += JSON.stringify(schema, null, 2);
+        exportContent += '\n</script>\n\n';
+      } catch (e) {
+        console.error("Failed to parse JSON-LD schema for export:", e);
       }
     }
-    return options;
-  }, [publishCredentials, currentPost, currentWebhook]);
 
+    // Add main content - AGGRESSIVELY CLEANED
+    const cleanedContent = cleanHtmlForExport(content);
+    exportContent += cleanedContent;
 
-  // Component for Publish Button, nested to access state directly
-  const PublishButton = ({ onPublish }) => {
-    return (
-      <div className="flex items-center gap-2">
-        <Button
-          onClick={() => onPublish()}
-          disabled={isPublishing || isSaving || isGeneratingSchema || !title || !content}
-          size="sm" className="bg-blue-900 text-white px-3 text-sm font-medium justify-center whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-cyan-700 inline-flex items-center gap-2 h-9 rounded-md shadow-sm hover:shadow-md focus-visible:ring-2 focus-visible:ring-cyan-400"
-          title={
-            defaultPublish?.method ?
-              `Publish to ${defaultPublish.label}${defaultPublishUsername ? ` for "${defaultPublishUsername}"` : ""}` :
-              "Set up a default publishing method in Username settings for one-click publishing"
-          }>
+    // Final pass to remove any remaining data-* attributes from the entire export
+    exportContent = cleanHtmlForExport(exportContent);
 
-          <Send className="w-4 h-4 mr-1" />
-          <span>{defaultPublish?.label ? `Publish to ${defaultPublish.label}` : "Publish"}</span>
-        </Button>
-      </div>);
+    // Create and download the file
+    const blob = new Blob([exportContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(title || "content").replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
+    toast.success("Content downloaded as TXT");
   };
 
 
@@ -2861,8 +2882,6 @@ ${truncatedHtml}`;
                         showPromotedProductSelector={() => setShowProductSelector(true)}
                         showCtaSelector={() => setShowCtaSelector(true)}
                         showEmailCaptureSelector={() => setShowEmailCaptureSelector(true)}
-                        // REMOVED: showTikTokSelector={() => setShowTikTokSelector(true)}
-                        // REMOVED: showYouTubeSelector={() => setShowYouTubeSelector(true)}
                         showTestimonialSelector={() => setShowTestimonialLibrary(true)}
                         showAskAIOptions={openAskAIOptions}
                         setShowWorkflowRunner={() => setShowWorkflowRunner(true)} />
@@ -2875,114 +2894,69 @@ ${truncatedHtml}`;
                         <FileTextIcon className="w-4 h-4" /> Invoices
                       </Button>
                     }
-                    <Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2" onClick={() => handleSave()} disabled={isSaving}>
+                    <Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2" onClick={handleSave} disabled={isSaving}>
                       {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
                     </Button>
-                    <PublishButton onPublish={handlePublish} />
 
-                    {/* REMOVED: Options dropdown menu completely */}
-
+                    {/* Publish Dropdown */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2">
-                          Share
-                          <ChevronDown className="w-4 h-4 ml-1" />
+                        <Button
+                          disabled={isPublishing || isSaving || isGeneratingSchema || !title || !content}
+                          className="bg-blue-900 text-white hover:bg-cyan-700"
+                        >
+                          {isPublishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                          Publish
+                          <ChevronDown className="w-4 h-4 ml-2" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => {
-                          const safeTitle = (title || "Untitled").replace(/</g, "&lt;").replace(/>/g, ">");
-                          const fullHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${safeTitle}</title></head><body>${content}</body></html>`;
-                          const blob = new Blob([fullHtml], { type: "text/html" });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `${(title || "content").replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }}>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem onSelect={handleDownloadTxt}>
                           <Download className="w-4 h-4 mr-2" />
-                          Download HTML
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => {
-                          // Enhanced TXT export with full SEO metadata
-                          let exportContent = "";
-
-                          // Add title in clean HTML tags (no attributes)
-                          if (title) {
-                            exportContent += `<title>${title}</title>\n\n`;
-                          }
-
-                          // Add SEO metadata if available
-                          if (currentPost?.meta_title || currentPost?.meta_description || currentPost?.focus_keyword || currentPost?.tags?.length > 0 || currentPost?.slug || currentPost?.excerpt) {
-                            exportContent += "<!-- SEO METADATA -->\n";
-
-                            if (currentPost.meta_title) {
-                              exportContent += `<meta name="title" content="${currentPost.meta_title}" />\n`;
-                            }
-
-                            if (currentPost.meta_description) {
-                              exportContent += `<meta name="description" content="${currentPost.meta_description}" />\n`;
-                            }
-
-                            if (currentPost.focus_keyword) {
-                              exportContent += `<!-- Focus Keyword: ${currentPost.focus_keyword} -->\n`;
-                            }
-
-                            if (currentPost.slug) {
-                              exportContent += `<!-- URL Slug: ${currentPost.slug} -->\n`;
-                            }
-
-                            if (currentPost.tags && Array.isArray(currentPost.tags) && currentPost.tags.length > 0) {
-                              exportContent += `<meta name="keywords" content="${currentPost.tags.join(', ')}" />\n`;
-                            }
-
-                            if (currentPost.excerpt) {
-                              exportContent += `<!-- Excerpt: ${currentPost.excerpt} -->\n`;
-                            }
-
-                            exportContent += "\n";
-                          }
-
-                          // Add JSON-LD Schema if available
-                          if (currentPost?.generated_llm_schema) {
-                            try {
-                              // Validate and format the schema
-                              const schema = typeof currentPost.generated_llm_schema === 'string'
-                                ? JSON.parse(currentPost.generated_llm_schema)
-                                : currentPost.generated_llm_schema;
-
-                              exportContent += '<!-- JSON-LD SCHEMA -->\n';
-                              exportContent += '<script type="application/ld+json">\n';
-                              exportContent += JSON.stringify(schema, null, 2);
-                              exportContent += '\n</script>\n\n';
-                            } catch (e) {
-                              // If schema parsing fails, include it as text comment
-                              console.error("Failed to parse JSON-LD schema for export:", e);
-                              exportContent += '<!-- JSON-LD SCHEMA (Raw, parsing failed) -->\n';
-                              exportContent += `<!-- ${currentPost.generated_llm_schema} -->\n\n`;
-                            }
-                          }
-
-                          // Add main content
-                          exportContent += "<!-- MAIN CONTENT -->\n";
-                          exportContent += content;
-
-                          // Create and download the file
-                          const blob = new Blob([exportContent], { type: "text/plain;charset=utf-8" });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `${(title || "content").replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          URL.revokeObjectURL(url);
-                        }}>
-                          <FileText className="w-4 h-4 mr-2" />
                           Download TXT
                         </DropdownMenuItem>
-
+                        
+                        <DropdownMenuItem onSelect={handlePublishGoogleDocs}>
+                          <Download className="w-4 h-4 mr-2" />
+                          Publish to Google Docs
+                        </DropdownMenuItem>
+                        
+                        {publishCredentials.length > 0 && (
+                          <>
+                            <DropdownMenuSeparator />
+                            {publishCredentials.map((cred) => (
+                              <DropdownMenuItem 
+                                key={cred.id}
+                                onSelect={() => {
+                                  if (isFreeTrial) {
+                                    toast.info("Free Trial users can only publish via Download TXT or Google Docs. Upgrade to unlock all publishing options.");
+                                  } else {
+                                    handlePublishToCredential(cred);
+                                  }
+                                }}
+                                disabled={isPublishing || loadingCredentials || isFreeTrial} // <-- ADDED isFreeTrial
+                              >
+                                {isPublishing && (!isFreeTrial) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                                Publish to {cred.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </>
+                        )}
+                        
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            if (isFreeTrial) {
+                              toast.info("Free Trial users cannot configure publishing directly to CMS. Upgrade to unlock this feature.");
+                            } else {
+                              setShowCMSModal(true);
+                            }
+                          }}
+                          disabled={isFreeTrial} // <-- ADDED isFreeTrial
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Configure Publishing...
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
@@ -3011,7 +2985,7 @@ ${truncatedHtml}`;
                         size="icon"
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:bg-slate-100 hover:text-indigo-600"
                         onClick={handleRewriteTitle}
-                        disabled={isRewritingTitle || !title || !content}
+                        disabled={isRewritingTitle || !title}
                         title="Rewrite title with AI"
                       >
                         {isRewritingTitle ? (
@@ -3026,9 +3000,9 @@ ${truncatedHtml}`;
 
                 <div className="relative mt-3 h-[70vh] w-full max-w-5xl mx-auto rounded-xl overflow-hidden" style={{ backgroundColor: "var(--hover)", border: "1px solid var(--border)" }}>
                   <div className="h-full bg-white text-slate-900 flex flex-col">
-                    {selectedMedia &&
+                    {selectedMedia && (
                       <div className="bg-slate-50 text-slate-950 p-2 text-xs flex-shrink-0 flex items-center gap-3">
-                        {(selectedMedia.type === 'image') ? (
+                        {selectedMedia.type === 'image' ? (
                           <>
                             <span className="opacity-70 whitespace-nowrap">Image width</span>
                             <div className="bg-slate-50 flex items-center gap-3 flex-1">
@@ -3037,32 +3011,26 @@ ${truncatedHtml}`;
                                 min={10}
                                 max={100}
                                 step={1}
-                                onValueChange={(val) => applyPreviewWidth(val[0])} className="bg-slate-50 text-base capitalize relative flex w-full touch-none select-none items-center flex-1" />
-
-
-                              <span className="w-12 text-right tabular-nums">
-                                {selectedMedia.width ?? 100}%
-                              </span>
+                                onValueChange={(val) => applyPreviewWidth(val[0])}
+                                className="bg-slate-50 text-base capitalize relative flex w-full touch-none select-none items-center flex-1"
+                              />
+                              <span className="w-12 text-right tabular-nums">{selectedMedia.width ?? 100}%</span>
                             </div>
                             <div className="h-4 w-px" style={{ backgroundColor: "var(--border)" }} />
                           </>
                         ) : (
-                          <span className="opacity-70">
-                            {selectedMedia.type === 'video' ? 'Video selected (resizing disabled)' :
-                              selectedMedia.type === 'audio' ? 'Audio selected (width not applicable)' :
-                                `${selectedMedia.type} selected (resizing disabled)`}
-                          </span>
+                          <div className="flex-1" />
                         )}
 
                         <button
-                          onClick={handleDeleteSelected} className="bg-violet-950 text-white p-1.5 rounded hover:bg-red-700"
-
-                          title="Delete selected block">
-
+                          onClick={handleDeleteSelected}
+                          className="bg-violet-950 text-white p-1.5 rounded hover:bg-red-700"
+                          title="Delete selected block"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    }
+                    )}
                     <div className="h-full w-full p-4">
                       <LiveHtmlPreview
                         html={content}
@@ -3132,10 +3100,6 @@ ${truncatedHtml}`;
               onClose={() => setShowHTMLCleanup(false)}
               currentContent={content}
               onContentUpdate={handleContentUpdate} />
-
-            {/* REMOVED: YouTubeSelector component */}
-
-            {/* REMOVED: TikTokSelector component and its associated state/props */}
 
             <LinkSelector
               isOpen={showLinkSelector}
@@ -3235,10 +3199,10 @@ ${truncatedHtml}`;
                 isOpen={showMediaLibrary}
                 onClose={() => {
                   setShowMediaLibrary(false);
-                  setMediaLibraryInitialTab(undefined); // Reset initial tab when closing
+                  setMediaLibraryInitialTab(undefined);
                 }}
                 onInsert={handleMediaInsert}
-                initialTab={mediaLibraryInitialTab} // Pass the initial tab prop
+                initialTab={mediaLibraryInitialTab}
             />
 
 
@@ -3270,7 +3234,7 @@ ${truncatedHtml}`;
 
             <PublishToCMSModal
               isOpen={showCMSModal}
-              onClose={() => setShowCMSModal(false)}
+              onClose={handleCMSModalClose}
               title={title}
               html={content} />
             <ShopifyPublishModal

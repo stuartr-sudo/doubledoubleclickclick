@@ -1,227 +1,548 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ImageLibraryItem } from "@/api/entities";
-import { YouTubeVideo } from "@/api/entities";
-import { TikTokVideo } from "@/api/entities";
-import { Username } from "@/api/entities";
-import { User } from "@/api/entities";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Search, Loader2, X, Trash2, Copy, Check, Edit, CheckSquare, Sparkles, Download, Plus, Video, Image as ImageIcon, Play, ExternalLink, Youtube, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Image as ImageIcon, Video, Youtube, Search, Loader2, Package, Download } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { saveImageFromString } from "@/api/functions";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
+// Import entities and functions
+import { ImageLibraryItem } from "@/api/entities";
+import { YouTubeVideo } from "@/api/entities";
+import { TikTokVideo } from "@/api/entities";
+import { User } from "@/api/entities";
+import { Username } from "@/api/entities";
+import { PromotedProduct } from "@/api/entities";
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
+
+// Import required functions
 import { youtubeSearch } from "@/api/functions";
 import { tiktokSearch } from "@/api/functions";
+import { amazonProduct as fetchAmazonProduct } from "@/api/functions";
+import { saveImageFromString } from "@/api/functions";
 import { getTikTokOembed } from "@/api/functions";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
-import { useWorkspace } from "@/components/hooks/useWorkspace";
-import useFeatureFlag from "@/components/hooks/useFeatureFlag";
-import { amazonProduct } from "@/api/functions";
 
-export default function MediaLibraryModal({ isOpen, onClose, onInsert }) {
+const TIKTOK_ICON = () => (
+  <svg fill="#000000" height="24" width="24" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 490 490">
+    <path d="M490,245c0,135.2-109.8,245-245,245S0,380.2,0,245S109.8,0,245,0S490,109.8,490,245z" fill="#ff0050" />
+    <path d="M490,245c0,135.2-109.8,245-245,245S0,380.2,0,245S109.8,0,245,0S490,109.8,490,245z" fill="#00f2ea" />
+    <path d="M375,174.5c-35.3,0-67.4,17.4-87.3,44.2c-22.1-39.3-63.5-65.7-110.8-65.7c-69.2,0-125.5,56.2-125.5,125.5 c0,15.6,2.9,30.6,8.2,44.5c-3.1-15-4.8-30.6-4.8-46.6c0-79.5,64.4-143.9,143.9-143.9c37.5,0,71.7,14.4,98,38.1v-34.9 c0-39.7,32.2-71.9,71.9-71.9c39.7,0,71.9,32.2,71.9,71.9v108.3c0,70.9-57.5,128.4-128.4,128.4c-16.1,0-31.5-3-46-8.5 c15.1,3.4,30.9,5.2,47.2,5.2c79.5,0,143.9-64.4,143.9-143.9V245C440.6,204.6,410.7,174.5,375,174.5z" fill="#fff" />
+  </svg>
+);
+
+
+const ImageTabContent = ({ imageItems, searchQuery, usernameFilter, onImageSelect, bulkMode, selectedIds, onToggleSelect }) => {
+  const filteredImages = useMemo(() => {
+    return imageItems.filter((image) => {
+      const matchesSearch = !searchQuery ||
+        image.alt_text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.tags?.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesUsername = !usernameFilter ||
+        usernameFilter === 'all' ||
+        image.user_name === usernameFilter;
+
+      return matchesSearch && matchesUsername;
+    });
+  }, [imageItems, searchQuery, usernameFilter]);
+
+  if (filteredImages.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+        <ImageIcon className="w-12 h-12 mb-4 opacity-50" />
+        <p className="text-lg font-medium">No images found</p>
+        <p className="text-sm">Try adjusting your search or import some images</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      {filteredImages.map((image) => {
+        const isSelected = selectedIds?.has(image.id);
+        return (
+          <div
+            key={image.id}
+            className={`group relative aspect-square rounded-lg overflow-hidden cursor-pointer transition-all ${isSelected ? 'ring-2 ring-blue-500' : 'hover:ring-2 hover:ring-blue-500'} bg-slate-100`}
+            onClick={() => bulkMode ? onToggleSelect(image.id) : onImageSelect(image)}
+          >
+            <img
+              src={image.url}
+              alt={image.alt_text || 'Image'}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors duration-200" />
+            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <p className="text-white text-xs truncate">{image.alt_text || 'Untitled'}</p>
+            </div>
+
+            {bulkMode && (
+              <div className="absolute top-2 left-2">
+                <div className="bg-white/90 rounded-md p-1 shadow">
+                  <Checkbox checked={!!isSelected} onCheckedChange={() => onToggleSelect(image.id)} />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const VideoTabContent = ({ videoItems, searchQuery, usernameFilter, onVideoSelect }) => {
+  // CHANGED: default from 'all' to '16:9' (YouTube)
+  const [dimension, setDimension] = useState('16:9');
+
+  const filteredVideos = useMemo(() => {
+    return videoItems.filter((video) => {
+      const matchesSearch = !searchQuery ||
+        video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        video.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesUsername = !usernameFilter ||
+        usernameFilter === 'all' ||
+        video.user_name === usernameFilter;
+
+      const matchesDimension = dimension === 'all' || video.aspectRatio === dimension;
+
+      return matchesSearch && matchesUsername && matchesDimension;
+    });
+  }, [videoItems, searchQuery, usernameFilter, dimension]);
+
+  if (filteredVideos.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+        <Video className="w-12 h-12 mb-4 opacity-50" />
+        <p className="text-lg font-medium">No videos found</p>
+        <p className="text-sm">Try adjusting your filters or add some videos</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Dimension Filter Tabs */}
+      {/* CHANGED: defaultValue from 'all' to '16:9' */}
+      <Tabs defaultValue="16:9" value={dimension} onValueChange={setDimension} className="mb-4">
+        <TabsList className="bg-blue-100 text-slate-700 mx-auto p-1 h-10 items-center justify-center rounded-md grid w-full grid-cols-3 max-w-sm border border-blue-200">
+          <TabsTrigger value="all" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">All</TabsTrigger>
+          <TabsTrigger value="16:9" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">Youtube</TabsTrigger>
+          <TabsTrigger value="9:16" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">TikTok</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"> {/* Changed lg:grid-cols-3 to lg:grid-cols-4 */}
+        {filteredVideos.map((video) =>
+          <div
+            key={`${video.source}-${video.id}`} // Updated key for mixed video types
+            className="group relative bg-slate-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+            onClick={() => onVideoSelect(video)} // Pass full video object
+          >
+            <div className={`w-full ${video.aspectRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-video'}`}> {/* Dynamic aspect ratio */}
+              <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" loading="lazy" />
+            </div>
+            <div className="p-3">
+              <p className="font-medium line-clamp-2 text-sm text-slate-800">{video.title}</p>
+              <p className="text-xs text-slate-500 capitalize">{video.source}</p> {/* Display video source */}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
+const YouTubeTabContent = ({ youtubeQuery, setYoutubeQuery, handleYouTubeSearch, youtubeLoading, youtubeResults, onVideoSelect }) =>
+  <div className="space-y-3">
+    <div className="flex gap-2">
+      <Input
+        placeholder="Search YouTube..."
+        value={youtubeQuery}
+        onChange={(e) => setYoutubeQuery(e.target.value)}
+        onKeyPress={(e) => e.key === "Enter" && handleYouTubeSearch()}
+        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0" />
+
+      <Button onClick={handleYouTubeSearch} disabled={youtubeLoading} className="bg-red-600 hover:bg-red-700 text-white">
+        {youtubeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+      </Button>
+    </div>
+    {youtubeLoading ?
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 text-slate-400 animate-spin" />
+      </div> :
+      youtubeResults.length > 0 ?
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          {youtubeResults.map((video) =>
+            <div key={video.videoId} className="flex gap-3 items-center p-2 hover:bg-slate-200 rounded-md cursor-pointer bg-white border border-slate-200" onClick={() => onVideoSelect(video)}>
+              <img src={video.thumbnail} alt={video.title} className="w-24 h-16 object-cover rounded" />
+              <div className="flex-1">
+                <p className="font-medium line-clamp-2 text-slate-800">{video.title}</p>
+                <p className="text-xs text-slate-500">{video.channelTitle} • {video.duration}</p>
+              </div>
+            </div>
+          )}
+        </div> :
+
+        <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+          <Youtube className="w-12 h-12 mb-4 opacity-50" />
+          <p className="text-lg font-medium">Search for YouTube videos</p>
+          <p className="text-sm">Results will appear here</p>
+        </div>
+    }
+  </div>;
+
+
+const TikTokTabContent = ({ tiktokQuery, setTiktokQuery, handleTikTokSearch, tiktokLoading, tiktokResults, onVideoSelect, selectedUsername }) => {
+
+  const insertTikTokFromSearch = async (video) => {
+    if (!selectedUsername || selectedUsername === 'all') {
+      toast.error("Please select a username in the workspace selector to save TikToks.");
+      return;
+    }
+
+    try {
+      // 1. Save the TikTok video to the library
+      const savedTikTok = await TikTokVideo.create({
+        title: video.title,
+        description: video.description || "",
+        author_name: video.author_name,
+        author_unique_id: video.author_unique_id,
+        cover_url: video.cover_url,
+        video_id: video.video_id,
+        url: video.web_video_url, // Use the web_video_url for oEmbed
+        user_name: selectedUsername,
+        width: video.width,
+        height: video.height
+      });
+
+      if (!savedTikTok?.id) {
+        throw new Error("Failed to save TikTok video to library.");
+      }
+
+      // 2. Get oEmbed HTML for insertion
+      const { data } = await getTikTokOembed({ url: video.web_video_url });
+      if (!data?.success || !data?.html) throw new Error("TikTok oEmbed failed");
+
+      // Generate a unique ID and add data attributes for proper selection
+      const elId = `tiktok-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const processedHtml = data.html.replace(
+        /<blockquote([^>]*)>/i,
+        `<blockquote$1 data-b44-id="${elId}" data-b44-type="video">`
+      );
+
+      // 3. Insert the HTML
+      onVideoSelect(processedHtml);
+      toast.success("TikTok video imported and added to library!");
+    } catch (error) {
+      console.error("TikTok oEmbed insert error:", error);
+      toast.error("Could not embed TikTok video. Please try another URL.");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <Input
+          placeholder="Search TikTok..."
+          value={tiktokQuery}
+          onChange={(e) => setTiktokQuery(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && handleTikTokSearch()}
+          className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0" />
+
+        <Button onClick={handleTikTokSearch} disabled={tiktokLoading} className="bg-purple-600 hover:bg-purple-700 text-white">
+          {tiktokLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+        </Button>
+      </div>
+      {tiktokLoading ?
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 text-slate-400 animate-spin" />
+        </div> :
+        tiktokResults.length > 0 ?
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {tiktokResults.map((video) =>
+              <div key={video.video_id} className="flex gap-3 items-center p-2 hover:bg-slate-200 rounded-md cursor-pointer bg-white border border-slate-200" onClick={() => insertTikTokFromSearch(video)}>
+                <img src={video.cover_url} alt={video.title} className="w-24 h-32 object-cover rounded" />
+                <div className="flex-1">
+                  <p className="font-medium line-clamp-3 text-slate-800">{video.title}</p>
+                  <p className="text-xs text-slate-500">by @{video.author_name}</p>
+                </div>
+              </div>
+            )}
+          </div> :
+
+          <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+            <TIKTOK_ICON /> {/* Added TikTok icon to tab content */}
+            <p className="text-lg font-medium mt-4">Search for TikTok videos</p>
+            <p className="text-sm">Results will appear here</p>
+          </div>
+      }
+    </div>
+  );
+};
+
+const AmazonImportTabContent = ({ amazonUrl, setAmazonUrl, runAmazonImport, amazonLoading }) =>
+  <div className="space-y-4 max-w-md mx-auto">
+    <div className="space-y-2">
+      <Label htmlFor="amazon-url">Amazon Product URL</Label>
+      <Input
+        id="amazon-url"
+        value={amazonUrl}
+        onChange={(e) => setAmazonUrl(e.target.value)}
+        placeholder="https://www.amazon.com/dp/B0..."
+        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0" />
+
+    </div>
+
+    <Button onClick={runAmazonImport} disabled={amazonLoading} className="w-full bg-orange-500 hover:bg-orange-600 text-white">
+      {amazonLoading ?
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          Importing...
+        </> :
+
+        <>
+          <Package className="w-4 h-4 mr-2" />
+          Import from Amazon
+        </>
+      }
+    </Button>
+
+    <div className="text-xs text-slate-500 text-center">
+      This will import the product image and create a promoted product card
+    </div>
+  </div>;
+
+
+const UrlImportTabContent = ({ importUrl, setImportUrl, importAltText, setImportAltText, handleUrlImport, isImporting }) => (
+  <div className="space-y-4 max-w-md mx-auto">
+    <div className="space-y-2">
+      <Label htmlFor="media-url">Image or Video URL</Label>
+      <Input
+        id="media-url"
+        value={importUrl}
+        onChange={(e) => setImportUrl(e.target.value)}
+        placeholder="https://... or YouTube/TikTok link"
+        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0"
+      />
+    </div>
+
+    <div className="space-y-2">
+      <Label htmlFor="alt-text">Title / Alt Text (optional)</Label>
+      <Input
+        id="alt-text"
+        value={importAltText}
+        onChange={(e) => setImportAltText(e.target.value)}
+        placeholder="Description of the media"
+        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0"
+      />
+    </div>
+
+    <Button onClick={handleUrlImport} disabled={isImporting} className="w-full bg-green-600 hover:bg-green-700 text-white">
+      {isImporting ? (
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          Importing...
+        </>
+      ) : (
+        <>
+          <Download className="w-4 h-4 mr-2" />
+          Import from URL
+        </>
+      )}
+    </Button>
+
+    <div className="text-xs text-slate-500 text-center">
+      This will save the media to your library
+    </div>
+  </div>
+);
+
+
+export default function MediaLibraryModal({
+  isOpen,
+  onClose,
+  onInsert,
+  usernameFilter: preselectedUsername,
+  initialTab
+}) {
+  const [activeTab, setActiveTab] = useState(initialTab || "images");
   const [loading, setLoading] = useState(true);
-  const [allImages, setAllImages] = useState([]);
-  const [allVideos, setAllVideos] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [imageItems, setImageItems] = useState([]);
+  const [videoItems, setVideoItems] = useState([]);
+  const { selectedUsername } = useWorkspace();
+  const { consumeTokensForFeature, isCheckingTokens } = useTokenConsumption();
+
+  // All usernames for dropdowns (still used for filtering main library)
   const [allUsernames, setAllUsernames] = useState([]);
-  const [query, setQuery] = useState("");
-  // Removed states related to selected image details/editing/deletion
-  // const [selectedImage, setSelectedImage] = useState(null);
-  // [editAltText, setEditAltText] = useState("");
-  // [isUpdating, setIsUpdating] = useState(false);
-  // [isDeleting, setIsDeleting] = useState(false);
-  // [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  // [copied, setCopied] = useState(false);
 
-  // The outline also removes the AlertDialog, implying `showDeleteConfirm` is not needed.
-  // I will keep `showDeleteConfirm` state for now as a placeholder in case deletion is re-added,
-  // but it won't be used in the current JSX.
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Retaining but unused in the current render
+  // YouTube search states
+  const [youtubeQuery, setYoutubeQuery] = useState("");
+  const [youtubeResults, setYoutubeResults] = useState([]);
+  const [youtubeLoading, setYoutubeLoading] = useState(false);
+  const [youtubeResultCount, setYoutubeResultCount] = useState(10);
 
-  const [showImportFromUrl, setShowImportFromUrl] = useState(false);
+  // TikTok search states
+  const [tiktokQuery, setTiktokQuery] = useState("");
+  const [tiktokResults, setTiktokResults] = useState([]);
+  const [tiktokLoading, setTiktokLoading] = useState(false);
+  const [tiktokResultCount, setTiktokResultCount] = useState(10);
+
+  // Amazon Import States
+  const [amazonUrl, setAmazonUrl] = useState("");
+  const [amazonLoading, setAmazonLoading] = useState(false);
+
+  // URL Import States
   const [importUrl, setImportUrl] = useState("");
   const [importAltText, setImportAltText] = useState("");
-  // const [importUsername, setImportUsername] = useState(""); // removed dropdown usage
   const [isImporting, setIsImporting] = useState(false);
 
-  // NEW: Amazon import state
-  const [showAmazonImport, setShowAmazonImport] = useState(false);
-  const [amazonUrl, setAmazonUrl] = useState("");
-  const [isImportingAmazon, setIsImportingAmazon] = useState(false);
-  
-  // YouTube Search Tab State
-  const [ytQuery, setYtQuery] = useState("");
-  const [ytMax, setYtMax] = useState(10);
-  const [ytResults, setYtResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [assignToUsername, setAssignToUsername] = useState("");
+  // Bulk Mode states for images
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
-  // TikTok Search Tab State - Added
-  const [tkQuery, setTkQuery] = useState("");
-  const [tkMax, setTkMax] = useState(10);
-  const [tkResults, setTkResults] = useState([]);
-  const [isSearchingTk, setIsSearchingTk] = useState(false);
-  const [assignToUsernameTk, setAssignToUsernameTk] = useState("");
+  // Use workspace username if available, otherwise fall back to preselected
+  const effectiveUsernameFilter = selectedUsername || preselectedUsername || "all";
 
-  const [videoLibrarySource, setVideoLibrarySource] = useState('youtube');
-
-  const { consumeTokensForFeature } = useTokenConsumption();
-
-  const { selectedUsername: globalUsername } = useWorkspace();
-  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
-
-  // Use workspace username - no local filter needed
-  const usernameFilter = useWorkspaceScoping ? (globalUsername || "all") : "all";
-
-  // --- DATA LOADING ---
-  const loadData = useCallback(async () => {
+  const loadInitialData = useCallback(async () => {
     setLoading(true);
     try {
       const user = await User.me();
+      let userAllowedUsernames = [];
+      const allUsernameObjects = await Username.list();
+      setAllUsernames(allUsernameObjects || []);
 
-      let availableUsernames = [];
       if (user.role === 'admin') {
-        availableUsernames = await Username.list();
+        userAllowedUsernames = (allUsernameObjects || []).map((u) => u.user_name);
       } else {
-        const assignedNames = new Set(user.assigned_usernames || []);
-        if (assignedNames.size > 0) {
-          const all = await Username.list();
-          availableUsernames = (all || []).filter((u) => assignedNames.has(u.user_name));
-        }
+        userAllowedUsernames = user.assigned_usernames || [];
       }
-      setAllUsernames(availableUsernames);
 
-      // Load images
-      const allImagesResponse = await ImageLibraryItem.list("-created_date", 1000);
-      let displayImages = [];
-      if (user.role === 'admin') {
-        displayImages = allImagesResponse;
-      } else {
-        const allowedUsernamesSet = new Set(availableUsernames.map((u) => u.user_name));
-        displayImages = (allImagesResponse || []).filter((img) => img.user_name && allowedUsernamesSet.has(img.user_name));
-      }
-      setAllImages(Array.isArray(displayImages) ? displayImages : []);
-
-      // Load videos (YouTube + TikTok)
-      const [ytVideosResponse, ttVideosResponse] = await Promise.all([
-        YouTubeVideo.list("-created_date"),
-        TikTokVideo.list("-created_date")
+      const [images, ytVideos, ttVideos] = await Promise.all([
+        ImageLibraryItem.list("-created_date", 1000),
+        YouTubeVideo.list("-created_date", 1000),
+        TikTokVideo.list("-created_date", 1000)
       ]);
-      
-      const ytVideos = (ytVideosResponse || []).map(v => ({ ...v, _type: 'youtube' }));
-      const ttVideos = (ttVideosResponse || []).map(v => ({ ...v, _type: 'tiktok' }));
 
-      let allVideosData = [...ytVideos, ...ttVideos];
+      const allowedUsernamesSet = new Set(userAllowedUsernames);
 
-      if (user.role !== 'admin') {
-        const allowedUsernamesSet = new Set(availableUsernames.map((u) => u.user_name));
-        allVideosData = allVideosData.filter((video) => video.user_name && allowedUsernamesSet.has(video.user_name));
+      let filteredImages = (images || []).filter((img) => allowedUsernamesSet.has(img.user_name));
+      if (effectiveUsernameFilter && effectiveUsernameFilter !== 'all') {
+        filteredImages = filteredImages.filter((img) => img.user_name === effectiveUsernameFilter);
       }
-      setAllVideos(allVideosData);
 
-      // Removed importUsername default UI; we now rely on workspace username
-    } catch (error) {
+      let filteredYtVideos = (ytVideos || []).filter((vid) => allowedUsernamesSet.has(vid.user_name));
+      let filteredTtVideos = (ttVideos || []).filter((vid) => allowedUsernamesSet.has(vid.user_name));
+
+      if (effectiveUsernameFilter && effectiveUsernameFilter !== 'all') {
+        filteredYtVideos = filteredYtVideos.filter((vid) => vid.user_name === effectiveUsernameFilter);
+        filteredTtVideos = filteredTtVideos.filter((vid) => vid.user_name === effectiveUsernameFilter);
+      }
+
+      const standardizedYtVideos = filteredYtVideos.map((v) => ({
+        ...v,
+        source: 'youtube',
+        aspectRatio: '16:9',
+        thumbnail: v.thumbnail,
+        description: v.description || ''
+      }));
+
+      const standardizedTtVideos = filteredTtVideos.map((v) => ({
+        ...v,
+        source: 'tiktok',
+        aspectRatio: '9:16',
+        thumbnail: v.cover_url,
+        description: v.description || ''
+      }));
+
+      const allVideos = [...standardizedYtVideos, ...standardizedTtVideos].sort((a, b) => {
+        const dateA = new Date(a.created_date || a.created_at);
+        const dateB = new Date(b.created_date || b.created_at);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      setImageItems(filteredImages);
+      setVideoItems(allVideos);
+    } catch (e) {
+      console.error("Failed to load media:", e);
       toast.error("Failed to load media library.");
-      console.error(error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [effectiveUsernameFilter]);
 
   useEffect(() => {
     if (isOpen) {
-      loadData();
-      setQuery("");
-      setShowImportFromUrl(false);
+      loadInitialData();
+    } else {
+      setSearchQuery("");
+      setActiveTab(initialTab || "images");
+      // Clear search results and input fields when modal closes
+      setYoutubeResults([]);
+      setTiktokResults([]);
+      setYoutubeQuery("");
+      setTiktokQuery("");
+      setAmazonUrl("");
       setImportUrl("");
       setImportAltText("");
-      setYtQuery("");
-      setYtResults([]);
-      setTkQuery(""); // Added for TikTok cleanup
-      setTkResults([]); // Added for TikTok cleanup
-      setShowAmazonImport(false); // Clear Amazon import state
-      setAmazonUrl(""); // Clear Amazon URL
+      // Clear bulk mode states
+      setSelectedIds(new Set());
+      setBulkMode(false);
     }
-  }, [isOpen, loadData]);
+  }, [isOpen, loadInitialData, initialTab]);
 
-  // Set default usernames - Added/Modified as per outline
+  // Set initial tab when prop changes
   useEffect(() => {
-    if (allUsernames && allUsernames.length > 0) {
-      // setImportUsername is removed
-      if (!useWorkspaceScoping) {
-        setAssignToUsername(allUsernames[0].user_name);
-        setAssignToUsernameTk(allUsernames[0].user_name); // Added for TikTok default
-      }
+    if (initialTab) {
+      setActiveTab(initialTab);
     }
-  }, [allUsernames, useWorkspaceScoping]);
+  }, [initialTab]);
 
-  // --- FILTERING ---
-  const filteredImages = useMemo(() => {
-    let items = allImages;
-    if (usernameFilter !== 'all') {
-      items = items.filter((img) => img.user_name === usernameFilter);
-    }
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      items = items.filter((img) => (img.alt_text || '').toLowerCase().includes(lowerQuery));
-    }
-    return items;
-  }, [allImages, query, usernameFilter]);
-
-  const filteredVideos = useMemo(() => {
-    let items = allVideos.filter(video => video._type === videoLibrarySource);
-    
-    if (usernameFilter !== 'all') {
-      items = items.filter((video) => video.user_name === usernameFilter);
-    }
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      items = items.filter((video) =>
-        (video.title || '').toLowerCase().includes(lowerQuery) ||
-        (video.description || '').toLowerCase().includes(lowerQuery) ||
-        (video.author_name || '').toLowerCase().includes(lowerQuery)
-      );
-    }
-    return items;
-  }, [allVideos, query, usernameFilter, videoLibrarySource]);
-
-  // --- IMAGE HANDLERS ---
-  // Removed handleSelectImage, handleUpdateAltText, handleDeleteImage, confirmDelete, handleCopyUrl functions
-
-  const handleInsertImage = async (image) => { // Modified to accept image directly
-    if (!image) return;
-
-    const result = await consumeTokensForFeature('image_library_access');
-    if (!result.success) {
+  // Handles selection of an image from the library
+  const handleImageInsert = async (image) => {
+    // Check feature flag + consume tokens for ai_image_library
+    const res = await consumeTokensForFeature("ai_image_library");
+    if (!res?.success) {
+      // Do not insert if feature disabled or tokens insufficient
       return;
     }
-
-    onInsert(image);
-    onClose();
+    if (onInsert && typeof onInsert === 'function') {
+      onInsert(image);
+      onClose();
+    }
   };
 
-  // --- VIDEO HANDLERS ---
-  // No longer a selectedVideo state or handler. Insert happens directly on button click for videos.
-  // const handleSelectVideo = (video) => {
-  //   setSelectedVideo(video);
-  //   setSelectedImage(null);
-  // };
+  // Generic function to insert raw HTML content
+  const insertHtmlContent = (htmlContent) => {
+    if (onInsert && typeof onInsert === 'function') {
+      onInsert(htmlContent);
+      onClose();
+    }
+  };
 
-  const handleInsertYouTube = async (video) => {
-    const result = await consumeTokensForFeature('video_library_insert');
-    if (!result.success) {
+  const handleYouTubeInsert = (video) => {
+    const videoId = video.videoId || video.video_id;
+    if (!videoId) {
+      toast.error("Invalid video ID");
       return;
     }
 
-    const videoHtml = `
-<div class="youtube-video-container" style="position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 2rem 0;">
+    if (onInsert && typeof onInsert === 'function') {
+      const elId = `el-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const videoHtml = `
+<div class="youtube-video-container" data-b44-id="${elId}" data-b44-type="video" style="position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 2rem 0;">
   <iframe
-    src="https://www.youtube.com/embed/${video.video_id}"
+    src="https://www.youtube.com/embed/${videoId}"
     title="${video.title}"
     frameborder="0"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -230,760 +551,514 @@ export default function MediaLibraryModal({ isOpen, onClose, onInsert }) {
     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 8px;"
   ></iframe>
 </div>`;
-    onInsert(videoHtml);
-    onClose();
-    toast.success("YouTube video inserted!");
+      onInsert(videoHtml);
+      onClose();
+      toast.success("YouTube video inserted!");
+    }
   };
 
-  const removeAutoplayFromTikTokEmbed = (embedHtml) => {
-    if (!embedHtml) return embedHtml;
-    
-    // Remove autoplay-related attributes and parameters from TikTok embeds
-    return embedHtml
-      .replace(/autoplay[^"']*["'][^"']*["']/gi, '')
-      .replace(/data-autoplay[^"']*["'][^"']*["']/gi, '')
-      .replace(/allowautoplay[^"']*["'][^"']*["']/gi, '')
-      .replace(/&autoplay=1/gi, '')
-      .replace(/\?autoplay=1/gi, '')
-      .replace(/autoplay=true/gi, '')
-      .replace(/autoplay="true"/gi, '')
-      .replace(/autoplay='true'/gi, '');
-  };
 
-  const handleInsertTikTok = async (video) => {
-    const result = await consumeTokensForFeature('video_library_insert');
-    if (!result.success) {
+  // Handles selection of videos from the combined video library (YouTube and TikTok)
+  const handleLibraryVideoSelect = async (video) => {
+    // NEW: guard video inserts from the library behind feature flag "video_library_insert"
+    const res = await consumeTokensForFeature("video_library_insert");
+    if (!res?.success) {
+      // Do not insert if feature disabled or tokens insufficient
       return;
     }
 
-    // `oembed_html` might not be present in search results, so generate a fallback.
-    let tiktokHtml = video.oembed_html || `
-<blockquote class="tiktok-embed" cite="${video.url}" data-video-id="${video.video_id}" style="max-width: 605px;min-width: 325px; margin: 2rem auto; border: 1px solid #00f2ea; border-radius: 12px; padding: 0;">
-  <section>
-    <a target="_blank" title="${video.title}" href="${video.url}">
-      <p style="margin: 1rem; text-align: center; font-weight: bold;">${video.title}</p>
-      <p style="margin: 1rem; text-align: center; color: #666;">View on TikTok</p>
-    </a>
-  </section>
-</blockquote>`;
+    if (video.source === 'youtube') {
+      // Re-use handleYouTubeInsert for library YouTube videos too, it handles toasts/closing.
+      // Make sure the video object matches structure (video.videoId, video.title)
+      handleYouTubeInsert({ videoId: video.video_id, title: video.title });
+    } else if (video.source === 'tiktok') {
+      try {
+        // Assuming 'video.url' for TikTok videos in library refers to their web_video_url for oEmbed
+        const { data } = await getTikTokOembed({ url: video.url });
+        if (!data?.success || !data?.html) throw new Error("TikTok oEmbed failed");
 
-    // Remove autoplay from the embed HTML
-    tiktokHtml = removeAutoplayFromTikTokEmbed(tiktokHtml);
-
-    onInsert(tiktokHtml);
-    onClose();
-    toast.success("TikTok video inserted!");
+        const elId = `tiktok-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const processedHtml = data.html.replace(
+          /<blockquote([^>]*)>/i,
+          `<blockquote$1 data-b44-id="${elId}" data-b44-type="video">`
+        );
+        insertHtmlContent(processedHtml);
+      } catch (error) {
+        console.error("TikTok oEmbed insert error:", error);
+        toast.error("Could not embed TikTok video from library.");
+      }
+    }
   };
 
-  const handleImportFromUrl = async () => {
-    if (!importUrl.trim()) {
-      toast.error("Please provide an image URL.");
+  // YouTube search function
+  const handleYouTubeSearch = async () => {
+    if (!youtubeQuery.trim()) return;
+
+    // NEW: enforce feature flag before searching YouTube
+    const tokenCheck = await consumeTokensForFeature("ai_youtube");
+    if (!tokenCheck?.success) {
+      // Hook shows appropriate toast; abort search
       return;
     }
 
-    if (isImporting) return;
+    setYoutubeLoading(true);
+    setYoutubeResults([]);
+    try {
+      const response = await youtubeSearch({
+        q: youtubeQuery,
+        maxResults: youtubeResultCount
+      });
+      setYoutubeResults(response?.data?.results || []);
+    } catch (e) {
+      toast.error(e.message || "Failed to search YouTube.");
+    } finally {
+      setYoutubeLoading(false);
+    }
+  };
 
-    const result = await consumeTokensForFeature('image_library_access');
-    if (!result.success) {
+  // TikTok search function
+  const handleTikTokSearch = async () => {
+    if (!tiktokQuery.trim()) return;
+
+    // NEW: enforce feature flag before searching TikTok
+    const tokenCheck = await consumeTokensForFeature("ai_tiktok");
+    if (!tokenCheck?.success) {
+      // Hook shows appropriate toast; abort search
       return;
     }
 
-    // Use workspace username when enabled
-    const activeUsername = useWorkspaceScoping ? (globalUsername || "") : "";
-    if (useWorkspaceScoping && !activeUsername) {
-      toast.error("Please select a workspace first.");
+    setTiktokLoading(true);
+    setTiktokResults([]);
+    try {
+      const response = await tiktokSearch({
+        keywords: tiktokQuery,
+        count: tiktokResultCount
+      });
+      setTiktokResults(response?.data?.videos || []);
+    } catch (e) {
+      toast.error(e.message || "Failed to search TikTok.");
+    } finally {
+      setTiktokLoading(false);
+    }
+  };
+
+  // Amazon Import function
+  const runAmazonImport = async () => {
+    if (!amazonUrl.trim()) {
+      toast.error("Please enter an Amazon product URL.");
       return;
+    }
+
+    const currentUsername = selectedUsername && selectedUsername !== 'all' ? selectedUsername : null;
+    if (!currentUsername) {
+      toast.error("Please select a username in the workspace selector.");
+      return;
+    }
+
+    // NEW: enforce feature flag before importing from Amazon
+    const tokenCheck = await consumeTokensForFeature("image_library_amazon_import");
+    if (!tokenCheck?.success) {
+      return; // Abort if feature disabled or insufficient tokens
+    }
+
+    setAmazonLoading(true);
+    try {
+      const { data: res } = await fetchAmazonProduct({ url: amazonUrl });
+      if (!res?.success) {
+        if (res?.error && res.error.includes("exceeded the MONTHLY quota")) {
+           toast.error("Amazon Import Quota Reached", {
+            description: "You've used all your free Amazon data requests for the month. To continue, please upgrade your plan on RapidAPI.",
+            duration: 10000,
+          });
+        } else {
+          toast.error(res?.error || "Failed to fetch product details.");
+        }
+        return;
+      }
+
+      const p = res.data;
+
+      // Extract ALL images, not just the main one
+      const allImages = [];
+
+      // Check multiple possible image field names
+      if (p.product_photos && Array.isArray(p.product_photos)) {
+        allImages.push(...p.product_photos);
+      }
+      if (p.images && Array.isArray(p.images)) {
+        allImages.push(...p.images);
+      }
+      if (p.product_images && Array.isArray(p.product_images)) {
+        allImages.push(...p.product_images);
+      }
+      if (p.image_gallery && Array.isArray(p.image_gallery)) {
+        allImages.push(...p.image_gallery);
+      }
+      if (p.all_images && Array.isArray(p.all_images)) {
+        allImages.push(...p.all_images);
+      }
+      if (p.additional_images && Array.isArray(p.additional_images)) {
+        allImages.push(...p.additional_images);
+      }
+      if (p.variant_images && Array.isArray(p.variant_images)) {
+        allImages.push(...p.variant_images);
+      }
+
+      // Add the main product_photo if it exists and isn't already in the array
+      if (p.product_photo && !allImages.includes(p.product_photo)) {
+        allImages.unshift(p.product_photo); // Add main image first
+      }
+
+      // Remove duplicates and filter out empty values
+      const uniqueImages = [...new Set(allImages.filter(Boolean))];
+
+      if (uniqueImages.length === 0) {
+        throw new Error("Product has no images to import.");
+      }
+
+      // Create ALL images in library
+      const imagePromises = uniqueImages.map((imageUrl, index) =>
+        ImageLibraryItem.create({
+          url: imageUrl,
+          alt_text: `${p.product_title || 'Amazon Product'}${index > 0 ? ` (${index + 1})` : ''}`,
+          source: 'upload',
+          user_name: currentUsername,
+          tags: ['amazon-import', p.asin].filter(Boolean)
+        })
+      );
+
+      await Promise.all(imagePromises);
+
+      // Also create a promoted product
+      await PromotedProduct.create({
+        name: p.product_title || 'Amazon Product',
+        description: p.product_description || (Array.isArray(p.about_product) ? p.about_product.join('\n') : ''),
+        image_url: uniqueImages[0], // Use first image as main image
+        product_url: p.product_url || amazonUrl,
+        button_url: p.product_url || amazonUrl,
+        price: p.product_price || '',
+        user_name: currentUsername,
+        sku: p.asin || ''
+      });
+
+      toast.success(`Successfully imported "${p.product_title || 'Amazon Product'}" with ${uniqueImages.length} images!`);
+      await loadInitialData(); // Refresh image library
+      setActiveTab("images"); // Switch back to images tab
+      setAmazonUrl("");
+
+    } catch (error) {
+      console.error("Amazon import error:", error);
+      toast.error(error.message || "Failed to import from Amazon.");
+    } finally {
+      setAmazonLoading(false);
+    }
+  };
+
+  // URL Import function
+  const handleUrlImport = async () => {
+    const url = importUrl.trim();
+    if (!url) {
+      toast.error("Please enter a URL.");
+      return;
+    }
+
+    const currentUsername = selectedUsername && selectedUsername !== 'all' ? selectedUsername : null;
+    if (!currentUsername) {
+      toast.error("Please select a username in the workspace selector.");
+      return;
+    }
+
+    // NEW: enforce feature flag before importing from URL
+    const tokenCheck = await consumeTokensForFeature("ai_product_url_import");
+    if (!tokenCheck?.success) {
+      return; // Abort if feature disabled or insufficient tokens
     }
 
     setIsImporting(true);
     try {
-      const { data } = await saveImageFromString({
-        value: importUrl.trim(),
-        user_name: activeUsername || undefined,
-        alt_text: importAltText.trim() || "Imported image",
-        source: "upload"
-      });
+      // YouTube URL
+      if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        const videoIdRegex = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(videoIdRegex);
+        const videoId = match && match[2].length === 11 ? match[2] : null;
+        if (!videoId) throw new Error("Invalid YouTube URL.");
 
-      if (data.success) {
-        toast.success("Image imported successfully!");
-        setImportUrl("");
-        setImportAltText("");
-        setShowImportFromUrl(false);
-        await loadData();
+        await YouTubeVideo.create({
+          title: importAltText || "YouTube Video",
+          video_id: videoId,
+          url: url,
+          user_name: currentUsername,
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        });
+        // Ensure it shows up under Video Library
+        setActiveTab("videos");
+        await loadInitialData();
+        toast.success("YouTube video imported successfully!");
+
+        // TikTok URL
+      } else if (url.includes('tiktok.com')) {
+        const videoIdRegex = /tiktok\.com\/@([^\/]+)\/video\/(\d+)/;
+        const match = url.match(videoIdRegex);
+        if (!match) throw new Error("Invalid TikTok URL format.");
+
+        const [_, authorName, videoId] = match;
+
+        const { data } = await getTikTokOembed({ url });
+        if (!data?.success) throw new Error("Could not fetch TikTok video details.");
+
+        await TikTokVideo.create({
+          title: importAltText || data.title || "TikTok Video",
+          video_id: videoId,
+          url: url,
+          author_name: authorName,
+          cover_url: data.thumbnail_url,
+          user_name: currentUsername,
+          width: data.width,
+          height: data.height,
+        });
+        // Ensure it shows up under Video Library
+        setActiveTab("videos");
+        await loadInitialData();
+        toast.success("TikTok video imported successfully!");
+
+        // Image URL
       } else {
-        toast.error(data.error || "Failed to import image.");
+        const { data: result } = await saveImageFromString({
+          value: url,
+          user_name: currentUsername,
+          alt_text: importAltText || 'Imported image',
+          source: "upload"
+        });
+        if (!result.success) throw new Error(result.error || "Failed to save image from URL.");
+        setActiveTab("images");
+        await loadInitialData();
+        toast.success("Image imported successfully!");
       }
+
+      setImportUrl("");
+      setImportAltText("");
     } catch (error) {
-      toast.error("Failed to import image.");
-      console.error(error);
+      toast.error(error.message || "Could not import from URL.");
     } finally {
       setIsImporting(false);
     }
   };
-  
-  // NEW: Amazon import handler (adds ALL listing photos)
-  const handleAmazonImport = async () => {
-    if (!amazonUrl.trim()) {
-      toast.error("Please enter an Amazon product URL");
+
+  // Helpers for bulk mode
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllFiltered = () => {
+    // Build the same filtered list used by ImageTabContent
+    const filtered = (imageItems || []).filter((image) => {
+      const matchesSearch = !searchQuery ||
+        image.alt_text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.tags?.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesUsername = !effectiveUsernameFilter ||
+        effectiveUsernameFilter === 'all' ||
+        image.user_name === effectiveUsernameFilter;
+      return matchesSearch && matchesUsername;
+    });
+    setSelectedIds(new Set(filtered.map((i) => i.id)));
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) {
+      setShowBulkDeleteConfirm(false);
       return;
     }
-
-    const activeUsername = useWorkspaceScoping ? (globalUsername || "") : "";
-    if (useWorkspaceScoping && !activeUsername) {
-      toast.error("Please select a workspace first.");
-      return;
-    }
-
-    const result = await consumeTokensForFeature('image_library_amazon_import');
-    if (!result.success) {
-      return;
-    }
-
-    setIsImportingAmazon(true);
+    setIsBulkDeleting(true);
     try {
-      const { data } = await amazonProduct({ url: amazonUrl.trim() });
-
-      if (!data?.success || !data.data?.product_photos?.length) {
-        toast.error("No Amazon product images found or failed to extract.");
-        setIsImportingAmazon(false);
-        return;
-      }
-
-      let importedCount = 0;
-      for (const imageUrl of data.data.product_photos) {
-        try {
-          const { data: saveResult } = await saveImageFromString({
-            value: imageUrl,
-            user_name: activeUsername || undefined,
-            alt_text: `${data.data.product_title || "Amazon Product"} - Image ${importedCount + 1}`,
-            source: "amazon_import"
-          });
-          if (saveResult?.success) importedCount++;
-        } catch (err) {
-          console.error("Failed to save Amazon image:", err);
-        }
-      }
-
-      if (importedCount > 0) {
-        toast.success(`Imported ${importedCount} Amazon image${importedCount > 1 ? 's' : ''}`);
-        await loadData();
-        setShowAmazonImport(false);
-        setAmazonUrl("");
-      } else {
-        toast.error("Failed to import any images");
-      }
+      await Promise.all(ids.map((id) => ImageLibraryItem.delete(id)));
+      // Remove from state
+      setImageItems((prev) => prev.filter((img) => !selectedIds.has(img.id)));
+      setSelectedIds(new Set());
+      setBulkMode(false); // Exit bulk mode after deleting
+      setShowBulkDeleteConfirm(false);
+      toast.success(`${ids.length} image(s) deleted successfully.`);
     } catch (error) {
-      console.error("Amazon import error:", error);
-      toast.error("Failed to import Amazon product images");
+      console.error("Bulk delete error:", error);
+      toast.error(error.message || "Failed to delete images.");
     } finally {
-      setIsImportingAmazon(false);
-    }
-  };
-
-  // --- YOUTUBE SEARCH HANDLERS ---
-  const handleYouTubeSearch = async () => {
-    if (!ytQuery.trim()) {
-      toast.info("Please enter a search query.");
-      return;
-    }
-    setIsSearching(true);
-    setYtResults([]);
-    try {
-      const tokenResult = await consumeTokensForFeature('ai_youtube');
-      if (!tokenResult.success) {
-        setIsSearching(false);
-        return;
-      }
-      const { data } = await youtubeSearch({ q: ytQuery.trim(), maxResults: ytMax });
-      setYtResults(data?.results || []);
-      if ((data?.results || []).length === 0) {
-        toast.info("No YouTube videos found for your search query.");
-      }
-    } catch (e) {
-      console.error("YouTube search error:", e);
-      toast.error("Failed to perform YouTube search. Please try again.");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleInsertSearchAndSave = async (res) => {
-    if (!useWorkspaceScoping && !assignToUsername) {
-      toast.error("You must select a username to save videos.");
-      return;
-    }
-    const payload = {
-      title: res.title,
-      video_id: res.video_id,
-      url: res.url,
-      thumbnail: res.thumbnail,
-      description: res.description,
-      user_name: useWorkspaceScoping ? (globalUsername || "unknown") : assignToUsername
-    };
-
-    try {
-      await YouTubeVideo.create(payload);
-      await loadData(); // Reload library to show new video
-      toast.success("Video saved to library and inserted.");
-    } catch (e) {
-      console.error("Failed to save video to library:", e);
-      toast.error("Insert succeeded, but saving to library failed.");
-    } finally {
-      handleInsertYouTube(payload); // Always insert regardless of save success
-    }
-  };
-
-  // --- TIKTOK SEARCH HANDLERS ---
-  const handleTikTokSearch = async () => {
-    if (!tkQuery.trim()) {
-      toast.info("Please enter a search query.");
-      return;
-    }
-    setIsSearchingTk(true);
-    setTkResults([]);
-    try {
-      const tokenResult = await consumeTokensForFeature('ai_tiktok');
-      if (!tokenResult.success) {
-        setIsSearchingTk(false);
-        return;
-      }
-      const { data } = await tiktokSearch({ keywords: tkQuery.trim(), count: tkMax });
-      setTkResults(data?.videos || []);
-      if ((data?.videos || []).length === 0) {
-        toast.info("No TikTok videos found for your search query.");
-      }
-    } catch (e) {
-      console.error("TikTok search error:", e);
-      toast.error("Failed to perform TikTok search. Please try again.");
-    }
-    setIsSearchingTk(false);
-  };
-
-  const handleInsertTikTokAndSave = async (res) => {
-    if (!useWorkspaceScoping && !assignToUsernameTk) {
-      toast.error("You must select a username to save videos.");
-      return;
-    }
-    
-    // Get the TikTok oEmbed HTML first
-    let oembedHtml = res.oembed_html;
-    if (!oembedHtml) {
-      try {
-        const { data } = await getTikTokOembed({ url: res.web_video_url });
-        oembedHtml = data?.html || '';
-      } catch (e) {
-        console.error("Failed to get TikTok oEmbed:", e);
-        toast.error("Failed to get TikTok embed code.");
-        return; // Critical: If oEmbed HTML cannot be fetched, we cannot insert or save.
-      }
-    }
-
-    // Remove autoplay from the embed HTML
-    oembedHtml = removeAutoplayFromTikTokEmbed(oembedHtml);
-
-    const payload = {
-      title: res.title,
-      video_id: res.video_id,
-      url: res.web_video_url,
-      cover_url: res.cover_url,
-      author_name: res.author_name,
-      user_name: useWorkspaceScoping ? (globalUsername || "unknown") : assignToUsernameTk,
-      oembed_html: oembedHtml
-    };
-
-    try {
-      await TikTokVideo.create(payload);
-      await loadData();
-      toast.success("Saved to library and inserted.");
-    } catch (e) {
-      console.error("Failed to save TikTok video to library:", e);
-      toast.error("Insert succeeded, but saving to library failed.");
-    } finally {
-      // Insert the HTML embed code, not the payload object
-      onInsert(oembedHtml);
-      onClose();
+      setIsBulkDeleting(false);
     }
   };
 
 
-  // --- RENDER ---
   return (
     <>
-      <Dialog open={!!isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-7xl w-[90vw] h-[85vh] p-0 flex flex-col bg-slate-50 text-slate-900 rounded-lg shadow-2xl">
-          {/* Header */}
-          <div className="flex-shrink-0 p-4 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-800">Media Library</h2>
-            <div className="flex items-center gap-2">
-              {/* NEW: Import from Amazon */}
-              <Button
-                onClick={() => { setShowAmazonImport(true); setShowImportFromUrl(false); }}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <Package className="w-4 h-4" />
-                Import from Amazon
-              </Button>
-              {/* Existing: Import from URL (unchanged label/behavior) */}
-              <Button
-                onClick={() => { setShowImportFromUrl(!showImportFromUrl); setShowAmazonImport(false); }}
-                className="bg-blue-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:bg-indigo-700"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Import from URL
-              </Button>
-              <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-500 hover:bg-slate-200 hover:text-slate-800">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-7xl w-[95vw] h-[90vh] p-0 flex flex-col bg-slate-100 text-slate-900 rounded-lg shadow-2xl">
+          <DialogHeader className="p-4 border-b border-slate-300">
+            <DialogTitle className="text-xl">Media Library</DialogTitle>
+          </DialogHeader>
 
-          {/* Import from URL Section - NO USERNAME DROPDOWN */}
-          {showImportFromUrl && (
-            <div className="bg-slate-50 p-4 flex-shrink-0 border-b border-slate-200">
-              <div className="space-y-3">
-                <h3 className="font-medium text-slate-800">Import Image from URL</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Input
-                    placeholder="https://example.com/image.jpg"
-                    value={importUrl}
-                    onChange={(e) => setImportUrl(e.target.value)}
-                    className="bg-white border-slate-300"
-                    disabled={isImporting}
-                  />
-                  <Input
-                    placeholder="Alt text (optional)"
-                    value={importAltText}
-                    onChange={(e) => setImportAltText(e.target.value)}
-                    className="bg-white border-slate-300"
-                    disabled={isImporting}
-                  />
-                  {/* Username dropdown removed intentionally; workspace username is used */}
-                  <div className="flex items-center text-sm text-slate-500">
-                    <span className="font-medium mr-1">Assigned to:</span>
-                    <span className="truncate">{globalUsername || "None Selected"}</span>
-                  </div>
+          <div className="flex-1 flex flex-col min-h-0 p-4">
+            {/* Top search + bulk controls */}
+            <div className="flex flex-col gap-3 mb-4">
+              <Input
+                placeholder="Search media..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-white border-slate-300 w-full text-slate-900 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              {activeTab === "images" && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {!bulkMode ? (
+                    <Button variant="outline" className="bg-white border-slate-300" onClick={() => setBulkMode(true)}>
+                      Enable Bulk Select
+                    </Button>
+                  ) : (
+                    <>
+                      <Button variant="outline" className="bg-white border-slate-300" onClick={() => setBulkMode(false)}>
+                        Exit Bulk Select
+                      </Button>
+                      <Button variant="outline" className="bg-white border-slate-300" onClick={selectAllFiltered}>
+                        Select All (filtered)
+                      </Button>
+                      <Button variant="outline" className="bg-white border-slate-300" onClick={clearSelection}>
+                        Clear Selection
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        disabled={selectedIds.size === 0}
+                        onClick={() => setShowBulkDeleteConfirm(true)}
+                      >
+                        Delete Selected ({selectedIds.size})
+                      </Button>
+                    </>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleImportFromUrl}
-                    disabled={isImporting || !importUrl.trim() || (useWorkspaceScoping && !globalUsername)}
-                    className="bg-blue-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 hover:bg-indigo-800"
-                  >
-                    {isImporting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Importing...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Import Image
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowImportFromUrl(false);
-                      setImportUrl("");
-                      setImportAltText("");
-                    }}
-                    className="bg-white border-slate-300"
-                    disabled={isImporting}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Main Content - Full Width */}
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* Search Bar */}
-            <div className="flex-shrink-0 p-3 border-b border-slate-200 flex items-center gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search media..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="pl-9 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
-                />
-              </div>
+              )}
             </div>
 
-            {/* Tabs */}
-            <Tabs defaultValue="images" className="flex-1 flex flex-col min-h-0">
-              {/* UPDATED: higher-contrast bar without layout changes */}
-              <TabsList className="flex-shrink-0 grid w-full grid-cols-4 bg-white border border-slate-200 rounded-md p-1">
-                <TabsTrigger
-                  value="images"
-                  className="text-slate-700 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-300"
-                >
-                  <ImageIcon className="w-4 h-4 mr-2" />
+            <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setBulkMode(false); setSelectedIds(new Set()); }} className="flex flex-col flex-1 min-h-0">
+              <TabsList className="grid w-full grid-cols-6 bg-white border border-slate-200">
+                <TabsTrigger value="images" className="flex items-center gap-2 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">
+                  <ImageIcon className="w-4 h-4" />
                   Images
                 </TabsTrigger>
-                <TabsTrigger
-                  value="videos"
-                  className="text-slate-700 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-300"
-                >
-                  <Video className="w-4 h-4 mr-2" />
+                <TabsTrigger value="videos" className="flex items-center gap-2 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">
+                  <Video className="w-4 h-4" />
                   Video Library
                 </TabsTrigger>
-                <TabsTrigger
-                  value="youtube_search"
-                  className="text-slate-700 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-300"
-                >
-                  <Youtube className="w-4 h-4 mr-2" />
+                <TabsTrigger value="youtube" className="flex items-center gap-2 data-[state=active]:bg-red-100 data-[state=active]:text-red-800">
+                  <Youtube className="w-4 h-4" />
                   Search YouTube
                 </TabsTrigger>
-                <TabsTrigger
-                  value="tiktok_search"
-                  className="text-slate-700 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-slate-300"
-                >
-                  <Video className="w-4 h-4 mr-2" />
+                <TabsTrigger value="tiktok" className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800">
                   Search TikTok
+                </TabsTrigger>
+                <TabsTrigger value="amazon-import" className="flex items-center gap-2 data-[state=active]:bg-orange-100 data-[state=active]:text-orange-800">
+                  <Package className="w-4 h-4" />
+                  Import Amazon
+                </TabsTrigger>
+                <TabsTrigger value="url-import" className="flex items-center gap-2 data-[state=active]:bg-green-100 data-[state=active]:text-green-800">
+                  <Download className="w-4 h-4" />
+                  Import URL
                 </TabsTrigger>
               </TabsList>
 
-              {/* Make inactive tab panels not take up space */}
-              <TabsContent value="images" className="hidden data-[state=active]:block flex-1 min-h-0 overflow-y-auto p-4 m-0">
+              <div className="flex-1 overflow-y-auto min-h-0">
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 text-slate-400 animate-spin" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {filteredImages.map((image) => (
-                      <div
-                        key={image.id}
-                        className="group relative aspect-w-16 aspect-h-10 rounded-lg overflow-hidden bg-white border border-slate-200 hover:shadow-md transition-all"
-                      >
-                        <img src={image.url} alt={image.alt_text || ""} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                          <Button
-                            onClick={() => handleInsertImage(image)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 hover:bg-blue-700 text-white"
-                            size="sm"
-                          >
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            Insert
-                          </Button>
-                        </div>
-                        <div className="absolute bottom-2 left-2 text-xs text-white bg-black/50 px-2 py-1 rounded">
-                          {image.user_name}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <>
+                    <TabsContent value="images" className="mt-4">
+                      <ImageTabContent
+                        imageItems={imageItems}
+                        searchQuery={searchQuery}
+                        usernameFilter={effectiveUsernameFilter}
+                        onImageSelect={handleImageInsert}
+                        bulkMode={bulkMode}
+                        selectedIds={selectedIds}
+                        onToggleSelect={toggleSelect}
+                      />
+                    </TabsContent>
+                    <TabsContent value="videos" className="mt-4">
+                      <VideoTabContent
+                        videoItems={videoItems}
+                        searchQuery={searchQuery}
+                        usernameFilter={effectiveUsernameFilter}
+                        onVideoSelect={handleLibraryVideoSelect}
+                      />
+                    </TabsContent>
+                    <TabsContent value="youtube" className="mt-4">
+                      <YouTubeTabContent
+                        youtubeQuery={youtubeQuery}
+                        setYoutubeQuery={setYoutubeQuery}
+                        handleYouTubeSearch={handleYouTubeSearch}
+                        youtubeLoading={youtubeLoading}
+                        youtubeResults={youtubeResults}
+                        onVideoSelect={handleYouTubeInsert}
+                      />
+                    </TabsContent>
+                    <TabsContent value="tiktok" className="mt-4">
+                      <TikTokTabContent
+                        tiktokQuery={tiktokQuery}
+                        setTiktokQuery={setTiktokQuery}
+                        handleTikTokSearch={handleTikTokSearch}
+                        tiktokLoading={tiktokLoading}
+                        tiktokResults={tiktokResults}
+                        onVideoSelect={insertHtmlContent}
+                        selectedUsername={selectedUsername}
+                      />
+                    </TabsContent>
+                    <TabsContent value="amazon-import" className="mt-4">
+                      <AmazonImportTabContent
+                        amazonUrl={amazonUrl}
+                        setAmazonUrl={setAmazonUrl}
+                        runAmazonImport={runAmazonImport}
+                        amazonLoading={amazonLoading}
+                      />
+                    </TabsContent>
+                    <TabsContent value="url-import" className="mt-4">
+                      <UrlImportTabContent
+                        importUrl={importUrl}
+                        setImportUrl={setImportUrl}
+                        importAltText={importAltText}
+                        setImportAltText={setImportAltText}
+                        handleUrlImport={handleUrlImport}
+                        isImporting={isImporting}
+                      />
+                    </TabsContent>
+                  </>
                 )}
-              </TabsContent>
-
-              <TabsContent value="videos" className="hidden data-[state=active]:flex flex-1 flex-col min-h-0 m-0">
-                 <div className="flex-shrink-0 p-3 border-b border-slate-200">
-                    <Select value={videoLibrarySource} onValueChange={setVideoLibrarySource}>
-                        <SelectTrigger className="w-[180px] bg-white border-slate-300">
-                            <SelectValue placeholder="Select video source" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="youtube">YouTube</SelectItem>
-                            <SelectItem value="tiktok">TikTok</SelectItem>
-                        </SelectContent>
-                    </Select>
-                 </div>
-                 <div className="flex-1 min-h-0 overflow-y-auto p-4">
-                    {loading ? (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                        <Loader2 className="h-8 w-8 text-slate-400 animate-spin mb-4" />
-                        Loading videos...
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredVideos.map((video) => (
-                          <div key={video.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3 bg-white">
-                            {/* Use portrait 9:16 only for TikTok; keep existing YouTube thumbnail style */}
-                            {video._type === 'tiktok' ? (
-                              <div className="aspect-[9/16] w-full overflow-hidden rounded">
-                                <img
-                                  src={video.cover_url || video.thumbnail}
-                                  alt={video.title}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ) : (
-                              <img
-                                src={video.thumbnail || video.cover_url}
-                                alt={video.title}
-                                className="w-full h-32 object-cover rounded"
-                              />
-                            )}
-                            <h4 className="font-medium line-clamp-2 h-12 text-slate-800">{video.title}</h4>
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs text-slate-500">Username: {video.user_name}</span>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={() => video._type === 'youtube' ? handleInsertYouTube(video) : handleInsertTikTok(video)}
-                                  size="sm"
-                                  className="bg-blue-900 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-red-700"
-                                >
-                                  <Plus className="w-4 h-4 mr-1" />
-                                  Insert
-                                </Button>
-                                <Button
-                                  onClick={() => window.open(video.url, '_blank')}
-                                  size="sm"
-                                  variant="outline"
-                                  className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                 </div>
-              </TabsContent>
-
-              <TabsContent value="youtube_search" className="hidden data-[state=active]:block flex-1 min-h-0 overflow-y-auto p-4 m-0 space-y-4">
-                {!useWorkspaceScoping && allUsernames.length > 0 &&
-                  <div>
-                    <Label htmlFor="assign-to-username" className="block text-sm font-medium mb-2 text-slate-700">Assign to Username</Label>
-                    <Select value={assignToUsername} onValueChange={setAssignToUsername}>
-                      <SelectTrigger id="assign-to-username" className="bg-white border-slate-300 text-slate-900">
-                        <SelectValue placeholder="Select a username..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200 text-slate-900">
-                        {allUsernames.map((u) =>
-                        <SelectItem key={u.id} value={u.user_name} className="hover:bg-slate-100">{u.display_name || u.user_name}</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                }
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="md:col-span-2 relative">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <Input
-                        placeholder="Search YouTube (e.g., dog training tips)"
-                        value={ytQuery}
-                        onChange={(e) => setYtQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleYouTubeSearch()}
-                        className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                        type="number"
-                        min={1} max={25} value={ytMax}
-                        onChange={(e) => { const val = Number(e.target.value); if (!isNaN(val) && val >= 1 && val <= 25) setYtMax(val); }}
-                        onBlur={(e) => { const val = Number(e.target.value); if (isNaN(val) || val < 1 || val > 25) setYtMax(10); }}
-                        className="w-24 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                        placeholder="Max" title="Max results (1-25)" />
-
-                    <Button onClick={handleYouTubeSearch} disabled={isSearching} className="bg-blue-900 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 flex-1 hover:bg-indigo-700">
-                      {isSearching ? 'Searching...' : 'Search'}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  {isSearching ?
-                    <div className="flex flex-col items-center justify-center py-8 text-slate-500">
-                      <Loader2 className="h-8 w-8 text-slate-400 animate-spin mb-4" />
-                      Searching YouTube...
-                    </div> :
-                    ytResults.length === 0 ?
-                    <div className="text-center py-8 text-slate-500">
-                      <Video className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                      <p>No results yet. Try a keyword above.</p>
-                    </div> :
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {ytResults.map((res) =>
-                      <div key={res.video_id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3 bg-white">
-                          <img src={res.thumbnail} alt={res.title} className="w-full h-32 object-cover rounded" />
-                          <h4 className="font-medium line-clamp-2 h-12 text-slate-800">{res.title}</h4>
-                          <div className="flex justify-between items-center">
-                            <a href={res.url} target="_blank" rel="noreferrer" className="text-sm text-blue-600 inline-flex items-center gap-1 hover:underline">
-                              <ExternalLink className="w-4 h-4" /> Open
-                            </a>
-                            <div className="flex gap-2">
-                              <Button onClick={() => handleInsertSearchAndSave(res)} size="sm" className="bg-blue-900 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-red-700">
-                                <Plus className="w-4 h-4 mr-1" /> Insert
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    }
-                </div>
-
-              </TabsContent>
-
-              {/* TikTok Search Tab - Added */}
-              <TabsContent value="tiktok_search" className="hidden data-[state=active]:block flex-1 min-h-0 overflow-y-auto p-4 m-0 space-y-4">
-                {!useWorkspaceScoping && allUsernames.length > 0 &&
-                  <div>
-                    <Label className="block text-sm font-medium mb-2 text-slate-700">Assign to Username</Label>
-                    <Select value={assignToUsernameTk} onValueChange={setAssignToUsernameTk}>
-                      <SelectTrigger className="bg-white border-slate-300 text-slate-900">
-                        <SelectValue placeholder="Select a username..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200 text-slate-900">
-                        {allUsernames.map((u) =>
-                        <SelectItem key={u.id} value={u.user_name} className="hover:bg-slate-100">{u.display_name || u.user_name}</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                }
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="md:col-span-2 relative">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <Input
-                        placeholder="Search TikTok (e.g., dog tricks)"
-                        value={tkQuery}
-                        onChange={(e) => setTkQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleTikTokSearch()}
-                        className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                        type="number"
-                        min={1} max={25} value={tkMax}
-                        onChange={(e) => { const val = Number(e.target.value); if (!isNaN(val) && val >= 1 && val <= 25) setTkMax(val); }}
-                        onBlur={(e) => { const val = Number(e.target.value); if (isNaN(val) || val < 1 || val > 25) setTkMax(10); }}
-                        className="w-24 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-                        placeholder="Max" title="Max results (1-25)" />
-
-                    <Button onClick={handleTikTokSearch} disabled={isSearchingTk} className="bg-blue-900 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 flex-1 hover:bg-indigo-700">
-                      {isSearchingTk ? 'Searching...' : 'Search'}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  {isSearchingTk ?
-                    <div className="flex flex-col items-center justify-center py-8 text-slate-500">
-                      <Loader2 className="h-8 w-8 text-slate-400 animate-spin mb-4" />
-                      Searching TikTok...
-                    </div> :
-                    tkResults.length === 0 ?
-                    <div className="text-center py-8 text-slate-500">
-                      <Video className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                      <p>No results yet. Try a keyword above.</p>
-                    </div> :
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {tkResults.map((res) =>
-                      <div key={res.video_id} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 space-y-3 bg-white">
-                          <div className="aspect-[9/16] relative">
-                            <img src={res.cover_url} alt={res.title} className="w-full h-full object-cover rounded" />
-                          </div>
-                          <h4 className="font-medium line-clamp-3 text-sm text-slate-800">{res.title}</h4>
-                          <p className="text-xs text-slate-600">by {res.author_name}</p>
-                          <div className="space-y-2">
-                            <a href={res.web_video_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 hover:underline">
-                              <ExternalLink className="w-3 h-3" /> Open
-                            </a>
-                            <Button onClick={() => handleInsertTikTokAndSave(res)} size="sm" className="bg-blue-900 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-gray-800 flex-1">
-                                <Plus className="w-4 h-4 mr-1" /> Insert
-                              </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    }
-                </div>
-
-              </TabsContent>
+              </div>
             </Tabs>
           </div>
-          {/* Right: Editor Pane - REMOVED */}
-          {/* The entire right panel JSX block was here and is now removed */}
         </DialogContent>
       </Dialog>
 
-      {/* NEW: Amazon Import Dialog (no username dropdown) */}
-      <Dialog open={showAmazonImport} onOpenChange={setShowAmazonImport}>
-        <DialogContent className="bg-white text-slate-900 max-w-md">
-          <DialogHeader>
-            <DialogTitle>Import from Amazon</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div>
-              <Label htmlFor="amazon-url" className="text-slate-700 mb-2 block">Amazon Product URL</Label>
-              <Input
-                id="amazon-url"
-                placeholder="https://amazon.com/dp/B0123456789"
-                value={amazonUrl}
-                onChange={(e) => setAmazonUrl(e.target.value)}
-                className="bg-white border-slate-300"
-                disabled={isImportingAmazon}
-              />
-            </div>
-            <div className="flex items-center text-sm text-slate-500">
-              <span className="font-medium mr-1">Assigned to:</span>
-              <span className="truncate">{globalUsername || "None Selected"}</span>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button
-                onClick={handleAmazonImport}
-                disabled={isImportingAmazon || !amazonUrl.trim() || (useWorkspaceScoping && !globalUsername)}
-                className="bg-orange-600 hover:bg-orange-700 text-white flex-1"
-              >
-                {isImportingAmazon ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <Package className="w-4 h-4 mr-2" />
-                    Import Images
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAmazonImport(false);
-                  setAmazonUrl("");
-                }}
-                disabled={isImportingAmazon}
-                className="bg-white border-slate-300"
-              >
-                Cancel
-              </Button>
-            </div>
-            {useWorkspaceScoping && !globalUsername && (
-              <p className="text-xs text-red-500">Please select a workspace to import images.</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* AlertDialog for delete confirmation - REMOVED from the outline, so removing it entirely */}
-      {/* <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Delete {selectedIds.size} image{selectedIds.size === 1 ? '' : 's'}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the image from your library. This action cannot be undone.
+              This action cannot be undone. The selected image{selectedIds.size === 1 ? '' : 's'} will be permanently removed from your library.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-red-600 hover:bg-red-700">
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={bulkDelete} disabled={isBulkDeleting} className="bg-red-600 hover:bg-red-700">
+              {isBulkDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog> */}
+      </AlertDialog>
     </>
   );
 }

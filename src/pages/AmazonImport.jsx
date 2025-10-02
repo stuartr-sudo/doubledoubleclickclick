@@ -15,7 +15,7 @@ import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import { InvokeLLM } from "@/api/integrations";
 import { Badge } from "@/components/ui/badge";
-import { CustomContentTemplate } from "@/api/entities";
+// Removed CustomContentTemplate import as it's no longer used
 import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
@@ -76,29 +76,7 @@ function buildProductHtml(meta) {
 </div>`.trim();
 }
 
-// Helper to apply placeholders for CustomContentTemplate (same mapping used elsewhere)
-function applyCustomTemplateToMeta(template, meta) {
-  if (!template?.html_structure || !meta) return "";
-  const html = template.html_structure;
-  const name = meta.title || "";
-  const desc = meta.description || "";
-  const price = meta.price ? (String(meta.price).trim().startsWith("$") ? String(meta.price).trim() : `$${String(meta.price).trim()}`) : "";
-  const url = meta.product_url || "#";
-  const image = meta.image || "";
-  const alt = name || "Product Image";
-
-  return html
-    .replace(/\{\{PRODUCT_NAME\}\}/g, name)
-    .replace(/\{\{TITLE\}\}/g, name)
-    .replace(/\{\{PRODUCT_DESCRIPTION\}\}/g, desc)
-    .replace(/\{\{CONTENT\}\}/g, desc)
-    .replace(/\{\{PRODUCT_PRICE\}\}/g, price)
-    .replace(/\{\{PRODUCT_URL\}\}/g, url)
-    .replace(/\{\{IMAGE_URL\}\}/g, image)
-    .replace(/\{\{IMAGE_ALT\}\}/g, alt)
-    .replace(/\{\{BUTTON_TEXT\}\}/g, "Buy Now")
-    .replace(/\{\{LINK_TEXT\}\}/g, "Learn More");
-}
+// Removed applyCustomTemplateToMeta as it's no longer used
 
 export default function AmazonImport() {
   const [input, setInput] = useState("");
@@ -113,9 +91,8 @@ export default function AmazonImport() {
   const [overrides, setOverrides] = useState({ title: "", description: "", price: "" });
   const [fieldLoading, setFieldLoading] = useState({ title: false, description: false });
 
-  // templates state
-  const [templates, setTemplates] = useState([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  // Removed templates state
+  // Removed selectedTemplateId state
   const [currentUser, setCurrentUser] = useState(null);
 
   const { consumeTokensForFeature } = useTokenConsumption();
@@ -176,21 +153,13 @@ export default function AmazonImport() {
           setSelectedUsername(names[0]);
         }
 
-        // Fetch only product templates, as per the outline, removing `is_active: true`
-        const tpls = await CustomContentTemplate.filter({ associated_ai_feature: 'product' });
-        setTemplates(tpls || []);
-        if ((tpls || []).length > 0) {
-          setSelectedTemplateId(tpls[0].id);
-        } else {
-          setSelectedTemplateId(""); // Ensure it's reset if no templates are found
-        }
+        // Removed template fetching logic
       } catch (error) {
         toast.error("Failed to load initial data.");
         console.error(error);
         setUsernames([]);
         setSelectedUsername("");
-        setTemplates([]);
-        setSelectedTemplateId("");
+        // Removed template state resets
       }
     };
     loadInitialData();
@@ -289,8 +258,6 @@ ${String(meta.description || "").slice(0, 4000)}`;
     setLoading(false);
   };
 
-  // Removed handleCopyHtml as per instructions
-
   const handleOpenInEditor = () => {
     if (!finalMeta) return;
     const html = buildProductHtml(finalMeta);
@@ -326,11 +293,10 @@ ${String(meta.description || "").slice(0, 4000)}`;
         price: priceStr,
         user_name: usernameToUse,
         category: "amazon",
-        template_key: "gradient", // This might need to be dynamic if the template system replaces it
-        custom_template_id: selectedTemplateId || null
+        // Removed template_key and custom_template_id
       });
 
-      toast.success("Product saved to library with selected template");
+      toast.success("Product saved to library"); // Updated toast message
     } catch (e) {
       const msg = e?.message || "Failed to save product to library.";
       setError(msg);
@@ -519,20 +485,7 @@ ${String(meta.description || "").slice(0, 4000)}`;
             {finalMeta &&
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div className="flex gap-2 flex-1">
-                  {/* Dynamic Template selector */}
-                  <div className="min-w-[220px]">
-                    <Select value={selectedTemplateId || "__none__"} onValueChange={(v) => setSelectedTemplateId(v === "__none__" ? "" : v)}>
-                      <SelectTrigger className="bg-white border-slate-300 text-slate-900">
-                        <SelectValue placeholder="Select Template" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border border-slate-200 text-slate-900">
-                        <SelectItem value="__none__">No Template</SelectItem>
-                        {templates.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Removed Dynamic Template selector */}
                 </div>
 
                 <div className="flex gap-2">
@@ -575,5 +528,6 @@ ${String(meta.description || "").slice(0, 4000)}`;
           </CardContent>
         </Card>
       </div>
-    </div>);
+    </div>
+  );
 }

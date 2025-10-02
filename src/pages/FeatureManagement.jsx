@@ -102,10 +102,10 @@ export default function FeatureManagement() {
   };
 
   const planOptions = [
-    { value: 'growth', label: 'Growth' },
-    { value: 'brand', label: 'Brand' },
-    { value: 'agency', label: 'Agency' }
-  ];
+  { value: 'growth', label: 'Growth' },
+  { value: 'brand', label: 'Brand' },
+  { value: 'agency', label: 'Agency' }];
+
 
   // NEW: Filter flags based on search query
   const filteredFlags = flags.filter((flag) => {
@@ -113,8 +113,8 @@ export default function FeatureManagement() {
     const query = searchQuery.toLowerCase();
     return (
       flag.name.toLowerCase().includes(query) ||
-      (flag.description && flag.description.toLowerCase().includes(query))
-    );
+      flag.description && flag.description.toLowerCase().includes(query));
+
   });
 
 
@@ -137,8 +137,8 @@ export default function FeatureManagement() {
               placeholder="Search features..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-64 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-            />
+              className="pl-10 w-64 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
           </div>
           <Button onClick={handleCreate} className="bg-indigo-600 hover:bg-indigo-700 text-white">
             <Plus className="w-4 h-4 mr-2" /> Add Feature
@@ -149,12 +149,12 @@ export default function FeatureManagement() {
       <div className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden">
         <div className="divide-y divide-slate-200">
           {filteredFlags.length === 0 && !loading ?
-            <div className="p-4 text-center text-slate-500">
+          <div className="p-4 text-center text-slate-500">
               {searchQuery ? `No features found matching "${searchQuery}"` : "No feature flags found."}
             </div> :
 
-            filteredFlags.map((flag) =>
-              <div key={flag.id} className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+          filteredFlags.map((flag) =>
+          <div key={flag.id} className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
                 <div className="lg:col-span-1">
                   <div className="font-semibold text-slate-800 break-words">{flag.name}</div>
                   <p className="text-sm text-slate-500 break-words">{flag.description || 'No description'}</p>
@@ -162,10 +162,10 @@ export default function FeatureManagement() {
 
                 <div className="lg:col-span-1">
                   <MiniMultiSelect
-                    placeholder="No plan restriction"
-                    options={planOptions}
-                    value={flag.required_plan_keys || []}
-                    onChange={(keys) => handlePlanChange(flag, keys)} />
+                placeholder="No plan restriction"
+                options={planOptions}
+                value={flag.required_plan_keys || []}
+                onChange={(keys) => handlePlanChange(flag, keys)} />
 
                 </div>
 
@@ -173,11 +173,11 @@ export default function FeatureManagement() {
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center">
                       <input
-                        type="checkbox"
-                        checked={!!flag.enabled_globally}
-                        onChange={(e) => handleToggleGlobal(flag, e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        id={`global-${flag.id}`} />
+                    type="checkbox"
+                    checked={!!flag.enabled_globally}
+                    onChange={(e) => handleToggleGlobal(flag, e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    id={`global-${flag.id}`} />
 
                       <label htmlFor={`global-${flag.id}`} className="ml-2 block text-sm text-slate-700">
                         Enabled Globally
@@ -185,11 +185,11 @@ export default function FeatureManagement() {
                     </div>
                     <div className="flex items-center">
                       <input
-                        type="checkbox"
-                        checked={!!flag.is_coming_soon}
-                        onChange={(e) => handleToggleComingSoon(flag, e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                        id={`soon-${flag.id}`} />
+                    type="checkbox"
+                    checked={!!flag.is_coming_soon}
+                    onChange={(e) => handleToggleComingSoon(flag, e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                    id={`soon-${flag.id}`} />
 
                       <label htmlFor={`soon-${flag.id}`} className="ml-2 block text-sm text-slate-700">
                         Coming Soon
@@ -197,12 +197,12 @@ export default function FeatureManagement() {
                     </div>
                   </div>
 
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(flag)} className="bg-background text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground h-9 rounded-md border-slate-300 hover:bg-slate-50">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(flag)} className="bg-background text-slate-700 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground h-9 rounded-md border-slate-300 hover:bg-slate-50">
                     Configure
                   </Button>
                 </div>
               </div>
-            )
+          )
           }
         </div>
       </div>

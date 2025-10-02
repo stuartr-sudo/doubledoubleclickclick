@@ -11,73 +11,142 @@ import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
 /**
- * NEW: A robust HTML cleaner to strip all unwanted attributes and styles.
- * This function handles full HTML documents (including <head>, <meta>, etc.)
- * by parsing them and only using the content from the <body> tag.
- *
- * @param {string} htmlString - The raw HTML from the clipboard.
- * @returns {string} Cleaned HTML with only basic tags and no inline styles.
+ * AGGRESSIVE HTML cleaner - removes ALL bloat and keeps only semantic HTML.
+ * Also extracts <h1> for title field.
+ * Returns: { title: string, content: string }
  */
 function cleanPastedHtml(htmlString) {
   if (!htmlString || typeof htmlString !== 'string') {
-    return '';
+    return { title: '', content: '' };
   }
 
-  // Use DOMParser to handle full HTML documents, not just fragments.
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlString, 'text/html');
   const body = doc.body;
 
-  // If no body is found, return an empty string.
   if (!body) {
-    return '';
+    return { title: '', content: '' };
   }
 
-  // Get all elements within the body to iterate over them.
-  const allElements = body.querySelectorAll('*');
+  // Extract H1 for title
+  let extractedTitle = '';
+  const h1Element = body.querySelector('h1');
+  if (h1Element) {
+    extractedTitle = h1Element.textContent.trim();
+    h1Element.remove(); // Remove H1 from body
+  }
 
-  // A list of attributes to remove completely.
-  const garbageAttrs = [
-    'style', 'class', 'face', 'size', 'color', 'bgcolor', 'width', 'height',
-    'cellpadding', 'cellspacing', 'border', 'align', 'valign', 'lang', 'dir',
-    'id', 'onclick', 'onmouseover', 'onmouseout'
-  ];
-
-  allElements.forEach(el => {
-    // Remove specific garbage attributes from the list.
-    garbageAttrs.forEach(attr => el.removeAttribute(attr));
+  // Allowed semantic tags only (NO H1, NO FORMATTING TAGS)
+  const allowedTags = ['P', 'UL', 'OL', 'LI', 'H2', 'H3', 'H4', 'H5', 'H6', 'A', 'BR'];
+  
+  // Recursively clean the DOM
+  function cleanNode(node) {
+    // If it's a text node, return it as-is
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.cloneNode(false);
+    }
     
-    // Remove all 'data-*' attributes.
-    Array.from(el.attributes).forEach(attr => {
-      if (attr.name.startsWith('data-')) {
-        el.removeAttribute(attr.name);
+    // If it's an element node
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const tagName = node.tagName.toUpperCase();
+      
+      // If tag is not allowed, unwrap it (keep children only)
+      if (!allowedTags.includes(tagName)) {
+        const fragment = document.createDocumentFragment();
+        Array.from(node.childNodes).forEach(child => {
+          const cleaned = cleanNode(child);
+          if (cleaned) fragment.appendChild(cleaned);
+        });
+        return fragment;
       }
-    });
+      
+      // Create a clean version of the allowed tag
+      const cleanElement = document.createElement(tagName);
+      
+      // For links, preserve only href, target, rel
+      if (tagName === 'A') {
+        const href = node.getAttribute('href');
+        if (href) {
+          cleanElement.setAttribute('href', href);
+          cleanElement.setAttribute('target', '_blank');
+          cleanElement.setAttribute('rel', 'noopener noreferrer');
+        }
+      }
+      
+      // Recursively clean and append children
+      Array.from(node.childNodes).forEach(child => {
+        const cleaned = cleanNode(child);
+        if (cleaned) {
+          cleanElement.appendChild(cleaned);
+        }
+      });
+      
+      return cleanElement;
+    }
+    
+    return null;
+  }
+  
+  // Clean all body children
+  const cleanedBody = document.createElement('body');
+  Array.from(body.childNodes).forEach(child => {
+    const cleaned = cleanNode(child);
+    if (cleaned) {
+      // DocumentFragments need to be appended directly
+      if (cleaned.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+        Array.from(cleaned.childNodes).forEach(fragChild => cleanedBody.appendChild(fragChild));
+      } else {
+        cleanedBody.appendChild(cleaned);
+      }
+    }
   });
-
-  // Return the innerHTML of the body, which is now clean.
-  return body.innerHTML;
+  
+  // Get the cleaned HTML
+  let cleaned = cleanedBody.innerHTML;
+  
+  // Additional regex cleanup to catch any remaining formatting tags
+  cleaned = cleaned.replace(/<\/?strong[^>]*>/gi, '');
+  cleaned = cleaned.replace(/<\/?b[^>]*>/gi, '');
+  cleaned = cleaned.replace(/<\/?em[^>]*>/gi, '');
+  cleaned = cleaned.replace(/<\/?i[^>]*>/gi, '');
+  cleaned = cleaned.replace(/<\/?span[^>]*>/gi, '');
+  cleaned = cleaned.replace(/<\/?h1[^>]*>/gi, ''); // Remove any remaining H1 tags
+  
+  // Remove all data-*, aria-*, role attributes
+  cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*"[^"]*"/gi, '');
+  cleaned = cleaned.replace(/\s+aria-[\w-]+\s*=\s*"[^"]*"/gi, '');
+  cleaned = cleaned.replace(/\s+role\s*=\s*"[^"]*"/gi, '');
+  
+  // Remove inline styles
+  cleaned = cleaned.replace(/\s+style\s*=\s*"[^"]*"/gi, '');
+  
+  // Normalize whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ');
+  cleaned = cleaned.replace(/>\s+</g, '><');
+  
+  // Remove empty paragraphs
+  cleaned = cleaned.replace(/<p>\s*<\/p>/gi, '');
+  cleaned = cleaned.replace(/<p><br><\/p>/gi, '');
+  cleaned = cleaned.replace(/<p>\s*<br\s*\/?>\s*<\/p>/gi, '');
+  
+  return { title: extractedTitle, content: cleaned.trim() };
 }
-
 
 /**
  * Converts raw text or HTML into simple, clean HTML for the editor.
- * It now uses the new robust cleaner.
- *
- * @param {string} raw - The raw input string.
- * @returns {string} Cleaned HTML string.
+ * Returns: { title: string, content: string }
  */
 function toSimpleHtml(raw) {
-  if (!raw) return "";
+  if (!raw) return { title: '', content: '' };
 
   const isHtml = /<\/?[a-z][\s\S]*>/i.test(raw);
   
   if (isHtml) {
-    // If it's HTML, pass it through the new super-cleaner.
+    // Pass through aggressive cleaner
     return cleanPastedHtml(String(raw));
   }
   
-  // If it's plain text, convert newlines to paragraphs.
+  // Plain text: convert to paragraphs
   const parts = String(raw)
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
@@ -88,9 +157,8 @@ function toSimpleHtml(raw) {
       return `<p>${lines.join("<br/>")}</p>`;
     });
   
-  return parts.join("\n");
+  return { title: '', content: parts.join("\n") };
 }
-
 
 function deriveTitleFrom(text) {
   if (!text) return "Pasted Content";
@@ -137,14 +205,23 @@ export default function PasteContentModal({
     }
   }, [isOpen, defaultUsername, initialRaw]);
 
+  // Derive title from raw content if title is empty
   React.useEffect(() => {
-    if (!title && raw) setTitle(deriveTitleFrom(raw));
+    if (!title && raw) {
+      // Use toSimpleHtml to check for extracted H1 title
+      const result = toSimpleHtml(raw);
+      if (result.title) {
+        setTitle(result.title);
+      } else {
+        setTitle(deriveTitleFrom(raw));
+      }
+    }
   }, [raw, title]);
 
   const canSubmit = !!username && !!raw && !submitting;
 
   /**
-   * NEW: The rewritten clipboard handler that uses the robust cleaner.
+   * The rewritten clipboard handler that uses the robust cleaner.
    */
   const handlePasteFromClipboard = React.useCallback(async () => {
     setPasteLoading(true);
@@ -179,17 +256,22 @@ export default function PasteContentModal({
       } else {
         // Run ALL content through the new `toSimpleHtml` function,
         // which now contains the robust `cleanPastedHtml` logic.
-        const cleanedContent = toSimpleHtml(clipboardContent);
+        const result = toSimpleHtml(clipboardContent);
+        
+        // Set title from H1 if found and the title field is currently empty
+        if (result.title && !title) {
+          setTitle(result.title);
+        }
         
         // Append or set the cleaned content in the textarea.
-        setRaw((prev) => (prev ? `${prev}\n\n${cleanedContent}` : cleanedContent));
+        setRaw((prev) => (prev ? `${prev}\n\n${result.content}` : result.content));
       }
     } catch (e) {
       setError("Couldn't read from clipboard. Use Cmd/Ctrl + V to paste.");
     } finally {
       setPasteLoading(false);
     }
-  }, []);
+  }, [title]); // Added 'title' to dependency array to correctly check !title
 
   React.useEffect(() => {
     if (isOpen && autoReadClipboard && !hasAutoPastedRef.current) {
@@ -206,9 +288,13 @@ export default function PasteContentModal({
     }
     setSubmitting(true);
     try {
+      // Re-process raw content to ensure it's clean and to extract any H1 that might have been typed
+      const result = toSimpleHtml(raw);
+      const finalTitle = title?.trim() || result.title || deriveTitleFrom(raw);
+
       await onSubmit?.({
-        title: title?.trim() || deriveTitleFrom(raw),
-        content: toSimpleHtml(raw), // Use the cleaner on final submission too.
+        title: finalTitle,
+        content: result.content, // Use the cleaned content from the final processing
         user_name: username
       });
       onClose?.();
@@ -224,7 +310,7 @@ export default function PasteContentModal({
       <DialogContent className="max-w-2xl bg-white text-slate-900 border border-slate-200">
         <DialogHeader>
           <DialogTitle>Paste content</DialogTitle>
-          <DialogDescription>Paste text or HTML. We'll save it as a draft and open it in the editor.</DialogDescription>
+          <DialogDescription>Paste text or HTML. We'll extract the H1 as title and save clean HTML to the editor.</DialogDescription>
         </DialogHeader>
 
         {allowedUsernames.length === 0 && (
@@ -259,7 +345,7 @@ export default function PasteContentModal({
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Optional title (auto-filled from content)"
+              placeholder="Optional title (auto-filled from content, H1 extracted if present)"
               className="bg-white border-slate-300"
             />
           </div>

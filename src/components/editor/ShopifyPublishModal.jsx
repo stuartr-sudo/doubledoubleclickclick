@@ -55,6 +55,9 @@ export default function ShopifyPublishModal({
       toast.error("Select a Shopify connection.");
       return;
     }
+    // NEW: set session flag so Layout blocks Editor re-navigation during publish
+    sessionStorage.setItem('dcPublishing', '1');
+
     setIsPublishing(true);
     try {
       const { data } = await publishToShopifyEnhanced({
@@ -81,6 +84,8 @@ export default function ShopifyPublishModal({
       toast.error("Error publishing to Shopify");
     } finally {
       setIsPublishing(false);
+      // NEW: clear session flag regardless of outcome
+      sessionStorage.removeItem('dcPublishing');
     }
   };
 

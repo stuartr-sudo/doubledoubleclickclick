@@ -111,7 +111,7 @@ export default function InlineFormatToolbar({ x, y, onClose }) {
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Heading buttons - UPDATED to use formatBlock */}
+      {/* Heading buttons */}
       <Button size="sm" variant="ghost" className="h-8 px-2 text-xs font-semibold text-slate-700 hover:bg-slate-100" onMouseDown={(e) => prevent(e, () => sendCmd("formatBlock", "H1"))}>
         h1
       </Button>
@@ -120,6 +120,10 @@ export default function InlineFormatToolbar({ x, y, onClose }) {
       </Button>
       <Button size="sm" variant="ghost" className="h-8 px-2 text-xs font-semibold text-slate-700 hover:bg-slate-100" onMouseDown={(e) => prevent(e, () => sendCmd("formatBlock", "H3"))}>
         h3
+      </Button>
+      {/* Added Paragraph button */}
+      <Button size="sm" variant="ghost" className="h-8 px-2 text-xs font-semibold text-slate-700 hover:bg-slate-100" onMouseDown={(e) => prevent(e, () => sendCmd("formatBlock", "P"))}>
+        p
       </Button>
 
       <div className="w-px h-5 bg-slate-200 mx-1" />

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, ExternalLink, Save, Loader2, Video, Trash2, Plus, RefreshCw, Edit, X } from "lucide-react";
+import { Search, ExternalLink, Save, Loader2, Video, Trash2, Plus, RefreshCw, Edit, X, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import { Textarea } from "@/components/ui/textarea";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function YouTubeManager() {
   const [videos, setVideos] = useState([]);
@@ -31,6 +32,7 @@ export default function YouTubeManager() {
   const [ytResults, setYtResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const { consumeTokensForFeature } = useTokenConsumption();
+  const [showSearch, setShowSearch] = useState(false); // NEW: To toggle search form
 
   // Assignment for saving searched videos
   const [assignToUsername, setAssignToUsername] = useState("");
@@ -176,13 +178,11 @@ export default function YouTubeManager() {
         setIsSearching(false);
         return;
       }
-      // Ensure ytMax is within 1-25 range for search API
-      const safeYtMax = Math.max(1, Math.min(25, Number(ytMax))); 
+      // Ensure ytMax is within 1-10 range for search API
+      const safeYtMax = Math.max(1, Math.min(10, Number(ytMax))); 
       const { data } = await youtubeSearch({ q: ytQuery.trim(), maxResults: safeYtMax });
       setYtResults(data?.results || []);
-      if ((data?.results || []).length === 0) {
-        toast.info("No YouTube videos found for your search query.");
-      }
+      // No toast for 0 results, as the UI handles it within the AnimatePresence block
     } catch (e) {
       console.error("YouTube search error:", e);
       toast.error("Failed to perform YouTube search. Please try again.");
@@ -294,122 +294,145 @@ export default function YouTubeManager() {
             </h1>
             <p className="text-slate-600 mt-1">Manage your saved YouTube videos</p>
           </div>
+          <Button
+            onClick={() => setShowSearch(!showSearch)}
+            variant="outline"
+            className={`bg-white border-slate-300 text-slate-700 hover:bg-slate-50 ${showSearch ? 'bg-slate-100' : ''}`}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            Search YouTube
+            <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showSearch ? 'rotate-180' : ''}`} />
+          </Button>
         </div>
 
-        {/* Search YouTube Section */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
-          <h2 className="text-xl font-semibold text-slate-900 mb-4">Search YouTube</h2>
-
-          {/* Assignment Username Selection (Conditionally rendered) */}
-          {!useWorkspaceScoping && availableUsernames.length > 0 ? (
-            <div className="mb-4">
-              <Label htmlFor="assign-to-username" className="block text-sm font-medium mb-2 text-slate-700">Assign to Username</Label>
-              <Select value={assignToUsername} onValueChange={setAssignToUsername}>
-                <SelectTrigger id="assign-to-username" className="w-full md:w-64 bg-white border-slate-300 text-slate-900">
-                  <SelectValue placeholder="Select a username..." />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  {availableUsernames.map((username) => (
-                    <SelectItem key={username} value={username} className="hover:bg-slate-100">
-                      {username}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            !useWorkspaceScoping && (
-              <p className="text-sm text-red-500 mb-4">You are not assigned to any usernames. Please contact support to get access to save videos.</p>
-            )
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-            <div className="md:col-span-2 relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="Search YouTube (e.g., dog training tips)"
-                value={ytQuery}
-                onChange={(e) => setYtQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleYouTubeSearch()}
-                className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
-              />
-            </div>
-            <div>
-              <Input
-                type="number"
-                min={1}
-                max={25} // Max value updated per outline
-                value={ytMax}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  if (!isNaN(val) && val >= 1 && val <= 25) setYtMax(val);
-                }}
-                onBlur={(e) => { // Enforce bounds on blur
-                  const val = Number(e.target.value);
-                  if (isNaN(val) || val < 1 || val > 25) setYtMax(4); // Reset to default if out of bounds
-                }}
-                className="bg-white border-slate-300 text-slate-900"
-                placeholder="Max results (1-25)"
-                title="Max results (1-25)"
-              />
-            </div>
-            <Button
-              onClick={handleYouTubeSearch}
-              disabled={isSearching || (!useWorkspaceScoping && !assignToUsername)} // Disable if no username for local mode
-              className="bg-red-600 hover:bg-red-700 text-white"
+        <AnimatePresence>
+          {showSearch && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="overflow-hidden"
             >
-              {isSearching ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Search className="w-4 h-4 mr-2" />}
-              Search
-            </Button>
-          </div>
+              {/* Search YouTube Section */}
+              <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
+                <h2 className="text-xl font-semibold text-slate-900 mb-4">Search YouTube</h2>
 
-          {/* Search Results */}
-          <div className="min-h-[200px]">
-            {isSearching ? (
-              <div className="py-16 flex items-center justify-center text-slate-500">
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Searching YouTube...
-              </div>
-            ) : ytResults.length === 0 ? (
-              <div className="py-16 text-center text-slate-500">
-                <Video className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                <p>Search for YouTube videos to add to your library.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {ytResults.map((video) => (
-                  <div key={video.video_id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3 bg-white">
-                    <img
-                      src={video.thumbnail}
-                      alt={video.title}
-                      className="w-full h-32 object-cover rounded"
-                    />
-                    <h4 className="font-medium line-clamp-2 h-12 text-slate-800">{video.title}</h4>
-                    <p className="text-sm text-slate-600 line-clamp-2 h-10">{video.description}</p>
-                    <div className="flex items-center justify-between">
-                      <a
-                        href={video.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-red-600 inline-flex items-center gap-1 hover:underline"
-                      >
-                        <ExternalLink className="w-4 h-4" /> Open
-                      </a>
-                      <Button
-                        onClick={() => handleInsertAndSave(video)} // Updated function name
-                        size="sm"
-                        disabled={(!useWorkspaceScoping && !assignToUsername) || (useWorkspaceScoping && !globalUsername)} // Disable if no username is selected (local or global)
-                        className={`bg-indigo-600 hover:bg-indigo-700 text-white`}
-                        title={(!useWorkspaceScoping && !assignToUsername) || (useWorkspaceScoping && !globalUsername) ? "Select a username to save" : "Save to Library"}
-                      >
-                        <Plus className="w-4 h-4 mr-1" /> Save
-                      </Button>
-                    </div>
+                {/* Assignment Username Selection (Conditionally rendered) */}
+                {!useWorkspaceScoping && availableUsernames.length > 0 ? (
+                  <div className="mb-4">
+                    <Label htmlFor="assign-to-username" className="block text-sm font-medium mb-2 text-slate-700">Assign to Username</Label>
+                    <Select value={assignToUsername} onValueChange={setAssignToUsername}>
+                      <SelectTrigger id="assign-to-username" className="w-full md:w-64 bg-white border-slate-300 text-slate-900">
+                        <SelectValue placeholder="Select a username..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 text-slate-900">
+                        {availableUsernames.map((username) => (
+                          <SelectItem key={username} value={username} className="hover:bg-slate-100">
+                            {username}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                ))}
+                ) : (
+                  !useWorkspaceScoping && (
+                    <p className="text-sm text-red-500 mb-4">You are not assigned to any usernames. Please contact support to get access to save videos.</p>
+                  )
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                  <div className="md:col-span-2 relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      placeholder="Search YouTube (e.g., dog training tips)"
+                      value={ytQuery}
+                      onChange={(e) => setYtQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleYouTubeSearch()}
+                      className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10} // Max value updated
+                      value={ytMax}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (!isNaN(val) && val >= 1 && val <= 10) setYtMax(val);
+                      }}
+                      onBlur={(e) => { // Enforce bounds on blur
+                        const val = Number(e.target.value);
+                        if (isNaN(val) || val < 1 || val > 10) setYtMax(4); // Reset to default if out of bounds
+                      }}
+                      className="bg-white border-slate-300 text-slate-900"
+                      placeholder="Max results (1-10)"
+                      title="Max results (1-10)"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleYouTubeSearch}
+                    disabled={isSearching || (!useWorkspaceScoping && !assignToUsername)} // Disable if no username for local mode
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {isSearching ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Search className="w-4 h-4 mr-2" />}
+                    Search
+                  </Button>
+                </div>
+
+                {/* Search Results */}
+                <div className="min-h-[200px]">
+                  {isSearching ? (
+                    <div className="py-16 flex items-center justify-center text-slate-500">
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Searching YouTube...
+                    </div>
+                  ) : ytResults.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {ytResults.map((video) => (
+                        <div key={video.video_id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 space-y-3 bg-white">
+                          <img
+                            src={video.thumbnail}
+                            alt={video.title}
+                            className="w-full h-32 object-cover rounded"
+                          />
+                          <h4 className="font-medium line-clamp-2 h-12 text-slate-800">{video.title}</h4>
+                          <p className="text-sm text-slate-600 line-clamp-2 h-10">{video.description}</p>
+                          <div className="flex items-center justify-between">
+                            <a
+                              href={video.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sm text-red-600 inline-flex items-center gap-1 hover:underline"
+                            >
+                              <ExternalLink className="w-4 h-4" /> Open
+                            </a>
+                            <Button
+                              onClick={() => handleInsertAndSave(video)} // Updated function name
+                              size="sm"
+                              disabled={(!useWorkspaceScoping && !assignToUsername) || (useWorkspaceScoping && !globalUsername)} // Disable if no username is selected (local or global)
+                              className={`bg-indigo-600 hover:bg-indigo-700 text-white`}
+                              title={(!useWorkspaceScoping && !assignToUsername) || (useWorkspaceScoping && !globalUsername) ? "Select a username to save" : "Save to Library"}
+                            >
+                              <Plus className="w-4 h-4 mr-1" /> Save
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    ytQuery && !isSearching && (
+                      <div className="py-16 text-center text-slate-500">
+                        <Video className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                        <p>No results found for your search.</p>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Video Library Section */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">

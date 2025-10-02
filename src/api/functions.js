@@ -187,3 +187,15 @@ export const trackAffiliateReferral = base44.functions.trackAffiliateReferral;
 
 export const syncStripeDiscounts = base44.functions.syncStripeDiscounts;
 
+export const addTopicKeyword = base44.functions.addTopicKeyword;
+
+export const googleDriveAuth = base44.functions.googleDriveAuth;
+
+export const googleDriveFiles = base44.functions.googleDriveFiles;
+
+export const trustpilotReviews = base44.functions.trustpilotReviews;
+
+export const airtableListRecords = base44.functions.airtableListRecords;
+
+export const airtableUpdateRecord = base44.functions.airtableUpdateRecord;
+

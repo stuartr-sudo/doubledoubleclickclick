@@ -27,6 +27,8 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
     plan_key: initial?.plan_key || "growth",
     billing_interval: initial?.billing_interval || "month",
     annual_price_per_month: initial?.annual_price_per_month || "",
+    // NEW
+    token_packs: Array.isArray(initial?.token_packs) ? initial.token_packs : [],
     // End NEW FIELDS
     ...initial,
     features_text: Array.isArray(initial?.features) ? initial.features.join("\n") : (initial?.features_text || ""),
@@ -36,6 +38,33 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
   });
 
   const update = (k, v) => setForm((s) => ({ ...s, [k]: v }));
+
+  // NEW: Token pack helpers
+  const addTokenPack = () => {
+    setForm(s => ({
+      ...s,
+      token_packs: [
+        ...(s.token_packs || []),
+        { name: "", tokens: 0, display_price: "", stripe_price_id: "", description: "", image_url: "", is_active: true, sort_order: (s.token_packs?.length || 0) + 1 }
+      ]
+    }));
+  };
+  const updateTokenPack = (idx, key, val) => {
+    setForm(s => {
+      const next = [...(s.token_packs || [])];
+      if (next[idx]) { // Ensure the item exists before updating
+        next[idx] = { ...next[idx], [key]: key === "tokens" || key === "sort_order" ? Number(val || 0) : val };
+      }
+      return { ...s, token_packs: next };
+    });
+  };
+  const removeTokenPack = (idx) => {
+    setForm(s => {
+      const next = [...(s.token_packs || [])];
+      next.splice(idx, 1);
+      return { ...s, token_packs: next };
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -61,7 +90,18 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
       features: (form.features_text || "")
         .split("\n")
         .map((s) => s.trim())
-        .filter(Boolean)
+        .filter(Boolean),
+      // NEW: include token packs
+      token_packs: (form.token_packs || []).map(p => ({
+        name: (p.name || "").trim(),
+        tokens: Number(p.tokens || 0),
+        display_price: (p.display_price || "").trim(),
+        stripe_price_id: (p.stripe_price_id || "").trim(),
+        description: (p.description || "").trim(),
+        image_url: (p.image_url || "").trim(),
+        is_active: !!p.is_active,
+        sort_order: Number(p.sort_order || 0)
+      }))
     };
     onSubmit?.(payload);
   };
@@ -98,6 +138,7 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
                     <SelectItem value="growth">Growth</SelectItem>
                     <SelectItem value="brand">Brand</SelectItem>
                     <SelectItem value="agency">Agency</SelectItem>
+                    <SelectItem value="free_trial">Free Trial</SelectItem>
                 </SelectContent>
             </Select>
         </div>
@@ -194,6 +235,61 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
             placeholder="- Feature A&#10;- Feature B"
             className="bg-white text-slate-900 placeholder:text-slate-400 border border-slate-300"
           />
+        </div>
+
+        {/* NEW: Token Pack Options */}
+        <div className="md:col-span-2">
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-slate-800">Token Pack Options (for this plan)</Label>
+            <Button type="button" variant="outline" onClick={addTokenPack}>Add Pack</Button>
+          </div>
+          {(form.token_packs || []).length === 0 ? (
+            <p className="text-sm text-slate-500">No token packs yet. Click "Add Pack" to create plan-specific top-ups.</p>
+          ) : (
+            <div className="space-y-3">
+              {form.token_packs.map((p, idx) => (
+                <div key={idx} className="grid md:grid-cols-6 gap-3 border rounded-lg p-3 bg-white">
+                  <div className="md:col-span-2">
+                    <Label className="text-slate-800">Name</Label>
+                    <Input value={p.name || ""} onChange={(e) => updateTokenPack(idx, "name", e.target.value)} placeholder="e.g., 1,000 Tokens" className="bg-white text-slate-900 placeholder:text-slate-400 border-slate-300" />
+                  </div>
+                  <div>
+                    <Label className="text-slate-800">Tokens</Label>
+                    <Input type="number" min={1} value={Number(p.tokens ?? 0)} onChange={(e) => updateTokenPack(idx, "tokens", e.target.value)} placeholder="1000" className="bg-white text-slate-900 placeholder:text-slate-400 border-slate-300" />
+                  </div>
+                  <div>
+                    <Label className="text-slate-800">Display Price</Label>
+                    <Input value={p.display_price || ""} onChange={(e) => updateTokenPack(idx, "display_price", e.target.value)} placeholder="$19" className="bg-white text-slate-900 placeholder:text-slate-400 border-slate-300" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-slate-800">Stripe Price ID</Label>
+                    <Input value={p.stripe_price_id || ""} onChange={(e) => updateTokenPack(idx, "stripe_price_id", e.target.value)} placeholder="price_..." className="bg-white text-slate-900 placeholder:text-slate-400 border-slate-300" />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-slate-800">Description (optional)</Label>
+                    <Input value={p.description || ""} onChange={(e) => updateTokenPack(idx, "description", e.target.value)} placeholder="Shown on top-up page" className="bg-white text-slate-900 placeholder:text-slate-400 border-slate-300" />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="text-slate-800">Image URL (optional)</Label>
+                    <Input value={p.image_url || ""} onChange={(e) => updateTokenPack(idx, "image_url", e.target.value)} placeholder="https://..." className="bg-white text-slate-900 placeholder:text-slate-400 border-slate-300" />
+                  </div>
+                  <div>
+                    <Label className="text-slate-800">Sort</Label>
+                    <Input type="number" value={Number(p.sort_order ?? 0)} onChange={(e) => updateTokenPack(idx, "sort_order", e.target.value)} className="bg-white text-slate-900 placeholder:text-slate-400 border-slate-300" />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div className="flex items-center gap-2">
+                      <Switch id={`pack_active_${idx}`} checked={!!p.is_active} onCheckedChange={(v) => updateTokenPack(idx, "is_active", v)} />
+                      <Label htmlFor={`pack_active_${idx}`} className="text-slate-800">Active</Label>
+                    </div>
+                  </div>
+                  <div className="md:col-span-6 flex justify-end">
+                    <Button type="button" variant="destructive" onClick={() => removeTokenPack(idx)}>Remove Pack</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

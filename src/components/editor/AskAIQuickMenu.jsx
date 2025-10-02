@@ -14,42 +14,42 @@ const MateriaOrb = ({ type, size = 16 }) => {
     const baseSize = size * 0.89;
     const glowSize = baseSize * 1.8;
 
-    // NEON: Bright, vibrant neon color schemes
+    // ENHANCED NEON: Brighter, more vibrant neon color schemes
     const colorSchemes = {
-      // Core AI Actions - Electric Neon Purple
+      // Core AI Actions - Bright Electric Neon Purple/Magenta
       core: {
-        primary: '#a855f7',
-        secondary: '#ec4899',
-        glow: '#c084fc',
-        inner: '#f3e8ff'
+        primary: '#ff00ff',
+        secondary: '#bf00ff',
+        glow: '#ff44ff',
+        inner: '#ff88ff'
       },
-      // Media & Libraries - Neon Cyan Blue
+      // Media & Libraries - Bright Neon Cyan Blue
       media: {
-        primary: '#06b6d4',
-        secondary: '#0ea5e9',
-        glow: '#22d3ee',
-        inner: '#cffafe'
+        primary: '#00ffff',
+        secondary: '#0099ff',
+        glow: '#44ffff',
+        inner: '#88ffff'
       },
-      // Links & Products - Neon Green
+      // Links & Products - Bright Neon Green/Lime
       links: {
-        primary: '#10b981',
-        secondary: '#06d6a0',
-        glow: '#34d399',
-        inner: '#d1fae5'
+        primary: '#00ff00',
+        secondary: '#44ff44',
+        glow: '#88ff88',
+        inner: '#ccffcc'
       },
-      // Utilities - Neon Orange
+      // Utilities - Bright Neon Orange/Yellow
       utilities: {
-        primary: '#ff6b35',
-        secondary: '#f97316',
-        glow: '#fb923c',
-        inner: '#fed7aa'
+        primary: '#ffaa00',
+        secondary: '#ff8800',
+        glow: '#ffbb44',
+        inner: '#ffdd88'
       },
-      // Advanced/Dangerous - Neon Pink
+      // Advanced/Dangerous - Bright Neon Pink/Red
       advanced: {
-        primary: '#ec4899',
-        secondary: '#f43f5e',
-        glow: '#f472b6',
-        inner: '#fce7f3'
+        primary: '#ff0088',
+        secondary: '#ff0044',
+        glow: '#ff44aa',
+        inner: '#ff88cc'
       }
     };
 
@@ -63,20 +63,20 @@ const MateriaOrb = ({ type, size = 16 }) => {
       'generate-image': 'media',
       'generate-video': 'media',
       'audio': 'media',
-      'media-library': 'media', // Added for the combined media library
-      'youtube': 'media', // Changed from 'links' to 'media' as YouTube is now in Media & Libraries
-      'tiktok': 'media', // Changed from 'links' to 'media' for TikTok
+      'media-library': 'media',
+      'youtube': 'media',
+      'tiktok': 'media',
       'manual-link': 'links',
       'promoted-product': 'links',
+      'testimonials': 'links',
+      'cta': 'links',
       'localize': 'utilities',
-      'cta': 'utilities',
-      'testimonials': 'utilities',
       'clean-html': 'utilities',
       'brand-it': 'utilities',
       'cite-sources': 'advanced',
       'ai-detection': 'advanced',
       'ai-agent': 'advanced',
-      'affilify': 'advanced'
+      'affilify': 'utilities' // FIX: Changed from 'advanced' to 'utilities' to match its group in the menu
     };
 
     const scheme = colorSchemes[typeMapping[actionType] || 'core'];
@@ -85,13 +85,13 @@ const MateriaOrb = ({ type, size = 16 }) => {
       width: `${baseSize}px`,
       height: `${baseSize}px`,
       borderRadius: '50%',
-      background: `radial-gradient(circle at 30% 30%, ${scheme.inner} 0%, ${scheme.primary} 35%, ${scheme.secondary} 75%, #0f0f0f 100%)`,
+      background: `radial-gradient(circle at 30% 30%, ${scheme.inner} 0%, ${scheme.primary} 35%, ${scheme.secondary} 75%, #000000 100%)`,
       boxShadow: `
-        0 0 ${glowSize * 0.2}px ${scheme.glow}88,
-        0 0 ${glowSize * 0.4}px ${scheme.glow}55,
-        0 0 ${glowSize * 0.6}px ${scheme.glow}22,
-        inset 0 0 ${baseSize * 0.4}px ${scheme.inner}77,
-        inset ${baseSize * 0.12}px ${baseSize * 0.12}px ${baseSize * 0.25}px rgba(255,255,255,0.5)
+        0 0 ${glowSize * 0.3}px ${scheme.glow}cc,
+        0 0 ${glowSize * 0.5}px ${scheme.glow}88,
+        0 0 ${glowSize * 0.8}px ${scheme.glow}44,
+        inset 0 0 ${baseSize * 0.4}px ${scheme.inner}aa,
+        inset ${baseSize * 0.12}px ${baseSize * 0.12}px ${baseSize * 0.25}px rgba(255,255,255,0.7)
       `,
       position: 'relative',
       animation: 'materiaPulse 3s ease-in-out infinite, materiaFloat 4s ease-in-out infinite alternate'
@@ -103,15 +103,15 @@ const MateriaOrb = ({ type, size = 16 }) => {
       style={getOrbStyle(type)}
       className="materia-orb"
     >
-      {/* Inner magical sparkle effect */}
+      {/* Inner magical sparkle effect - enhanced for neon */}
       <div
         style={{
           position: 'absolute',
-          top: '18%',
-          left: '22%',
-          width: '35%',
-          height: '35%',
-          background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, transparent 65%)',
+          top: '15%',
+          left: '20%',
+          width: '40%',
+          height: '40%',
+          background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, transparent 70%)',
           borderRadius: '50%',
           animation: 'materiaSparkle 2s ease-in-out infinite alternate'
         }}
@@ -130,6 +130,8 @@ const ActionItem = ({ icon: Icon, label, onClick, isComingSoon, showVideo, onPla
       disabled={isComingSoon}
       className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group hover:bg-slate-700/50"
     >
+      {/* Re-added MateriaOrb */}
+      <MateriaOrb type={actionType} size={16} />
       <span className="flex-1">{label}</span>
       {showTokenCosts && tokenCost > 0 && (
         <div className="flex items-center gap-1 text-xs text-white bg-white/10 px-1.5 py-px rounded-full border border-white/30">
@@ -301,7 +303,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
         },
         features.ai_faq && {
           id: 'faq',
-          label: 'Generate FAQs',
+          label: 'FAQs', // Renamed from 'Generate FAQs' to 'FAQs'
           actionType: 'ai-faq',
           isComingSoon: features.ai_faq.isComingSoon,
           youtube_tutorial_url: features.ai_faq.youtube_tutorial_url,
@@ -343,33 +345,14 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
         // Combined Image and Video Libraries into a single Media Library entry
         features.ai_image_library && { // Using ai_image_library as the primary feature flag for the combined entry
           id: 'media-library',
-          label: 'Media Library',
+          label: 'Media', // Renamed from 'Media Library' to 'Media'
           actionType: 'media-library',
           isComingSoon: features.ai_image_library.isComingSoon, // Using image library's coming soon status
           youtube_tutorial_url: features.ai_image_library.youtube_tutorial_url, // Using image library's tutorial URL
           loom_tutorial_url: features.ai_image_library.loom_tutorial_url, // Using image library's tutorial URL
           tokenCost: features.ai_image_library.token_cost || 0 // Using image library's token cost
         },
-        // YouTube Search moved here from LINKS & PRODUCTS
-        features.ai_youtube && {
-          id: 'youtube',
-          label: 'Search YouTube',
-          actionType: 'youtube',
-          isComingSoon: features.ai_youtube.isComingSoon,
-          youtube_tutorial_url: features.ai_youtube.youtube_tutorial_url,
-          loom_tutorial_url: features.ai_youtube.loom_tutorial_url,
-          tokenCost: features.ai_youtube.token_cost || 0
-        },
-        // TikTok Search moved here from LINKS & PRODUCTS
-        features.ai_tiktok && {
-          id: 'tiktok',
-          label: 'Search TikTok',
-          actionType: 'tiktok',
-          isComingSoon: features.ai_tiktok.isComingSoon,
-          youtube_tutorial_url: features.ai_tiktok.youtube_tutorial_url,
-          loom_tutorial_url: features.ai_tiktok.loom_tutorial_url,
-          tokenCost: features.ai_tiktok.token_cost || 0
-        },
+        // REMOVED: YouTube and TikTok search entries
       ].filter(a => a && (!HIDE_COMING_SOON || !a.isComingSoon)),
     },
     {
@@ -386,7 +369,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
         },
         features.ai_promoted_product && {
           id: 'promoted-product',
-          label: 'Promoted Product',
+          label: 'Products', // Renamed from 'Promoted Product' to 'Products'
           actionType: 'promoted-product',
           isComingSoon: features.ai_promoted_product.isComingSoon,
           youtube_tutorial_url: features.ai_promoted_product.youtube_tutorial_url,
@@ -521,6 +504,15 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           transform: scale(1.2) !important;
           filter: brightness(1.6) saturate(1.5) !important;
         }
+
+        /* Hide scrollbar completely */
+        .scrollbar-hidden {
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none; /* IE and Edge */
+        }
+        .scrollbar-hidden::-webkit-scrollbar {
+          display: none; /* Chrome, Safari, Opera */
+        }
       `}</style>
 
       <div
@@ -533,7 +525,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
         className="fixed z-[999] w-72 rounded-xl bg-slate-800/95 p-2 text-white shadow-2xl backdrop-blur-lg border border-purple-500/20 transition-opacity duration-150"
         style={positionStyle}
       >
-        <div className="max-h-[70vh] overflow-y-auto pr-1">
+        <div className="max-h-[70vh] overflow-y-auto pr-1 scrollbar-hidden">
           {groups.map((group, groupIndex) => (
             <div key={group.title} className={groupIndex > 0 ? 'mt-2' : ''}>
               <h3 className="px-3 py-1.5 text-xs font-semibold uppercase text-slate-300 tracking-wider">

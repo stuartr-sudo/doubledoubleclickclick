@@ -234,14 +234,6 @@ export default function LiveHtmlPreview({
                 if (n.tagName === 'IMG') bindImageHandlers(n.parentElement || document);
                 else bindImageHandlers(n);
 
-                // NEW: handle product iframes in newly added nodes
-                if (n.matches && n.matches('.b44-promoted-product')) {
-                  setupAllProductIframes(n);
-                } else if (n.querySelectorAll) {
-                  const cand = n.querySelectorAll('.b44-promoted-product iframe[data-b44-product-iframe]');
-                  if (cand && cand.length) cand.forEach(setupProductIframe);
-                }
-
                 // NEW: set up any newly added shadow-host blocks
                 if (n.matches && n.matches('[data-b44-shadow-host]')) {
                   setupShadowBlocks(n.parentElement || n);
@@ -335,52 +327,7 @@ export default function LiveHtmlPreview({
           });
         }
 
-        // Add new iframe autosizer helper functions
-        function setIframeHeight(iframe) {
-          try {
-            const doc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
-            if (!doc) return;
-            const b = doc.body;
-            const h = Math.max(b.scrollHeight || 0, b.offsetHeight || 0, b.clientHeight || 0);
-            if (h && iframe.style.height !== h + 'px') {
-              iframe.style.height = h + 'px';
-            }
-          } catch(_) {}
-        }
-
-        function setupProductIframe(iframe) {
-          try {
-            if (!iframe || iframe.dataset.b44IframeReady === '1') return;
-            iframe.dataset.b44IframeReady = '1';
-            const resize = () => setIframeHeight(iframe);
-            iframe.addEventListener('load', () => {
-              resize();
-              try {
-                const doc = iframe.contentDocument || iframe.contentWindow.document;
-                // Observe changes inside the iframe to keep height in sync
-                const ro = new (iframe.contentWindow.ResizeObserver || ResizeObserver)(resize);
-                ro.observe(doc.documentElement);
-                ro.observe(doc.body);
-                // Also re-measure a few times after load for late assets
-                setTimeout(resize, 100);
-                setTimeout(resize, 300);
-                setTimeout(resize, 800);
-              } catch(_) {}
-            });
-            // In case it's already loaded
-            if (iframe.contentDocument && (iframe.contentDocument.readyState === 'complete' || iframe.contentDocument.readyState === 'interactive')) {
-              setTimeout(resize, 0);
-              setTimeout(resize, 150);
-              setTimeout(resize, 500);
-            }
-          } catch(_) {}
-        }
-
-        function setupAllProductIframes(root) {
-          try {
-            (root || document).querySelectorAll('.b44-promoted-product iframe[data-b44-product-iframe]').forEach(setupProductIframe);
-          } catch(_) {}
-        }
+        // All product iframe handling functions are removed as per instructions.
 
         function assignIds() {
           // start from the highest existing numeric id + 1 to avoid duplicates
@@ -417,15 +364,15 @@ export default function LiveHtmlPreview({
           prods.forEach(function(el){
             if (!el.dataset.b44Id) { el.dataset.b44Id = String(nextId++); }
             el.style.cursor = 'pointer';
-            if (!el.style.margin) el.style.margin = '1rem 0';
+            // Specific styles for promoted product should generally be handled by CSS only,
+            // but for dynamic sizing/alignment, it might be adjusted by the applyChange function.
+            // Default margin is now zeroed out in CSS.
+            // if (!el.style.margin) el.style.margin = '1rem 0';
             el.style.maxWidth = '100%';
           });
 
           // NEW: after products exist in DOM, render their shadow content
           setupShadowBlocks(document);
-
-          // NEW: auto-setup sizing for product iframes
-          setupAllProductIframes(document);
 
           // NEW: Ensure audio elements or their wrappers get a data-b44-id
           const audios = document.querySelectorAll('audio, .b44-audio-inline');
@@ -722,6 +669,12 @@ export default function LiveHtmlPreview({
           if (el.matches && el.matches('.b44-audio-inline')) {
             // The applyTo(el) already handles block, width, margin.
             // Float handling here specific for the wrapper.
+          }
+
+          // If a promoted product, specific margin/padding is handled by CSS,
+          // but width/alignment from here might still be useful.
+          if (el.matches && el.matches('.b44-promoted-product')) {
+            // No additional margin/padding rules here, relies on global CSS.
           }
 
 
@@ -1102,6 +1055,13 @@ export default function LiveHtmlPreview({
                 if (typeof s.margin === 'string') {
                   el.style.margin = s.margin;
                 }
+                // For promoted products, prevent dynamic margins from here conflicting with CSS-defined zeroing
+                if (el.matches && el.matches('.b44-promoted-product')) {
+                  if (typeof s.margin !== 'string') { // Only override if parent explicitly set a margin
+                    el.style.margin = '5px'; // Enforce 5px margin
+                    el.style.padding = '5px'; // Enforce 5px padding
+                  }
+                }
 
                 // If TikTok blockquote, mirror width/alignment to sibling iframe
                 if (el.matches && el.matches('blockquote.tiktok-embed')) {
@@ -1192,29 +1152,23 @@ export default function LiveHtmlPreview({
             th, td { border:1px solid #e5e7eb; padding:8px; }
             code, pre { background: #0f172a0d; padding: 2px 4px; border-radius: 6px; }
 
-            /* Product block wrapper: allow natural overflow within block; isolation via Shadow DOM prevents bleed */
+            /* Product block - direct HTML, no iframes */
             .b44-promoted-product {
               max-width: 100%;
               display: block;
-              overflow: visible;
-              box-sizing: border-box;
-              margin: 1rem 0;
-              contain: layout style paint;
+              cursor: pointer;
               position: relative;
-              isolation: isolate;
-              z-index: 0;
+              margin: 5px !important;
+              padding: 5px !important;
             }
 
-            .b44-promoted-product *, .b44-promoted-product *::before, .b44-promoted-product *::after {
-              box-sizing: border-box;
+            .b44-promoted-product * {
               max-width: 100%;
             }
-            .b44-promoted-product img,
-            .b44-promoted-product video,
-            .b44-promoted-product iframe {
+
+            .b44-promoted-product img {
               max-width: 100%;
               height: auto;
-              display: block;
             }
           </style>
         </head>

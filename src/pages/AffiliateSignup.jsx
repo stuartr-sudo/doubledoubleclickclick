@@ -1,6 +1,8 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Affiliate } from '@/api/entities';
+import { User } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +20,12 @@ export default function AffiliateSignup() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check auth status to decide post-submit CTA
+  React.useEffect(() => {
+    User.me().then(() => setIsLoggedIn(true)).catch(() => setIsLoggedIn(false));
+  }, []);
 
   const generateUniqueCode = (name, email) => {
     const namepart = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 4);
@@ -90,9 +98,22 @@ export default function AffiliateSignup() {
             <p className="text-slate-600 mb-6">
               Thank you for your interest in becoming an affiliate. We'll review your application and get back to you within 24 hours.
             </p>
-            <Link to={createPageUrl('Home')}>
-              <Button className="w-full">Back to Home</Button>
-            </Link>
+
+            {isLoggedIn ? (
+              <Link to={createPageUrl('Dashboard')}>
+                <Button className="w-full">Go to Dashboard</Button>
+              </Link>
+            ) : (
+              <Button
+                className="w-full"
+                onClick={() => {
+                  const callbackUrl = `${window.location.origin}${createPageUrl('Dashboard')}`;
+                  User.loginWithRedirect(callbackUrl);
+                }}
+              >
+                Create your account to access the Dashboard
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -116,35 +137,41 @@ export default function AffiliateSignup() {
         </div>
       </header>
 
-      <div className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="py-12 px-4">
+        <div className="max-w-4xl mx-auto">
           {/* Hero Section */}
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-slate-900 mb-4">
               Join Our Affiliate Program
             </h1>
-            <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
+            <p className="text-lg text-slate-600">
               Earn generous commissions by promoting DoubleClick's AI-powered content tools to your audience.
             </p>
           </div>
 
           {/* Benefits Grid */}
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="bg-white rounded-lg p-6 shadow-sm text-center">
-              <DollarSign className="w-12 h-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">High Commissions</h3>
-              <p className="text-slate-600">Earn up to 30% recurring commission on every sale you refer.</p>
-            </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm text-center">
-              <Users className="w-12 h-12 text-blue-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">Marketing Support</h3>
-              <p className="text-slate-600">Get access to high-converting marketing materials and campaigns.</p>
-            </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm text-center">
-              <TrendingUp className="w-12 h-12 text-purple-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">Real-time Tracking</h3>
-              <p className="text-slate-600">Monitor your referrals, conversions, and earnings in real-time.</p>
-            </div>
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <DollarSign className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">High Commissions</h3>
+                <p className="text-slate-600">Earn up to 50% recurring commission on every sale you refer.</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <Users className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">Marketing Support</h3>
+                <p className="text-slate-600">Get access to high-converting marketing materials and campaigns.</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <TrendingUp className="w-12 h-12 text-purple-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">Real-time Tracking</h3>
+                <p className="text-slate-600">Monitor your referrals, conversions, and earnings in real-time.</p>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Signup Form */}

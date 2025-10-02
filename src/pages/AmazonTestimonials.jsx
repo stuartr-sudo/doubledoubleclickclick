@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,7 +40,7 @@ export default function AmazonTestimonials() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [workspaceDefaultUsername, setWorkspaceDefaultUsername] = useState(""); // New state for auto-assigned username
+  const [workspaceDefaultUsername, setWorkspaceDefaultUsername] = useState("");
   const { consumeTokensForFeature } = useTokenConsumption();
 
   useEffect(() => {
@@ -60,14 +59,14 @@ export default function AmazonTestimonials() {
           names = assigned.filter((n) => set.has(n));
         }
         names = Array.from(new Set(names)).sort();
-        setWorkspaceDefaultUsername(names[0] || ""); // Set the first assigned username as default
+        setWorkspaceDefaultUsername(names[0] || "");
       } catch {
         setWorkspaceDefaultUsername("");
       }
     })();
   }, []);
 
-  const reviews = useMemo(() => data && data.reviews || [], [data]);
+  const reviews = useMemo(() => (data && data.reviews) || [], [data]);
 
   const handleFetch = async () => {
     setError("");
@@ -78,10 +77,9 @@ export default function AmazonTestimonials() {
       return;
     }
 
-    // Check and consume tokens before fetching reviews
     const result = await consumeTokensForFeature('amazon_testimonials_import');
     if (!result.success) {
-      return; // Error toast is handled by the hook
+      return;
     }
 
     setAsin(as);
@@ -98,12 +96,12 @@ export default function AmazonTestimonials() {
         current_format_only: currentFormatOnly
       });
       if (!(resp && resp.success)) {
-        throw new Error(resp && resp.error || "Failed to fetch reviews.");
+        throw new Error((resp && resp.error) || "Failed to fetch reviews.");
       }
-      setData(resp && resp.data || {});
+      setData((resp && resp.data) || {});
       setSelectedIds(new Set());
     } catch (e) {
-      const msg = e && e.message ? e.message : "Unexpected error while fetching reviews.";
+      const msg = (e && e.message) ? e.message : "Unexpected error while fetching reviews.";
       setError(msg);
       toast.error(msg);
     }
@@ -118,9 +116,7 @@ export default function AmazonTestimonials() {
     });
   };
 
-  const selectAll = () => {
-    setSelectedIds(new Set(reviews.map((r) => r.review_id)));
-  };
+  const selectAll = () => setSelectedIds(new Set(reviews.map((r) => r.review_id)));
   const clearAll = () => setSelectedIds(new Set());
 
   const handleSaveToLibrary = async () => {
@@ -135,8 +131,8 @@ export default function AmazonTestimonials() {
     }
     const payload = selected.map((r) => ({
       source: "amazon",
-      asin: asin,
-      country: country,
+      asin,
+      country,
       review_id: r.review_id,
       review_title: r.review_title || "",
       review_comment: r.review_comment || "",
@@ -149,15 +145,14 @@ export default function AmazonTestimonials() {
       is_verified_purchase: Boolean(r.is_verified_purchase),
       helpful_vote_statement: r.helpful_vote_statement || "",
       images: Array.isArray(r.review_images) ? r.review_images : [],
-      user_name: workspaceDefaultUsername // Auto-assigned
+      user_name: workspaceDefaultUsername
     }));
     try {
       if (payload.length === 1) await Testimonial.create(payload[0]);
-      else
-        await Testimonial.bulkCreate(payload);
+      else await Testimonial.bulkCreate(payload);
       toast.success("Saved to library");
     } catch (e) {
-      toast.error(e && e.message ? e.message : "Failed to save testimonials.");
+      toast.error((e && e.message) ? e.message : "Failed to save testimonials.");
     }
   };
 
@@ -183,7 +178,7 @@ export default function AmazonTestimonials() {
               />
               <Button onClick={handleFetch} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                Fetch
+                <span className="ml-2">Fetch</span>
               </Button>
             </div>
             <p className="text-sm text-slate-500 mt-1">Paste a full Amazon URL or a 10-character ASIN.</p>
@@ -191,22 +186,20 @@ export default function AmazonTestimonials() {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <Label htmlFor="country" className="text-slate-700">Country</Label>
+              <Label className="text-slate-700">Country</Label>
               <Select value={country} onValueChange={setCountry}>
                 <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  {/* Preserving original list of countries as it provides more options */}
-                  {["US", "AU", "BR", "CA", "CN", "FR", "DE", "IN", "IT", "MX", "NL", "SG", "ES", "TR", "AE", "GB", "JP", "SA", "PL", "SE", "BE", "EG"].map((c) =>
+                  {["US","AU","BR","CA","CN","FR","DE","IN","IT","MX","NL","SG","ES","TR","AE","GB","JP","SA","PL","SE","BE","EG"].map(c =>
                     <SelectItem key={c} value={c} className="hover:bg-slate-100">{c}</SelectItem>
                   )}
                 </SelectContent>
               </Select>
             </div>
-
             <div>
-              <Label htmlFor="sort-by" className="text-slate-700">Sort By</Label>
+              <Label className="text-slate-700">Sort By</Label>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                   <SelectValue />
@@ -217,22 +210,19 @@ export default function AmazonTestimonials() {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
-              <Label htmlFor="star-rating" className="text-slate-700">Star Rating</Label>
+              <Label className="text-slate-700">Star Rating</Label>
               <Select value={starRating} onValueChange={setStarRating}>
                 <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  {/* Preserving original list of star rating options as it provides more functionality */}
-                  {["ALL", "5_STARS", "4_STARS", "3_STARS", "2_STARS", "1_STARS", "POSITIVE", "CRITICAL"].map((v) =>
-                    <SelectItem key={v} value={v} className="hover:bg-slate-100">{v.replace("_", " ")}</SelectItem>
+                  {["ALL","5_STARS","4_STARS","3_STARS","2_STARS","1_STARS","POSITIVE","CRITICAL"].map(v =>
+                    <SelectItem key={v} value={v} className="hover:bg-slate-100">{v.replace("_"," ")}</SelectItem>
                   )}
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label htmlFor="page" className="text-slate-700">Page</Label>
               <Input
@@ -243,15 +233,14 @@ export default function AmazonTestimonials() {
                 value={page}
                 onChange={(e) => {
                   const val = parseInt(e.target.value) || 1;
-                  const clampedVal = Math.max(1, Math.min(3, val));
-                  setPage(clampedVal);
+                  const clamped = Math.max(1, Math.min(3, val));
+                  setPage(clamped);
                 }}
                 className="w-full bg-white border-slate-300 text-slate-900"
               />
             </div>
           </div>
 
-          {/* Checkbox row */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <label className="inline-flex items-center gap-2 text-slate-700 whitespace-nowrap">
               <Checkbox checked={verifiedOnly} onCheckedChange={(v) => setVerifiedOnly(Boolean(v))} />
@@ -267,9 +256,13 @@ export default function AmazonTestimonials() {
             </label>
           </div>
 
-          {error && <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">{error}</div>}
+          {error && (
+            <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
+              {error}
+            </div>
+          )}
 
-          {reviews.length > 0 &&
+          {reviews.length > 0 && (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" onClick={selectAll} className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50">
@@ -279,19 +272,17 @@ export default function AmazonTestimonials() {
                   Clear
                 </Button>
                 <div className="flex-1" />
-                {/* USERNAME SELECT REMOVED - now auto-assigns to workspace username */}
-                <Button onClick={handleSaveToLibrary} className="bg-blue-600 hover:bg-blue-700 text-white">Save to Library</Button>
+                <Button onClick={handleSaveToLibrary} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Save to Library
+                </Button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {reviews.map((r) =>
+                {reviews.map((r) => (
                   <div
                     key={r.review_id}
-                    className={`p-4 rounded-xl border transition-colors bg-white ${selectedIds.has(r.review_id) ?
-                      "border-emerald-500 bg-emerald-50" :
-                      "border-slate-200 hover:border-slate-300"
-                      }`}>
-
+                    className={`p-4 rounded-xl border transition-colors bg-white ${selectedIds.has(r.review_id) ? "border-emerald-500 bg-emerald-50" : "border-slate-200 hover:border-slate-300"}`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <Checkbox checked={selectedIds.has(r.review_id)} onCheckedChange={() => toggleSelect(r.review_id)} />
@@ -309,10 +300,10 @@ export default function AmazonTestimonials() {
                       {r.helpful_vote_statement && <span>• {r.helpful_vote_statement}</span>}
                     </div>
                   </div>
-                )}
+                ))}
               </div>
             </div>
-          }
+          )}
         </CardContent>
       </Card>
     </div>

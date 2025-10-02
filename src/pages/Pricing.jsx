@@ -2,14 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AppProduct } from "@/api/entities";
-import { PricingFaq } from "@/api/entities"; // Import the new entity
+import { PricingFaq } from "@/api/entities";
 import { User } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createCheckoutSession } from "@/api/functions";
 import { createCustomerPortalSession } from "@/api/functions";
-import PricingFaqSection from "@/components/common/PricingFaqSection"; // Import the FAQ component
+import PricingFaqSection from "@/components/common/PricingFaqSection";
 
 function PlanCard({ plan, billing, onBuy, isCheckingOut }) {
   if (!plan) return null;
@@ -71,16 +71,13 @@ function PlanCard({ plan, billing, onBuy, isCheckingOut }) {
 
 export default function Pricing() {
   const [plans, setPlans] = useState([]);
-  const [faqs, setFaqs] = useState([]); // State for FAQs
+  const [faqs, setFaqs] = useState([]);
   const [billing, setBilling] = useState('month');
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(null);
   const [user, setUser] = useState(null);
   const [isManagingSubscription, setIsManagingSubscription] = useState(false);
   const navigate = useNavigate();
-
-  // REMOVED: The local useEffect for affiliate tracking is no longer needed.
-  // It is now handled globally in Layout.js.
 
   useEffect(() => {
     async function fetchData() {
@@ -89,13 +86,13 @@ export default function Pricing() {
         const [user, products, faqData] = await Promise.all([
         User.me().catch(() => null),
         AppProduct.filter({ is_active: true }).catch(() => []),
-        PricingFaq.filter({ is_active: true }, 'sort_order').catch(() => []) // Fetch active FAQs
+        PricingFaq.filter({ is_active: true }, 'sort_order').catch(() => [])
         ]);
         setUser(user);
 
         const sortedProducts = products.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
         setPlans(sortedProducts);
-        setFaqs(faqData); // Set the fetched FAQs
+        setFaqs(faqData);
 
       } catch (error) {
         console.error("Error fetching plans or FAQs:", error);
@@ -114,7 +111,6 @@ export default function Pricing() {
     
     setIsCheckingOut(priceId);
     try {
-      // Get affiliate ref from localStorage (now reliably set by Layout.js)
       const affiliateRef = localStorage.getItem('affiliate_ref');
       
       console.log('=== PRICING CHECKOUT DEBUG ===');
@@ -168,10 +164,11 @@ export default function Pricing() {
     const growth = plans.find((p) => p.plan_key === 'growth' && p.billing_interval === billing);
     const brand = plans.find((p) => p.plan_key === 'brand' && p.billing_interval === billing);
     const agency = plans.find((p) => p.plan_key === 'agency' && p.billing_interval === billing);
-    return { growth, brand, agency };
+    const freeTrial = plans.find((p) => p.plan_key === 'free_trial' && p.billing_interval === billing);
+    return { growth, brand, agency, freeTrial };
   };
 
-  const { growth, brand, agency } = getPlansForBilling();
+  const { growth, brand, agency, freeTrial } = getPlansForBilling();
 
   const hasActiveSubscription = user && user.subscription_status === 'active';
 
@@ -189,7 +186,6 @@ export default function Pricing() {
 
         <div className="flex justify-center mb-6">
             <div className="relative bg-slate-200 p-1 rounded-full flex items-center">
-              {/* Animated background slider */}
               <div
               className={`absolute top-1 bottom-1 bg-white rounded-full shadow-sm transition-all duration-300 ease-in-out ${
               billing === 'month' ?
@@ -198,7 +194,6 @@ export default function Pricing() {
               } />
 
               
-              {/* Monthly button */}
               <button
               onClick={() => setBilling('month')}
               className={`relative z-10 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 ${
@@ -210,7 +205,6 @@ export default function Pricing() {
                 Monthly
               </button>
               
-              {/* Yearly button */}
               <button
               onClick={() => setBilling('year')}
               className={`relative z-10 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 ${
@@ -259,10 +253,11 @@ export default function Pricing() {
             <Loader2 className="animate-spin w-8 h-8 text-slate-400" />
           </div> :
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start mt-8">
             <PlanCard plan={growth} billing={billing} onBuy={handleBuy} isCheckingOut={isCheckingOut} />
             <PlanCard plan={brand} billing={billing} onBuy={handleBuy} isCheckingOut={isCheckingOut} />
             <PlanCard plan={agency} billing={billing} onBuy={handleBuy} isCheckingOut={isCheckingOut} />
+            <PlanCard plan={freeTrial} billing={billing} onBuy={handleBuy} isCheckingOut={isCheckingOut} />
           </div>
         }
 

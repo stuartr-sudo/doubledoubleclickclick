@@ -16,8 +16,9 @@ import { Globe, Search, Tag, Link, Image, Focus, Sparkles, Save, CheckCircle2, F
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { InvokeLLM } from "@/api/integrations";
-import ImageLibraryModal from "./ImageLibraryModal"; // NEW: ImageLibraryModal import
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption'; // NEW: Token consumption hook import
+import ImageLibraryModal from "./ImageLibraryModal";
+import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { agentSDK } from "@/agents"; // NEW: Agent SDK import
 
 export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) {
   const [metadata, setMetadata] = useState({
@@ -34,17 +35,10 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
   const [autoLoading, setAutoLoading] = useState(false);
   const [genLoading, setGenLoading] = useState({ title: false, desc: false, slug: false, keyword: false, tags: false, image: false, excerpt: false });
 
-  // NEW: state for image library modal
   const [showImageLibrary, setShowImageLibrary] = useState(false);
-
-  // NEW: track one-time auto-init
   const autoInitRef = useRef(false);
-
-  // NEW: State for schema generation loading
   const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
-
-  // NEW: Token consumption hook
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeTokensForFeature, consumeTokensOptimistic } = useTokenConsumption(); // ADDED consumeTokensOptimistic
 
   // Helper functions that might be used in effects or handlers
   const articleText = useMemo(() => {
@@ -173,39 +167,39 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
 
   // NEW: field-specific generators
   const genTitle = async () => {
-    const tokenResult = await consumeTokensForFeature('ai_seo_meta_title');
-    if (!tokenResult.success) {
-      toast.error(tokenResult.message);
-      return;
-    }
+    consumeTokensOptimistic('ai_title_rewrite'); // Changed to optimistic
+    // Removed tokenResult check for optimistic mode
 
     setGenLoading((s) => ({ ...s, title: true }));
     try {
       const fx = (metadata.focus_keyword || "").trim();
       const res = await callLLM(
-        `Write a world-class SEO meta title (<= 60 chars) for the article below.
-Return JSON { "meta_title": string }. Include the focus keyword if provided, front-load value, avoid clickbait, use title case.
+        `Rewrite the article's title to be highly optimized for SEO while remaining natural and compelling.
+Constraints:
+- ≤ 60 characters
+- Include the focus keyword if provided
+- No quotes, no emojis
+- Title case
+Return JSON { "meta_title": string }.
+
 Focus keyword: ${fx || "(none)"}
-Article title: ${postData?.title || ""}
-Content: """${articleText}"""`,
+Current title: ${postData?.title || metadata.meta_title || ""}
+Content (truncated): """${articleText}"""`,
         { type: "object", properties: { meta_title: { type: "string" } }, required: ["meta_title"] }
       );
       if (res?.meta_title) setMetadata((prev) => ({ ...prev, meta_title: res.meta_title }));
-      toast.success("Meta Title suggested!");
+      toast.success("Title rewritten for SEO!"); // Changed toast message
     } catch (e) {
       console.error("Error generating title:", e);
-      toast.error("Failed to suggest Meta Title.");
+      toast.error("Failed to rewrite title."); // Changed toast message
     } finally {
       setGenLoading((s) => ({ ...s, title: false }));
     }
   };
 
   const genDescription = async () => {
-    const tokenResult = await consumeTokensForFeature('ai_seo_meta_description');
-    if (!tokenResult.success) {
-      toast.error(tokenResult.message);
-      return;
-    }
+    consumeTokensOptimistic('ai_seo_meta_description'); // Changed to optimistic
+    // Removed tokenResult check for optimistic mode
 
     setGenLoading((s) => ({ ...s, desc: true }));
     try {
@@ -229,11 +223,8 @@ Content: """${articleText}"""`,
   };
 
   const genSlug = async () => {
-    const tokenResult = await consumeTokensForFeature('ai_seo_slug');
-    if (!tokenResult.success) {
-      toast.error(tokenResult.message);
-      return;
-    }
+    consumeTokensOptimistic('ai_seo_slug'); // Changed to optimistic
+    // Removed tokenResult check for optimistic mode
 
     setGenLoading((s) => ({ ...s, slug: true }));
     try {
@@ -256,11 +247,8 @@ Content: """${articleText.slice(0, 1200)}"""`,
   };
 
   const genKeyword = async () => {
-    const tokenResult = await consumeTokensForFeature('ai_seo_focus_keyword');
-    if (!tokenResult.success) {
-      toast.error(tokenResult.message);
-      return;
-    }
+    consumeTokensOptimistic('ai_seo_focus_keyword'); // Changed to optimistic
+    // Removed tokenResult check for optimistic mode
 
     setGenLoading((s) => ({ ...s, keyword: true }));
     try {
@@ -282,11 +270,8 @@ Content: """${articleText}"""`,
   };
 
   const genTags = async () => {
-    const tokenResult = await consumeTokensForFeature('ai_seo_tags');
-    if (!tokenResult.success) {
-      toast.error(tokenResult.message);
-      return;
-    }
+    consumeTokensOptimistic('ai_seo_tags'); // Changed to optimistic
+    // Removed tokenResult check for optimistic mode
 
     setGenLoading((s) => ({ ...s, tags: true }));
     try {
@@ -343,11 +328,8 @@ Content: """${articleText.slice(0, 1200)}"""`,
 
   // NEW: generate excerpt from article content
   const genExcerpt = async () => {
-    const tokenResult = await consumeTokensForFeature('ai_seo_excerpt');
-    if (!tokenResult.success) {
-      toast.error(tokenResult.message);
-      return;
-    }
+    consumeTokensOptimistic('ai_seo_excerpt'); // Changed to optimistic
+    // Removed tokenResult check for optimistic mode
 
     setGenLoading((s) => ({ ...s, excerpt: true }));
     try {
@@ -387,11 +369,8 @@ Content: """${text}"""`,
 
   // NEW: Auto-generate SEO fields using Perplexity via InvokeLLM
   const handleAutoGenerate = async () => {
-    const tokenResult = await consumeTokensForFeature('ai_seo_auto_generate');
-    if (!tokenResult.success) {
-      toast.error(tokenResult.message);
-      return;
-    }
+    consumeTokensOptimistic('ai_seo_auto_generate'); // Changed to optimistic
+    // Removed tokenResult check for optimistic mode
 
     setAutoLoading(true);
     try {
@@ -439,11 +418,8 @@ Content: """${text}"""`,
 
   // NEW: Generate JSON-LD Schema based on current content and SEO fields
   const genSchema = async () => {
-    const tokenResult = await consumeTokensForFeature('ai_schema_generation');
-    if (!tokenResult.success) {
-      toast.error(tokenResult.message);
-      return;
-    }
+    consumeTokensOptimistic('ai_schema_generation'); // Changed to optimistic
+    // Removed tokenResult check for optimistic mode
 
     setIsGeneratingSchema(true);
     try {
@@ -454,21 +430,29 @@ Content: """${text}"""`,
         return;
       }
 
-      // Limit content length to keep prompt manageable
       const text = String(html).slice(0, 20000);
 
-      const result = await InvokeLLM({
-        add_context_from_internet: false,
-        prompt: `Generate a valid JSON-LD schema (one JSON object, no code fences) for this blog article. Prefer BlogPosting/Article. Include:
+      const conversation = await agentSDK.createConversation({
+        agent_name: "schema_generator",
+        metadata: { purpose: "Generate JSON-LD schema for article" }
+      });
+
+      if (!conversation?.id) {
+        throw new Error("Could not start conversation with schema_generator agent.");
+      }
+
+      await agentSDK.addMessage(conversation, {
+        role: "user",
+        content: `Generate a valid JSON-LD schema (one JSON object, no code fences) for this blog article. Prefer BlogPosting/Article. Include:
 - headline (title)
 - description (use meta_description/excerpt)
-- author if inferable (string ok)
-- datePublished (use current date if unknown)
-- dateModified (current date)
-- mainEntityOfPage (slug as URL path ok)
+- author if inferable (string ok, e.g., "${postData?.author_name || "Unknown Author"}")
+- datePublished (use current date if unknown, e.g., "${new Date().toISOString().split('T')[0]}")
+- dateModified (current date, e.g., "${new Date().toISOString().split('T')[0]}")
+- mainEntityOfPage (slug as URL path ok, e.g., "/${metadata.slug}")
 - image if present (use featured_image if available)
 - keywords from tags (array)
-- publisher as Organization if inferable
+- publisher as Organization if inferable (e.g., "${postData?.site_name || "Your Company"}")
 Return ONLY a single JSON object.
 
 Context:
@@ -479,20 +463,61 @@ Excerpt: ${metadata.excerpt}
 Tags: ${(metadata.tags || []).join(", ")}
 Featured Image: ${metadata.featured_image || ""}
 HTML (truncated):
-${text}`,
-        response_json_schema: {
-          type: "object",
-          additionalProperties: true
-        }
+${text}`
       });
 
-      const schemaObj = result || {};
-      const schemaStr = JSON.stringify(schemaObj, null, 2);
+      // POLL for completion
+      const pollTimeout = 90000; // 90 seconds
+      const pollInterval = 2000; // 2 seconds
+      const startTime = Date.now();
+
+      let schemaJson = "";
+      let attempts = 0;
+      const maxAttempts = Math.ceil(pollTimeout / pollInterval);
+
+      while (Date.now() - startTime < pollTimeout && attempts < maxAttempts) {
+        attempts++;
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+
+        const updatedConversation = await agentSDK.getConversation(conversation.id);
+        const lastMessage = updatedConversation?.messages?.[updatedConversation.messages.length - 1];
+
+        if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || (lastMessage.content && lastMessage.content.length > 10))) {
+          let contentStr = lastMessage.content || "";
+          
+          // Clean up markdown code fences if present
+          contentStr = contentStr.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+          contentStr = contentStr.trim();
+          
+          if (contentStr && contentStr.length > 10) { // Ensure it's not just empty string or very short
+            schemaJson = contentStr;
+            break;
+          }
+        }
+      }
+
+      if (!schemaJson || schemaJson.length < 10) {
+        toast.error("Agent didn't return a valid schema. Please try again.");
+        return;
+      }
+
+      // Validate it's proper JSON
+      let parsedSchema;
+      try {
+        parsedSchema = JSON.parse(schemaJson);
+      } catch (parseError) {
+        console.error("Failed to parse agent response as JSON:", parseError);
+        toast.error("Agent returned invalid JSON. Please check the output and fix manually.");
+        setMetadata((prev) => ({ ...prev, generated_llm_schema: schemaJson })); // Show raw response if parsing fails
+        return;
+      }
+
+      const schemaStr = JSON.stringify(parsedSchema, null, 2);
       setMetadata((prev) => ({ ...prev, generated_llm_schema: schemaStr }));
-      toast.success("Schema generated.");
+      toast.success("Schema generated successfully by AI agent!");
     } catch (e) {
       console.error("Schema generation failed:", e);
-      toast.error("Failed to generate schema.");
+      toast.error(e?.message || "Failed to generate schema.");
     } finally {
       setIsGeneratingSchema(false);
     }
@@ -512,9 +537,7 @@ ${text}`,
                 <Button onClick={handleAutoGenerate} disabled={autoLoading} className="bg-gray-600 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-emerald-700">
                   {autoLoading ? "Generating..." : "Auto-generate SEO"}
                 </Button>
-                <Button onClick={genSchema} disabled={isGeneratingSchema} variant="outline" className="bg-white border-slate-300 text-slate-900 hover:bg-slate-50">
-                  {isGeneratingSchema ? "Generating Schema..." : "Generate Schema"}
-                </Button>
+                {/* Removed duplicate "Generate Schema" button from header */}
               </div>
             </DialogTitle>
             <DialogDescription className="text-slate-600 text-lg">
@@ -746,7 +769,7 @@ ${text}`,
                   placeholder='Paste or generate a JSON object. It will be embedded as <script type="application/ld+json"> on publish.'
                   className="font-mono text-sm bg-slate-100 border-slate-300 text-slate-800" />
                 <div className="flex justify-end mt-2">
-                  {/* Generate Schema button is already in DialogHeader, keeping it here too for context within the field */}
+                  {/* This is the correct "Generate Schema" button */}
                   <Button variant="outline" onClick={genSchema} disabled={isGeneratingSchema} className="bg-white border-slate-300 text-slate-900 hover:bg-slate-50">
                     {isGeneratingSchema ? "Generating Schema..." : "Generate Schema"}
                   </Button>

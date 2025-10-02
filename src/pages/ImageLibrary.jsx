@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Search, Loader2, Trash2, Edit, CheckSquare, Sparkles, Download, Plus, Image as ImageIcon, RefreshCw, ShoppingBag, Package } from "lucide-react";
+import { Search, Loader2, Trash2, Edit, CheckSquare, Sparkles, Download, Plus, Image as ImageIcon, RefreshCw, ShoppingBag, Package, ChevronDown, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // Fix: Corrected import syntax and added Header/Title
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { generateImageFalAi } from "@/api/functions";
@@ -36,16 +36,15 @@ export default function ImageLibrary() {
   const [showImportFromUrl, setShowImportFromUrl] = useState(false);
   const [importUrl, setImportUrl] = useState("");
   const [importAltText, setImportAltText] = useState("");
-  const [importUsername, setImportUsername] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const { consumeTokensForFeature } = useTokenConsumption();
   const [showGenerator, setShowGenerator] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showEditorDialog, setShowEditorDialog] = useState(false);
-  const [imageToDelete, setImageToDelete] = useState(null); // NEW: State to hold the image to delete from grid
+  const [imageToDelete, setImageToDelete] = useState(null);
 
-  const [showProductImport, setShowProductImport] = useState(false);
-  const [showAmazonImport, setShowAmazonImport] = useState(false);
+  const [productFormExpanded, setProductFormExpanded] = useState(false);
+  const [amazonFormExpanded, setAmazonFormExpanded] = useState(false);
   const [productUrl, setProductUrl] = useState("");
   const [amazonUrl, setAmazonUrl] = useState("");
   const [isImportingProduct, setIsImportingProduct] = useState(false);
@@ -98,31 +97,20 @@ export default function ImageLibrary() {
       }
       setAllImages(Array.isArray(displayImages) ? displayImages : []);
 
-      // Set default username for import
-      if (availableUsernamesForSelection && availableUsernamesForSelection.length > 0) {
-        const defaultImportUsername = useWorkspaceScoping ?
-        globalUsername || availableUsernamesForSelection[0].user_name :
-        availableUsernamesForSelection[0].user_name;
-        setImportUsername(defaultImportUsername);
-      }
+      // REMOVED: setImportUsername is no longer needed, we use globalUsername from workspace
     } catch (error) {
       toast.error("Failed to load image library.");
       console.error(error);
     } finally {
       setLoading(false);
     }
-  }, [useWorkspaceScoping, globalUsername]);
+  }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Sync import username with workspace selection when feature is on
-  useEffect(() => {
-    if (useWorkspaceScoping && globalUsername) {
-      setImportUsername(globalUsername);
-    }
-  }, [useWorkspaceScoping, globalUsername]);
+  // REMOVED: Sync import username with workspace selection is no longer needed as there's no dedicated importUsername state.
 
   // --- FILTERING ---
   const filteredImages = useMemo(() => {
@@ -152,9 +140,9 @@ export default function ImageLibrary() {
       toast.success("Alt text updated!");
       setSelectedImage((prev) => ({ ...prev, alt_text: editAltText }));
       setAllImages((prev) =>
-      prev.map((img) =>
-      img.id === selectedImage.id ? { ...img, alt_text: editAltText } : img
-      )
+        prev.map((img) =>
+          img.id === selectedImage.id ? { ...img, alt_text: editAltText } : img
+        )
       );
     } catch (error) {
       toast.error("Failed to update alt text.");
@@ -204,9 +192,12 @@ export default function ImageLibrary() {
   };
 
   const handleImportFromUrl = async () => {
-    const activeImportUsername = useWorkspaceScoping ? globalUsername : importUsername;
-    if (!importUrl.trim() || !activeImportUsername) {
-      toast.error("Please provide a URL and select a username.");
+    if (!globalUsername) {
+      toast.error("Please select a workspace before importing.");
+      return;
+    }
+    if (!importUrl.trim()) {
+      toast.error("Please provide a URL.");
       return;
     }
 
@@ -221,7 +212,7 @@ export default function ImageLibrary() {
     try {
       const { data } = await saveImageFromString({
         value: importUrl.trim(),
-        user_name: activeImportUsername,
+        user_name: globalUsername, // Use globalUsername directly
         alt_text: importAltText.trim() || "Imported image",
         source: "upload"
       });
@@ -249,9 +240,8 @@ export default function ImageLibrary() {
       return;
     }
 
-    const activeUsername = useWorkspaceScoping ? globalUsername : importUsername;
-    if (!activeUsername) {
-      toast.error("Please select a username");
+    if (!globalUsername) {
+      toast.error("Please select a workspace before importing.");
       return;
     }
 
@@ -274,7 +264,7 @@ export default function ImageLibrary() {
         try {
           const { data: saveResult } = await saveImageFromString({
             value: imageUrl,
-            user_name: activeUsername,
+            user_name: globalUsername, // Use globalUsername directly
             alt_text: `${data.title || "Product"} - Image ${importedCount + 1}`,
             source: "product_import"
           });
@@ -290,7 +280,7 @@ export default function ImageLibrary() {
       if (importedCount > 0) {
         toast.success(`Imported ${importedCount} product image${importedCount > 1 ? 's' : ''}`);
         await loadData();
-        setShowProductImport(false);
+        setProductFormExpanded(false); // Close inline form and reset
         setProductUrl("");
       } else {
         toast.error("Failed to import any images");
@@ -309,9 +299,8 @@ export default function ImageLibrary() {
       return;
     }
 
-    const activeUsername = useWorkspaceScoping ? globalUsername : importUsername;
-    if (!activeUsername) {
-      toast.error("Please select a username");
+    if (!globalUsername) {
+      toast.error("Please select a workspace before importing.");
       return;
     }
 
@@ -337,7 +326,7 @@ export default function ImageLibrary() {
         try {
           const { data: saveResult } = await saveImageFromString({
             value: imageUrl,
-            user_name: activeUsername,
+            user_name: globalUsername, // Use globalUsername directly
             // CORRECTED: Use 'product_title' from the response
             alt_text: `${data.data.product_title || "Amazon Product"} - Image ${importedCount + 1}`,
             source: "amazon_import"
@@ -354,7 +343,8 @@ export default function ImageLibrary() {
       if (importedCount > 0) {
         toast.success(`Imported ${importedCount} Amazon product image${importedCount > 1 ? 's' : ''}`);
         await loadData();
-        setShowAmazonImport(false);
+        // Close inline form and reset
+        setAmazonFormExpanded(false); // Update to close inline form
         setAmazonUrl("");
       } else {
         toast.error("Failed to import any Amazon images");
@@ -379,24 +369,34 @@ export default function ImageLibrary() {
               <p className="text-slate-600 mt-1">Manage your uploaded and generated images</p>
             </div>
             <div className="flex gap-3">
-              {canImportFromProduct &&
-              <Button
-                onClick={() => setShowProductImport(true)} className="hover:text-white bg-slate-800 text-white border-2 border-emerald-500 px-4 py-2 text-sm font-medium hover:bg-slate-700 hover:border-emerald-400 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10">
-
-
+              {canImportFromProduct && (
+                <Button
+                  onClick={() => setProductFormExpanded(!productFormExpanded)}
+                  className={`hover:text-white border-2 border-emerald-500 px-4 py-2 text-sm font-medium hover:border-emerald-400 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 ${
+                    productFormExpanded
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-slate-800 text-white hover:bg-slate-700'
+                  }`}
+                >
                   <ShoppingBag className="w-4 h-4 mr-2" />
                   Import from Product
+                  <ChevronDown className={`w-4 h-4 ml-1 transition-transform duration-200 ${productFormExpanded ? 'rotate-180' : ''}`} />
                 </Button>
-              }
-              {canImportFromAmazon &&
-              <Button
-                onClick={() => setShowAmazonImport(true)} className="bg-slate-800 text-white border-2 border-orange-500 px-4 py-2 text-sm font-medium hover:bg-slate-700 hover:border-orange-400 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10">
-
-
+              )}
+              {canImportFromAmazon && (
+                <Button
+                  onClick={() => setAmazonFormExpanded(!amazonFormExpanded)} // Toggle inline Amazon form
+                  className={`hover:text-white border-2 border-orange-500 px-4 py-2 text-sm font-medium hover:border-orange-400 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 ${
+                    amazonFormExpanded
+                      ? 'bg-orange-600 text-white border-orange-600'
+                      : 'bg-slate-800 text-white hover:bg-slate-700'
+                  }`}
+                >
                   <Package className="w-4 h-4 mr-2" />
                   Import from Amazon
+                  <ChevronDown className={`w-4 h-4 ml-1 transition-transform duration-200 ${amazonFormExpanded ? 'rotate-180' : ''}`} />
                 </Button>
-              }
+              )}
               <Button onClick={() => setShowImportFromUrl(!showImportFromUrl)} className="bg-slate-800 text-white border-2 border-blue-500 px-4 py-2 text-sm font-medium hover:bg-slate-700 hover:border-blue-400 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10">
                 <Download className="w-4 h-4 mr-2" />
                 Import from URL
@@ -404,80 +404,188 @@ export default function ImageLibrary() {
             </div>
           </div>
 
-          {/* Import from URL Section */}
-          {showImportFromUrl &&
-          <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 mb-6">
-              <h3 className="font-medium text-slate-800 mb-4">Import Image from URL</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Input
-                placeholder="https://example.com/image.jpg"
-                value={importUrl}
-                onChange={(e) => setImportUrl(e.target.value)}
-                className="bg-white border-slate-300"
-                disabled={isImporting} />
-
-                <Input
-                placeholder="Alt text (optional)"
-                value={importAltText}
-                onChange={(e) => setImportAltText(e.target.value)}
-                className="bg-white border-slate-300"
-                disabled={isImporting} />
-
-                {/* Username selection - conditionally rendered */}
-                {useWorkspaceScoping ?
-              <Input
-                value={globalUsername || "No workspace selected"}
-                disabled
-                className="bg-slate-100 border-slate-300 text-slate-500" /> :
-
-
-              <Select value={importUsername} onValueChange={setImportUsername} disabled={isImporting}>
-                    <SelectTrigger className="bg-white border-slate-300">
-                      <SelectValue placeholder="Select username" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allUsernames.map((u) =>
-                  <SelectItem key={u.id} value={u.user_name}>
-                          {u.display_name || u.user_name}
-                        </SelectItem>
+          {/* NEW: Inline Product Import Form */}
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${productFormExpanded ? 'max-h-96 opacity-100 mb-6' : 'max-h-0 opacity-0'}`}>
+            <div className="bg-slate-100 border border-slate-200 rounded-xl p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-medium text-slate-800">Import from Product URL</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setProductFormExpanded(false);
+                    setProductUrl(""); // Clear product URL on close
+                  }}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="product-url-inline" className="text-slate-700 mb-2 block">Product URL</Label>
+                  <Input
+                    id="product-url-inline"
+                    placeholder="https://example.com/product"
+                    value={productUrl}
+                    onChange={(e) => setProductUrl(e.target.value)}
+                    className="bg-white border-slate-300"
+                    disabled={isImportingProduct}
+                  />
+                </div>
+                {/* REMOVED USERNAME FIELD */}
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={handleProductImport}
+                  disabled={isImportingProduct || !productUrl.trim() || !globalUsername}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1"
+                >
+                  {isImportingProduct ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag className="w-4 h-4 mr-2" />
+                      Import Images
+                    </>
                   )}
-                    </SelectContent>
-                  </Select>
-              }
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setProductFormExpanded(false);
+                    setProductUrl("");
+                  }}
+                  disabled={isImportingProduct}
+                  className="bg-white border-slate-300"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* NEW: Inline Amazon Import Form */}
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${amazonFormExpanded ? 'max-h-96 opacity-100 mb-6' : 'max-h-0 opacity-0'}`}>
+            <div className="bg-slate-100 border border-slate-200 rounded-xl p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-medium text-slate-800">Import from Amazon</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setAmazonFormExpanded(false);
+                    setAmazonUrl(""); // Clear Amazon URL on close
+                  }}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="amazon-url-inline" className="text-slate-700 mb-2 block">Amazon Product URL</Label>
+                  <Input
+                    id="amazon-url-inline"
+                    placeholder="https://amazon.com/dp/B0123456789"
+                    value={amazonUrl}
+                    onChange={(e) => setAmazonUrl(e.target.value)}
+                    className="bg-white border-slate-300"
+                    disabled={isImportingAmazon}
+                  />
+                </div>
+                {/* REMOVED USERNAME FIELD */}
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={handleAmazonImport}
+                  disabled={isImportingAmazon || !amazonUrl.trim() || !globalUsername}
+                  className="bg-orange-600 hover:bg-orange-700 text-white flex-1"
+                >
+                  {isImportingAmazon ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <Package className="w-4 h-4 mr-2" />
+                      Import Images
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAmazonFormExpanded(false);
+                    setAmazonUrl("");
+                  }}
+                  disabled={isImportingAmazon}
+                  className="bg-white border-slate-300"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Import from URL Section */}
+          {showImportFromUrl && (
+            <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 mb-6">
+              <h3 className="font-medium text-slate-800 mb-4">Import Image from URL</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  placeholder="https://example.com/image.jpg"
+                  value={importUrl}
+                  onChange={(e) => setImportUrl(e.target.value)}
+                  className="bg-white border-slate-300"
+                  disabled={isImporting} />
+
+                <Input
+                  placeholder="Alt text (optional)"
+                  value={importAltText}
+                  onChange={(e) => setImportAltText(e.target.value)}
+                  className="bg-white border-slate-300"
+                  disabled={isImporting} />
+                
+                {/* REMOVED USERNAME FIELD */}
               </div>
               <div className="flex gap-2 mt-4">
                 <Button
-                onClick={handleImportFromUrl}
-                disabled={isImporting || !importUrl.trim() || !importUsername}
-                className="bg-blue-600 hover:bg-blue-700 text-white">
+                  onClick={handleImportFromUrl}
+                  disabled={isImporting || !importUrl.trim() || !globalUsername}
+                  className="bg-blue-600 hover:bg-blue-700 text-white">
 
                   {isImporting ?
-                <>
+                    <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Importing...
                     </> :
 
-                <>
+                    <>
                       <Plus className="w-4 h-4 mr-2" />
                       Import Image
                     </>
-                }
+                  }
                 </Button>
                 <Button
-                variant="outline"
-                onClick={() => {
-                  setShowImportFromUrl(false);
-                  setImportUrl("");
-                  setImportAltText("");
-                }}
-                className="bg-white border-slate-300"
-                disabled={isImporting}>
+                  variant="outline"
+                  onClick={() => {
+                    setShowImportFromUrl(false);
+                    setImportUrl("");
+                    setImportAltText("");
+                  }}
+                  className="bg-white border-slate-300"
+                  disabled={isImporting}>
 
                   Cancel
                 </Button>
               </div>
             </div>
-          }
+          )}
 
           {/* Search and filter controls */}
           <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
@@ -493,17 +601,17 @@ export default function ImageLibrary() {
               </div>
               {/* Username filter - conditionally rendered */}
               {!useWorkspaceScoping &&
-              <Select value={localUsernameFilter} onValueChange={setLocalUsernameFilter}>
+                <Select value={localUsernameFilter} onValueChange={setLocalUsernameFilter}>
                   <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                     <SelectValue placeholder="All Usernames" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Usernames</SelectItem>
                     {allUsernames.map((u) =>
-                  <SelectItem key={u.id} value={u.user_name}>
+                      <SelectItem key={u.id} value={u.user_name}>
                         {u.display_name || u.user_name}
                       </SelectItem>
-                  )}
+                    )}
                   </SelectContent>
                 </Select>
               }
@@ -519,39 +627,39 @@ export default function ImageLibrary() {
 
           {/* Image grid */}
           {loading ?
-          <div className="flex items-center justify-center h-64">
+            <div className="flex items-center justify-center h-64">
               <Loader2 className="h-8 w-8 text-slate-400 animate-spin" />
             </div> :
-          filteredImages.length === 0 ?
-          <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200">
+            filteredImages.length === 0 ?
+              <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200">
                 <ImageIcon className="w-12 h-12 mx-auto mb-4 text-slate-300" />
                 <p>No images found for the selected filter.</p>
                 <p className="text-sm mt-2">Try importing or generating some images.</p>
               </div> :
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredImages.map((image) =>
-            <div
-              key={image.id}
-              onClick={() => handleSelectImage(image)}
-              className={cn(
-                "group relative bg-white rounded-lg overflow-hidden border transition-all cursor-pointer",
-                selectedImage?.id === image.id ? "border-blue-500 ring-2 ring-blue-500" : "border-slate-200 hover:shadow-md"
-              )}>
+                  <div
+                    key={image.id}
+                    onClick={() => handleSelectImage(image)}
+                    className={cn(
+                      "group relative bg-white rounded-lg overflow-hidden border transition-all cursor-pointer",
+                      selectedImage?.id === image.id ? "border-blue-500 ring-2 ring-blue-500" : "border-slate-200 hover:shadow-md"
+                    )}>
 
                     <div className="aspect-square">
                       <img
-                  src={image.url}
-                  alt={image.alt_text || "No alt text"}
-                  className="w-full h-full object-cover" />
+                        src={image.url}
+                        alt={image.alt_text || "No alt text"}
+                        className="w-full h-full object-cover" />
 
                     </div>
 
                     {/* NEW: Delete button */}
                     <button
-                onClick={(e) => handleGridDelete(image, e)}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow-lg"
-                title="Delete image">
+                      onClick={(e) => handleGridDelete(image, e)}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow-lg"
+                      title="Delete image">
 
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -563,12 +671,12 @@ export default function ImageLibrary() {
                       </p>
                     </div>
                     {selectedImage?.id === image.id &&
-              <div className="absolute top-2 left-2 bg-blue-600 rounded-full p-1">
+                      <div className="absolute top-2 left-2 bg-blue-600 rounded-full p-1">
                         <CheckSquare className="h-3 w-3 text-white" />
                       </div>
-              }
+                    }
                   </div>
-            )}
+                )}
               </div>
           }
         </div>
@@ -599,7 +707,7 @@ export default function ImageLibrary() {
       <Dialog open={showEditorDialog} onOpenChange={setShowEditorDialog}>
         <DialogContent className="bg-white text-slate-900 max-w-lg w-full p-0 flex flex-col max-h-[90vh]">
           {selectedImage ?
-          <>
+            <>
               <div className="p-6 border-b border-slate-200">
                 <h3 className="text-lg font-semibold text-slate-800">Edit Image</h3>
                 <p className="text-sm text-slate-500">Update image details or delete from library.</p>
@@ -614,11 +722,11 @@ export default function ImageLibrary() {
                     Alt Text
                   </Label>
                   <Textarea
-                  id="alt-text"
-                  value={editAltText}
-                  onChange={(e) => setEditAltText(e.target.value)}
-                  onBlur={handleUpdateAltText}
-                  placeholder="Describe the image..." className="bg-white border-slate-300 text-slate-900 px-3 py-2 text-sm flex min-h-[80px] w-full rounded-md border ring-offset-background placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 h-20 resize-none" />
+                    id="alt-text"
+                    value={editAltText}
+                    onChange={(e) => setEditAltText(e.target.value)}
+                    onBlur={handleUpdateAltText}
+                    placeholder="Describe the image..." className="bg-white border-slate-300 text-slate-900 px-3 py-2 text-sm flex min-h-[80px] w-full rounded-md border ring-offset-background placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 h-20 resize-none" />
                 </div>
 
                 <div>
@@ -637,26 +745,26 @@ export default function ImageLibrary() {
               </div>
               <div className="p-6 border-t border-slate-200 bg-slate-50 space-y-2 flex-shrink-0">
                 <Button
-                onClick={handleCopyUrl} className="bg-white border border-slate-300 text-slate-800 hover:bg-slate-100 h-10 w-full flex items-center justify-center gap-2"
-                variant="outline">
+                  onClick={handleCopyUrl} className="bg-white border border-slate-300 text-slate-800 hover:bg-slate-100 h-10 w-full flex items-center justify-center gap-2"
+                  variant="outline">
                   <CheckSquare className="mr-2 h-4 w-4" />
                   Copy URL
                 </Button>
 
                 <Button
-                onClick={handleDeleteImage}
-                variant="destructive" className="bg-red-600 text-destructive-foreground px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-destructive/90 h-10 w-full"
+                  onClick={handleDeleteImage}
+                  variant="destructive" className="bg-red-600 text-destructive-foreground px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-destructive/90 h-10 w-full"
 
-                disabled={isDeleting}>
+                  disabled={isDeleting}>
                   {isDeleting ?
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
-                <Trash2 className="mr-2 h-4 w-4" />
-                }
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  }
                   Delete Image
                 </Button>
               </div>
             </> :
-          <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+            <div className="flex flex-col items-center justify-center h-64 text-slate-500">
               <ImageIcon className="h-8 w-8 mb-3" />
               <p className="text-sm font-medium mb-1">Select an image</p>
               <p className="text-xs text-center">
@@ -670,185 +778,21 @@ export default function ImageLibrary() {
 
       {/* Generator Section */}
       {showGenerator &&
-      <Dialog open={showGenerator} onOpenChange={setShowGenerator}>
+        <Dialog open={showGenerator} onOpenChange={setShowGenerator}>
           <DialogContent className="max-w-4xl p-0">
             <ImageGeneratorPanel
-            onClose={() => setShowGenerator(false)}
-            onImageGenerated={async (imageUrl, altText, username) => {
-              toast.success("Image generated and saved!");
-              await loadData();
-            }}
-            currentUser={currentUser}
-            availableUsernames={allUsernames.map((u) => u.user_name)}
-            defaultUsername={useWorkspaceScoping && globalUsername ? globalUsername : undefined} />
+              onClose={() => setShowGenerator(false)}
+              onImageGenerated={async (imageUrl, altText, username) => {
+                toast.success("Image generated and saved!");
+                await loadData();
+              }}
+              currentUser={currentUser}
+              availableUsernames={allUsernames.map((u) => u.user_name)}
+              defaultUsername={useWorkspaceScoping && globalUsername ? globalUsername : undefined} />
 
           </DialogContent>
         </Dialog>
       }
-
-      {/* Product Import Dialog */}
-      <Dialog open={showProductImport} onOpenChange={setShowProductImport}>
-        <DialogContent className="bg-white text-slate-900 max-w-md">
-          <DialogHeader>
-            <DialogTitle>Import from Product URL</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div>
-              <Label htmlFor="product-url" className="text-slate-700 mb-2 block">Product URL</Label>
-              <Input
-                id="product-url"
-                placeholder="https://example.com/product"
-                value={productUrl}
-                onChange={(e) => setProductUrl(e.target.value)}
-                className="bg-white border-slate-300"
-                disabled={isImportingProduct} />
-
-            </div>
-            
-            {/* Username selection - conditionally rendered */}
-            {useWorkspaceScoping ?
-            <div>
-                <Label htmlFor="product-import-username-workspace" className="text-slate-700 mb-2 block">Username</Label>
-                <Input
-                id="product-import-username-workspace"
-                value={globalUsername || "No workspace selected"}
-                disabled
-                className="bg-slate-100 border-slate-300 text-slate-500" />
-
-              </div> :
-
-            <div>
-                <Label htmlFor="product-import-username-select" className="text-slate-700 mb-2 block">Username</Label>
-                <Select value={importUsername} onValueChange={setImportUsername} disabled={isImportingProduct}>
-                  <SelectTrigger id="product-import-username-select" className="bg-white border-slate-300">
-                    <SelectValue placeholder="Select username" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allUsernames.map((u) =>
-                  <SelectItem key={u.id} value={u.user_name}>
-                        {u.display_name || u.user_name}
-                      </SelectItem>
-                  )}
-                  </SelectContent>
-                </Select>
-              </div>
-            }
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={handleProductImport}
-                disabled={isImportingProduct || !productUrl.trim() || !(useWorkspaceScoping ? globalUsername : importUsername)} className="bg-blue-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-green-700 flex-1">
-
-
-                {isImportingProduct ?
-                <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Importing...
-                  </> :
-
-                <>
-                    <ShoppingBag className="w-4 h-4 mr-2" />
-                    Import Images
-                  </>
-                }
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowProductImport(false);
-                  setProductUrl("");
-                }}
-                disabled={isImportingProduct}
-                className="bg-white border-slate-300">
-
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Amazon Import Dialog */}
-      <Dialog open={showAmazonImport} onOpenChange={setShowAmazonImport}>
-        <DialogContent className="bg-white text-slate-900 max-w-md">
-          <DialogHeader>
-            <DialogTitle>Import from Amazon</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div>
-              <Label htmlFor="amazon-url" className="text-slate-700 mb-2 block">Amazon Product URL</Label>
-              <Input
-                id="amazon-url"
-                placeholder="https://amazon.com/dp/B0123456789"
-                value={amazonUrl}
-                onChange={(e) => setAmazonUrl(e.target.value)}
-                className="bg-white border-slate-300"
-                disabled={isImportingAmazon} />
-
-            </div>
-            
-            {/* Username selection - conditionally rendered */}
-            {useWorkspaceScoping ?
-            <div>
-                <Label htmlFor="amazon-import-username-workspace" className="text-slate-700 mb-2 block">Username</Label>
-                <Input
-                id="amazon-import-username-workspace"
-                value={globalUsername || "No workspace selected"}
-                disabled
-                className="bg-slate-100 border-slate-300 text-slate-500" />
-
-              </div> :
-
-            <div>
-                <Label htmlFor="amazon-import-username-select" className="text-slate-700 mb-2 block">Username</Label>
-                <Select value={importUsername} onValueChange={setImportUsername} disabled={isImportingAmazon}>
-                  <SelectTrigger id="amazon-import-username-select" className="bg-white border-slate-300">
-                    <SelectValue placeholder="Select username" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allUsernames.map((u) =>
-                  <SelectItem key={u.id} value={u.user_name}>
-                        {u.display_name || u.user_name}
-                      </SelectItem>
-                  )}
-                  </SelectContent>
-                </Select>
-              </div>
-            }
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={handleAmazonImport}
-                disabled={isImportingAmazon || !amazonUrl.trim() || !(useWorkspaceScoping ? globalUsername : importUsername)}
-                className="bg-orange-600 hover:bg-orange-700 text-white flex-1">
-
-                {isImportingAmazon ?
-                <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Importing...
-                  </> :
-
-                <>
-                    <Package className="w-4 h-4 mr-2" />
-                    Import Images
-                  </>
-                }
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAmazonImport(false);
-                  setAmazonUrl("");
-                }}
-                disabled={isImportingAmazon}
-                className="bg-white border-slate-300">
-
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>);
-
+    </>
+  );
 }

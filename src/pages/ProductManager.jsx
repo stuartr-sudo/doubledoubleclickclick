@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog";
+  DialogFooter } from
+"@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,13 +19,13 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
+  AlertDialogTitle } from
+"@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ShoppingBag, Trash2, Edit, Loader2, Link as LinkIcon, Wand2 } from "lucide-react";
+import { Plus, ShoppingBag, Trash2, Edit, Loader2, Link as LinkIcon, Wand2, X } from "lucide-react";
 import { toast } from "sonner";
 import { extractProductMeta } from "@/api/functions";
 import { InvokeLLM } from "@/api/integrations";
@@ -34,25 +34,25 @@ import { ImageLibraryItem } from "@/api/entities";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
+import { motion, AnimatePresence } from "framer-motion";
 
 
-// New ProductForm component
-function ProductForm({
+// New ProductForm component that renders inline (no Dialog wrapper)
+function InlineProductForm({
   initialProduct,
   onSave,
   onCancel,
   availableUsernames,
   isSaving,
-  currentUser, // Passed from ProductManager
-  globalUsername, // Passed from ProductManager
-  useWorkspaceScoping, // Passed from ProductManager
-  consumeTokensForFeature // Passed from ProductManager
+  currentUser,
+  globalUsername,
+  useWorkspaceScoping,
+  consumeTokensForFeature
 }) {
   const [newProduct, setNewProduct] = useState(initialProduct);
   const [isFetchingMeta, setIsFetchingMeta] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [fieldLoading, setFieldLoading] = useState({ name: false, description: false });
-  const productUrlRef = useRef(null);
 
   // Sync initialProduct prop changes to internal state (for editing an existing product)
   useEffect(() => {
@@ -214,174 +214,182 @@ Title (context): "${newProduct.name || ""}"`;
   };
 
   return (
-    <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="bg-white border border-slate-200 text-slate-900 w-[96vw] max-w-[860px] max-h-[85vh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle className="text-blue-900">{initialProduct.id ? 'Edit Product' : 'Add New Product'}</DialogTitle>
-          <DialogDescription className="text-slate-600">
-            {initialProduct.id ? 'Update the details for this product.' : 'Paste a product URL to auto-fill details, or enter them manually.'}
-          </DialogDescription>
-        </DialogHeader>
+    <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 shadow-sm">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-semibold text-blue-900">
+          {initialProduct.id ? 'Edit Product' : 'Add New Product'}
+        </h3>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onCancel}
+          className="text-slate-400 hover:text-slate-600">
 
-        <form onSubmit={handleFormSubmit} className="space-y-4 break-words">
-          <div ref={productUrlRef} id="product_url_section">
-            <Label htmlFor="product_url" className="text-slate-700">Product URL</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <LinkIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <Input
-                  id="product_url"
-                  name="product_url"
-                  value={newProduct.product_url}
-                  onChange={handleChange}
-                  placeholder="https://example.com/product"
-                  className="bg-white text-slate-900 placeholder:text-slate-500 pl-9 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                  required
-                />
-              </div>
-              <Button
-                type="button"
-                onClick={handleFetchFromUrl}
-                disabled={isFetchingMeta || !newProduct.product_url || isSaving}
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 hover:shadow-[0_0_20px_rgba(0,0,128,0.6),0_0_40px_rgba(0,0,128,0.4)] text-white min-w-[130px]"
-              >
-                {isFetchingMeta ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Fetching</> : 'Fetch from URL'}
-              </Button>
-            </div>
-            {fetchError && <p className="text-red-600 text-xs mt-2">{fetchError}</p>}
-          </div>
+          <X className="w-5 h-5" />
+        </Button>
+      </div>
 
-          <div>
-            <Label htmlFor="name" className="text-slate-700">Product Name</Label>
-            <div className="flex gap-2">
+      <form onSubmit={handleFormSubmit} className="space-y-4">
+        <div id="product_url_section">
+          <Label htmlFor="product_url" className="text-slate-700">Product URL</Label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <LinkIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input
-                id="name"
-                name="name"
-                value={newProduct.name}
+                id="product_url"
+                name="product_url"
+                value={newProduct.product_url}
                 onChange={handleChange}
-                required
-                disabled={isSaving}
-                className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => rewriteField("name")}
-                disabled={fieldLoading.name || isSaving}
-                className="min-w-[120px] bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-                title="Magic rewrite title"
-              >
-                {fieldLoading.name ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Magic</> : <><Wand2 className="w-4 h-4 mr-2" />Magic</>}
-              </Button>
+                placeholder="https://example.com/product"
+                className="bg-white text-slate-900 placeholder:text-slate-500 pl-9 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                required />
+
             </div>
-          </div>
+            <Button
+              type="button"
+              onClick={handleFetchFromUrl}
+              disabled={isFetchingMeta || !newProduct.product_url || isSaving}
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 hover:shadow-[0_0_20px_rgba(0,0,128,0.6),0_0_40px_rgba(0,0,128,0.4)] text-white min-w-[130px]">
 
-          <div>
-            <Label htmlFor="button_url" className="text-slate-700">Button Link URL</Label>
-            <Input
-              id="button_url"
-              name="button_url"
-              value={newProduct.button_url}
-              onChange={handleChange}
-              placeholder="https://example.com/your-affiliate-or-cart-link"
-              disabled={isSaving}
-              className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              This is where the inserted product button will link to. If left blank, it will use the Product URL.
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="description" className="text-slate-700">Description</Label>
-            <div className="flex gap-2">
-              <Textarea
-                id="description"
-                name="description"
-                value={newProduct.description}
-                onChange={handleChange}
-                disabled={isSaving}
-                className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-sm flex min-h-[80px] w-full rounded-md border border-slate-300 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => rewriteField("description")}
-                disabled={fieldLoading.description || isSaving}
-                className="h-auto min-w-[120px] bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-                title="Magic rewrite description"
-              >
-                {fieldLoading.description ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Magic</> : <><Wand2 className="w-4 h-4 mr-2" />Magic</>}
-              </Button>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="image_url" className="text-slate-700">Image URL</Label>
-            <Input
-              id="image_url"
-              name="image_url"
-              value={newProduct.image_url || ""}
-              onChange={handleChange}
-              placeholder="Auto-filled from URL when available"
-              disabled={isSaving}
-              className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="price" className="text-slate-700">Price</Label>
-            <Input
-              id="price"
-              name="price"
-              value={newProduct.price || ""}
-              onChange={handleChange}
-              placeholder="$29.99"
-              disabled={isSaving}
-              className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="user_name" className="text-slate-700">Assign to Username</Label>
-            {useWorkspaceScoping ?
-              <Input
-                value={globalUsername || "No workspace selected"}
-                disabled
-                className="bg-slate-100 border-slate-300 text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border ring-offset-background"
-              /> :
-              <Select name="user_name" value={newProduct.user_name} onValueChange={handleUsernameChange} required disabled={isSaving}>
-                <SelectTrigger className="bg-white text-slate-900 border border-slate-300 px-3 py-2 text-sm flex h-10 w-full items-center justify-between rounded-md">
-                  <SelectValue placeholder="Select a username" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
-                  {availableUsernames.map((username) => (
-                    <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            }
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={onCancel} disabled={isSaving}>Cancel</Button>
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isSaving}>
-              {isSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving</> : (initialProduct.id ? 'Update Product' : 'Save Product')}
+              {isFetchingMeta ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Fetching</> : 'Fetch from URL'}
             </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+          </div>
+          {fetchError && <p className="text-red-600 text-xs mt-2">{fetchError}</p>}
+        </div>
+
+        <div>
+          <Label htmlFor="name" className="text-slate-700">Product Name</Label>
+          <div className="flex gap-2">
+            <Input
+              id="name"
+              name="name"
+              value={newProduct.name}
+              onChange={handleChange}
+              required
+              disabled={isSaving}
+              className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm flex-1" />
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => rewriteField("name")}
+              disabled={fieldLoading.name || isSaving}
+              className="min-w-[120px] bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+              title="Magic rewrite title">
+
+              {fieldLoading.name ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Magic</> : <><Wand2 className="w-4 h-4 mr-2" />Magic</>}
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="button_url" className="text-slate-700">Button Link URL</Label>
+          <Input
+            id="button_url"
+            name="button_url"
+            value={newProduct.button_url}
+            onChange={handleChange}
+            placeholder="https://example.com/your-affiliate-or-cart-link"
+            disabled={isSaving}
+            className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300" />
+
+          <p className="text-xs text-slate-500 mt-1">
+            This is where the inserted product button will link to. If left blank, it will use the Product URL.
+          </p>
+        </div>
+
+        <div>
+          <Label htmlFor="description" className="text-slate-700">Description</Label>
+          <div className="flex gap-2">
+            <Textarea
+              id="description"
+              name="description"
+              value={newProduct.description}
+              onChange={handleChange}
+              disabled={isSaving}
+              className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-sm flex min-h-[80px] w-full rounded-md border border-slate-300 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1" />
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => rewriteField("description")}
+              disabled={fieldLoading.description || isSaving}
+              className="h-auto min-w-[120px] bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+              title="Magic rewrite description">
+
+              {fieldLoading.description ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Magic</> : <><Wand2 className="w-4 h-4 mr-2" />Magic</>}
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="image_url" className="text-slate-700">Image URL</Label>
+          <Input
+            id="image_url"
+            name="image_url"
+            value={newProduct.image_url || ""}
+            onChange={handleChange}
+            placeholder="Auto-filled from URL when available"
+            disabled={isSaving}
+            className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+
+        </div>
+
+        <div>
+          <Label htmlFor="price" className="text-slate-700">Price</Label>
+          <Input
+            id="price"
+            name="price"
+            value={newProduct.price || ""}
+            onChange={handleChange}
+            placeholder="$29.99"
+            disabled={isSaving}
+            className="bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border border-slate-300 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
+
+        </div>
+
+        <div>
+          <Label htmlFor="user_name" className="text-slate-700">Assign to Username</Label>
+          {useWorkspaceScoping ?
+          <Input
+            value={globalUsername || "No workspace selected"}
+            disabled
+            className="bg-slate-100 border-slate-300 text-slate-500 px-3 py-2 text-base flex h-10 w-full rounded-md border ring-offset-background" /> :
+
+          <Select name="user_name" value={newProduct.user_name} onValueChange={handleUsernameChange} required disabled={isSaving}>
+              <SelectTrigger className="bg-white text-slate-900 border border-slate-300 px-3 py-2 text-sm flex h-10 w-full items-center justify-between rounded-md">
+                <SelectValue placeholder="Select a username" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200 text-slate-900">
+                {availableUsernames.map((username) =>
+              <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
+              )}
+              </SelectContent>
+            </Select>
+          }
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving} className="bg-background text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:text-accent-foreground h-10">
+            Cancel
+          </Button>
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white" disabled={isSaving}>
+            {isSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving</> : initialProduct.id ? 'Update Product' : 'Save Product'}
+          </Button>
+        </div>
+      </form>
+    </div>);
+
 }
 
 
 export default function ProductManager() {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showProductForm, setShowProductForm] = useState(false); // Controls visibility of ProductForm
-  const [productFormData, setProductFormData] = useState(null); // Data for ProductForm
-  const [isSavingProduct, setIsSavingProduct] = useState(false); // Loading state for save action
+  const [showInlineForm, setShowInlineForm] = useState(false); // NEW: Controls inline form visibility
+  const [productFormData, setProductFormData] = useState(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -402,7 +410,7 @@ export default function ProductManager() {
 
       if (assigned.length > 0) {
         const allAssignedProducts = await PromotedProduct.filter({ user_name: assigned }, "-created_date");
-        const uniqueProducts = Array.from(new Map(allAssignedProducts.map(p => [p.id, p])).values());
+        const uniqueProducts = Array.from(new Map(allAssignedProducts.map((p) => [p.id, p])).values());
         uniqueProducts.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
         setProducts(uniqueProducts);
       } else {
@@ -434,10 +442,8 @@ export default function ProductManager() {
     loadCurrentUser();
   }, [loadCurrentUser]);
 
-  // Removed useEffect for loading product templates
-
-  const handleProductFormClose = () => {
-    setShowProductForm(false);
+  const handleInlineFormClose = () => {
+    setShowInlineForm(false);
     setProductFormData(null);
   };
 
@@ -450,81 +456,38 @@ export default function ProductManager() {
       button_url: "",
       price: "",
       user_name: useWorkspaceScoping ? globalUsername || "" : currentUser?.role === 'admin' ? availableUsernames[0] || "" : currentUser?.assigned_usernames?.[0] || "",
-      template_key: "gradient", // This can remain as a default or be removed if template_key is fully deprecated
       sku: "",
       in_stock: true,
       review_count: 0,
-      star_rating: 0,
-      display_styles: {
-        background_color: "",
-        text_color: "",
-        padding: "",
-        layout: ""
-      },
-      font_settings: {
-        title_font: "",
-        title_size: 0,
-        description_font: "",
-        description_size: 0,
-        price_font: "",
-        price_size: 0
-      },
-      price_display: {
-        show_original: false,
-        original_price_color: "",
-        currency_symbol: ""
-      },
-      // custom_template_id removed
+      star_rating: 0
     });
-    setShowProductForm(true);
+    setShowInlineForm(true);
   };
 
   const handleEditClick = (product) => {
     setProductFormData({
       ...product,
-      template_key: product.template_key || "gradient", // This can remain as a default or be removed if template_key is fully deprecated
       sku: product.sku || "",
       in_stock: product.in_stock !== undefined ? product.in_stock : true,
       review_count: product.review_count || 0,
       star_rating: product.star_rating || 0,
       product_url: product.product_url || "",
-      button_url: product.button_url || product.product_url || "",
-      display_styles: {
-        background_color: product.display_styles?.background_color || "",
-        text_color: product.display_styles?.text_color || "",
-        padding: product.display_styles?.padding || "",
-        layout: product.display_styles?.layout || ""
-      },
-      font_settings: {
-        title_font: product.font_settings?.title_font || "",
-        title_size: product.font_settings?.title_size || 0,
-        description_font: product.font_settings?.description_font || "",
-        description_size: product.font_settings?.description_size || 0,
-        price_font: product.font_settings?.price_font || "",
-        price_size: product.font_settings?.price_size || 0
-      },
-      price_display: {
-        show_original: !!product.price_display?.show_original,
-        original_price_color: product.price_display?.original_price_color || "",
-        currency_symbol: product.price_display?.currency_symbol || ""
-      },
-      // custom_template_id removed
+      button_url: product.button_url || product.product_url || ""
     });
-    setShowProductForm(true);
+    setShowInlineForm(true);
   };
 
   const handleProductFormSave = async (productData) => {
     setIsSavingProduct(true);
     try {
-      // custom_template_id handling removed
-      if (productData.id) { // Check if it's an existing product by looking for an ID
+      if (productData.id) {// Check if it's an existing product by looking for an ID
         await PromotedProduct.update(productData.id, productData);
         toast.success("Product updated successfully!");
       } else {
         await PromotedProduct.create(productData);
         toast.success("Product created successfully!");
       }
-      handleProductFormClose();
+      handleInlineFormClose();
       await loadProducts(currentUser);
     } catch (error) {
       console.error("Error saving product:", error);
@@ -560,6 +523,7 @@ export default function ProductManager() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="p-8">
+        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold flex items-center gap-2 text-blue-900">
             <ShoppingBag className="w-8 h-8 text-blue-900" />
@@ -570,8 +534,34 @@ export default function ProductManager() {
           </Button>
         </div>
 
+        {/* Inline Form */}
+        <AnimatePresence>
+          {showInlineForm && productFormData &&
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden">
+
+              <InlineProductForm
+              initialProduct={productFormData}
+              onSave={handleProductFormSave}
+              onCancel={handleInlineFormClose}
+              availableUsernames={availableUsernames}
+              isSaving={isSavingProduct}
+              currentUser={currentUser}
+              globalUsername={globalUsername}
+              useWorkspaceScoping={useWorkspaceScoping}
+              consumeTokensForFeature={consumeTokensForFeature} />
+
+            </motion.div>
+          }
+        </AnimatePresence>
+
+        {/* Filters */}
         {!useWorkspaceScoping &&
-          <div className="mb-6 max-w-sm">
+        <div className="mb-6 max-w-sm">
             <Label htmlFor="filter-username" className="text-slate-700">Filter by Username</Label>
             <Select value={filterUsername} onValueChange={setFilterUsername}>
               <SelectTrigger id="filter-username" className="bg-white border-slate-300 text-slate-900 px-3 py-2 text-sm flex h-10 w-full items-center justify-between rounded-md ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1">
@@ -580,31 +570,36 @@ export default function ProductManager() {
               <SelectContent className="bg-white border-slate-200 text-slate-900">
                 <SelectItem value="all">All Users</SelectItem>
                 {availableUsernames.map((username) =>
-                  <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
-                )}
+              <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
+              )}
               </SelectContent>
             </Select>
           </div>
         }
 
+        {/* Product Grid or No Products Message */}
         {isLoading ?
-          <div className="text-center py-10 text-slate-600">Loading products...</div> :
-          filteredProducts.length === 0 ?
-            <div className="text-center py-10 bg-white rounded-lg border border-slate-200">
+        <div className="text-center py-10 text-slate-600">Loading products...</div> :
+        filteredProducts.length === 0 ?
+        <div className="text-center py-10 bg-white rounded-lg border border-slate-200">
               <p className="text-slate-600">No products found for the selected user.</p>
             </div> :
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) =>
-                <div key={product.id} className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+          <div key={product.id} className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
                   {product.image_url &&
-                    <img
-                      src={product.image_url}
-                      alt={product.name}
-                      className="w-full h-40 object-cover rounded-md mb-4" />
-                  }
-                  <h3 className="text-xl font-semibold mb-2 text-blue-900">{product.name}</h3>
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="w-full h-40 object-cover rounded-md mb-4" />
+            }
+                  <h3 className="text-xl font-semibold mb-2 text-blue-900 line-clamp-2 min-h-[3rem]">
+                    {product.name}
+                  </h3>
                   <p className="text-blue-600 font-bold text-lg mb-3">{product.price}</p>
-                  <p className="text-slate-600 mb-4 h-20 overflow-y-auto">{product.description}</p>
+                  <p className="text-slate-600 mb-4 line-clamp-3 min-h-[3.6rem]">
+                    {product.description}
+                  </p>
                   <p className="text-xs text-slate-500 mb-4">Username: {product.user_name}</p>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(product)} className="w-full bg-white border-slate-300 text-slate-700 hover:bg-slate-50">
@@ -615,25 +610,12 @@ export default function ProductManager() {
                     </Button>
                   </div>
                 </div>
-              )}
+          )}
             </div>
         }
       </div>
 
-      {showProductForm && productFormData && (
-        <ProductForm
-          initialProduct={productFormData}
-          onSave={handleProductFormSave}
-          onCancel={handleProductFormClose}
-          availableUsernames={availableUsernames}
-          isSaving={isSavingProduct}
-          currentUser={currentUser}
-          globalUsername={globalUsername}
-          useWorkspaceScoping={useWorkspaceScoping}
-          consumeTokensForFeature={consumeTokensForFeature}
-        />
-      )}
-
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="bg-white border-slate-200 text-slate-900">
           <AlertDialogHeader>
@@ -648,6 +630,6 @@ export default function ProductManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>);
+
 }

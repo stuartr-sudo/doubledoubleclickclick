@@ -24,6 +24,14 @@ import { airtableListFields } from "@/api/functions";
 import { airtableDeleteRecord } from "@/api/functions";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
+import { toast } from "sonner";
+import { BlogPost } from "@/api/entities";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import TopicsOnboardingModal from "@/components/onboarding/TopicsOnboardingModal";
+import { Username } from "@/api/entities";
+import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
+import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal";
 
 // --- Configuration ---
 const TABLE_IDS = {
@@ -31,22 +39,26 @@ const TABLE_IDS = {
   faq: "tblSDBPmucJA0Skvp",
   targetMarket: "tblhayydQ0Zq2NBR9",
   blogCategories: "tblyNaoalXlmc1pQO",
-  companyProducts: "tblafbTZlVJekc2Dz"
+  companyProducts: "Company Products", // Use table name instead of ID
+  companyInformation: "Company Information" // This should be a real table ID or name
+};
+
+const GET_QUESTIONS_RATE_LIMIT = {
+  limit: 3,
+  windowMs: 30 * 60 * 1000 // 30 minutes
 };
 
 const KEYWORD_MAP_HEADERS = [
   "Keyword",
-  "Select Keyword",
+  "Get Questions", // This is the UI label for 'Select Keyword'
   "Search Volume",
-  "Keyword Difficulty",
-  "Search Intent",
   "Target Market",
   "Promoted Product"
 ];
 
 
-const KEYWORD_MAP_LAYOUT =
-  "minmax(300px, 1.5fr) 140px 140px 160px 160px minmax(220px, 1fr) minmax(220px, 1fr)";
+// Reduce the column width for 'Get Questions' from 120px to 80px
+const KEYWORD_MAP_LAYOUT = "2fr 80px 100px 1.2fr 1.2fr";
 
 // Fields we require before sending to Airtable (moved outside component for stability)
 const REQUIRED_FIELDS = ["Target Market", "Promoted Product"];
@@ -69,6 +81,7 @@ function getLabel(fields, tableContext = null) {
       "SEO Title",
       "Seo Title"
     ];
+
 
     const stripHtml = (s) => String(s || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     const safeTruncate = (s, n = 80) => s.length > n ? s.slice(0, n) + "..." : s;
@@ -100,9 +113,7 @@ function getLabel(fields, tableContext = null) {
         } catch {
           // ignore JSON parse errors and continue
         }
-      }
-
-      // Strip HTML if present and use a truncated readable text
+      } // Strip HTML if present and use a truncated readable text
       const clean = stripHtml(text);
       if (clean) return safeTruncate(clean, 80);
     }
@@ -150,7 +161,7 @@ export default function TopicsPage() {
   const [options, setOptions] = useState({ tm: [], bc: [], pp: [] });
 
   const [loadingData, setLoadingData] = useState(false);
-  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadingInitial, setLoadingInitial] = useState(true); // FIX: malformed useState call
   const [error, setError] = useState(null);
 
   // Persist and restore active tab so it never jumps back on re-render
@@ -162,19 +173,27 @@ export default function TopicsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [showCompleteOnly, setShowCompleteOnly] = useState(false);
-  // Removed: const [density, setDensity] = useState("comfortable"); // 'comfortable' | 'compact'
+  const [showManualOnly, setShowManualOnly] = useState(false); // NEW: Manual filter state
+
+  // NEW: Dedicated state for filtering FAQs by a keyword from the Keyword Map
+  const [faqKeywordFilter, setFaqKeywordFilter] = useState(null);
 
   // NEW: URL-driven focus for RecommendedQuestions -> Topics handoff
   const [pendingUsername, setPendingUsername] = useState(null);
   const [focusQuestion, setFocusQuestion] = useState(null);
   const faqTabRef = useRef(null);
 
-  // NEW: Add Keyword/FAQ states
+  // NEW: Add Keyword/FAQ states (kept for existing modal logic, though UI button now uses inline add)
   const [showAddKeyword, setShowAddKeyword] = useState(false);
-  const [showAddFaq, setShowAddFaq] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
+  const [showAddFaq, setShowAddFaq] = useState(false);
   const [newFaqKeyword, setNewFaqKeyword] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // NEW: Inline add form state
+  const [showInlineAdd, setShowInlineAdd] = useState(false);
+  const [inlineKeywordText, setInlineKeywordText] = useState("");
+  const [inlineTarget, setInlineTarget] = useState("keyword_map"); // "keyword_map" | "faq"
 
   // NEW: brand field/value derived from existing rows for this username
   const [brandFieldKey, setBrandFieldKey] = useState(null);
@@ -184,11 +203,42 @@ export default function TopicsPage() {
   const [auxDataCache, setAuxDataCache] = useState({ tm: [], bc: [], pp: [], cacheTime: 0 });
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+  // NEW: ref mirror of the cache to avoid re-creating callbacks and causing loops
+  const auxDataCacheRef = useRef(auxDataCache);
+  useEffect(() => {
+    auxDataCacheRef.current = auxDataCache;
+  }, [auxDataCache]);
+
   const { selectedUsername: globalUsername, assignedUsernames: globalUsernames, isLoading: isWorkspaceLoading } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
 
   // Determine active username based on workspace scoping
   const selectedUsername = useWorkspaceScoping ? globalUsername : localSelectedUsername;
+
+  // Ref to suppress initial data load when workspace scoping is active
+  const isInitialDataLoadSuppressed = useRef(true);
+
+  // NEW: State for tracking loading questions per row
+  const [loadingQuestions, setLoadingQuestions] = useState({});
+  const [countdown, setCountdown] = useState({});
+
+  // NEW: Ref to store interval IDs for cleanup, preventing leaks if toggled multiple times
+  const intervalRefs = useRef({});
+
+  // NEW: Map of keyword(lowercased) -> blogPostId to detect written content
+  const [writtenByKeyword, setWrittenByKeyword] = useState({});
+
+  // Add an in-flight guard to prevent concurrent loads
+  const isFetchingRef = useRef(false);
+
+  // NEW: onboarding gate states and ref
+  const [checkingTopicsGate, setCheckingTopicsGate] = React.useState(true);
+  const [topicsGateSatisfied, setTopicsGateSatisfied] = React.useState(true); // Assume satisfied until checked
+  const [showOnboarding, setShowOnboarding] = React.useState(false);
+
+  // Keep a ref so loaders can bail if gate is false
+  const topicsGateRef = React.useRef(true);
+  React.useEffect(() => { topicsGateRef.current = topicsGateSatisfied; }, [topicsGateSatisfied]);
 
   // Helper: pick the first existing field from candidates (case-insensitive)
   const pickField = useCallback((fieldsArr, candidates) => {
@@ -200,12 +250,34 @@ export default function TopicsPage() {
     return null;
   }, []);
 
-  // Read URL params once on mount
+  // NEW: persist manual-added Keyword Map record IDs across reloads
+  const MANUAL_KW_SET_KEY = "manual_keyword_ids";
+  const getManualKwSet = React.useCallback(() => {
+    try {
+      const raw = localStorage.getItem(MANUAL_KW_SET_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  }, []);
+  const saveManualKwSet = React.useCallback((setObj) => {
+    try {
+      localStorage.setItem(MANUAL_KW_SET_KEY, JSON.stringify(Array.from(setObj)));
+    } catch {
+      // ignore
+    }
+  }, []); // Read URL params once on mount
+
+  const [deleteTarget, setDeleteTarget] = useState(null); // {tableId, recordId}
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
     const uname = urlParams.get('username');
     const focus = urlParams.get('focus');
+    const faqKeyword = urlParams.get('faq_keyword'); // NEW: read dedicated filter from URL
 
     if (tab === 'faq') {
       setActiveTab('faq');
@@ -216,6 +288,9 @@ export default function TopicsPage() {
     if (focus) {
       setFocusQuestion(focus);
       setSearchQuery(focus); // filter list to find it quickly
+    }
+    if (faqKeyword) { // NEW: set dedicated filter from URL
+      setFaqKeywordFilter(faqKeyword);
     }
   }, []);
 
@@ -256,6 +331,45 @@ export default function TopicsPage() {
     getInitialData();
   }, [useWorkspaceScoping, globalUsernames]);
 
+  // Gate check BEFORE loading any Airtable data
+  React.useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const me = await User.me().catch(() => null);
+        const uname = selectedUsername || null;
+
+        if (!me || !uname) {
+          // If no user or no username selected, gate is implicitly satisfied (or not applicable)
+          // or we're waiting for selection. Allow UI to proceed to username selection.
+          if (isMounted) {
+            setTopicsGateSatisfied(true);
+            setShowOnboarding(false);
+            setCheckingTopicsGate(false);
+          }
+          return;
+        }
+
+        const doneForThis = Array.isArray(me.topics) && me.topics.includes(uname);
+
+        if (isMounted) {
+          setTopicsGateSatisfied(doneForThis);
+          setShowOnboarding(!doneForThis);
+          setCheckingTopicsGate(false);
+        }
+      } catch (e) {
+        console.error("Error checking topics gate:", e);
+        if (isMounted) {
+          // On error, assume satisfied to not block the user indefinitely, but log it.
+          setTopicsGateSatisfied(true);
+          setShowOnboarding(false);
+          setCheckingTopicsGate(false);
+        }
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [selectedUsername]);
+
   // Persist activeTab to sessionStorage on change
   useEffect(() => {
     sessionStorage.setItem('topics_active_tab', activeTab);
@@ -278,12 +392,22 @@ export default function TopicsPage() {
   }, [activeTab, selectedUsername, loadingData]);
 
   const loadDataForUser = useCallback(async (username) => {
+    // SHORT-CIRCUIT all heavy loading if gate not satisfied
+    if (!topicsGateRef.current) {
+      setLoadingData(false);
+      isFetchingRef.current = false;
+      console.log("TopicsPage: loadDataForUser blocked by topics gate.");
+      return;
+    }
+
     if (!username) return;
+
+    // Prevent double-loading if a fetch is already in progress
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
 
     setLoadingData(true);
     setError(null);
-    setKeywordRows([]);
-    setFaqRows([]);
 
     try {
       const listWithFilter = async (tableIdOrName, formula) => {
@@ -295,19 +419,28 @@ export default function TopicsPage() {
       };
 
       const sanitizedUsername = username.replace(/'/g, "\\'");
+      // Ensure manually added keywords always load, even if Search Volume <= 100
+      const manualIds = Array.from(getManualKwSet ? getManualKwSet() : new Set());
       const mainFormula = `{Username} = '${sanitizedUsername}'`;
-      const keywordFormula = `AND({Search Volume} > 500, {Username} = '${sanitizedUsername}')`;
+      const keywordFormula = manualIds.length ?
+        `AND({Username} = '${sanitizedUsername}', OR({Search Volume} > 100, ${manualIds.map((id) => `RECORD_ID()='${id}'`).join(", ")}))` :
+        `AND({Search Volume} > 100, {Username} = '${sanitizedUsername}')`;
       const productFormula = `{Client Username} = '${sanitizedUsername}'`; // Specific formula for Company Products
 
-      // Start main data fetch immediately
+      // Start main data fetch immediately (EXACT filters; only one call per table)
       const mainDataPromise = Promise.all([
         listWithFilter(TABLE_IDS.keywordMap, keywordFormula),
         listWithFilter(TABLE_IDS.faq, mainFormula)
       ]);
 
-      // Check if we need to fetch auxiliary data or use cache
+      // Decide whether to refresh cache using the ref (prevents callback recreation loop)
       const now = Date.now();
-      const shouldRefreshCache = (now - auxDataCache.cacheTime) > CACHE_DURATION || auxDataCache.tm.length === 0;
+      const cacheSnapshot = auxDataCacheRef.current || { tm: [], bc: [], pp: [], cacheTime: 0 }; // Use ref here
+      const shouldRefreshCache =
+        now - (cacheSnapshot.cacheTime || 0) > CACHE_DURATION ||
+        (cacheSnapshot.tm?.length || 0) === 0 ||
+        (cacheSnapshot.bc?.length || 0) === 0 ||
+        (cacheSnapshot.pp?.length || 0) === 0;
 
       let auxDataPromise;
       if (shouldRefreshCache) {
@@ -321,63 +454,64 @@ export default function TopicsPage() {
           let bcArr = results[1].status === "fulfilled" ? results[1].value || [] : [];
           let ppArr = results[2].status === "fulfilled" ? results[2].value || [] : [];
 
-          // Fallback attempt for products table if the primary formula fails (e.g., field name variation)
+          // Fallback attempt for products table if primary formula fails (e.g., field variation)
           if (ppArr.length === 0 && results[2].status === "rejected") {
             try {
               ppArr = await listWithFilter(TABLE_IDS.companyProducts, mainFormula); // Try with 'Username' field
             } catch {
-              // Ignore, ppArr remains empty
+              // keep empty
+            }
+          } // Last resort: fetch by table name and filter client-side
+          if (ppArr.length === 0) {
+            try {
+              const allProducts = await listWithFilter(TABLE_IDS.companyProducts, null); // Use the table name from config
+              const keyCandidates = ["client_username", "client username", "username", "user_name", "user"];
+              ppArr = (allProducts || []).filter((r) => {
+                const f = r?.fields || {};
+                const lower = Object.fromEntries(Object.entries(f).map(([k, v]) => [String(k).toLowerCase(), v]));
+                let val = null;
+                for (const k of keyCandidates) {
+                  if (lower.hasOwnProperty(k)) { val = lower[k]; break; }
+                }
+                if (Array.isArray(val)) return val.includes(username);
+                return String(val || "") === username;
+              });
+            } catch {
+              // keep empty
             }
           }
-
-          // If we still have no products, try fetching by table name as a last resort
-          if (ppArr.length === 0) {
-              try {
-                const allProducts = await listWithFilter("Company Products", null); // Fetch all and filter client-side
-                const keyCandidates = ["client_username", "client username", "username", "user_name", "user"];
-                ppArr = (allProducts || []).filter((r) => {
-                  const f = r?.fields || {};
-                  const lower = Object.fromEntries(Object.entries(f).map(([k,v]) => [String(k).toLowerCase(), v]));
-                  let val = null;
-                  for (const k of keyCandidates) {
-                    if (lower.hasOwnProperty(k)) { val = lower[k]; break; }
-                  }
-                  if (Array.isArray(val)) return val.includes(username);
-                  return String(val || "") === username;
-                });
-              } catch {
-                // Keep empty array
-              }
-          }
-
-          return { tmArr, bcArr, ppArr };
+          return { tmArr, bcArr, ppArr, cacheTime: now };
         });
       } else {
         // Use cached data
         auxDataPromise = Promise.resolve({
-          tmArr: auxDataCache.tm,
-          bcArr: auxDataCache.bc,
-          ppArr: auxDataCache.pp
+          tmArr: cacheSnapshot.tm || [],
+          bcArr: cacheSnapshot.bc || [],
+          ppArr: cacheSnapshot.pp || [],
+          cacheTime: cacheSnapshot.cacheTime || now
         });
       }
 
       // Wait for both main data and auxiliary data
       const [mainData, auxData] = await Promise.all([mainDataPromise, auxDataPromise]);
       const [keywords, faqs] = mainData;
-      const { tmArr, bcArr, ppArr } = auxData;
+      const { tmArr, bcArr, ppArr, cacheTime } = auxData;
 
-      // Update cache if we fetched fresh auxiliary data
+      // Update cache in both ref and state only when refreshed (prevents re-renders → loops)
       if (shouldRefreshCache) {
-        setAuxDataCache({
-          tm: tmArr,
-          bc: bcArr,
-          pp: ppArr,
-          cacheTime: now
-        });
+        const nextCache = { tm: tmArr, bc: bcArr, pp: ppArr, cacheTime };
+        auxDataCacheRef.current = nextCache; // Update ref first
+        setAuxDataCache(nextCache);
       }
 
+      // Preserve manual 'm' markers using persisted set and tag results before setting state
+      const manualSet = getManualKwSet();
+      const processedKeywords = (keywords || []).map((r) =>
+        manualSet.has(r.id) ? { ...r, __manualAdded: true } : r
+      );
+
       // Set processed data
-      setKeywordRows(keywords);
+      setKeywordRows(processedKeywords);
       setFaqRows(faqs);
       setOptions({
         tm: tmArr.map((r) => ({ value: r.id, label: getLabel(r.fields, "targetMarket") })),
@@ -415,7 +549,6 @@ export default function TopicsPage() {
         setBrandFieldKey(null);
         setBrandArray([]);
       }
-
     } catch (e) {
       console.error(`Failed to load data for ${username}:`, e);
       setError(e.message || "An unknown error occurred.");
@@ -423,24 +556,71 @@ export default function TopicsPage() {
       setBrandArray([]);
     } finally {
       setLoadingData(false);
+      isFetchingRef.current = false; // Release the guard
     }
-  }, [auxDataCache.cacheTime, auxDataCache.tm, auxDataCache.bc, auxDataCache.pp, CACHE_DURATION]);
+    // IMPORTANT: only depend on getManualKwSet (stable callback), not on auxDataCache state
+  }, [getManualKwSet, CACHE_DURATION, topicsGateRef]); // CACHE_DURATION is a constant, so it's stable
 
   // When selectedUsername (from any source) changes, load data
   useEffect(() => {
-    if (selectedUsername) {
-      loadDataForUser(selectedUsername);
-    } else {
-      // Clear data if no username is selected
+    if (selectedUsername && topicsGateSatisfied) { // Only load if gate is satisfied
+      if (useWorkspaceScoping && isInitialDataLoadSuppressed.current) {
+        // If workspace scoping is enabled and this is the initial data load trigger,
+        // suppress the actual data fetch. The user will need to click refresh.
+        console.log("TopicsPage: Suppressing initial data load for workspace user.");
+        setLoadingData(false); // Stop spinner
+        setKeywordRows([]); // Clear any pending data
+        setFaqRows([]);
+      } else {
+        // For subsequent username changes, or if not workspace scoped, or if initial load was already done,
+        // proceed with loading data.
+        loadDataForUser(selectedUsername);
+      }
+    } else if (!selectedUsername) {
+      // Clear data if no username is selected (e.g., initial state or user de-selected)
       setKeywordRows([]);
       setFaqRows([]);
+      setLoadingData(false);
     }
-  }, [selectedUsername, loadDataForUser]);
+    // After the first check (which might suppress or load), set the ref to false.
+    // This ensures subsequent changes to selectedUsername (e.g., manual selection or global change)
+    // will trigger loadDataForUser.
+    isInitialDataLoadSuppressed.current = false;
+  }, [selectedUsername, loadDataForUser, useWorkspaceScoping, topicsGateSatisfied]); // Added topicsGateSatisfied
 
   // Memoize to prevent changing reference in effects
   const handleUsernameSelect = React.useCallback((username) => {
     setLocalSelectedUsername(username); // Set local state for non-workspace mode
   }, []);
+
+  // NEW: Load written status for current username (maps BlogPosts by focus_keyword)
+  const updateWrittenStatus = React.useCallback(async (username) => {
+    if (!username) {
+      setWrittenByKeyword({});
+      return;
+    }
+    // fetch recent posts for this username; build map by focus_keyword
+    const posts = await BlogPost.filter({ user_name: username }, "-created_date", 500);
+    const map = {};
+    (posts || []).forEach((p) => {
+      const key = (p.focus_keyword || "").toString().trim().toLowerCase();
+      if (key && !map[key]) {
+        map[key] = p.id;
+      }
+    });
+    setWrittenByKeyword(map);
+  }, []);
+
+  // Refresh written status whenever username changes and on an interval
+  React.useEffect(() => {
+    if (!selectedUsername || !topicsGateSatisfied) { // Only update if gate is satisfied
+      setWrittenByKeyword({});
+      return;
+    }
+    updateWrittenStatus(selectedUsername);
+    const id = setInterval(() => updateWrittenStatus(selectedUsername), 15000); // Poll every 15 seconds
+    return () => clearInterval(id);
+  }, [selectedUsername, updateWrittenStatus, topicsGateSatisfied]); // Added topicsGateSatisfied
 
   // When usernames are available, auto-select the pending username (if valid)
   useEffect(() => {
@@ -449,15 +629,10 @@ export default function TopicsPage() {
       if (useWorkspaceScoping) {
         // In workspace mode, we assume the provider handles this.
         // This logic is primarily for the old system.
-      } else {
-        handleUsernameSelect(pendingUsername);
-      }
+      } else { handleUsernameSelect(pendingUsername); }
       setPendingUsername(null);
     }
-  }, [availableUsernames, pendingUsername, handleUsernameSelect, useWorkspaceScoping]);
-
-
-  // After FAQ data and tab are ready, highlight and scroll to the focused question
+  }, [availableUsernames, pendingUsername, handleUsernameSelect, useWorkspaceScoping]); // After FAQ data and tab are ready, highlight and scroll to the focused question
   useEffect(() => {
     if (activeTab !== 'faq' || !focusQuestion) return;
     if (!faqTabRef.current) return;
@@ -487,19 +662,138 @@ export default function TopicsPage() {
       Array.isArray(pp) && pp.length > 0;
   };
 
+  // NEW: token consumption for feature-flagged actions on Topics
+  const { consumeTokensForFeature } = useTokenConsumption();
+
   const handleUpdate = useCallback(async (tableId, recordId, fieldName, newValue) => {
     const isKeywordMap = tableId === TABLE_IDS.keywordMap;
     const stateSetter = isKeywordMap ? setKeywordRows : setFaqRows;
 
+    // Correct field name for Airtable update. "Get Questions" is the UI name, "Select Keyword" is the actual Airtable field.
+    const writeFieldName = fieldName === "Get Questions" ? "Select Keyword" : fieldName;
+
+    // NEW: Handle "Get Questions" toggle with Rate Limiting
+    if (fieldName === "Get Questions" && newValue === true) {
+      const now = Date.now();
+      const rateLimitKey = `get_questions_timestamps_${currentUser?.id || 'guest'}`;
+      let timestamps = [];
+      try {
+        timestamps = JSON.parse(localStorage.getItem(rateLimitKey)) || [];
+      } catch (e) {
+        timestamps = [];
+      }
+
+      const recentTimestamps = timestamps.filter((ts) => now - ts < GET_QUESTIONS_RATE_LIMIT.windowMs);
+
+      if (recentTimestamps.length >= GET_QUESTIONS_RATE_LIMIT.limit) {
+        toast.warning("Woah there, slow down!", {
+          description: "You've reached the rate limit for getting questions. For higher limits, please consider upgrading."
+        });
+        return; // Stop the update
+      }
+
+      // Add new timestamp and save
+      const newTimestamps = [...recentTimestamps, now];
+      localStorage.setItem(rateLimitKey, JSON.stringify(newTimestamps));
+
+      // NEW: feature flag token consumption (non-blocking of UI layout/colors)
+      await consumeTokensForFeature("topics_get_questions");
+
+      // Clear any existing interval for this recordId to prevent leaks
+      if (intervalRefs.current[recordId]) {
+        clearInterval(intervalRefs.current[recordId]);
+        delete intervalRefs.current[recordId];
+      }
+
+      // Start loading state for this record
+      setLoadingQuestions((prev) => ({
+        ...prev,
+        [recordId]: { loading: true, startTime: Date.now() }
+      }));
+
+      // Start countdown
+      setCountdown((prev) => ({
+        ...prev,
+        [recordId]: 60
+      }));
+
+      // Countdown timer
+      const newIntervalId = setInterval(() => {
+        setCountdown((prev) => {
+          const currentCount = prev[recordId];
+          if (currentCount === undefined || currentCount <= 1) { // <=1 to ensure 0 is shown for a tick
+            clearInterval(intervalRefs.current[recordId]);
+            delete intervalRefs.current[recordId]; // Clean up ref entry
+            setLoadingQuestions((prevLoading) => {
+              const updated = { ...prevLoading };
+              delete updated[recordId];
+              return updated;
+            });
+            const newCountdown = { ...prev };
+            delete newCountdown[recordId];
+            return newCountdown;
+          }
+          return {
+            ...prev,
+            [recordId]: currentCount - 1
+          };
+        });
+      }, 1000);
+
+      intervalRefs.current[recordId] = newIntervalId; // Store the new interval ID
+
+      // Backup 60-second timer to ensure loading state clears, even if interval fails
+      setTimeout(() => {
+        if (intervalRefs.current[recordId]) { // Only clear if interval still exists
+          clearInterval(intervalRefs.current[recordId]);
+          delete intervalRefs.current[recordId];
+        }
+        setLoadingQuestions((prev) => {
+          const updated = { ...prev };
+          delete updated[recordId];
+          return updated;
+        });
+        setCountdown((prev) => {
+          const newCountdown = { ...prev };
+          delete newCountdown[recordId];
+          return newCountdown;
+        });
+      }, 60000);
+    } else if (fieldName === "Get Questions" && newValue === false) {
+      // Clear any existing interval for this recordId
+      if (intervalRefs.current[recordId]) {
+        clearInterval(intervalRefs.current[recordId]);
+        delete intervalRefs.current[recordId];
+      }
+
+      // Clear loading state and countdown when toggled off
+      setLoadingQuestions((prev) => {
+        const newState = { ...prev };
+        delete newState[recordId];
+        return newState;
+      });
+      setCountdown((prev) => {
+        const newCountdown = { ...prev };
+        delete newCountdown[recordId];
+        return newCountdown;
+      });
+    }
+
     let fullyUpdatedRowFields = null;
+    // NEW: capture if this specific change leads to a "complete" state (TM + PP both selected) to charge tokens once
+    let becameComplete = false;
 
     // Use the functional update form to get the latest state and capture the new fields.
     // This avoids stale closures and makes the function more stable.
     stateSetter((currentRows) =>
       currentRows.map((row) => {
         if (row.id === recordId) {
-          const updatedFields = { ...row.fields, [fieldName]: newValue };
+          const wasCompleteBefore = isComplete(row.fields || {});
+          // IMPORTANT: Update UI state using the actual Airtable field name ('writeFieldName')
+          const updatedFields = { ...row.fields, [writeFieldName]: newValue };
           fullyUpdatedRowFields = updatedFields; // Capture the new fields for the check below
+          const nowComplete = isComplete(updatedFields || {});
+          becameComplete = !wasCompleteBefore && nowComplete;
           return { ...row, fields: updatedFields };
         }
         return row;
@@ -511,12 +805,12 @@ export default function TopicsPage() {
     const isRequiredSpecial = ["target market", "promoted product", "link to company products"].includes(canonicalLower);
 
     // For Promoted Product, ensure we write to the real linked field (often "Link to Company Products")
-    let writeFieldName = fieldName;
+    let finalWriteFieldName = writeFieldName; // Start with the potentially remapped field name
     if (canonicalLower.includes("promoted") || canonicalLower.includes("company products")) {
       const ppKey = getLinkedProductFieldName(fullyUpdatedRowFields || {});
-      // Only override writeFieldName if ppKey returns something valid and different from fieldName
-      if (ppKey && ppKey !== fieldName) {
-        writeFieldName = ppKey;
+      // Only override finalWriteFieldName if ppKey returns something valid and different from writeFieldName
+      if (ppKey && ppKey !== writeFieldName) {
+        finalWriteFieldName = ppKey;
       }
     }
 
@@ -530,6 +824,11 @@ export default function TopicsPage() {
         const isNowComplete =
           Array.isArray(fullyUpdatedRowFields[tmKey]) && fullyUpdatedRowFields[tmKey].length > 0 &&
           Array.isArray(fullyUpdatedRowFields[ppKey]) && fullyUpdatedRowFields[ppKey].length > 0;
+
+        // NEW: token consumption when completion is achieved (non-blocking UI/layout)
+        if (becameComplete) {
+          await consumeTokensForFeature("topics_assignment_complete");
+        }
 
         if (isNowComplete) {
           // All required fields are selected, so write the batch update to Airtable.
@@ -550,32 +849,38 @@ export default function TopicsPage() {
         action: "updateRecord",
         tableId,
         recordId,
-        fields: { [writeFieldName]: newValue }
+        fields: { [finalWriteFieldName]: newValue }
       });
       return;
     }
 
-    // For any other field (e.g., the 'Select Keyword' switch), write to Airtable immediately.
+    // For any other field (e.g., the 'Select Keyword' switch itself), write to Airtable immediately.
     await airtableSync({
       action: "updateRecord",
       tableId,
       recordId,
-      fields: { [writeFieldName]: newValue }
+      fields: { [finalWriteFieldName]: newValue }
     });
-  }, []);
+  }, [currentUser, consumeTokensForFeature]); // intervalRefs not included in dependency array as it's a ref and doesn't trigger re-renders
 
   const refreshData = () => {
-    // Clear cache to force a full refresh on next loadDataForUser call
-    setAuxDataCache({ tm: [], bc: [], pp: [], cacheTime: 0 });
+    // Clear cache to force a full refresh on next load
+    const cleared = { tm: [], bc: [], pp: [], cacheTime: 0 };
+    auxDataCacheRef.current = cleared;
+    setAuxDataCache(cleared);
+    // When manually refreshing, ensure next call runs (even in workspace-suppressed initial load)
+    isInitialDataLoadSuppressed.current = false;
     if (selectedUsername) {
       loadDataForUser(selectedUsername);
     }
   };
 
-  const handleCreateKeyword = async () => {
-    if (!selectedUsername || !newKeyword.trim()) return;
+  // EDIT: allow optional text override so inline form can reuse this without changing existing behavior
+  const handleCreateKeyword = async (textOverride) => {
+    const text = (textOverride ?? newKeyword)?.trim();
+    if (!selectedUsername || !text) return;
     setCreating(true);
-    setError(null); // Clear any previous error
+    setError(null);
     try {
       // Inspect table fields to use correct names
       const { data: listRes } = await airtableListFields({
@@ -588,12 +893,13 @@ export default function TopicsPage() {
       const usernameKey = pickField(available, ["Username", "username", "user_name", "client_username", "User", "user"]);
       const keywordKey = pickField(available, ["Keyword", "Name", "Title"]);
       const selectKey = pickField(available, ["Select Keyword", "Select", "Selected"]);
+      const getQuestionsKey = pickField(available, ["Get Questions", "Get_Questions"]); // Added for new field
 
       // NEW: Find a suitable Brand field in this table
       const brandFieldCandidate = pickField(available, ["Brand ID", "brand id", "BrandID", "Brand Name", "brand name", "Brand", "brand"]);
       // Prefer previously observed brand field if available
-      const brandTargetField = brandFieldKey && available.some((f) => f.toLowerCase() === brandFieldKey.toLowerCase()) ?
-        available.find((f) => f.toLowerCase() === brandFieldKey.toLowerCase()) :
+      const brandTargetField = brandFieldKey && available.some((f) => f === brandFieldKey) ?
+        brandFieldKey :
         brandFieldCandidate;
 
       if (!keywordKey) {
@@ -608,10 +914,11 @@ export default function TopicsPage() {
       }
 
       const fieldsPayload = {
-        [keywordKey]: newKeyword.trim(),
+        [keywordKey]: text,
         [usernameKey]: selectedUsername
       };
       if (selectKey) fieldsPayload[selectKey] = false;
+      if (getQuestionsKey) fieldsPayload[getQuestionsKey] = false; // Initialize new field as false
 
       // NEW: always set canonical 'Username' field for filtering and compatibility
       fieldsPayload["Username"] = selectedUsername;
@@ -629,6 +936,7 @@ export default function TopicsPage() {
       if (data?.success && data?.record) {
         const newRecord = {
           id: data.record.id,
+          __manualAdded: true, // NEW: mark local manual
           fields: {
             // Use fields as returned by Airtable to keep UI consistent
             ...data.record.fields,
@@ -637,7 +945,15 @@ export default function TopicsPage() {
             [getLinkedProductFieldName(data.record.fields)]: data.record.fields[getLinkedProductFieldName(data.record.fields)] || []
           }
         };
+        // NEW: persist manual id so it stays marked after reload
+        const setObj = getManualKwSet();
+        setObj.add(newRecord.id);
+        saveManualKwSet(setObj);
+
+        // insert at top
         setKeywordRows((prev) => [newRecord, ...prev]);
+
+        // keep existing modal behavior intact
         setShowAddKeyword(false);
         setNewKeyword("");
         setActiveTab("keyword_map");
@@ -659,8 +975,10 @@ export default function TopicsPage() {
     }
   };
 
-  const handleCreateFaq = async () => {
-    if (!selectedUsername || !newFaqKeyword.trim()) return;
+  // EDIT: allow optional text override so inline form can reuse this without changing existing behavior
+  const handleCreateFaq = async (textOverride) => {
+    const text = (textOverride ?? newFaqKeyword)?.trim();
+    if (!selectedUsername || !text) return;
     setCreating(true);
     setError(null); // Clear any previous error
     try {
@@ -678,8 +996,8 @@ export default function TopicsPage() {
 
       // NEW: Find a suitable Brand field in this table
       const brandFieldCandidate = pickField(available, ["Brand ID", "brand id", "BrandID", "Brand Name", "brand name", "Brand", "brand"]);
-      const brandTargetField = brandFieldKey && available.some((f) => f.toLowerCase() === brandFieldKey.toLowerCase()) ?
-        available.find((f) => f.toLowerCase() === brandFieldKey.toLowerCase()) :
+      const brandTargetField = brandFieldKey && available.some((f) => f === brandFieldKey) ?
+        brandFieldKey :
         brandFieldCandidate;
 
       if (!keywordKey) {
@@ -694,7 +1012,7 @@ export default function TopicsPage() {
       }
 
       const fieldsPayload = {
-        [keywordKey]: newFaqKeyword.trim(),
+        [keywordKey]: text,
         [usernameKey]: selectedUsername
       };
 
@@ -721,7 +1039,8 @@ export default function TopicsPage() {
           }
         };
         setFaqRows((prev) => [newRecord, ...prev]);
-        setShowAddFaq(false);
+        // keep existing modal behavior intact
+        setShowAddFaq(false); // Fix: Corrected typo from setShowAddFag to setShowAddFaq
         setNewFaqKeyword("");
         setActiveTab("faq");
         setSearchQuery("");
@@ -744,30 +1063,73 @@ export default function TopicsPage() {
 
   const handleDeleteRecord = async (tableId, recordId) => {
     if (!tableId || !recordId) return;
-    const confirmed = window.confirm("Are you sure you want to delete this record? This action cannot be undone.");
-    if (!confirmed) return;
+    setDeleteTarget({ tableId, recordId });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    const { tableId, recordId } = deleteTarget;
     try {
       await airtableDeleteRecord({ tableId, recordId });
 
       if (tableId === TABLE_IDS.keywordMap) {
         setKeywordRows((prev) => prev.filter((r) => r.id !== recordId));
+        // NEW: remove from manual set if present
+        const setObj = getManualKwSet();
+        if (setObj.has(recordId)) {
+          setObj.delete(recordId);
+          saveManualKwSet(setObj);
+        }
       } else if (tableId === TABLE_IDS.faq) {
         setFaqRows((prev) => prev.filter((r) => r.id !== recordId));
       }
-      // Optionally provide user feedback for successful deletion
-      console.log(`Record ${recordId} from table ${tableId} deleted successfully.`);
     } catch (e) {
       console.error("Error deleting record:", e);
       setError("Failed to delete record: " + (e.message || "Unknown error"));
+    } finally {
+      setDeleteLoading(false);
+      setDeleteTarget(null);
     }
   };
 
-  // NEW: Replace the previous capture/bubble-phase listener with a no-op to allow dropdowns to open normally
-  React.useEffect(() => {
+  // NEW: Function to handle "View Questions" click
+  const handleViewQuestions = useCallback((keyword) => {
+    // Switch to FAQ tab
+    setActiveTab('faq');
+    // Set the dedicated filter for FAQs instead of using the global search
+    setFaqKeywordFilter(keyword);
+    // Clear global search to avoid confusion
+    setSearchQuery("");
+  }, []);
 
-    // no-op: let Radix Select and DropdownMenu handle their own events
-  }, []); // Derived rows for current filters
+  // Example: guard the "Get Questions" trigger (replace prop usage below)
+  const guardedHandleViewQuestions = useCallback(async (keyword) => {
+    // The previous ensureOnboardingGate relied on usernameRecord.topics.
+    // With the new User.me().topics gate, this check might be redundant or require re-evaluation
+    // depending on the exact intent of two separate 'topics' fields.
+    // For now, I'm removing the call to the now-removed ensureOnboardingGate.
+    // If a different gate specific to an action is needed, it should be re-introduced.
+    handleViewQuestions(keyword); // Call the original handler
+  }, [handleViewQuestions]);
+
+  // NEW: Inline submit wrapper (does not affect existing modal flows)
+  const handleInlineSubmit = async () => {
+    if (!inlineKeywordText.trim()) return;
+    if (inlineTarget === "faq") {
+      await handleCreateFaq(inlineKeywordText);
+    } else {
+      await handleCreateKeyword(inlineKeywordText);
+    }
+    setShowInlineAdd(false);
+    setInlineKeywordText("");
+    setInlineTarget("keyword_map");
+
+    // Refresh written status after creating (in case a post already exists for that keyword)
+    if (selectedUsername) updateWrittenStatus(selectedUsername);
+  };
+
+  // Derived rows for current filters
   const filteredKeywordRows = React.useMemo(() => {
     let rows = [...keywordRows]; // Use a copy to avoid mutating the original state
     if (searchQuery.trim()) {
@@ -775,33 +1137,40 @@ export default function TopicsPage() {
       rows = rows.filter((r) => String(r?.fields?.["Keyword"] || "").toLowerCase().includes(q));
     }
     if (showSelectedOnly) {
+      // FIX: Use the correct field "Select Keyword" for filtering
       rows = rows.filter((r) => !!r?.fields?.["Select Keyword"]);
     }
     if (showCompleteOnly) {
       rows = rows.filter((r) => isComplete(r?.fields || {}));
     }
+    // NEW: filter by '__manualAdded' presence
+    if (showManualOnly) {
+      rows = rows.filter((r) => r.__manualAdded);
+    }
     return rows;
-  }, [keywordRows, searchQuery, showSelectedOnly, showCompleteOnly]);
+  }, [keywordRows, searchQuery, showSelectedOnly, showCompleteOnly, showManualOnly]);
 
   const filteredFaqRows = React.useMemo(() => {
     let rows = [...faqRows];
+
+    // First, apply the dedicated keyword filter if it exists
+    if (faqKeywordFilter) {
+      rows = rows.filter((r) => (r?.fields?.['Top Level Keyword'] || []).includes(faqKeywordFilter));
+    }
+
+    // Then, apply the global search query to the already-filtered list
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       rows = rows.filter((r) => String(r?.fields?.["Keyword"] || "").toLowerCase().includes(q));
     }
     return rows;
-  }, [faqRows, searchQuery]);
-
-  // REPLACE the previous capture/bubble-phase listener with a no-op to allow dropdowns to open normally
-  React.useEffect(() => {
-    // no-op: let Radix Select and DropdownMenu handle their own events
-  }, []);
+  }, [faqRows, searchQuery, faqKeywordFilter]);
 
 
   // Derived rows for current filters
   // REPLACE the nested PageContent component with an inline-render variable to avoid remounts
   const renderPageBody = (() => {
-    if (loadingInitial || (useWorkspaceScoping && isWorkspaceLoading)) {
+    if (loadingInitial || useWorkspaceScoping && isWorkspaceLoading) {
       return (
         <div className="text-center py-12 text-slate-600 flex justify-center items-center gap-2">
           <Loader2 className="w-5 h-5 animate-spin" />
@@ -828,6 +1197,17 @@ export default function TopicsPage() {
           <Users className="w-12 h-12 mx-auto mb-4 text-slate-400" />
           <h3 className="text-xl font-semibold text-slate-900">Select a Workspace</h3>
           <p className="text-slate-600">Choose a workspace from the top navigation to view topics.</p>
+        </div>);
+
+    }
+
+    // Check if initial load was suppressed and we haven't manually triggered a load yet
+    if (useWorkspaceScoping && isInitialDataLoadSuppressed.current) {
+      return (
+        <div className="text-center py-12 text-slate-600 bg-white rounded-2xl border border-slate-200">
+          <Info className="w-12 h-12 mx-auto mb-4 text-slate-400" />
+          <h3 className="text-xl font-semibold text-slate-900">Data Load Suppressed</h3>
+          <p className="text-slate-600">Click "Refresh" to load topics for {selectedUsername}.</p>
         </div>);
 
     }
@@ -888,12 +1268,38 @@ export default function TopicsPage() {
               density="compact"
               onDeleteRow={handleDeleteRecord}
               layout={KEYWORD_MAP_LAYOUT} // Ensure layout prop is passed
-            />
+              loadingQuestions={loadingQuestions}
+              countdown={countdown} // Pass countdown state to DataTable
+              handleViewQuestions={guardedHandleViewQuestions} // Use the guarded handler
+              // NEW: pass written map
+              writtenByKeyword={writtenByKeyword} />
+
+
           </TabsContent>
 
           <TabsContent
             value="faq"
             className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
+
+            {/* NEW: Filter status banner */}
+            {faqKeywordFilter &&
+              <div className="sticky top-0 z-30 bg-indigo-50 border-b border-indigo-200 px-4 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-indigo-700" />
+                  <span className="text-sm text-indigo-800">
+                    Showing questions for: <span className="font-semibold">{faqKeywordFilter}</span>
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFaqKeywordFilter(null)}
+                  className="text-indigo-700 hover:bg-indigo-100 h-7 px-2">
+
+                  Clear Filter
+                </Button>
+              </div>
+            }
 
             <GroupedFaqTable
               rows={filteredFaqRows}
@@ -902,7 +1308,10 @@ export default function TopicsPage() {
               handleUpdate={handleUpdate}
               density="compact"
               ref={faqTabRef}
-              onDeleteRow={handleDeleteRecord} />
+              onDeleteRow={handleDeleteRecord}
+              // NEW: pass written map
+              writtenByKeyword={writtenByKeyword} />
+
 
           </TabsContent>
         </Tabs>
@@ -910,99 +1319,203 @@ export default function TopicsPage() {
 
   })();
 
+  if (checkingTopicsGate) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center text-slate-600">
+        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+        <span>Loading…</span>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
-      <div className="max-w-5xl mx-auto">
-        {/* One-row toolbar: compact controls with no horizontal scroll */}
-        <div className="bg-white border border-slate-200 rounded-xl p-2 mb-4">
-          <div className="flex items-center gap-1 flex-nowrap">
-            {/* Inline page title */}
-            <span className="text-sm font-semibold text-slate-900 mr-2">Topics</span>
+      <TopicsOnboardingModal
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        username={selectedUsername}
+        companyInfoTableId={TABLE_IDS.companyInformation}
+        targetMarketTableId={TABLE_IDS.targetMarket}
+        companyProductsTableId={TABLE_IDS.companyProducts}
+        onCompleted={async () => {
+          // Mark this username as completed in the current user's record
+          const me = await User.me().catch(() => null);
+          if (me) {
+            const arr = Array.isArray(me.topics) ? me.topics : [];
+            const uname = selectedUsername || null;
+            if (uname && !arr.includes(uname)) {
+              const updated = [...arr, uname];
+              await User.updateMyUserData({ topics: updated });
+              setCurrentUser(prev => ({ ...prev, topics: updated })); // Update local user state
+              setTopicsGateSatisfied(true);
+              setShowOnboarding(false);
+              toast.success(`Topics onboarding complete for ${uname}.`);
+              refreshData(); // Force a refresh of data to reflect the new state
+            }
+          }
+        }}
+      />
 
-            {/* Divider */}
-            <div className="h-5 w-px bg-slate-200" />
+      {/* Only render the existing Topics UI when the gate is satisfied */}
+      {topicsGateSatisfied && (
+        <div className="w-full px-6">
+          {/* One-row toolbar: compact controls with no horizontal scroll */}
+          <div className="bg-white border border-slate-200 rounded-xl p-2 mb-2">
+            <div className="flex items-center gap-1 flex-nowrap">
+              {/* Inline page title */}
+              <span className="text-sm font-semibold text-slate-900 mr-2">Topics</span>
 
-            {/* Username selector - now conditionally rendered */}
-            {!useWorkspaceScoping && (
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4 text-slate-500" />
-                <Select
-                  value={localSelectedUsername || ""}
-                  onValueChange={handleUsernameSelect}
-                  disabled={loadingInitial}>
-                  <SelectTrigger className="w-40 h-8 bg-white border-slate-300 text-slate-900 text-sm">
-                    <SelectValue placeholder={loadingInitial ? "Loading..." : "Select username"} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border border-slate-200">
-                    {availableUsernames.map((name) =>
-                      <SelectItem key={name} value={name} className="text-slate-900 hover:bg-slate-100">
-                        {name}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+              {/* Divider */}
+              <div className="h-5 w-px bg-slate-200" />
+
+              {/* Username selector - now conditionally rendered */}
+              {!useWorkspaceScoping &&
+                <div className="flex items-center gap-1">
+                  <Users className="w-4 h-4 text-slate-500" />
+                  <Select
+                    value={localSelectedUsername || ""}
+                    onValueChange={handleUsernameSelect}
+                    disabled={loadingInitial}>
+                    <SelectTrigger className="w-40 h-8 bg-white border-slate-300 text-slate-900 text-sm">
+                      <SelectValue placeholder={loadingInitial ? "Loading..." : "Select username"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-slate-200">
+                      {availableUsernames.map((name) =>
+                        <SelectItem key={name} value={name} className="text-slate-900 hover:bg-slate-100">
+                          {name}
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              }
+
+              {/* Divider (only if workspace scoping is off) */}
+              {!useWorkspaceScoping && <div className="h-5 w-px bg-slate-200" />}
+
+              {/* Search keywords (slightly narrower) */}
+              <div className="relative">
+                <Input
+                  placeholder="Search…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-7 w-[180px] h-8 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 text-sm" />
+                <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
-            )}
 
-            {/* Divider (only if workspace scoping is off) */}
-            {!useWorkspaceScoping && <div className="h-5 w-px bg-slate-200" />}
+              {/* Divider */}
+              <div className="h-5 w-px bg-slate-200" />
 
-            {/* Search keywords (slightly narrower) */}
-            <div className="relative">
-              <Input
-                placeholder="Search…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-7 w-[180px] h-8 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 text-sm" />
-              <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
+              {/* Quick filters */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <Switch
+                    checked={showSelectedOnly}
+                    onCheckedChange={setShowSelectedOnly}
+                    disabled={activeTab !== "keyword_map"} className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white" />
 
-            {/* Divider */}
-            <div className="h-5 w-px bg-slate-200" />
+                  <span className={`text-[11px] ${activeTab !== "keyword_map" ? "text-slate-400" : "text-slate-700"}`}>
+                    Selected
+                  </span>
+                </div>
 
-            {/* Quick filters */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <Switch
-                  checked={showSelectedOnly}
-                  onCheckedChange={setShowSelectedOnly}
-                  disabled={activeTab !== "keyword_map"}
-                  className="h-5 w-9 data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-300" />
-                <span className={`text-[11px] ${activeTab !== "keyword_map" ? "text-slate-400" : "text-slate-700"}`}>
-                  Selected
-                </span>
+                <div className="flex items-center gap-1">
+                  <Switch
+                    checked={showCompleteOnly}
+                    onCheckedChange={setShowCompleteOnly}
+                    disabled={activeTab !== "keyword_map"} className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white" />
+
+                  <span className={`text-[11px] ${activeTab !== "keyword_map" ? "text-slate-400" : "text-slate-700"}`}>
+                    Complete
+                  </span>
+                </div>
+
+                {/* NEW: Manual filter toggle */}
+                <div className="flex items-center gap-1">
+                  <Switch
+                    checked={showManualOnly}
+                    onCheckedChange={setShowManualOnly}
+                    disabled={activeTab !== "keyword_map"} className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white" />
+
+                  <span className={`text-[11px] ${activeTab !== "keyword_map" ? "text-slate-400" : "text-slate-700"}`}>
+                    Manual
+                  </span>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1">
-                <Switch
-                  checked={showCompleteOnly}
-                  onCheckedChange={setShowCompleteOnly}
-                  disabled={activeTab !== "keyword_map"}
-                  className="h-5 w-9 data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-300" />
-                <span className={`text-[11px] ${activeTab !== "keyword_map" ? "text-slate-400" : "text-slate-700"}`}>
-                  Complete
-                </span>
+              {/* Actions (refresh button and new Add Keyword button) */}
+              <div className="ml-auto flex items-center gap-1">
+                <Button
+                  onClick={refreshData}
+                  disabled={!selectedUsername || loadingData}
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8 bg-white border border-slate-300 text-slate-900 hover:bg-slate-50"
+                  title="Refresh">
+
+                  <RefreshCw className={`w-4 h-4 ${loadingData ? "animate-spin" : ""}`} />
+                </Button>
+                {/* EDIT: Keep same button, only toggles inline form (colors/layout unchanged) */}
+                <Button
+                  onClick={() => setShowInlineAdd((v) => !v)}
+                  disabled={!selectedUsername}
+                  size="sm"
+                  className="gap-2 h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-sm">
+
+                  <Plus className="w-4 h-4" />
+                  Add Keyword
+                </Button>
               </div>
-            </div>
-
-            {/* Actions (only refresh button now) */}
-            <div className="ml-auto flex items-center gap-1">
-              <Button
-                onClick={refreshData}
-                disabled={!selectedUsername || loadingData}
-                size="icon"
-                variant="outline"
-                className="h-8 w-8 bg-white border border-slate-300 text-slate-900 hover:bg-slate-50"
-                title="Refresh">
-
-                <RefreshCw className={`w-4 h-4 ${loadingData ? "animate-spin" : ""}`} />
-              </Button>
             </div>
           </div>
-        </div>
 
-        {renderPageBody}
-      </div>
+          {/* NEW: Inline add form (appears below toolbar) */}
+          {showInlineAdd &&
+            <div className="bg-white border border-slate-200 rounded-xl p-2 mb-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  value={inlineKeywordText}
+                  onChange={(e) => setInlineKeywordText(e.target.value)}
+                  placeholder="Enter keyword or question"
+                  className="bg-white border-slate-300 text-slate-900 h-8 flex-1 min-w-[220px]"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && inlineKeywordText.trim() && !creating) {
+                      e.preventDefault();
+                      handleInlineSubmit();
+                    }
+                  }} />
+
+                <Select value={inlineTarget} onValueChange={setInlineTarget}>
+                  <SelectTrigger className="w-44 h-8 bg-white border-slate-300 text-slate-900">
+                    <SelectValue placeholder="Select destination" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border border-slate-200">
+                    <SelectItem value="keyword_map">Keyword Map</SelectItem>
+                    <SelectItem value="faq">FAQs</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleInlineSubmit}
+                  disabled={!inlineKeywordText.trim() || creating}
+                  className="h-8 bg-emerald-600 hover:bg-emerald-700">
+
+                  {creating ? "Adding..." : "Submit"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setShowInlineAdd(false); setNewKeyword(""); setNewFaqKeyword(""); setInlineKeywordText(""); setInlineTarget("keyword_map"); }}
+                  className="h-8 bg-white border-slate-300 text-slate-900 hover:bg-slate-50">
+
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          }
+
+          {renderPageBody}
+        </div>
+      )}
+
 
       {/* Add Keyword (Keyword Map) Dialog */}
       <Dialog open={showAddKeyword} onOpenChange={setShowAddKeyword}>
@@ -1073,23 +1586,26 @@ export default function TopicsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteModal
+        open={!!deleteTarget}
+        loading={deleteLoading}
+        onConfirm={confirmDelete}
+        onClose={() => { if (!deleteLoading) setDeleteTarget(null); }}
+        title="Delete record"
+        description="Are you sure you want to delete this record? This action cannot be undone."
+      />
     </div>);
 
 }
 
 // --- Reusable DataTable Component (for Keyword Map) ---
-const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, density = "comfortable", onDeleteRow }) => {
-  // NEW: local sort state for Search Volume and Keyword Difficulty
+const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, density = "comfortable", onDeleteRow, loadingQuestions, countdown, handleViewQuestions, writtenByKeyword }) => {
+  // NEW: local sort state for Search Volume
   const [svSort, setSvSort] = React.useState(null); // null | 'asc' | 'desc'
-  const [kdSort, setKdSort] = React.useState(null); // NEW: for Keyword Difficulty
 
   const toggleSvSort = () => {
     setSvSort((prev) => prev === null ? 'desc' : prev === 'desc' ? 'asc' : null);
-    setKdSort(null); // Clear KD sort when SV sort changes
-  };
-  const toggleKdSort = () => {
-    setKdSort((prev) => prev === null ? 'asc' : prev === 'asc' ? 'desc' : null);
-    setSvSort(null); // Clear SV sort when KD sort changes
   };
 
   // Helper to safely parse numbers that may include commas/strings
@@ -1102,35 +1618,31 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
 
   // Sort rows according to active sort
   const sortedRows = React.useMemo(() => {
-    if (!svSort && !kdSort) return rows;
-    let list = [...rows]; // Create a shallow copy to avoid mutating original props
+    let list = [...rows];
+    // Always pin manually added rows to the top
+    list.sort((a, b) => {
+      const ma = a.__manualAdded ? 1 : 0;
+      const mb = b.__manualAdded ? 1 : 0;
 
-    if (svSort) {
-      list.sort((a, b) => {
-        const av = parseNum(a?.fields?.["Search Volume"]);
-        const bv = parseNum(b?.fields?.["Search Volume"]);
-        // Treat NaN as smallest in asc, largest in desc
-        const aVal = isNaN(av) ? svSort === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY : av;
-        const bVal = isNaN(bv) ? svSort === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY : bv;
-        return svSort === "asc" ? aVal - bVal : bVal - aVal;
-      });
-    } else if (kdSort) {
-      list.sort((a, b) => {
-        const av = parseNum(a?.fields?.["Keyword Difficulty"]);
-        const bv = parseNum(b?.fields?.["Keyword Difficulty"]);
-        const aVal = isNaN(av) ? kdSort === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY : av;
-        const bVal = isNaN(bv) ? kdSort === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY : bv;
-        return kdSort === "asc" ? aVal - bVal : bVal - aVal;
-      });
-    }
+      // Prioritize manual-added rows to the top
+      if (ma !== mb) return mb - ma; // manual first (1 - 0 = 1 means a comes after b; 0 - 1 = -1 means a comes before b)
+
+      if (!svSort) return 0; // If no Search Volume sort, maintain original order for non-manual rows or relative order for manual rows
+
+      const av = parseNum(a?.fields?.["Search Volume"]);
+      const bv = parseNum(b?.fields?.["Search Volume"]);
+      const aVal = isNaN(av) ? svSort === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY : av;
+      const bVal = isNaN(bv) ? svSort === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY : bv;
+      return svSort === "asc" ? aVal - bVal : bVal - aVal;
+    });
     return list;
-  }, [rows, svSort, kdSort]);
+  }, [rows, svSort]);
 
   // helper for human-friendly numbers
   const formatNumber = (val) => {
     if (val == null || val === "") return "-";
     const n = typeof val === "number" ? val : parseFloat(String(val).toString().replace(/,/g, ""));
-    if (isNaN(n)) return String(val);
+    if (isNaN(n)) return String(n); // Changed from String(val) to String(n) for consistent output if val was a string number
     return n.toLocaleString();
   };
 
@@ -1140,18 +1652,6 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
     const pp = fields?.[ppKey] || [];
     return Array.isArray(tm) && tm.length > 0 &&
       Array.isArray(pp) && pp.length > 0;
-  };
-
-  const intentBadge = (val) => {
-    const v = String(val || "").toLowerCase();
-    const map = {
-      informational: "bg-blue-100 text-blue-800",
-      transactional: "bg-amber-100 text-amber-800",
-      navigational: "bg-violet-100 text-violet-800",
-      commercial: "bg-rose-100 text-rose-800"
-    };
-    const cls = map[v] || "bg-slate-200 text-slate-800";
-    return <Badge className="bg-green-600 text-slate-50 px-2.5 py-0.5 text-xs font-semibold inline-flex items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent hover:bg-primary/80">{v || "-"}</Badge>;
   };
 
   // Enhanced horizontal scroll with safe click handling
@@ -1185,7 +1685,7 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
       // Check if at the horizontal edges. If so, don't preventDefault to allow parent scroll
       const atLeft = el.scrollLeft <= 0;
       const atRight = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1; // -1 to account for subpixel rendering differences
-      if ((atLeft && delta < 0) || (atRight && delta > 0)) {
+      if (atLeft && delta < 0 || atRight && delta > 0) {
         // At horizontal limit, don't prevent vertical scrolling of parent
         return;
       }
@@ -1270,16 +1770,16 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
       style={{ touchAction: "pan-x pan-y" }} // Allow natural vertical touch scrolling too
       aria-label="Keyword table horizontal scroller">
 
-      <div className="min-w-[1200px]">
+      <div className="w-full">
         {/* Edited: clearer sticky header with subtle shadow and border */}
         <div
           className="grid text-xs font-semibold tracking-wide text-slate-600 uppercase bg-white sticky top-0 z-20 border-b border-slate-200 shadow-sm"
-          style={{ gridTemplateColumns: layout, gap: "1rem", padding: "0.75rem 1.5rem" }}>
+          style={{ gridTemplateColumns: layout, gap: "1.5rem", padding: "0.5rem 1.5rem" }}>
 
           {headers.map((header) =>
             <div
               key={header}
-              className={header === "Search Volume" || header === "Keyword Difficulty" ? "text-right" : "whitespace-nowrap"}>
+              className={header === "Search Volume" ? "text-right" : "whitespace-nowrap"}>
 
               {header === "Search Volume" ?
                 <button
@@ -1293,28 +1793,10 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
                     <ArrowUp className="w-3.5 h-3.5" /> :
                     svSort === "desc" ?
                       <ArrowDown className="w-3.5 h-3.5" /> :
-
                       <ArrowUpDown className="w-3.5 h-3.5" />
                   }
                 </button> :
-                header === "Keyword Difficulty" ?
-                  <button
-                    type="button"
-                    onClick={toggleKdSort}
-                    className="inline-flex items-center gap-1 hover:text-slate-800 transition-colors"
-                    title="Sort by Keyword Difficulty">
-
-                    <span>Keyword Difficulty</span>
-                    {kdSort === "asc" ?
-                      <ArrowUp className="w-3.5 h-3.5" /> :
-                      kdSort === "desc" ?
-                        <ArrowDown className="w-3.5 h-3.5" /> :
-
-                        <ArrowUpDown className="w-3.5 h-3.5" />
-                    }
-                  </button> :
-
-                  header
+                header
               }
             </div>
           )}
@@ -1326,62 +1808,116 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
             const fields = row.fields || {};
             const complete = isComplete(fields);
             const productField = getLinkedProductFieldName(fields); // Determine the actual product field name here
+            const keywordText = String(fields["Keyword"] || "").trim();
+            const keywordKey = keywordText.toLowerCase();
+            const postId = writtenByKeyword ? writtenByKeyword[keywordKey] : null;
+
+            // FIX: Read from the correct "Select Keyword" for the toggle's state
+            const isToggled = fields["Select Keyword"] || false;
+            const isLoading = loadingQuestions[row.id]?.loading;
+            const currentCountdown = countdown[row.id]; // Access countdown for this row
+            // The "View Questions" button should show if toggled is true, it's not currently loading, and countdown is finished (or never started for existing items)
+            const canShowButton = isToggled && !isLoading && (currentCountdown === undefined || currentCountdown <= 0);
+
+
             return (
               <div
                 key={row.id}
                 className={`grid items-center border-t border-slate-200 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? "bg-slate-50/60" : "bg-white"}`}
-                style={{ gridTemplateColumns: layout, gap: "1rem", padding: density === "compact" ? "0.5rem 1.0rem" : "0.875rem 1.5rem" }}>
+                style={{ gridTemplateColumns: layout, gap: "1.5rem", padding: density === "compact" ? "0.5rem 1.5rem" : "1rem 2rem" }}>
 
                 {headers.map((header) =>
                   <div
                     key={`${row.id}-${header}`}
-                    className={header === "Search Volume" || header === "Keyword Difficulty" ? "text-right font-mono tabular-nums text-slate-700" : "min-w-0"}>
+                    className={header === "Search Volume" ? "text-right font-mono tabular-nums text-slate-700" : "min-w-0"}>
 
                     {header === "Keyword" ?
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-900 truncate">{String(fields[header] || "-")}</span>
-                        {complete &&
-                          <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            Writing Article
-                          </Badge>
+                        {/* NEW: 'm' symbol for manual-added */}
+                        {row.__manualAdded &&
+                          <span className="h-5 w-5 rounded-full border border-slate-300 text-slate-600 text-[10px] flex items-center justify-center">
+                            m
+                          </span>
+                        }
+                        <span className="text-slate-900 truncate">{keywordText || "-"}</span>
+                        {complete && (
+                          postId ?
+                            <Link to={`${createPageUrl('Editor')}?postId=${postId}`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                title="Open in Editor">
+
+                                Written
+                              </Button>
+                            </Link> :
+
+                            <Badge className="bg-emerald-100/70 text-emerald-800 border border-emerald-200">
+                              Writing Article
+                            </Badge>)
+
                         }
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="ml-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+                          size="icon" className="text-fuchsia-700 ml-auto text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 w-8 hover:text-red-700 hover:bg-red-50"
+
                           onClick={() => onDeleteRow && onDeleteRow(tableId, row.id)}
                           title="Delete keyword">
 
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div> :
-                      header === "Select Keyword" ?
-                        <Switch
-                          checked={fields[header] || false}
-                          onCheckedChange={(checked) =>
-                            handleUpdate(tableId, row.id, header, checked)
-                          }
-                          className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-300" /> :
+                      header === "Get Questions" ?
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={isToggled}
+                            onCheckedChange={(checked) =>
+                              // FIX: Pass the UI name "Get Questions" but the logic will map it to "Select Keyword"
+                              handleUpdate(tableId, row.id, "Get Questions", checked)
+                            } className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white"
 
+                            style={{
+                              // Tailwind classes handle the switch track background, this ensures thumb color is correct.
+                              // The original code in the outline provided '#64748b' as off color, which is slate-700.
+                              '--switch-thumb': isToggled ? '#ffffff' : '#64748b'
+                            }} />
+
+                          {isLoading && currentCountdown !== undefined && currentCountdown > 0 &&
+                            <div className="flex items-center gap-1 text-xs text-slate-600">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Searching... {currentCountdown}s</span>
+                            </div>
+                          }
+                          {isToggled && canShowButton && // Only show button when toggled AND not loading AND countdown is done
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewQuestions(fields["Keyword"])}
+                              className="text-xs px-2 py-1 h-6 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+                              View Questions
+                            </Button>
+                          }
+                        </div> :
                         header === "Target Market" ?
                           <MiniMultiSelect
                             options={options.tm}
                             value={fields["Target Market"] || []}
-                            onChange={(selected) => handleUpdate(tableId, row.id, "Target Market", selected)} /> :
+                            onChange={(selected) => handleUpdate(tableId, row.id, "Target Market", selected)}
+                            size="sm"
+                          /> :
 
-                            header === "Promoted Product" ?
-                              <MiniMultiSelect
-                                options={options.pp}
-                                value={fields[productField] || []} // use actual linked field for display
-                                onChange={(selected) => handleUpdate(tableId, row.id, productField, selected)} // write to actual field name
-                                itemVariant="pill" // Added itemVariant for bordered pills
-                              /> :
-                              header === "Search Intent" ?
-                                intentBadge(fields[header]) :
-                                header === "Search Volume" || header === "Keyword Difficulty" ?
-                                  <span>{formatNumber(fields[header])}</span> :
-
-                                  renderFieldValue(fields[header])
+                          header === "Promoted Product" ?
+                            <MiniMultiSelect
+                              options={options.pp}
+                              value={fields[productField] || []} // use actual linked field for display
+                              onChange={(selected) => handleUpdate(tableId, row.id, productField, selected)} // write to actual field name
+                              size="sm"
+                              itemVariant="pill" // Added itemVariant for bordered pills
+                            /> :
+                            header === "Search Volume" ?
+                              <span>{formatNumber(fields[header])}</span> :
+                              renderFieldValue(fields[header])
                     }
                   </div>
                 )}

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,20 @@ export default function EditorAmazonImportModal({ isOpen, onClose, onInsert, cur
     setLoading(true);
     try {
       const { data } = await amazonReviews({ url: url.trim() });
+
+      if (data && !data.success && data.error) {
+        if (data.error.includes("exceeded the MONTHLY quota")) {
+          toast.error("Amazon Import Quota Reached", {
+            description: "You've used all your Amazon review requests for the month. To continue, please upgrade your plan on RapidAPI.",
+            duration: 10000,
+          });
+        } else {
+          toast.error(data.error || "Failed to retrieve reviews.");
+        }
+        setReviews([]);
+        return;
+      }
+      
       const rows = Array.isArray(data?.reviews) ? data.reviews.slice(0, 15) : [];
       setReviews(rows);
       setSelected(Object.fromEntries(rows.map((r, i) => [i, true])));

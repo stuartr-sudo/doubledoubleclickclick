@@ -26,7 +26,7 @@ export default function AIRewriterModal({ isOpen, onClose, selectedText, onRewri
   const [rewrittenText, setRewrittenText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeTokensOptimistic } = useTokenConsumption();
 
   const styles = {
     improve: "Improve the clarity and flow of this text while keeping the same meaning",
@@ -42,17 +42,11 @@ export default function AIRewriterModal({ isOpen, onClose, selectedText, onRewri
     if (!selectedText.trim()) return;
     
     setIsLoading(true);
-    try {
-      // Check tokens before making the API call
-      const tokenResult = await consumeTokensForFeature('ai_rewrite');
-      if (!tokenResult.success) {
-        setIsLoading(false);
-        // Optionally, provide user feedback about token consumption failure
-        console.warn("Token consumption failed. User may not have enough tokens or feature is disabled.");
-        setRewrittenText("Sorry, you don't have enough tokens for this operation. Please check your plan.");
-        return; // Token consumption failed, stop here
-      }
 
+    // NEW: run token deduction in parallel (do not block UI)
+    consumeTokensOptimistic('ai_rewrite');
+
+    try {
       const prompt = style === "custom" && customPrompt
         ? `${customPrompt}\n\nText to rewrite: "${selectedText}"`
         : `${styles[style]}\n\nText to rewrite: "${selectedText}"`;
@@ -64,6 +58,10 @@ export default function AIRewriterModal({ isOpen, onClose, selectedText, onRewri
       setRewrittenText(result);
     } catch (error) {
       console.error("AI rewrite error:", error);
+      // In optimistic mode, we don't block on token check result.
+      // If the LLM call fails, we assume it's an LLM or network issue, not necessarily a token issue.
+      // The backend will ultimately reject the request if tokens were insufficient,
+      // but here we just show a generic error.
       setRewrittenText("Sorry, there was an error rewriting the text. Please try again.");
     }
     setIsLoading(false);

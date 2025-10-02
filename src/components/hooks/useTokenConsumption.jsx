@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { checkAndConsumeTokens } from '@/api/functions';
 import { toast } from 'sonner';
@@ -47,5 +48,35 @@ export function useTokenConsumption() {
     }
   }, []);
 
-  return { consumeTokensForFeature, isCheckingTokens };
+  // NEW: non-blocking token check that runs in background
+  const consumeTokensOptimistic = useCallback((featureKey, costOverride = null) => {
+    // fire-and-forget; do not set isCheckingTokens to avoid UI spinners
+    try {
+      checkAndConsumeTokens({
+        feature_key: featureKey,
+        cost_override: costOverride
+      })
+      .then(({ data }) => {
+        if (data?.ok && typeof data.balance === 'number') {
+          window.dispatchEvent(new CustomEvent('tokenBalanceUpdated', { 
+            detail: { newBalance: data.balance, consumed: data.consumed || 1, featureUsed: featureKey }
+          }));
+        } else {
+          // Quietly notify listeners; callers can choose to react (e.g., revert UI) without spamming toasts
+          window.dispatchEvent(new CustomEvent('tokenConsumptionFailed', { 
+            detail: { featureKey, code: data?.code, error: data?.error, balance: data?.balance }
+          }));
+        }
+      })
+      .catch((err) => {
+        window.dispatchEvent(new CustomEvent('tokenConsumptionFailed', { 
+          detail: { featureKey, error: err?.message || String(err) }
+        }));
+      });
+    } catch (e) {
+      console.warn('consumeTokensOptimistic failed to start:', e);
+    }
+  }, []);
+
+  return { consumeTokensForFeature, consumeTokensOptimistic, isCheckingTokens };
 }

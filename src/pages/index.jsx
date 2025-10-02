@@ -132,6 +132,8 @@ import AffiliateDashboard from "./AffiliateDashboard";
 
 import AffiliatePackManager from "./AffiliatePackManager";
 
+import ProductLibrary from "./ProductLibrary";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -267,6 +269,8 @@ const PAGES = {
     AffiliateDashboard: AffiliateDashboard,
     
     AffiliatePackManager: AffiliatePackManager,
+    
+    ProductLibrary: ProductLibrary,
     
 }
 
@@ -426,6 +430,8 @@ function PagesContent() {
                 <Route path="/AffiliateDashboard" element={<AffiliateDashboard />} />
                 
                 <Route path="/AffiliatePackManager" element={<AffiliatePackManager />} />
+                
+                <Route path="/ProductLibrary" element={<ProductLibrary />} />
                 
             </Routes>
         </Layout>

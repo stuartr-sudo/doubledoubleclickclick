@@ -189,9 +189,9 @@ export default function CtaSelector({ isOpen, onClose, onInsert, pageHtml, pageT
         {/* Fill form modal */}
         <CtaTemplateFillModal
           isOpen={fillOpen}
-          onCancel={() => {setFillOpen(false);setTemplateToFill(null);}}
-          onSubmit={handleFillSubmit}
-          template={templateToFill}
+          onClose={() => {setFillOpen(false);setTemplateToFill(null);}}
+          onInsert={handleFillSubmit}
+          selectedTemplate={templateToFill}
           // NEW: context for AI + filtering
           pageHtml={pageHtml}
           pageTitle={pageTitle}

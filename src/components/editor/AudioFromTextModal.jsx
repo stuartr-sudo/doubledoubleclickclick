@@ -167,7 +167,7 @@ export default function AudioFromTextModal({ isOpen, onClose, selectedText, onQu
               <span className="text-sm">{error}</span>
             </div> :
 
-          <Select value={selectedVoice} onValueChange={setSelectedVoice}>
+          <Select value={selectedVoice} onValueChange={setSelectedVoice} modal={true}>
               <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                 <SelectValue placeholder="Select a voice…" />
               </SelectTrigger>
