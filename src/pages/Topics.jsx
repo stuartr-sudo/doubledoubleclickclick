@@ -1,11 +1,12 @@
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { airtableSync } from "@/api/functions";
 import { User } from "@/api/entities";
+import { AppSettings } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { RefreshCw, Users, ShieldAlert, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Plus, Search, Filter, Trash2, Tag, HelpCircle, Info, Key } from "lucide-react";
+import { RefreshCw, Users, ShieldAlert, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Plus, Search, Filter, Trash2, Tag, HelpCircle, Info, Key, Clock, MessageCircle } from "lucide-react";
 import MiniMultiSelect from "@/components/common/MiniMultiSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import GroupedFaqTable from "@/components/topics/GroupedFaqTable";
@@ -32,6 +33,8 @@ import TopicsOnboardingModal from "@/components/onboarding/TopicsOnboardingModal
 import { Username } from "@/api/entities";
 import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
 import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal";
+import { callPromptWebhook } from "@/api/functions";
+import { base44 } from "@/api/base44Client";
 
 // --- Configuration ---
 const TABLE_IDS = {
@@ -39,37 +42,31 @@ const TABLE_IDS = {
   faq: "tblSDBPmucJA0Skvp",
   targetMarket: "tblhayydQ0Zq2NBR9",
   blogCategories: "tblyNaoalXlmc1pQO",
-  companyProducts: "Company Products", // Use table name instead of ID
-  companyInformation: "Company Information" // This should be a real table ID or name
+  companyProducts: "Company Products",
+  companyInformation: "Company Information"
 };
 
 const GET_QUESTIONS_RATE_LIMIT = {
   limit: 3,
-  windowMs: 30 * 60 * 1000 // 30 minutes
+  windowMs: 30 * 60 * 1000
 };
 
 const KEYWORD_MAP_HEADERS = [
   "Keyword",
-  "Get Questions", // This is the UI label for 'Select Keyword'
+  "Get Questions",
   "Search Volume",
-  "Target Market",
-  "Promoted Product"
+  "Actions"
 ];
 
+const KEYWORD_MAP_LAYOUT = "2fr 200px 100px 100px";
 
-// Reduce the column width for 'Get Questions' from 120px to 80px
-const KEYWORD_MAP_LAYOUT = "2fr 80px 100px 1.2fr 1.2fr";
-
-// Fields we require before sending to Airtable (moved outside component for stability)
 const REQUIRED_FIELDS = ["Target Market", "Promoted Product"];
 
 // --- Helper Functions ---
 function getLabel(fields, tableContext = null) {
   if (!fields) return "(untitled)";
 
-  // Prefer clean, human product titles for Company Products
   if (tableContext === "companyProducts") {
-    // 1) Strong priority for page/product name fields
     const NAME_KEYS = [
       "Page Name",
       "PageName",
@@ -82,7 +79,6 @@ function getLabel(fields, tableContext = null) {
       "Seo Title"
     ];
 
-
     const stripHtml = (s) => String(s || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     const safeTruncate = (s, n = 80) => s.length > n ? s.slice(0, n) + "..." : s;
 
@@ -93,14 +89,12 @@ function getLabel(fields, tableContext = null) {
       }
     }
 
-    // 2) If a name field isn't present, attempt to derive a readable name from Page Content
     const contentCandidates = ["Page Content", "Content", "Body", "Description"];
     for (const key of contentCandidates) {
       const raw = fields[key];
       if (!raw) continue;
       let text = String(raw);
 
-      // Try JSON payloads that may contain name/title
       if (/^\s*\{/.test(text)) {
         try {
           const obj = JSON.parse(text);
@@ -111,18 +105,15 @@ function getLabel(fields, tableContext = null) {
             if (clean) return safeTruncate(clean, 80);
           }
         } catch {
-          // ignore JSON parse errors and continue
         }
-      } // Strip HTML if present and use a truncated readable text
+      }
       const clean = stripHtml(text);
       if (clean) return safeTruncate(clean, 80);
     }
 
-    // 3) Last resort: show record id
     return fields.id || "(untitled)";
   }
 
-  // Default labels for other tables
   const PREFERRED_LABELS = ["Target Market Name", "Blog Name", "Page Name", "Name", "Title", "Keyword"];
   for (const key of PREFERRED_LABELS) {
     if (typeof fields[key] === "string" && fields[key]) return fields[key];
@@ -130,7 +121,6 @@ function getLabel(fields, tableContext = null) {
   return fields.id || "(untitled)";
 }
 
-// NEW: reliably find the actual linked-products field on a row (Promoted Product vs Link to Company Products)
 function getLinkedProductFieldName(fieldsObj) {
   const keys = Object.keys(fieldsObj || {});
   const lowerMap = new Map(keys.map((k) => [k.toLowerCase(), k]));
@@ -138,13 +128,12 @@ function getLinkedProductFieldName(fieldsObj) {
     lowerMap.get("link to company products") ||
     lowerMap.get("promoted product") ||
     lowerMap.get("promoted products") ||
-    "Promoted Product" // Fallback to common display name if no exact match found
+    "Promoted Product"
   );
 }
 
 const renderFieldValue = (value) => {
   if (value === null || typeof value === "undefined" || value === "") {
-    // Changed for light theme compatibility
     return <span className="text-slate-500">-</span>;
   }
   return String(value);
@@ -154,56 +143,49 @@ const renderFieldValue = (value) => {
 export default function TopicsPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [availableUsernames, setAvailableUsernames] = useState([]);
-  const [localSelectedUsername, setLocalSelectedUsername] = useState(null); // Renamed from selectedUsername
+  const [localSelectedUsername, setLocalSelectedUsername] = useState(null);
 
   const [keywordRows, setKeywordRows] = useState([]);
   const [faqRows, setFaqRows] = useState([]);
   const [options, setOptions] = useState({ tm: [], bc: [], pp: [] });
 
   const [loadingData, setLoadingData] = useState(false);
-  const [loadingInitial, setLoadingInitial] = useState(true); // FIX: malformed useState call
+  const [loadingInitial, setLoadingInitial] = useState(true);
   const [error, setError] = useState(null);
 
-  // Persist and restore active tab so it never jumps back on re-render
   const [activeTab, setActiveTab] = useState(() => {
     return sessionStorage.getItem('topics_active_tab') || 'keyword_map';
   });
 
-  // NEW: toolbar states
   const [searchQuery, setSearchQuery] = useState("");
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [showCompleteOnly, setShowCompleteOnly] = useState(false);
-  const [showManualOnly, setShowManualOnly] = useState(false); // NEW: Manual filter state
+  const [showManualOnly, setShowManualOnly] = useState(false);
 
-  // NEW: Dedicated state for filtering FAQs by a keyword from the Keyword Map
   const [faqKeywordFilter, setFaqKeywordFilter] = useState(null);
 
-  // NEW: URL-driven focus for RecommendedQuestions -> Topics handoff
   const [pendingUsername, setPendingUsername] = useState(null);
   const [focusQuestion, setFocusQuestion] = useState(null);
   const faqTabRef = useRef(null);
 
-  // NEW: Add Keyword/FAQ states (kept for existing modal logic, though UI button now uses inline add)
   const [showAddKeyword, setShowAddKeyword] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
   const [showAddFaq, setShowAddFaq] = useState(false);
   const [newFaqKeyword, setNewFaqKeyword] = useState("");
   const [creating, setCreating] = useState(false);
+  const [isCreatingArticle, setIsCreatingArticle] = useState(false);
+  const [currentTargetMarket, setCurrentTargetMarket] = useState(null);
 
-  // NEW: Inline add form state
   const [showInlineAdd, setShowInlineAdd] = useState(false);
   const [inlineKeywordText, setInlineKeywordText] = useState("");
-  const [inlineTarget, setInlineTarget] = useState("keyword_map"); // "keyword_map" | "faq"
+  const [inlineTarget, setInlineTarget] = useState("keyword_map");
 
-  // NEW: brand field/value derived from existing rows for this username
   const [brandFieldKey, setBrandFieldKey] = useState(null);
   const [brandArray, setBrandArray] = useState([]);
 
-  // NEW: Cache auxiliary data to avoid repeated fetches
   const [auxDataCache, setAuxDataCache] = useState({ tm: [], bc: [], pp: [], cacheTime: 0 });
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const CACHE_DURATION = 5 * 60 * 1000;
 
-  // NEW: ref mirror of the cache to avoid re-creating callbacks and causing loops
   const auxDataCacheRef = useRef(auxDataCache);
   useEffect(() => {
     auxDataCacheRef.current = auxDataCache;
@@ -212,35 +194,28 @@ export default function TopicsPage() {
   const { selectedUsername: globalUsername, assignedUsernames: globalUsernames, isLoading: isWorkspaceLoading } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
 
-  // Determine active username based on workspace scoping
   const selectedUsername = useWorkspaceScoping ? globalUsername : localSelectedUsername;
 
-  // Ref to suppress initial data load when workspace scoping is active
   const isInitialDataLoadSuppressed = useRef(true);
 
-  // NEW: State for tracking loading questions per row
   const [loadingQuestions, setLoadingQuestions] = useState({});
-  const [countdown, setCountdown] = useState({});
 
-  // NEW: Ref to store interval IDs for cleanup, preventing leaks if toggled multiple times
   const intervalRefs = useRef({});
 
-  // NEW: Map of keyword(lowercased) -> blogPostId to detect written content
   const [writtenByKeyword, setWrittenByKeyword] = useState({});
 
-  // Add an in-flight guard to prevent concurrent loads
   const isFetchingRef = useRef(false);
 
-  // NEW: onboarding gate states and ref
   const [checkingTopicsGate, setCheckingTopicsGate] = React.useState(true);
-  const [topicsGateSatisfied, setTopicsGateSatisfied] = React.useState(true); // Assume satisfied until checked
+  const [topicsGateSatisfied, setTopicsGateSatisfied] = React.useState(true);
   const [showOnboarding, setShowOnboarding] = React.useState(false);
 
-  // Keep a ref so loaders can bail if gate is false
+  const [onboardingCompletionTime, setOnboardingCompletionTime] = useState(null);
+  const [onboardingTimeRemaining, setOnboardingTimeRemaining] = useState(0);
+
   const topicsGateRef = React.useRef(true);
   React.useEffect(() => { topicsGateRef.current = topicsGateSatisfied; }, [topicsGateSatisfied]);
 
-  // Helper: pick the first existing field from candidates (case-insensitive)
   const pickField = useCallback((fieldsArr, candidates) => {
     const lowerMap = new Map((fieldsArr || []).map((f) => [String(f).toLowerCase(), f]));
     for (const c of candidates) {
@@ -250,7 +225,6 @@ export default function TopicsPage() {
     return null;
   }, []);
 
-  // NEW: persist manual-added Keyword Map record IDs across reloads
   const MANUAL_KW_SET_KEY = "manual_keyword_ids";
   const getManualKwSet = React.useCallback(() => {
     try {
@@ -265,11 +239,10 @@ export default function TopicsPage() {
     try {
       localStorage.setItem(MANUAL_KW_SET_KEY, JSON.stringify(Array.from(setObj)));
     } catch {
-      // ignore
     }
-  }, []); // Read URL params once on mount
+  }, []);
 
-  const [deleteTarget, setDeleteTarget] = useState(null); // {tableId, recordId}
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
@@ -277,22 +250,87 @@ export default function TopicsPage() {
     const tab = urlParams.get('tab');
     const uname = urlParams.get('username');
     const focus = urlParams.get('focus');
-    const faqKeyword = urlParams.get('faq_keyword'); // NEW: read dedicated filter from URL
+    const faqKeyword = urlParams.get('faq_keyword');
 
     if (tab === 'faq') {
-      setActiveTab('faq');
+      setActiveTab('faqs');
     }
     if (uname) {
       setPendingUsername(uname);
     }
     if (focus) {
       setFocusQuestion(focus);
-      setSearchQuery(focus); // filter list to find it quickly
+      setSearchQuery(focus);
     }
-    if (faqKeyword) { // NEW: set dedicated filter from URL
+    if (faqKeyword) {
       setFaqKeywordFilter(faqKeyword);
     }
   }, []);
+
+  const formatTimeRemaining = useCallback((ms) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }, []);
+
+  useEffect(() => {
+    if (!selectedUsername || !currentUser) {
+      setOnboardingCompletionTime(null);
+      setOnboardingTimeRemaining(0);
+      return;
+    }
+
+    try {
+      const raw = currentUser.topics_onboarding_completed_at;
+      let completedMap = {};
+      if (typeof raw === 'string' && raw.trim()) {
+        try {
+          completedMap = JSON.parse(raw);
+        } catch {
+          completedMap = {};
+        }
+      } else if (raw && typeof raw === 'object') {
+        completedMap = raw;
+      }
+
+      const completionTimeStr = completedMap?.[selectedUsername];
+
+      if (completionTimeStr) {
+        const completionMs = new Date(completionTimeStr).getTime();
+        const now = Date.now();
+        const fifteenMinutesMs = 15 * 60 * 1000;
+        const remaining = Math.max(0, fifteenMinutesMs - (now - completionMs));
+
+        setOnboardingCompletionTime(completionTimeStr);
+        setOnboardingTimeRemaining(remaining);
+
+        if (remaining > 0) {
+          const interval = setInterval(() => {
+            const newNow = Date.now();
+            const newRemaining = Math.max(0, fifteenMinutesMs - (newNow - completionMs));
+            setOnboardingTimeRemaining(newRemaining);
+
+            if (newRemaining <= 0) {
+              clearInterval(interval);
+              window.dispatchEvent(new CustomEvent('topicsRefreshRequested'));
+            }
+          }, 1000);
+
+          return () => clearInterval(interval);
+        } else {
+          window.dispatchEvent(new CustomEvent('topicsRefreshRequested'));
+        }
+      } else {
+        setOnboardingCompletionTime(null);
+        setOnboardingTimeRemaining(0);
+      }
+    } catch (error) {
+      console.error('Error parsing onboarding completion time:', error);
+      setOnboardingCompletionTime(null);
+      setOnboardingTimeRemaining(0);
+    }
+  }, [selectedUsername, currentUser?.id, currentUser?.topics_onboarding_completed_at]);
 
   useEffect(() => {
     const getInitialData = async () => {
@@ -301,10 +339,8 @@ export default function TopicsPage() {
         setCurrentUser(user);
 
         if (useWorkspaceScoping) {
-          // With workspace, available usernames come from the provider
           setAvailableUsernames(globalUsernames || []);
         } else {
-          // Original logic for non-workspace mode
           if (user.role === "admin") {
             const allUsers = await User.list();
             const usernames = new Set();
@@ -331,7 +367,6 @@ export default function TopicsPage() {
     getInitialData();
   }, [useWorkspaceScoping, globalUsernames]);
 
-  // Gate check BEFORE loading any Airtable data
   React.useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -340,8 +375,6 @@ export default function TopicsPage() {
         const uname = selectedUsername || null;
 
         if (!me || !uname) {
-          // If no user or no username selected, gate is implicitly satisfied (or not applicable)
-          // or we're waiting for selection. Allow UI to proceed to username selection.
           if (isMounted) {
             setTopicsGateSatisfied(true);
             setShowOnboarding(false);
@@ -360,7 +393,6 @@ export default function TopicsPage() {
       } catch (e) {
         console.error("Error checking topics gate:", e);
         if (isMounted) {
-          // On error, assume satisfied to not block the user indefinitely, but log it.
           setTopicsGateSatisfied(true);
           setShowOnboarding(false);
           setCheckingTopicsGate(false);
@@ -370,19 +402,16 @@ export default function TopicsPage() {
     return () => { isMounted = false; };
   }, [selectedUsername]);
 
-  // Persist activeTab to sessionStorage on change
   useEffect(() => {
     sessionStorage.setItem('topics_active_tab', activeTab);
   }, [activeTab]);
 
-  // Preserve scroll position across rerenders/reloads to avoid "jump to top" feel
   useEffect(() => {
     const onScroll = () => sessionStorage.setItem('topics_scroll', String(window.scrollY || 0));
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Restore scroll after data loads or tab/user changes
   useEffect(() => {
     const saved = sessionStorage.getItem('topics_scroll');
     if (saved) {
@@ -392,7 +421,6 @@ export default function TopicsPage() {
   }, [activeTab, selectedUsername, loadingData]);
 
   const loadDataForUser = useCallback(async (username) => {
-    // SHORT-CIRCUIT all heavy loading if gate not satisfied
     if (!topicsGateRef.current) {
       setLoadingData(false);
       isFetchingRef.current = false;
@@ -402,7 +430,6 @@ export default function TopicsPage() {
 
     if (!username) return;
 
-    // Prevent double-loading if a fetch is already in progress
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
 
@@ -419,23 +446,17 @@ export default function TopicsPage() {
       };
 
       const sanitizedUsername = username.replace(/'/g, "\\'");
-      // Ensure manually added keywords always load, even if Search Volume <= 100
-      const manualIds = Array.from(getManualKwSet ? getManualKwSet() : new Set());
-      const mainFormula = `{Username} = '${sanitizedUsername}'`;
-      const keywordFormula = manualIds.length ?
-        `AND({Username} = '${sanitizedUsername}', OR({Search Volume} > 100, ${manualIds.map((id) => `RECORD_ID()='${id}'`).join(", ")}))` :
-        `AND({Search Volume} > 100, {Username} = '${sanitizedUsername}')`;
-      const productFormula = `{Client Username} = '${sanitizedUsername}'`; // Specific formula for Company Products
+      const usernameFormula = `{Username} = '${sanitizedUsername}'`;
 
-      // Start main data fetch immediately (EXACT filters; only one call per table)
+      const productFormula = `{Client Username} = '${sanitizedUsername}'`;
+
       const mainDataPromise = Promise.all([
-        listWithFilter(TABLE_IDS.keywordMap, keywordFormula),
-        listWithFilter(TABLE_IDS.faq, mainFormula)
+        listWithFilter(TABLE_IDS.keywordMap, usernameFormula),
+        listWithFilter(TABLE_IDS.faq, usernameFormula)
       ]);
 
-      // Decide whether to refresh cache using the ref (prevents callback recreation loop)
       const now = Date.now();
-      const cacheSnapshot = auxDataCacheRef.current || { tm: [], bc: [], pp: [], cacheTime: 0 }; // Use ref here
+      const cacheSnapshot = auxDataCacheRef.current || { tm: [], bc: [], pp: [], cacheTime: 0 };
       const shouldRefreshCache =
         now - (cacheSnapshot.cacheTime || 0) > CACHE_DURATION ||
         (cacheSnapshot.tm?.length || 0) === 0 ||
@@ -444,27 +465,24 @@ export default function TopicsPage() {
 
       let auxDataPromise;
       if (shouldRefreshCache) {
-        // Fetch auxiliary data with optimized concurrent requests AND server-side filtering
         auxDataPromise = Promise.allSettled([
-          listWithFilter(TABLE_IDS.targetMarket, mainFormula),
-          listWithFilter(TABLE_IDS.blogCategories, mainFormula),
+          listWithFilter(TABLE_IDS.targetMarket, usernameFormula),
+          listWithFilter(TABLE_IDS.blogCategories, usernameFormula),
           listWithFilter(TABLE_IDS.companyProducts, productFormula)
         ]).then(async (results) => {
           let tmArr = results[0].status === "fulfilled" ? results[0].value || [] : [];
           let bcArr = results[1].status === "fulfilled" ? results[1].value || [] : [];
           let ppArr = results[2].status === "fulfilled" ? results[2].value || [] : [];
 
-          // Fallback attempt for products table if primary formula fails (e.g., field variation)
           if (ppArr.length === 0 && results[2].status === "rejected") {
             try {
-              ppArr = await listWithFilter(TABLE_IDS.companyProducts, mainFormula); // Try with 'Username' field
+              ppArr = await listWithFilter(TABLE_IDS.companyProducts, usernameFormula);
             } catch {
-              // keep empty
             }
-          } // Last resort: fetch by table name and filter client-side
+          }
           if (ppArr.length === 0) {
             try {
-              const allProducts = await listWithFilter(TABLE_IDS.companyProducts, null); // Use the table name from config
+              const allProducts = await listWithFilter(TABLE_IDS.companyProducts, null);
               const keyCandidates = ["client_username", "client username", "username", "user_name", "user"];
               ppArr = (allProducts || []).filter((r) => {
                 const f = r?.fields || {};
@@ -477,13 +495,11 @@ export default function TopicsPage() {
                 return String(val || "") === username;
               });
             } catch {
-              // keep empty
             }
           }
           return { tmArr, bcArr, ppArr, cacheTime: now };
         });
       } else {
-        // Use cached data
         auxDataPromise = Promise.resolve({
           tmArr: cacheSnapshot.tm || [],
           bcArr: cacheSnapshot.bc || [],
@@ -492,25 +508,21 @@ export default function TopicsPage() {
         });
       }
 
-      // Wait for both main data and auxiliary data
       const [mainData, auxData] = await Promise.all([mainDataPromise, auxDataPromise]);
       const [keywords, faqs] = mainData;
       const { tmArr, bcArr, ppArr, cacheTime } = auxData;
 
-      // Update cache in both ref and state only when refreshed (prevents re-renders → loops)
       if (shouldRefreshCache) {
         const nextCache = { tm: tmArr, bc: bcArr, pp: ppArr, cacheTime };
-        auxDataCacheRef.current = nextCache; // Update ref first
+        auxDataCacheRef.current = nextCache;
         setAuxDataCache(nextCache);
       }
 
-      // Preserve manual 'm' markers using persisted set and tag results before setting state
       const manualSet = getManualKwSet();
       const processedKeywords = (keywords || []).map((r) =>
         manualSet.has(r.id) ? { ...r, __manualAdded: true } : r
       );
 
-      // Set processed data
       setKeywordRows(processedKeywords);
       setFaqRows(faqs);
       setOptions({
@@ -519,7 +531,6 @@ export default function TopicsPage() {
         pp: ppArr.map((r) => ({ value: r.id, label: getLabel(r.fields, "companyProducts") }))
       });
 
-      // Derive brand info (optimized)
       const deriveBrand = (rows) => {
         const candidates = ["Brand ID", "Brand Name", "Brand"];
         for (const row of rows || []) {
@@ -556,50 +567,39 @@ export default function TopicsPage() {
       setBrandArray([]);
     } finally {
       setLoadingData(false);
-      isFetchingRef.current = false; // Release the guard
+      isFetchingRef.current = false;
     }
-    // IMPORTANT: only depend on getManualKwSet (stable callback), not on auxDataCache state
-  }, [getManualKwSet, CACHE_DURATION, topicsGateRef]); // CACHE_DURATION is a constant, so it's stable
+  }, [getManualKwSet, CACHE_DURATION, topicsGateRef]);
 
-  // When selectedUsername (from any source) changes, load data
   useEffect(() => {
-    if (selectedUsername && topicsGateSatisfied) { // Only load if gate is satisfied
-      if (useWorkspaceScoping && isInitialDataLoadSuppressed.current) {
-        // If workspace scoping is enabled and this is the initial data load trigger,
-        // suppress the actual data fetch. The user will need to click refresh.
+    if (selectedUsername && topicsGateSatisfied) {
+      const suppressCurrentLoad = useWorkspaceScoping && isInitialDataLoadSuppressed.current && onboardingTimeRemaining === 0;
+
+      if (suppressCurrentLoad) {
         console.log("TopicsPage: Suppressing initial data load for workspace user.");
-        setLoadingData(false); // Stop spinner
-        setKeywordRows([]); // Clear any pending data
+        setLoadingData(false);
+        setKeywordRows([]);
         setFaqRows([]);
       } else {
-        // For subsequent username changes, or if not workspace scoped, or if initial load was already done,
-        // proceed with loading data.
         loadDataForUser(selectedUsername);
       }
     } else if (!selectedUsername) {
-      // Clear data if no username is selected (e.g., initial state or user de-selected)
       setKeywordRows([]);
       setFaqRows([]);
       setLoadingData(false);
     }
-    // After the first check (which might suppress or load), set the ref to false.
-    // This ensures subsequent changes to selectedUsername (e.g., manual selection or global change)
-    // will trigger loadDataForUser.
     isInitialDataLoadSuppressed.current = false;
-  }, [selectedUsername, loadDataForUser, useWorkspaceScoping, topicsGateSatisfied]); // Added topicsGateSatisfied
+  }, [selectedUsername, loadDataForUser, useWorkspaceScoping, topicsGateSatisfied, onboardingTimeRemaining]);
 
-  // Memoize to prevent changing reference in effects
   const handleUsernameSelect = React.useCallback((username) => {
-    setLocalSelectedUsername(username); // Set local state for non-workspace mode
+    setLocalSelectedUsername(username);
   }, []);
 
-  // NEW: Load written status for current username (maps BlogPosts by focus_keyword)
   const updateWrittenStatus = React.useCallback(async (username) => {
     if (!username) {
       setWrittenByKeyword({});
       return;
     }
-    // fetch recent posts for this username; build map by focus_keyword
     const posts = await BlogPost.filter({ user_name: username }, "-created_date", 500);
     const map = {};
     (posts || []).forEach((p) => {
@@ -611,32 +611,28 @@ export default function TopicsPage() {
     setWrittenByKeyword(map);
   }, []);
 
-  // Refresh written status whenever username changes and on an interval
   React.useEffect(() => {
-    if (!selectedUsername || !topicsGateSatisfied) { // Only update if gate is satisfied
+    if (!selectedUsername || !topicsGateSatisfied) {
       setWrittenByKeyword({});
       return;
     }
     updateWrittenStatus(selectedUsername);
-    const id = setInterval(() => updateWrittenStatus(selectedUsername), 15000); // Poll every 15 seconds
+    const id = setInterval(() => updateWrittenStatus(selectedUsername), 15000);
     return () => clearInterval(id);
-  }, [selectedUsername, updateWrittenStatus, topicsGateSatisfied]); // Added topicsGateSatisfied
+  }, [selectedUsername, updateWrittenStatus, topicsGateSatisfied]);
 
-  // When usernames are available, auto-select the pending username (if valid)
   useEffect(() => {
     if (!pendingUsername || !availableUsernames || availableUsernames.length === 0) return;
     if (availableUsernames.includes(pendingUsername)) {
       if (useWorkspaceScoping) {
-        // In workspace mode, we assume the provider handles this.
-        // This logic is primarily for the old system.
       } else { handleUsernameSelect(pendingUsername); }
       setPendingUsername(null);
     }
-  }, [availableUsernames, pendingUsername, handleUsernameSelect, useWorkspaceScoping]); // After FAQ data and tab are ready, highlight and scroll to the focused question
+  }, [availableUsernames, pendingUsername, handleUsernameSelect, useWorkspaceScoping]);
+
   useEffect(() => {
-    if (activeTab !== 'faq' || !focusQuestion) return;
+    if (activeTab !== 'faqs' || !focusQuestion) return;
     if (!faqTabRef.current) return;
-    // small delay to ensure the table is rendered
     const t = setTimeout(() => {
       const root = faqTabRef.current;
       const all = Array.from(root.querySelectorAll('li, tr, div'));
@@ -644,7 +640,6 @@ export default function TopicsPage() {
       if (target) {
         target.classList.add('ring-2', 'ring-emerald-400', 'rounded-md', 'bg-emerald-500/10');
         try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { console.error("Scroll failed:", e); }
-        // remove highlight after a few seconds
         setTimeout(() => {
           target.classList.remove('ring-2', 'ring-emerald-400', 'rounded-md', 'bg-emerald-500/10');
         }, 4500);
@@ -653,7 +648,6 @@ export default function TopicsPage() {
     return () => clearTimeout(t);
   }, [activeTab, faqRows, loadingData, focusQuestion, searchQuery]);
 
-  // Helper to know if a row has all required assignments
   const isComplete = (fields) => {
     const tm = fields?.["Target Market"] || [];
     const ppKey = getLinkedProductFieldName(fields || {});
@@ -662,17 +656,23 @@ export default function TopicsPage() {
       Array.isArray(pp) && pp.length > 0;
   };
 
-  // NEW: token consumption for feature-flagged actions on Topics
   const { consumeTokensForFeature } = useTokenConsumption();
 
   const handleUpdate = useCallback(async (tableId, recordId, fieldName, newValue) => {
     const isKeywordMap = tableId === TABLE_IDS.keywordMap;
     const stateSetter = isKeywordMap ? setKeywordRows : setFaqRows;
 
-    // Correct field name for Airtable update. "Get Questions" is the UI name, "Select Keyword" is the actual Airtable field.
     const writeFieldName = fieldName === "Get Questions" ? "Select Keyword" : fieldName;
 
-    // NEW: Handle "Get Questions" toggle with Rate Limiting
+    // Log the update for debugging
+    console.log('[Topics] handleUpdate called:', {
+      tableId,
+      recordId,
+      fieldName,
+      newValue,
+      valueType: Array.isArray(newValue) ? `array[${newValue.length}]` : typeof newValue
+    });
+
     if (fieldName === "Get Questions" && newValue === true) {
       const now = Date.now();
       const rateLimitKey = `get_questions_timestamps_${currentUser?.id || 'guest'}`;
@@ -689,109 +689,63 @@ export default function TopicsPage() {
         toast.warning("Woah there, slow down!", {
           description: "You've reached the rate limit for getting questions. For higher limits, please consider upgrading."
         });
-        return; // Stop the update
+        return;
       }
 
-      // Add new timestamp and save
       const newTimestamps = [...recentTimestamps, now];
       localStorage.setItem(rateLimitKey, JSON.stringify(newTimestamps));
 
-      // NEW: feature flag token consumption (non-blocking of UI layout/colors)
       await consumeTokensForFeature("topics_get_questions");
 
-      // Clear any existing interval for this recordId to prevent leaks
       if (intervalRefs.current[recordId]) {
         clearInterval(intervalRefs.current[recordId]);
         delete intervalRefs.current[recordId];
       }
 
-      // Start loading state for this record
       setLoadingQuestions((prev) => ({
         ...prev,
         [recordId]: { loading: true, startTime: Date.now() }
       }));
 
-      // Start countdown
-      setCountdown((prev) => ({
-        ...prev,
-        [recordId]: 60
-      }));
+      let secondsElapsed = 0;
+      const totalSeconds = 60;
 
-      // Countdown timer
       const newIntervalId = setInterval(() => {
-        setCountdown((prev) => {
-          const currentCount = prev[recordId];
-          if (currentCount === undefined || currentCount <= 1) { // <=1 to ensure 0 is shown for a tick
-            clearInterval(intervalRefs.current[recordId]);
-            delete intervalRefs.current[recordId]; // Clean up ref entry
-            setLoadingQuestions((prevLoading) => {
-              const updated = { ...prevLoading };
-              delete updated[recordId];
-              return updated;
-            });
-            const newCountdown = { ...prev };
-            delete newCountdown[recordId];
-            return newCountdown;
-          }
-          return {
-            ...prev,
-            [recordId]: currentCount - 1
-          };
-        });
-      }, 1000);
-
-      intervalRefs.current[recordId] = newIntervalId; // Store the new interval ID
-
-      // Backup 60-second timer to ensure loading state clears, even if interval fails
-      setTimeout(() => {
-        if (intervalRefs.current[recordId]) { // Only clear if interval still exists
+        secondsElapsed++;
+        if (secondsElapsed >= totalSeconds) {
           clearInterval(intervalRefs.current[recordId]);
           delete intervalRefs.current[recordId];
+          setLoadingQuestions((prevLoading) => {
+            const updated = { ...prevLoading };
+            delete updated[recordId];
+            return updated;
+          });
         }
-        setLoadingQuestions((prev) => {
-          const updated = { ...prev };
-          delete updated[recordId];
-          return updated;
-        });
-        setCountdown((prev) => {
-          const newCountdown = { ...prev };
-          delete newCountdown[recordId];
-          return newCountdown;
-        });
-      }, 60000);
+      }, 1000);
+
+      intervalRefs.current[recordId] = newIntervalId;
     } else if (fieldName === "Get Questions" && newValue === false) {
-      // Clear any existing interval for this recordId
       if (intervalRefs.current[recordId]) {
         clearInterval(intervalRefs.current[recordId]);
         delete intervalRefs.current[recordId];
       }
 
-      // Clear loading state and countdown when toggled off
       setLoadingQuestions((prev) => {
         const newState = { ...prev };
         delete newState[recordId];
         return newState;
       });
-      setCountdown((prev) => {
-        const newCountdown = { ...prev };
-        delete newCountdown[recordId];
-        return newCountdown;
-      });
     }
 
     let fullyUpdatedRowFields = null;
-    // NEW: capture if this specific change leads to a "complete" state (TM + PP both selected) to charge tokens once
     let becameComplete = false;
 
-    // Use the functional update form to get the latest state and capture the new fields.
-    // This avoids stale closures and makes the function more stable.
     stateSetter((currentRows) =>
       currentRows.map((row) => {
         if (row.id === recordId) {
           const wasCompleteBefore = isComplete(row.fields || {});
-          // IMPORTANT: Update UI state using the actual Airtable field name ('writeFieldName')
           const updatedFields = { ...row.fields, [writeFieldName]: newValue };
-          fullyUpdatedRowFields = updatedFields; // Capture the new fields for the check below
+          fullyUpdatedRowFields = updatedFields;
           const nowComplete = isComplete(updatedFields || {});
           becameComplete = !wasCompleteBefore && nowComplete;
           return { ...row, fields: updatedFields };
@@ -800,51 +754,58 @@ export default function TopicsPage() {
       })
     );
 
-    // Map UI "Promoted Product" to the actual linked field if needed
     const canonicalLower = String(fieldName).toLowerCase();
     const isRequiredSpecial = ["target market", "promoted product", "link to company products"].includes(canonicalLower);
 
-    // For Promoted Product, ensure we write to the real linked field (often "Link to Company Products")
-    let finalWriteFieldName = writeFieldName; // Start with the potentially remapped field name
+    let finalWriteFieldName = writeFieldName;
     if (canonicalLower.includes("promoted") || canonicalLower.includes("company products")) {
       const ppKey = getLinkedProductFieldName(fullyUpdatedRowFields || {});
-      // Only override finalWriteFieldName if ppKey returns something valid and different from writeFieldName
       if (ppKey && ppKey !== writeFieldName) {
         finalWriteFieldName = ppKey;
       }
     }
 
-    // For the two special dropdown fields, check if we should batch-write to Airtable.
     if (isRequiredSpecial) {
       if (fullyUpdatedRowFields) {
-        // Dynamically get the exact field names, as they might vary slightly
         const tmKey = Object.keys(fullyUpdatedRowFields).find((k) => k.toLowerCase() === "target market") || "Target Market";
-        const ppKey = getLinkedProductFieldName(fullyUpdatedRowFields || {}); // Use the helper for Promoted Product
+        const ppKey = getLinkedProductFieldName(fullyUpdatedRowFields || {});
 
         const isNowComplete =
           Array.isArray(fullyUpdatedRowFields[tmKey]) && fullyUpdatedRowFields[tmKey].length > 0 &&
-          Array.isArray(fullyUpdatedRowFields[ppKey]) && fullyUpdatedRowFields[ppKey].length > 0;
+          ppKey && Array.isArray(fullyUpdatedRowFields[ppKey]) && fullyUpdatedRowFields[ppKey].length > 0;
 
-        // NEW: token consumption when completion is achieved (non-blocking UI/layout)
         if (becameComplete) {
           await consumeTokensForFeature("topics_assignment_complete");
         }
 
-        if (isNowComplete) {
-          // All required fields are selected, so write the batch update to Airtable.
-          await airtableSync({
-            action: "updateRecord",
-            tableId,
-            recordId,
-            fields: {
-              [tmKey]: fullyUpdatedRowFields[tmKey],
-              [ppKey]: fullyUpdatedRowFields[ppKey]
-            }
-          });
-          return; // Batch update performed, no need for single field update below
-        }
+        // ALWAYS update Airtable, whether complete or not (handles deselections)
+        const fieldsToUpdate = {
+          [finalWriteFieldName]: newValue
+        };
+
+        console.log('[Topics] Syncing to Airtable:', {
+          recordId,
+          fieldsToUpdate,
+          isNowComplete
+        });
+
+        await airtableSync({
+          action: "updateRecord",
+          tableId,
+          recordId,
+          fields: fieldsToUpdate
+        });
+
+        console.log('[Topics] Airtable sync complete');
+        return;
       }
-      // If not all required fields are complete, proceed with the single field update
+      
+      console.log('[Topics] Syncing to Airtable (fallback):', {
+        recordId,
+        field: finalWriteFieldName,
+        value: newValue
+      });
+
       await airtableSync({
         action: "updateRecord",
         tableId,
@@ -854,35 +815,42 @@ export default function TopicsPage() {
       return;
     }
 
-    // For any other field (e.g., the 'Select Keyword' switch itself), write to Airtable immediately.
+    console.log('[Topics] Syncing to Airtable (non-special field):', {
+      recordId,
+      field: finalWriteFieldName,
+      value: newValue
+    });
+
     await airtableSync({
       action: "updateRecord",
       tableId,
       recordId,
       fields: { [finalWriteFieldName]: newValue }
     });
-  }, [currentUser, consumeTokensForFeature]); // intervalRefs not included in dependency array as it's a ref and doesn't trigger re-renders
+  }, [currentUser, consumeTokensForFeature]);
 
-  const refreshData = () => {
-    // Clear cache to force a full refresh on next load
+  const refreshData = useCallback(() => {
     const cleared = { tm: [], bc: [], pp: [], cacheTime: 0 };
     auxDataCacheRef.current = cleared;
     setAuxDataCache(cleared);
-    // When manually refreshing, ensure next call runs (even in workspace-suppressed initial load)
     isInitialDataLoadSuppressed.current = false;
     if (selectedUsername) {
       loadDataForUser(selectedUsername);
     }
-  };
+  }, [selectedUsername, loadDataForUser]);
 
-  // EDIT: allow optional text override so inline form can reuse this without changing existing behavior
+  useEffect(() => {
+    const handler = () => refreshData();
+    window.addEventListener('topicsRefreshRequested', handler);
+    return () => window.removeEventListener('topicsRefreshRequested', handler);
+  }, [refreshData]);
+
   const handleCreateKeyword = async (textOverride) => {
     const text = (textOverride ?? newKeyword)?.trim();
     if (!selectedUsername || !text) return;
     setCreating(true);
     setError(null);
     try {
-      // Inspect table fields to use correct names
       const { data: listRes } = await airtableListFields({
         tableId: TABLE_IDS.keywordMap,
         sampleSize: 1
@@ -893,11 +861,9 @@ export default function TopicsPage() {
       const usernameKey = pickField(available, ["Username", "username", "user_name", "client_username", "User", "user"]);
       const keywordKey = pickField(available, ["Keyword", "Name", "Title"]);
       const selectKey = pickField(available, ["Select Keyword", "Select", "Selected"]);
-      const getQuestionsKey = pickField(available, ["Get Questions", "Get_Questions"]); // Added for new field
+      const getQuestionsKey = pickField(available, ["Get Questions", "Get_Questions"]);
 
-      // NEW: Find a suitable Brand field in this table
       const brandFieldCandidate = pickField(available, ["Brand ID", "brand id", "BrandID", "Brand Name", "brand name", "Brand", "brand"]);
-      // Prefer previously observed brand field if available
       const brandTargetField = brandFieldKey && available.some((f) => f === brandFieldKey) ?
         brandFieldKey :
         brandFieldCandidate;
@@ -918,12 +884,10 @@ export default function TopicsPage() {
         [usernameKey]: selectedUsername
       };
       if (selectKey) fieldsPayload[selectKey] = false;
-      if (getQuestionsKey) fieldsPayload[getQuestionsKey] = false; // Initialize new field as false
+      if (getQuestionsKey) fieldsPayload[getQuestionsKey] = false;
 
-      // NEW: always set canonical 'Username' field for filtering and compatibility
       fieldsPayload["Username"] = selectedUsername;
 
-      // NEW: include Brand array if we have it and the table has a matching field
       if (brandTargetField && Array.isArray(brandArray) && brandArray.length > 0) {
         fieldsPayload[brandTargetField] = brandArray;
       }
@@ -936,31 +900,25 @@ export default function TopicsPage() {
       if (data?.success && data?.record) {
         const newRecord = {
           id: data.record.id,
-          __manualAdded: true, // NEW: mark local manual
+          __manualAdded: true,
           fields: {
-            // Use fields as returned by Airtable to keep UI consistent
             ...data.record.fields,
-            // Ensure optional arrays exist for UI (important for MiniMultiSelect)
             "Target Market": data.record.fields["Target Market"] || [],
             [getLinkedProductFieldName(data.record.fields)]: data.record.fields[getLinkedProductFieldName(data.record.fields)] || []
           }
         };
-        // NEW: persist manual id so it stays marked after reload
         const setObj = getManualKwSet();
         setObj.add(newRecord.id);
         saveManualKwSet(setObj);
 
-        // insert at top
         setKeywordRows((prev) => [newRecord, ...prev]);
 
-        // keep existing modal behavior intact
         setShowAddKeyword(false);
         setNewKeyword("");
         setActiveTab("keyword_map");
         setSearchQuery("");
 
-        // If we just wrote a brand, cache it
-        if (brandTargetField && fieldsPayload[brandTargetField]) { // Check against payload as it's the one we sent
+        if (brandTargetField && fieldsPayload[brandTargetField]) {
           setBrandFieldKey(brandTargetField);
           setBrandArray(Array.isArray(fieldsPayload[brandTargetField]) ? fieldsPayload[brandTargetField] : [fieldsPayload[brandTargetField]]);
         }
@@ -975,14 +933,12 @@ export default function TopicsPage() {
     }
   };
 
-  // EDIT: allow optional text override so inline form can reuse this without changing existing behavior
   const handleCreateFaq = async (textOverride) => {
     const text = (textOverride ?? newFaqKeyword)?.trim();
     if (!selectedUsername || !text) return;
     setCreating(true);
-    setError(null); // Clear any previous error
+    setError(null);
     try {
-      // Inspect FAQ table fields
       const { data: listRes } = await airtableListFields({
         tableId: TABLE_IDS.faq,
         sampleSize: 1
@@ -991,10 +947,8 @@ export default function TopicsPage() {
       const available = listRes?.fields || [];
 
       const usernameKey = pickField(available, ["Username", "username", "user_name", "client_username", "User", "user"]);
-      // Many bases use "Keyword" for FAQs; some use "Question" or "Title"
       const keywordKey = pickField(available, ["Keyword", "Question", "Title", "Name"]);
 
-      // NEW: Find a suitable Brand field in this table
       const brandFieldCandidate = pickField(available, ["Brand ID", "brand id", "BrandID", "Brand Name", "brand name", "Brand", "brand"]);
       const brandTargetField = brandFieldKey && available.some((f) => f === brandFieldKey) ?
         brandFieldKey :
@@ -1016,10 +970,8 @@ export default function TopicsPage() {
         [usernameKey]: selectedUsername
       };
 
-      // NEW: always set canonical 'Username' field for filtering and compatibility
       fieldsPayload["Username"] = selectedUsername;
 
-      // NEW: include Brand array if we have it and the table has a matching field
       if (brandTargetField && Array.isArray(brandArray) && brandArray.length > 0) {
         fieldsPayload[brandTargetField] = brandArray;
       }
@@ -1039,14 +991,12 @@ export default function TopicsPage() {
           }
         };
         setFaqRows((prev) => [newRecord, ...prev]);
-        // keep existing modal behavior intact
-        setShowAddFaq(false); // Fix: Corrected typo from setShowAddFag to setShowAddFaq
+        setShowAddFaq(false);
         setNewFaqKeyword("");
-        setActiveTab("faq");
+        setActiveTab("faqs");
         setSearchQuery("");
 
-        // Cache brand after successful write
-        if (brandTargetField && fieldsPayload[brandTargetField]) { // Check against payload as it's the one we sent
+        if (brandTargetField && fieldsPayload[brandTargetField]) {
           setBrandFieldKey(brandTargetField);
           setBrandArray(Array.isArray(fieldsPayload[brandTargetField]) ? fieldsPayload[brandTargetField] : [fieldsPayload[brandTargetField]]);
         }
@@ -1060,6 +1010,57 @@ export default function TopicsPage() {
       setCreating(false);
     }
   };
+
+  const handleCreateArticle = useCallback(async (question) => {
+    try {
+      const currentUser = await User.me();
+      const timestamps = Array.isArray(currentUser.article_creation_timestamps)
+        ? currentUser.article_creation_timestamps
+        : [];
+
+      const now = Date.now();
+      const thirtyMinsAgo = now - (30 * 60 * 1000);
+
+      const recentCreations = timestamps.filter(ts => {
+        const timestamp = new Date(ts).getTime();
+        return timestamp > thirtyMinsAgo;
+      });
+
+      if (recentCreations.length >= 5) {
+        toast.info("Your content queue is full! Our AI agents are busy writing your articles. Please check back in a few minutes.");
+        return;
+      }
+
+      setIsCreatingArticle(true);
+
+      const payload = {
+        user_name: selectedUsername,
+        target_market: currentTargetMarket || undefined,
+        question_id: question.id,
+        question_text: question.question
+      };
+
+      const { data } = await callPromptWebhook(payload);
+
+      if (data?.success && data?.webhook_id) {
+        const updatedTimestamps = [...timestamps, new Date().toISOString()];
+        await User.updateMyUserData({ article_creation_timestamps: updatedTimestamps });
+
+        toast.success("Article created! Redirecting to editor...");
+        setTimeout(() => {
+          window.location.href = createPageUrl(`Editor?webhook=${data.webhook_id}`);
+        }, 500);
+      } else {
+        throw new Error(data?.error || "Failed to create article");
+      }
+    } catch (error) {
+      console.error("Error creating article:", error);
+      toast.error(error.message || "Failed to create article");
+    } finally {
+      setIsCreatingArticle(false);
+    }
+  }, [selectedUsername, currentTargetMarket, setIsCreatingArticle]);
+
 
   const handleDeleteRecord = async (tableId, recordId) => {
     if (!tableId || !recordId) return;
@@ -1075,7 +1076,6 @@ export default function TopicsPage() {
 
       if (tableId === TABLE_IDS.keywordMap) {
         setKeywordRows((prev) => prev.filter((r) => r.id !== recordId));
-        // NEW: remove from manual set if present
         const setObj = getManualKwSet();
         if (setObj.has(recordId)) {
           setObj.delete(recordId);
@@ -1093,27 +1093,16 @@ export default function TopicsPage() {
     }
   };
 
-  // NEW: Function to handle "View Questions" click
   const handleViewQuestions = useCallback((keyword) => {
-    // Switch to FAQ tab
-    setActiveTab('faq');
-    // Set the dedicated filter for FAQs instead of using the global search
+    setActiveTab('faqs');
     setFaqKeywordFilter(keyword);
-    // Clear global search to avoid confusion
     setSearchQuery("");
   }, []);
 
-  // Example: guard the "Get Questions" trigger (replace prop usage below)
   const guardedHandleViewQuestions = useCallback(async (keyword) => {
-    // The previous ensureOnboardingGate relied on usernameRecord.topics.
-    // With the new User.me().topics gate, this check might be redundant or require re-evaluation
-    // depending on the exact intent of two separate 'topics' fields.
-    // For now, I'm removing the call to the now-removed ensureOnboardingGate.
-    // If a different gate specific to an action is needed, it should be re-introduced.
-    handleViewQuestions(keyword); // Call the original handler
+    handleViewQuestions(keyword);
   }, [handleViewQuestions]);
 
-  // NEW: Inline submit wrapper (does not affect existing modal flows)
   const handleInlineSubmit = async () => {
     if (!inlineKeywordText.trim()) return;
     if (inlineTarget === "faq") {
@@ -1125,25 +1114,21 @@ export default function TopicsPage() {
     setInlineKeywordText("");
     setInlineTarget("keyword_map");
 
-    // Refresh written status after creating (in case a post already exists for that keyword)
     if (selectedUsername) updateWrittenStatus(selectedUsername);
   };
 
-  // Derived rows for current filters
   const filteredKeywordRows = React.useMemo(() => {
-    let rows = [...keywordRows]; // Use a copy to avoid mutating the original state
+    let rows = [...keywordRows];
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       rows = rows.filter((r) => String(r?.fields?.["Keyword"] || "").toLowerCase().includes(q));
     }
     if (showSelectedOnly) {
-      // FIX: Use the correct field "Select Keyword" for filtering
       rows = rows.filter((r) => !!r?.fields?.["Select Keyword"]);
     }
     if (showCompleteOnly) {
       rows = rows.filter((r) => isComplete(r?.fields || {}));
     }
-    // NEW: filter by '__manualAdded' presence
     if (showManualOnly) {
       rows = rows.filter((r) => r.__manualAdded);
     }
@@ -1153,12 +1138,10 @@ export default function TopicsPage() {
   const filteredFaqRows = React.useMemo(() => {
     let rows = [...faqRows];
 
-    // First, apply the dedicated keyword filter if it exists
     if (faqKeywordFilter) {
       rows = rows.filter((r) => (r?.fields?.['Top Level Keyword'] || []).includes(faqKeywordFilter));
     }
 
-    // Then, apply the global search query to the already-filtered list
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       rows = rows.filter((r) => String(r?.fields?.["Keyword"] || "").toLowerCase().includes(q));
@@ -1167,16 +1150,14 @@ export default function TopicsPage() {
   }, [faqRows, searchQuery, faqKeywordFilter]);
 
 
-  // Derived rows for current filters
-  // REPLACE the nested PageContent component with an inline-render variable to avoid remounts
   const renderPageBody = (() => {
     if (loadingInitial || useWorkspaceScoping && isWorkspaceLoading) {
       return (
         <div className="text-center py-12 text-slate-600 flex justify-center items-center gap-2">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Loading user data...</span>
-        </div>);
-
+          <span>Loading...</span>
+        </div>
+      );
     }
 
     if (!useWorkspaceScoping && availableUsernames.length === 0 && currentUser?.role !== "admin") {
@@ -1187,8 +1168,8 @@ export default function TopicsPage() {
           <p className="text-amber-700/80 mt-2">
             Your account does not have any usernames assigned. Please contact an administrator.
           </p>
-        </div>);
-
+        </div>
+      );
     }
 
     if (!selectedUsername) {
@@ -1197,19 +1178,38 @@ export default function TopicsPage() {
           <Users className="w-12 h-12 mx-auto mb-4 text-slate-400" />
           <h3 className="text-xl font-semibold text-slate-900">Select a Workspace</h3>
           <p className="text-slate-600">Choose a workspace from the top navigation to view topics.</p>
-        </div>);
-
+        </div>
+      );
     }
 
-    // Check if initial load was suppressed and we haven't manually triggered a load yet
+    if (onboardingTimeRemaining > 0) {
+      return (
+        <div className="flex items-center justify-center min-h-[500px]">
+          <div className="text-center bg-white rounded-2xl border-2 border-slate-200 p-12 shadow-lg max-w-md">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center animate-pulse">
+              <Clock className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">Processing Your Topics</h2>
+            <p className="text-slate-600 mb-8">
+              Our AI is analyzing your keywords and preparing personalized recommendations.
+            </p>
+            <div className="text-6xl font-bold text-indigo-600 mb-2">
+              {formatTimeRemaining(onboardingTimeRemaining)}
+            </div>
+            <div className="text-sm text-slate-500">time remaining</div>
+          </div>
+        </div>
+      );
+    }
+
     if (useWorkspaceScoping && isInitialDataLoadSuppressed.current) {
       return (
         <div className="text-center py-12 text-slate-600 bg-white rounded-2xl border border-slate-200">
           <Info className="w-12 h-12 mx-auto mb-4 text-slate-400" />
           <h3 className="text-xl font-semibold text-slate-900">Data Load Suppressed</h3>
           <p className="text-slate-600">Click "Refresh" to load topics for {selectedUsername}.</p>
-        </div>);
-
+        </div>
+      );
     }
 
     if (loadingData) {
@@ -1217,8 +1217,8 @@ export default function TopicsPage() {
         <div className="text-center py-12 text-slate-600 flex justify-center items-center gap-2">
           <Loader2 className="w-5 h-5 animate-spin" />
           <span>Loading topics for {selectedUsername}...</span>
-        </div>);
-
+        </div>
+      );
     }
 
     if (error) {
@@ -1242,12 +1242,12 @@ export default function TopicsPage() {
               </div>
             </TabsTrigger>
             <TabsTrigger
-              value="faq"
+              value="faqs"
               className="rounded-lg text-slate-700 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-colors">
 
               <div className="flex items-center gap-2">
-                <HelpCircle className="w-4 h-4" />
-                <span>FAQs</span>
+                <MessageCircle className="w-4 h-4" />
+                <span>Questions</span>
                 <span className="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-700 data-[state=active]:bg-white/20 data-[state=active]:text-white">
                   {filteredFaqRows.length}
                 </span>
@@ -1267,21 +1267,18 @@ export default function TopicsPage() {
               handleUpdate={handleUpdate}
               density="compact"
               onDeleteRow={handleDeleteRecord}
-              layout={KEYWORD_MAP_LAYOUT} // Ensure layout prop is passed
+              layout={KEYWORD_MAP_LAYOUT}
               loadingQuestions={loadingQuestions}
-              countdown={countdown} // Pass countdown state to DataTable
-              handleViewQuestions={guardedHandleViewQuestions} // Use the guarded handler
-              // NEW: pass written map
+              handleViewQuestions={guardedHandleViewQuestions}
               writtenByKeyword={writtenByKeyword} />
 
 
           </TabsContent>
 
           <TabsContent
-            value="faq"
+            value="faqs"
             className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
 
-            {/* NEW: Filter status banner */}
             {faqKeywordFilter &&
               <div className="sticky top-0 z-30 bg-indigo-50 border-b border-indigo-200 px-4 py-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1309,14 +1306,13 @@ export default function TopicsPage() {
               density="compact"
               ref={faqTabRef}
               onDeleteRow={handleDeleteRecord}
-              // NEW: pass written map
               writtenByKeyword={writtenByKeyword} />
 
 
           </TabsContent>
         </Tabs>
-      </>);
-
+      </>
+    );
   })();
 
   if (checkingTopicsGate) {
@@ -1337,38 +1333,72 @@ export default function TopicsPage() {
         companyInfoTableId={TABLE_IDS.companyInformation}
         targetMarketTableId={TABLE_IDS.targetMarket}
         companyProductsTableId={TABLE_IDS.companyProducts}
-        onCompleted={async () => {
-          // Mark this username as completed in the current user's record
+        onCompleted={async (websiteUrl) => {
           const me = await User.me().catch(() => null);
           if (me) {
             const arr = Array.isArray(me.topics) ? me.topics : [];
             const uname = selectedUsername || null;
-            if (uname && !arr.includes(uname)) {
-              const updated = [...arr, uname];
-              await User.updateMyUserData({ topics: updated });
-              setCurrentUser(prev => ({ ...prev, topics: updated })); // Update local user state
+            if (uname) {
+              const updatedTopics = [...arr, uname];
+              const completionTimestamp = new Date().toISOString();
+
+              const existingCompletionTimestamps = me.topics_onboarding_completed_at
+                ? (typeof me.topics_onboarding_completed_at === 'string'
+                  ? JSON.parse(me.topics_onboarding_completed_at)
+                  : me.topics_onboarding_completed_at)
+                : {};
+
+              const updatedCompletionTimestamps = {
+                ...existingCompletionTimestamps,
+                [uname]: completionTimestamp,
+              };
+
+              await User.updateMyUserData({
+                topics: updatedTopics,
+                topics_onboarding_completed_at: JSON.stringify(updatedCompletionTimestamps),
+              });
+
+              setCurrentUser(prev => ({
+                ...prev,
+                topics: updatedTopics,
+                topics_onboarding_completed_at: JSON.stringify(updatedCompletionTimestamps),
+              }));
+
               setTopicsGateSatisfied(true);
               setShowOnboarding(false);
-              toast.success(`Topics onboarding complete for ${uname}.`);
-              refreshData(); // Force a refresh of data to reflect the new state
+
+              toast.success(`Topics onboarding complete for ${uname}. Processing keywords...`);
             }
           }
         }}
       />
 
-      {/* Only render the existing Topics UI when the gate is satisfied */}
       {topicsGateSatisfied && (
         <div className="w-full px-6">
-          {/* One-row toolbar: compact controls with no horizontal scroll */}
+          {onboardingTimeRemaining > 0 && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="text-blue-600">
+                  <Clock className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-900">
+                    Onboarding Complete! Questions will be available in {formatTimeRemaining(onboardingTimeRemaining)}.
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    This 15-minute timer starts after you complete the onboarding process. Data will refresh automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white border border-slate-200 rounded-xl p-2 mb-2">
             <div className="flex items-center gap-1 flex-nowrap">
-              {/* Inline page title */}
               <span className="text-sm font-semibold text-slate-900 mr-2">Topics</span>
 
-              {/* Divider */}
               <div className="h-5 w-px bg-slate-200" />
 
-              {/* Username selector - now conditionally rendered */}
               {!useWorkspaceScoping &&
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4 text-slate-500" />
@@ -1390,10 +1420,8 @@ export default function TopicsPage() {
                 </div>
               }
 
-              {/* Divider (only if workspace scoping is off) */}
               {!useWorkspaceScoping && <div className="h-5 w-px bg-slate-200" />}
 
-              {/* Search keywords (slightly narrower) */}
               <div className="relative">
                 <Input
                   placeholder="Search…"
@@ -1403,10 +1431,8 @@ export default function TopicsPage() {
                 <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
 
-              {/* Divider */}
               <div className="h-5 w-px bg-slate-200" />
 
-              {/* Quick filters */}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   <Switch
@@ -1430,7 +1456,6 @@ export default function TopicsPage() {
                   </span>
                 </div>
 
-                {/* NEW: Manual filter toggle */}
                 <div className="flex items-center gap-1">
                   <Switch
                     checked={showManualOnly}
@@ -1443,7 +1468,6 @@ export default function TopicsPage() {
                 </div>
               </div>
 
-              {/* Actions (refresh button and new Add Keyword button) */}
               <div className="ml-auto flex items-center gap-1">
                 <Button
                   onClick={refreshData}
@@ -1455,7 +1479,6 @@ export default function TopicsPage() {
 
                   <RefreshCw className={`w-4 h-4 ${loadingData ? "animate-spin" : ""}`} />
                 </Button>
-                {/* EDIT: Keep same button, only toggles inline form (colors/layout unchanged) */}
                 <Button
                   onClick={() => setShowInlineAdd((v) => !v)}
                   disabled={!selectedUsername}
@@ -1469,7 +1492,6 @@ export default function TopicsPage() {
             </div>
           </div>
 
-          {/* NEW: Inline add form (appears below toolbar) */}
           {showInlineAdd &&
             <div className="bg-white border border-slate-200 rounded-xl p-2 mb-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -1516,8 +1538,6 @@ export default function TopicsPage() {
         </div>
       )}
 
-
-      {/* Add Keyword (Keyword Map) Dialog */}
       <Dialog open={showAddKeyword} onOpenChange={setShowAddKeyword}>
         <DialogContent className="bg-white border border-slate-200 text-slate-900">
           <DialogHeader>
@@ -1552,7 +1572,6 @@ export default function TopicsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add FAQ Keyword Dialog */}
       <Dialog open={showAddFaq} onOpenChange={setShowAddFaq}>
         <DialogContent className="bg-white border border-slate-200 text-slate-900">
           <DialogHeader>
@@ -1595,20 +1614,18 @@ export default function TopicsPage() {
         title="Delete record"
         description="Are you sure you want to delete this record? This action cannot be undone."
       />
-    </div>);
-
+    </div>
+  );
 }
 
 // --- Reusable DataTable Component (for Keyword Map) ---
-const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, density = "comfortable", onDeleteRow, loadingQuestions, countdown, handleViewQuestions, writtenByKeyword }) => {
-  // NEW: local sort state for Search Volume
-  const [svSort, setSvSort] = React.useState(null); // null | 'asc' | 'desc'
+const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, density = "comfortable", onDeleteRow, loadingQuestions, handleViewQuestions, writtenByKeyword }) => {
+  const [svSort, setSvSort] = React.useState(null);
 
   const toggleSvSort = () => {
     setSvSort((prev) => prev === null ? 'desc' : prev === 'desc' ? 'asc' : null);
   };
 
-  // Helper to safely parse numbers that may include commas/strings
   const parseNum = (val) => {
     if (val == null || val === "") return Number.NaN;
     if (typeof val === "number") return val;
@@ -1616,18 +1633,15 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
     return isNaN(n) ? Number.NaN : n;
   };
 
-  // Sort rows according to active sort
   const sortedRows = React.useMemo(() => {
     let list = [...rows];
-    // Always pin manually added rows to the top
     list.sort((a, b) => {
       const ma = a.__manualAdded ? 1 : 0;
       const mb = b.__manualAdded ? 1 : 0;
 
-      // Prioritize manual-added rows to the top
-      if (ma !== mb) return mb - ma; // manual first (1 - 0 = 1 means a comes after b; 0 - 1 = -1 means a comes before b)
+      if (ma !== mb) return mb - ma;
 
-      if (!svSort) return 0; // If no Search Volume sort, maintain original order for non-manual rows or relative order for manual rows
+      if (!svSort) return 0;
 
       const av = parseNum(a?.fields?.["Search Volume"]);
       const bv = parseNum(b?.fields?.["Search Volume"]);
@@ -1638,23 +1652,21 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
     return list;
   }, [rows, svSort]);
 
-  // helper for human-friendly numbers
   const formatNumber = (val) => {
     if (val == null || val === "") return "-";
     const n = typeof val === "number" ? val : parseFloat(String(val).toString().replace(/,/g, ""));
-    if (isNaN(n)) return String(n); // Changed from String(val) to String(n) for consistent output if val was a string number
+    if (isNaN(n)) return String(n);
     return n.toLocaleString();
   };
 
   const isComplete = (fields) => {
     const tm = fields?.["Target Market"] || [];
-    const ppKey = getLinkedProductFieldName(fields || {});
+    const ppKey = getLinkedProductFieldName(fields);
     const pp = fields?.[ppKey] || [];
     return Array.isArray(tm) && tm.length > 0 &&
       Array.isArray(pp) && pp.length > 0;
   };
 
-  // Enhanced horizontal scroll with safe click handling
   const scrollRef = React.useRef(null);
   React.useEffect(() => {
     const el = scrollRef.current;
@@ -1665,33 +1677,26 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
 
     const onWheel = (e) => {
       const canScrollX = el.scrollWidth > el.clientWidth;
-      // If no horizontal scrollbar, or if explicit vertical intent (deltaY is much larger than deltaX)
-      // or if shift key is not pressed, allow natural vertical scrolling.
-      // e.g. for trackpads, deltaY is often non-zero even with horizontal scroll
       const horizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey;
 
       if (!canScrollX) {
-        // No horizontal scrollbar, allow natural vertical scroll
         return;
       }
 
       if (!horizontalIntent) {
-        // Not strong horizontal intent, allow natural vertical scrolling
         return;
       }
 
-      const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY; // Prefer deltaX, fall back to deltaY if deltaX is 0 (e.g. shift-scroll)
+      const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
 
-      // Check if at the horizontal edges. If so, don't preventDefault to allow parent scroll
       const atLeft = el.scrollLeft <= 0;
-      const atRight = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1; // -1 to account for subpixel rendering differences
+      const atRight = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
       if (atLeft && delta < 0 || atRight && delta > 0) {
-        // At horizontal limit, don't prevent vertical scrolling of parent
         return;
       }
 
       el.scrollLeft += delta;
-      e.preventDefault(); // Prevent page scroll when actively horizontal scrolling the table
+      e.preventDefault();
     };
 
     let isDown = false;
@@ -1701,23 +1706,22 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
 
     const onPointerDown = (e) => {
       if (el.scrollWidth <= el.clientWidth) return;
-      if (isInteractive(e.target)) return; // don't hijack clicks on controls
+      if (isInteractive(e.target)) return;
       isDown = true;
       isPanning = false;
       startX = e.clientX;
       startLeft = el.scrollLeft;
-      // no preventDefault here so click events still fire if user doesn't pan
     };
 
     const onPointerMove = (e) => {
       if (!isDown) return;
       const dx = e.clientX - startX;
-      if (!isPanning && Math.abs(dx) > 3) { // Start panning only after small threshold
+      if (!isPanning && Math.abs(dx) > 3) {
         isPanning = true;
       }
       if (isPanning) {
         el.scrollLeft = startLeft - dx;
-        e.preventDefault(); // Prevent default only when actively panning
+        e.preventDefault();
       }
     };
 
@@ -1746,7 +1750,7 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
 
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("pointerdown", onPointerDown, { passive: false });
-    window.addEventListener("pointermove", onPointerMove, { passive: false }); // passive: false to allow preventDefault
+    window.addEventListener("pointermove", onPointerMove, { passive: false });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
     el.addEventListener("keydown", onKeyDown);
 
@@ -1767,11 +1771,10 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
       ref={scrollRef}
       tabIndex={0}
       className="w-full overflow-x-auto focus:outline-none"
-      style={{ touchAction: "pan-x pan-y" }} // Allow natural vertical touch scrolling too
+      style={{ touchAction: "pan-x pan-y" }}
       aria-label="Keyword table horizontal scroller">
 
       <div className="w-full">
-        {/* Edited: clearer sticky header with subtle shadow and border */}
         <div
           className="grid text-xs font-semibold tracking-wide text-slate-600 uppercase bg-white sticky top-0 z-20 border-b border-slate-200 shadow-sm"
           style={{ gridTemplateColumns: layout, gap: "1.5rem", padding: "0.5rem 1.5rem" }}>
@@ -1779,7 +1782,7 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
           {headers.map((header) =>
             <div
               key={header}
-              className={header === "Search Volume" ? "text-right" : "whitespace-nowrap"}>
+              className={header === "Search Volume" ? "text-right" : header === "Actions" ? "text-center" : "whitespace-nowrap"}>
 
               {header === "Search Volume" ?
                 <button
@@ -1802,22 +1805,17 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
           )}
         </div>
 
-        {/* Edited: clearer rows, numeric columns aligned and formatted */}
         <div className="text-sm text-slate-900">
           {sortedRows.map((row, idx) => {
             const fields = row.fields || {};
             const complete = isComplete(fields);
-            const productField = getLinkedProductFieldName(fields); // Determine the actual product field name here
             const keywordText = String(fields["Keyword"] || "").trim();
             const keywordKey = keywordText.toLowerCase();
             const postId = writtenByKeyword ? writtenByKeyword[keywordKey] : null;
 
-            // FIX: Read from the correct "Select Keyword" for the toggle's state
             const isToggled = fields["Select Keyword"] || false;
             const isLoading = loadingQuestions[row.id]?.loading;
-            const currentCountdown = countdown[row.id]; // Access countdown for this row
-            // The "View Questions" button should show if toggled is true, it's not currently loading, and countdown is finished (or never started for existing items)
-            const canShowButton = isToggled && !isLoading && (currentCountdown === undefined || currentCountdown <= 0);
+            const canShowButton = isToggled && !isLoading;
 
 
             return (
@@ -1829,11 +1827,10 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
                 {headers.map((header) =>
                   <div
                     key={`${row.id}-${header}`}
-                    className={header === "Search Volume" ? "text-right font-mono tabular-nums text-slate-700" : "min-w-0"}>
+                    className={header === "Search Volume" ? "text-right font-mono tabular-nums text-slate-700" : header === "Actions" ? "text-center" : "min-w-0"}>
 
                     {header === "Keyword" ?
                       <div className="flex items-center gap-2">
-                        {/* NEW: 'm' symbol for manual-added */}
                         {row.__manualAdded &&
                           <span className="h-5 w-5 rounded-full border border-slate-300 text-slate-600 text-[10px] flex items-center justify-center">
                             m
@@ -1858,38 +1855,26 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
                             </Badge>)
 
                         }
-                        <Button
-                          variant="ghost"
-                          size="icon" className="text-fuchsia-700 ml-auto text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 w-8 hover:text-red-700 hover:bg-red-50"
-
-                          onClick={() => onDeleteRow && onDeleteRow(tableId, row.id)}
-                          title="Delete keyword">
-
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
                       </div> :
                       header === "Get Questions" ?
                         <div className="flex items-center gap-2">
                           <Switch
                             checked={isToggled}
                             onCheckedChange={(checked) =>
-                              // FIX: Pass the UI name "Get Questions" but the logic will map it to "Select Keyword"
                               handleUpdate(tableId, row.id, "Get Questions", checked)
                             } className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white"
 
                             style={{
-                              // Tailwind classes handle the switch track background, this ensures thumb color is correct.
-                              // The original code in the outline provided '#64748b' as off color, which is slate-700.
                               '--switch-thumb': isToggled ? '#ffffff' : '#64748b'
                             }} />
 
-                          {isLoading && currentCountdown !== undefined && currentCountdown > 0 &&
+                          {isLoading &&
                             <div className="flex items-center gap-1 text-xs text-slate-600">
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              <span>Searching... {currentCountdown}s</span>
+                              <span>Searching...</span>
                             </div>
                           }
-                          {isToggled && canShowButton && // Only show button when toggled AND not loading AND countdown is done
+                          {canShowButton &&
                             <Button
                               variant="outline"
                               size="sm"
@@ -1899,33 +1884,25 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
                             </Button>
                           }
                         </div> :
-                        header === "Target Market" ?
-                          <MiniMultiSelect
-                            options={options.tm}
-                            value={fields["Target Market"] || []}
-                            onChange={(selected) => handleUpdate(tableId, row.id, "Target Market", selected)}
-                            size="sm"
-                          /> :
-
-                          header === "Promoted Product" ?
-                            <MiniMultiSelect
-                              options={options.pp}
-                              value={fields[productField] || []} // use actual linked field for display
-                              onChange={(selected) => handleUpdate(tableId, row.id, productField, selected)} // write to actual field name
-                              size="sm"
-                              itemVariant="pill" // Added itemVariant for bordered pills
-                            /> :
-                            header === "Search Volume" ?
-                              <span>{formatNumber(fields[header])}</span> :
-                              renderFieldValue(fields[header])
+                        header === "Search Volume" ?
+                          <span>{formatNumber(fields[header])}</span> :
+                          header === "Actions" ?
+                            <Button
+                              variant="ghost"
+                              size="icon" className="text-red-600 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 w-8 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => onDeleteRow && onDeleteRow(tableId, row.id)}
+                              title="Delete keyword">
+                              <Trash2 className="w-4 h-4" />
+                            </Button> :
+                            renderFieldValue(fields[header])
                     }
                   </div>
                 )}
-              </div>);
-
+              </div>
+            );
           })}
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 };

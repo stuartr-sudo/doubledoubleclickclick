@@ -1,271 +1,225 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { User } from "@/api/entities";
 import { AppProduct } from "@/api/entities";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Plus, CreditCard, ShieldCheck, Zap, CheckCircle2, ImageIcon } from "lucide-react";
+import { toast } from "@/components/ui/use-toast"; // Assuming toast utility is from shadcn/ui
+import { createPageUrl } from "@/lib/utils"; // Assuming createPageUrl is a utility function
+import { Loader2, Shield, ShoppingCart, Coins } from "lucide-react";
 import { createCheckoutSession } from "@/api/functions";
 
 export default function TokenPacketsTopUp() {
-  const [me, setMe] = React.useState(null);
-  const [products, setProducts] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [adding, setAdding] = React.useState(false);
-  const [form, setForm] = React.useState({
-    name: "",
-    description: "",
-    display_price: "",
-    stripe_price_id: "",
-    tokens_granted: 0,
-    image_url: "",
-    is_active: true,
-    category: "tokens",
-    is_recurring: false,
-  });
-  const [purchasing, setPurchasing] = React.useState(null);
-  const [planPacks, setPlanPacks] = React.useState([]);
-  const [purchasingPackId, setPurchasingPackId] = React.useState(null);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [availablePacks, setAvailablePacks] = useState([]);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const u = await User.me();
-        setMe(u);
-      } catch {
-        setMe(null);
-      }
-    })();
+  useEffect(() => {
+    loadData();
   }, []);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
+  const loadData = async () => {
+    setIsLoading(true);
     try {
-      const list = await AppProduct.list();
-      const filtered = (list || []).filter(
-        (p) => (p.tokens_granted || 0) > 0 && (p.is_active !== false) && (p.category === "tokens" || p.category == null)
-      ).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-      setProducts(filtered);
+      const fetchedUser = await User.me();
+      setUser(fetchedUser);
 
-      // NEW: compute plan-specific token packs for current user's plan
-      if (me?.plan_price_id) {
-        const plan = (list || []).find(p => p.stripe_price_id === me.plan_price_id);
-        const packs = (plan?.token_packs || [])
-          .filter(pk => pk && pk.is_active !== false)
-          .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-        setPlanPacks(packs);
-      } else {
-        setPlanPacks([]);
+      const allProducts = await AppProduct.list();
+      const userPlanKey = fetchedUser.plan_price_id ?
+      allProducts.find((p) => p.stripe_price_id === fetchedUser.plan_price_id)?.plan_key :
+      null;
+
+      let packs = [];
+      if (userPlanKey) {
+        // Find the product that represents the user's current plan based on plan_key and billing_interval
+        const userPlanProduct = allProducts.find((p) => p.plan_key === userPlanKey && p.billing_interval === 'month');
+        if (userPlanProduct && userPlanProduct.token_packs) {
+          packs = userPlanProduct.token_packs.filter((pack) => pack && pack.is_active !== false);
+        }
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [me]);
 
-  React.useEffect(() => { load(); }, [load]);
-
-  const canManage = !!(me && (me.role === "admin" || me.is_superadmin === true));
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    setAdding(true);
-    try {
-      const payload = {
-        name: form.name,
-        description: form.description,
-        display_price: form.display_price,
-        stripe_price_id: form.stripe_price_id,
-        tokens_granted: Number(form.tokens_granted || 0),
-        image_url: form.image_url || undefined,
-        is_active: !!form.is_active,
-        category: "tokens",
-        is_recurring: !!form.is_recurring,
-      };
-      await AppProduct.create(payload);
-      setForm({ name: "", description: "", display_price: "", stripe_price_id: "", tokens_granted: 0, image_url: "", is_active: true, category: "tokens", is_recurring: false });
-      await load();
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  const buy = async (p) => {
-    setPurchasing(p.id);
-    try {
-      if (!p.stripe_price_id) {
-        alert("This token packet has no Stripe price set yet.");
-        return;
-      }
-      const successUrl = window.location.origin + "/?topup=success";
-      const cancelUrl = window.location.href;
-      // Updated param name for compatibility with our function
-      // Assuming createCheckoutSession now handles mode, success_url, cancel_url, metadata internally or through defaults
-      const { data } = await createCheckoutSession({
-        priceId: p.stripe_price_id,
-        mode: p.is_recurring ? "subscription" : "payment", // Kept these, assuming the outline meant 'priceId' was added, not replaced everything
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-        metadata: { product_name: p.name, tokens_granted: String(p.tokens_granted || 0), category: "tokens" }
+      setAvailablePacks(packs);
+    } catch (error) {
+      console.error('Error loading token packs:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load token packs. Please try again later.",
+        variant: "destructive"
       });
-      const url = data?.url || data?.checkoutUrl || data?.checkout_url || data?.session_url;
-      if (url) {
-        window.location.href = url;
-      } else {
-        alert("Unable to start checkout. Please try again or contact support.");
-      }
     } finally {
-      setPurchasing(null);
+      setIsLoading(false);
     }
   };
 
-  // NEW: buy function for plan-specific pack entries
-  const buyPlanPack = async (pack) => {
-    setPurchasingPackId(pack.stripe_price_id);
+  const handleBuyPack = async (pack) => {
+    if (isCheckingOut) return;
+    setIsCheckingOut(true);
+
     try {
       if (!pack.stripe_price_id) {
-        alert("This token pack has no Stripe price set yet.");
+        toast({
+          title: "Error",
+          description: "This token pack has no Stripe price set yet. Please contact support.",
+          variant: "destructive"
+        });
+        setIsCheckingOut(false);
         return;
       }
-      // Assuming createCheckoutSession now handles mode, success_url, cancel_url, metadata internally or through defaults
-      const successUrl = window.location.origin + "/?topup=success";
-      const cancelUrl = window.location.href;
+
+      // Use payload keys expected by the backend createCheckoutSession function
+      const affiliateRef = localStorage.getItem('affiliate_ref') || null;
       const { data } = await createCheckoutSession({
         priceId: pack.stripe_price_id,
-        mode: "payment", // Plan specific packs are generally one-time purchases
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-        metadata: { product_name: pack.name, tokens_granted: String(pack.tokens), category: "plan_tokens" }
+        affiliateRef
       });
-      const url = data?.url || data?.checkoutUrl || data?.checkout_url || data?.session_url;
-      if (url) {
-        window.location.href = url;
+
+      if (data?.url) {
+        window.location.href = data.url;
       } else {
-        alert("Unable to start checkout. Please try again or contact support.");
+        throw new Error('No checkout URL returned from Stripe');
       }
-    } finally {
-      setPurchasingPackId(null);
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to initiate checkout. Please try again.",
+        variant: "destructive"
+      });
+      setIsCheckingOut(false);
     }
   };
 
-  const balance = typeof me?.token_balance === "number" ? me.token_balance : 0;
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">Token Packets Top Up</h1>
+          <p className="text-slate-600 mb-8">
+            Purchase additional tokens to keep using AI generation and enhancements without interruptions.
+          </p>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Coins className="w-6 h-6 text-green-600" />
+              <div>
+                <p className="text-sm text-slate-600">Current balance:</p>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                  <span className="text-slate-400">Loading...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1, 2, 3].map((i) =>
+            <div key={i} className="bg-white rounded-xl border border-slate-200 p-6 animate-pulse">
+                <div className="h-6 bg-slate-200 rounded w-1/2 mb-4"></div>
+                <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
+                <div className="h-4 bg-slate-200 rounded w-full mb-2"></div>
+                <div className="h-4 bg-slate-200 rounded w-3/4 mb-6"></div>
+                <div className="h-10 bg-slate-200 rounded w-full"></div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>);
+
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Please Log In</h2>
+          <p className="text-slate-600 mb-6">You need to be logged in to purchase token packets.</p>
+          <Button onClick={() => User.loginWithRedirect(window.location.href)}>
+            Log In
+          </Button>
+        </div>
+      </div>);
+
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex items-start md:items-center justify-between gap-6 flex-col md:flex-row">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Token Packets Top Up</h1>
-            <p className="text-slate-600 mt-2">Purchase additional tokens to keep using AI generation and enhancements without interruptions.</p>
-            <div className="mt-3 flex items-center gap-2 text-slate-700">
-              <Zap className="h-4 w-4 text-amber-600" />
-              <span>Current balance:</span>
-              <Badge variant={balance > 0 ? "default" : "destructive"} className="ml-1">{balance}</Badge>
-            </div>
-          </div>
+    <div className="container mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-4xl font-bold text-slate-900 mb-2">Token Packets Top Up</h1>
+        <p className="text-slate-600 mb-8">
+          Purchase additional tokens to keep using AI generation and enhancements without interruptions.
+        </p>
+
+        {/* Current Balance Card */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 p-6 mb-8">
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 text-slate-500">
-              <ShieldCheck className="h-4 w-4" />
-              <span>Secure checkout by Stripe</span>
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+              <Coins className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-600">Current balance:</p>
+              <p className="text-2xl font-bold text-green-700">{Number(user.token_balance ?? 0)} tokens</p>
             </div>
           </div>
         </div>
 
-        {/* NEW: Plan-specific packs section */}
-        {planPacks && planPacks.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-2xl font-semibold mb-4">Recommended Token Packs for Your Plan</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {planPacks.map((pk) => (
-                <Card key={pk.stripe_price_id || pk.name} className="border-slate-200">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>{pk.name}</span>
-                      {pk.is_best_value && <Badge className="bg-amber-600 hover:bg-amber-700">Best value</Badge>}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {pk.image_url ? (
-                      <img src={pk.image_url} alt={pk.name} className="w-full h-40 object-cover rounded-lg mb-3" />
-                    ) : (
-                      <div className="w-full h-40 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center mb-3 text-slate-500">
-                        <ImageIcon className="h-6 w-6 mr-2" />
-                        No image
-                      </div>
-                    )}
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-xl font-semibold">{pk.display_price || "$—"}</span>
-                      <Badge variant="outline" className="text-slate-700">{pk.tokens} tokens</Badge>
-                    </div>
-                    {pk.description && <p className="text-sm text-slate-600 mb-4">{pk.description}</p>}
-                    <Button className="w-full" onClick={() => buyPlanPack(pk)} disabled={purchasingPackId === pk.stripe_price_id}>
-                      {purchasingPackId === pk.stripe_price_id ? "Redirecting…" : (<><CreditCard className="h-4 w-4 mr-2" />Buy now</>)}
-                    </Button>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-3">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Instant crediting after payment
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Secure Checkout Badge */}
+        <div className="flex items-center justify-end gap-2 mb-6 text-sm text-slate-600">
+          <Shield className="w-4 h-4 text-green-600" />
+          <span>Secure checkout by Stripe</span>
+        </div>
 
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader><div className="h-6 bg-slate-200 rounded w-1/2"></div></CardHeader>
-                <CardContent>
-                  <div className="h-4 bg-slate-200 rounded w-1/3 mb-3"></div>
-                  <div className="h-24 bg-slate-100 rounded"></div>
-                </CardContent>
-              </Card>
-            ))
-          ) : products.length === 0 ? (
-            <div className="col-span-full text-slate-600">
-              No token packets available yet. Please check back soon.
-            </div>
-          ) : (
-            products.map((p) => (
-              <Card key={p.id} className="border-slate-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{p.name}</span>
-                    {p.is_best_value && <Badge className="bg-amber-600 hover:bg-amber-700">Best value</Badge>}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} className="w-full h-40 object-cover rounded-lg mb-3" />
-                  ) : (
-                    <div className="w-full h-40 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center mb-3 text-slate-500">
-                      <ImageIcon className="h-6 w-6 mr-2" />
-                      No image
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-xl font-semibold">{p.display_price || "$—"}</span>
-                    <Badge variant="outline" className="text-slate-700">{p.tokens_granted} tokens</Badge>
+        {/* Token Packs Grid */}
+        {availablePacks.length === 0 ?
+        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+            <Coins className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-600">No token packets available yet. Please check back soon.</p>
+          </div> :
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {availablePacks.map((pack, idx) =>
+          <div
+            key={pack.stripe_price_id || idx} // Use stripe_price_id if available, otherwise index
+            className="bg-white rounded-xl border-2 border-slate-200 hover:border-green-400 transition-all p-6 flex flex-col">
+
+                <div className="flex items-center gap-3 mb-4">
+                  {/* <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <Coins className="w-6 h-6 text-green-600" />
+                </div> */}
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">{pack.name}</h3>
+                    <p className="text-blue-900 font-bold">{pack.display_price}</p>
+                    <p className="text-sm text-slate-500">{pack.tokens} tokens</p>
                   </div>
-                  {p.description && <p className="text-sm text-slate-600 mb-4">{p.description}</p>}
-                  <Button className="w-full" onClick={() => buy(p)} disabled={!!purchasing}>
-                    {purchasing === p.id ? "Redirecting…" : (<><CreditCard className="h-4 w-4 mr-2" />Buy now</>)}
+                </div>
+
+                {pack.description &&
+            <p className="text-slate-600 text-sm mb-4">{pack.description}</p>
+            }
+
+                <div className="mt-auto">
+                  <Button
+                onClick={() => handleBuyPack(pack)}
+                disabled={isCheckingOut} className="bg-blue-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 w-full hover:bg-green-700">
+
+
+                    {isCheckingOut ?
+                <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </> :
+
+                <>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Buy Now
+                      </>
+                }
                   </Button>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-3">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Instant crediting after payment
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                </div>
+              </div>
           )}
-        </div>
+          </div>
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }

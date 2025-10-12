@@ -4,7 +4,9 @@ import { User } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Coins } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function AccountSettings() {
   const [user, setUser] = useState(null);
@@ -61,6 +63,27 @@ export default function AccountSettings() {
       <h1 className="text-3xl font-bold text-blue-900 mb-2">Account Settings</h1>
       <p className="text-slate-600 mb-8">Manage your profile and account details.</p>
       
+      {/* Token Balance Section */}
+      <div className="mb-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+              <Coins className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">AI Tokens</h3>
+              <p className="text-sm text-slate-600">Current balance: <span className="font-bold text-green-700">{Number(user.token_balance ?? 0)}</span> tokens</p>
+            </div>
+          </div>
+          <Link to={createPageUrl('TokenPacketsTopUp')}>
+            <Button className="bg-green-600 hover:bg-green-700 text-white">
+              <Coins className="w-4 h-4 mr-2" />
+              Top Up Tokens
+            </Button>
+          </Link>
+        </div>
+      </div>
+
       <form onSubmit={handleSave} className="space-y-6">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">

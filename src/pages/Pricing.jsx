@@ -172,6 +172,10 @@ export default function Pricing() {
 
   const hasActiveSubscription = user && user.subscription_status === 'active';
 
+  // Calculate number of visible plans for grid layout
+  const visiblePlansCount = [growth, brand, agency, freeTrial].filter(Boolean).length;
+  const gridColsClass = visiblePlansCount === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3';
+
   return (
     <div className="bg-slate-50 py-6 md:py-12">
       <div className="container mx-auto px-4">
@@ -253,7 +257,7 @@ export default function Pricing() {
             <Loader2 className="animate-spin w-8 h-8 text-slate-400" />
           </div> :
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start mt-8">
+        <div className={`grid grid-cols-1 ${gridColsClass} gap-4 items-start mt-8`}>
             <PlanCard plan={growth} billing={billing} onBuy={handleBuy} isCheckingOut={isCheckingOut} />
             <PlanCard plan={brand} billing={billing} onBuy={handleBuy} isCheckingOut={isCheckingOut} />
             <PlanCard plan={agency} billing={billing} onBuy={handleBuy} isCheckingOut={isCheckingOut} />

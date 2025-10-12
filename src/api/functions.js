@@ -199,3 +199,31 @@ export const airtableListRecords = base44.functions.airtableListRecords;
 
 export const airtableUpdateRecord = base44.functions.airtableUpdateRecord;
 
+export const sendResendEmail = base44.functions.sendResendEmail;
+
+export const sendNewUserNotification = base44.functions.sendNewUserNotification;
+
+export const newUserWebhook = base44.functions.newUserWebhook;
+
+export const executeInternalLinker = base44.functions.executeInternalLinker;
+
+export const generateExternalReferences = base44.functions.generateExternalReferences;
+
+export const generateNapkinInfographic = base44.functions.generateNapkinInfographic;
+
+export const checkEmailBlacklist = base44.functions.checkEmailBlacklist;
+
+export const initiateImagineerGeneration = base44.functions.initiateImagineerGeneration;
+
+export const imagineerCallback = base44.functions.imagineerCallback;
+
+export const listContentFeed = base44.functions.listContentFeed;
+
+export const backfillArticleKeywords = base44.functions.backfillArticleKeywords;
+
+export const transcribeAudio = base44.functions.transcribeAudio;
+
+export const notifyFirecrawlWebsite = base44.functions.notifyFirecrawlWebsite;
+
+export const stylePreviewProxy = base44.functions.stylePreviewProxy;
+

@@ -123,87 +123,103 @@ export default function FeatureManagement() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Feature Flag Management</h1>
-          <p className="text-slate-600">Control feature visibility for users and plans.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* NEW: Search input */}
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="Search features..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-64 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Feature Flag Management</h1>
+            <p className="text-slate-600">Control feature visibility for users and plans.</p>
           </div>
-          <Button onClick={handleCreate} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            <Plus className="w-4 h-4 mr-2" /> Add Feature
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* NEW: Search input */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search features..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-64 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+
+            </div>
+            <Button onClick={handleCreate} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              <Plus className="w-4 h-4 mr-2" /> Add Feature
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden">
-        <div className="divide-y divide-slate-200">
-          {filteredFlags.length === 0 && !loading ?
-          <div className="p-4 text-center text-slate-500">
-              {searchQuery ? `No features found matching "${searchQuery}"` : "No feature flags found."}
-            </div> :
+        <div className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden">
+          <div className="divide-y divide-slate-200">
+            {filteredFlags.length === 0 && !loading ?
+            <div className="p-4 text-center text-slate-500">
+                {searchQuery ? `No features found matching "${searchQuery}"` : "No feature flags found."}
+              </div> :
 
-          filteredFlags.map((flag) =>
-          <div key={flag.id} className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
-                <div className="lg:col-span-1">
-                  <div className="font-semibold text-slate-800 break-words">{flag.name}</div>
-                  <p className="text-sm text-slate-500 break-words">{flag.description || 'No description'}</p>
-                </div>
-
-                <div className="lg:col-span-1">
-                  <MiniMultiSelect
-                placeholder="No plan restriction"
-                options={planOptions}
-                value={flag.required_plan_keys || []}
-                onChange={(keys) => handlePlanChange(flag, keys)} />
-
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4 lg:col-span-2 justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                      <input
-                    type="checkbox"
-                    checked={!!flag.enabled_globally}
-                    onChange={(e) => handleToggleGlobal(flag, e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    id={`global-${flag.id}`} />
-
-                      <label htmlFor={`global-${flag.id}`} className="ml-2 block text-sm text-slate-700">
-                        Enabled Globally
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                    type="checkbox"
-                    checked={!!flag.is_coming_soon}
-                    onChange={(e) => handleToggleComingSoon(flag, e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                    id={`soon-${flag.id}`} />
-
-                      <label htmlFor={`soon-${flag.id}`} className="ml-2 block text-sm text-slate-700">
-                        Coming Soon
-                      </label>
-                    </div>
+            filteredFlags.map((flag) =>
+            <div key={flag.id} className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+                  <div className="lg:col-span-1">
+                    <div className="font-semibold text-slate-800 break-words">{flag.name}</div>
+                    <p className="text-sm text-slate-500 break-words">{flag.description || 'No description'}</p>
                   </div>
 
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(flag)} className="bg-background text-slate-700 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground h-9 rounded-md border-slate-300 hover:bg-slate-50">
-                    Configure
-                  </Button>
+                  <div className="lg:col-span-1">
+                    <MiniMultiSelect
+                  placeholder="No plan restriction"
+                  options={planOptions}
+                  value={flag.required_plan_keys || []}
+                  onChange={(keys) => handlePlanChange(flag, keys)} />
+
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 lg:col-span-2 justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center">
+                        <input
+                      type="checkbox"
+                      checked={!!flag.enabled_globally}
+                      onChange={(e) => handleToggleGlobal(flag, e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      id={`global-${flag.id}`} />
+
+                        <label htmlFor={`global-${flag.id}`} className="ml-2 block text-sm text-slate-700">
+                          Enabled Globally
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                      type="checkbox"
+                      checked={!!flag.is_coming_soon}
+                      onChange={(e) => handleToggleComingSoon(flag, e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                      id={`soon-${flag.id}`} />
+
+                        <label htmlFor={`soon-${flag.id}`} className="ml-2 block text-sm text-slate-700">
+                          Coming Soon
+                        </label>
+                      </div>
+                    </div>
+
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(flag)} className="bg-background text-slate-700 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground h-9 rounded-md border-slate-300 hover:bg-slate-50">
+                      Configure
+                    </Button>
+                  </div>
                 </div>
-              </div>
-          )
-          }
+            )
+            }
+          </div>
+        </div>
+
+        {/* When rendering the token_cost input field, update it to: */}
+        <div>
+          <Label htmlFor="token_cost">Token Cost</Label>
+          <Input
+            id="token_cost"
+            type="number"
+            step="0.5"
+            min="0"
+            value={editingFlag?.token_cost ?? 1}
+            onChange={(e) => setEditingFlag({ ...editingFlag, token_cost: parseFloat(e.target.value) || 0 })}
+            className="bg-white border-slate-300"
+          />
         </div>
       </div>
 

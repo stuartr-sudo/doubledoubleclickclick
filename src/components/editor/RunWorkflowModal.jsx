@@ -1,3 +1,4 @@
+
 import React from "react";
 import { EditorWorkflow } from "@/api/entities";
 import { WorkflowRunStatus } from "@/api/entities";
@@ -107,7 +108,8 @@ export default function RunWorkflowModal({ isOpen, onClose, currentHtml, onApply
       cite_sources: "Add Citations",
       add_internal_links: "Add Internal Links",
       affilify: "Affilify",
-      brand_it: "Brand It"
+      brand_it: "Brand It",
+      smart_insert: "Smart Insert" // NEW
     };
     const currentIdx = status?.current_step_index ?? -1;
 

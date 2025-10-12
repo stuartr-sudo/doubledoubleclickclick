@@ -12,13 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Globe, Search, Tag, Link, Image, Focus, Sparkles, Save, CheckCircle2, FileText } from "lucide-react";
+import { Globe, Search, Tag, Link, Image, Focus, Sparkles, Save, CheckCircle2, FileText, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { InvokeLLM } from "@/api/integrations";
 import ImageLibraryModal from "./ImageLibraryModal";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { agentSDK } from "@/agents"; // NEW: Agent SDK import
+import FeatureHelpIcon from "./FeatureHelpIcon"; // NEW: FeatureHelpIcon import
 
 export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) {
   const [metadata, setMetadata] = useState({
@@ -533,6 +534,13 @@ ${text}`
                 <Globe className="w-6 h-6 text-blue-600" />
               </div>
               SEO & Post Settings
+              {/* Help icon + optional training video (FeatureFlag: 'seo') */}
+              <FeatureHelpIcon
+                featureFlagName="seo"
+                label="SEO"
+                description="Configure meta title, description, slug, tags, excerpt, and JSON-LD. Click to watch a short tutorial."
+                className="ml-1"
+              />
               <div className="ml-auto flex gap-2">
                 <Button onClick={handleAutoGenerate} disabled={autoLoading} className="bg-gray-600 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-emerald-700">
                   {autoLoading ? "Generating..." : "Auto-generate SEO"}

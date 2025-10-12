@@ -13,6 +13,25 @@ import { createBrandPaymentLink } from "@/api/functions";
 import { SendEmail } from "@/api/integrations";
 import { toast } from "sonner";
 
+// CRITICAL: Username blacklist - only Stuart Asta can use these terms
+const BLACKLIST = [
+  'stuartasta', 'stuarta', 'stuartas', 'stuartast', 'stuart-asta', 'stuartasta1',
+  'stuartasta_', 'stuart_asta', 'stuartasta-', 'sasta', 's-asta', 's_asta',
+  'stasta', 'stasta1', 'doubleclick', 'double-click', 'double_click', 'doubleclk',
+  'doublecl1ck', 'doubleclicks', 'double-clicks', 'doubleclick1', 'doubleclick_',
+  'doubleclick-', 'dbleclick', 'dbl-click', 'dblclick', 'dclick', 'd-click',
+  'db1eclick', 'doub1eclick', 'dc-work', 'dcwork', 'dc_work', 'doubleclickwork',
+  'doubleclick-work', 'doubleclick_work', 'doubleclck', 'double-clck',
+  'doub1eck1ick', 'd0ubleclick', 'd0uble-click', 'doubieclick', '2bleclick', 'doubl3click'
+];
+
+const STUART_EMAIL = 'stuartr@doubleclick.work';
+
+function isBlacklisted(username) {
+  const lower = username.toLowerCase();
+  return BLACKLIST.some(term => lower.includes(term));
+}
+
 export default function AddBrandModal({ open, onClose, users = [], existingUsernames = [], onComplete }) {
   const [step, setStep] = React.useState("form"); // form | result
   const [isWorking, setIsWorking] = React.useState(false);
@@ -72,6 +91,16 @@ export default function AddBrandModal({ open, onClose, users = [], existingUsern
     if (!assignUserId) { toast.error("Select a user to assign."); return; }
     if (!key) { toast.error("Enter a username key."); return; }
     if (usernameExists(key)) { toast.error("That username already exists."); return; }
+
+    // CRITICAL: Check blacklist
+    const assignedUser = sortedUsers.find(u => u.id === assignUserId);
+    if (isBlacklisted(key) && assignedUser?.email !== STUART_EMAIL) {
+      toast.error("This username is reserved and cannot be used.", {
+        description: "Please choose a different username.",
+        duration: 5000
+      });
+      return;
+    }
 
     setIsWorking(true);
     try {

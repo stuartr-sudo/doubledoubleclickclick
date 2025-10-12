@@ -6,23 +6,31 @@ import { createPageUrl } from "@/utils";
 import {
   LayoutDashboard, FileText, Edit3, Database, Calendar as CalendarIcon, User as UserIcon, ListChecks, Settings, ShoppingBag,
   Share2, Mail, Package, Palette, BookOpen, Video, Clapperboard, Film, Link as LinkIcon, ShoppingCart, Home as HomeIcon,
-  LogOut, ChevronUp, ChevronDown, Layers3, Menu, X, Shield, Sparkles, Loader2, Coins, Quote, ImageIcon, Youtube, Users } from
+  LogOut, ChevronUp, ChevronDown, Layers3, Menu, X, Shield, Sparkles, Loader2, Coins, Quote, ImageIcon, Users
+} from
 "lucide-react";
 import { User } from "@/api/entities";
+import { AppSettings } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator } from
+  DropdownMenuSeparator
+} from
 "@/components/ui/dropdown-menu";
 import { AnimatePresence, motion } from "framer-motion";
 import { FeatureFlagProvider, useFeatureFlagData } from "@/components/providers/FeatureFlagProvider";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import TokenTopUpBanner from "@/components/common/TokenTopUpBanner";
+import VideoModal from "@/components/common/VideoModal";
 import { WorkspaceProvider, WorkspaceContext } from "@/components/providers/WorkspaceProvider";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
+import usePageTutorial from '@/components/hooks/usePageTutorial';
+import { base44 } from "@/api/base44Client";
+import { Username } from "@/api/entities";
+import { Sitemap } from "@/api/entities";
 
 const navStructure = [
 // Core link
@@ -37,40 +45,35 @@ const navStructure = [
   { name: "Editor", href: "Editor", icon: Edit3, featureFlag: "show_editor_link" },
   { name: "Pages", href: "Pages", icon: FileText, featureFlag: "show_pages_link" },
   { name: "Pages Setup", href: "PagesSetup", icon: Settings, featureFlag: "show_pages_setup_link" },
-  { name: "Topics", href: "Topics", icon: Database, featureFlag: "show_topics_link" },
-  { name: "Schedule", href: "SchedulingDashboard", icon: CalendarIcon, featureFlag: "show_schedule_link" },
+  { name: "Topics", href: "Topics", icon: Database },
+  { name: "Topic Products", href: "ProductLibrary", icon: ShoppingBag },
   { name: "DoubleClick Tutorials", href: "DoubleClickTutorials", icon: BookOpen }]
-
 },
 
-// Assets Category
+// Assets Category (Brand Guidelines and Sitemap moved from here)
 {
   name: "Assets",
   icon: Layers3,
+  featureFlag: "assets-menu", // ADDED: Feature flag for Assets menu item
   items: [
-  { name: "Brand Guidelines", href: "BrandGuidelinesManager", icon: Settings, featureFlag: "show_brand_guidelines_link" },
-  { name: "Sitemaps", href: "SitemapManager", icon: LinkIcon, featureFlag: "show_sitemaps_link" },
   { name: "Services", href: "ServiceCatalog", icon: Package, featureFlag: "show_service_catalog_link" },
-  { name: "Product Library", href: "ProductLibrary", icon: ShoppingBag, featureFlag: "product_library_link" },
   { name: "Templates", href: "CustomTemplateManager", icon: FileText, featureFlag: "show_custom_template_manager_link", requireSuperAdmin: true }]
-
 },
 
-// Media Category
+// Media Category (now AI Hub)
 {
   name: "AI Hub",
   icon: ImageIcon,
   items: [
-  { name: "Image Library", href: "ImageLibrary", icon: ImageIcon },
+  { name: "Media", href: "Media", icon: ImageIcon }, // Changed: Removed featureFlag to make it always visible
   { name: "Testimonials", href: "TestimonialLibrary", icon: Quote, featureFlag: "show_testimonials_link" },
+  // Moved from Assets:
+  { name: "Brand Guidelines", href: "BrandGuidelinesManager", icon: Settings, featureFlag: "show_brand_guidelines_link" },
+  { name: "Sitemap", href: "SitemapManager", icon: LinkIcon, featureFlag: "show_sitemaps_link" },
   { type: "separator" },
-  { name: "Products", href: "ProductManager", icon: ShoppingBag, featureFlag: "show_products_link" },
-  { name: "Amazon Import", href: "AmazonImport", icon: ShoppingCart, featureFlag: "show_amazon_import_link" },
-  { name: "Amazon Testimonials", href: "AmazonTestimonials", icon: ShoppingBag, featureFlag: "show_amazon_testimonials_link" },
-  { type: "separator" },
-  { name: "YouTube AI", href: "YouTubeManager", icon: Youtube, featureFlag: "show_youtube_ai_link" },
-  { name: "TikTok AI", href: "TiktokAIGenerator", icon: Video, featureFlag: "show_tiktok_ai_link" }]
-
+  { name: "Products", href: "ProductManager", icon: ShoppingBag, featureFlag: "show_products_link" }]
+  // Removed "Amazon Import" as it's now integrated into ProductManager
+  // Removed "Amazon Testimonials" as it's now integrated into TestimonialLibrary
 },
 
 // Growth Category
@@ -81,8 +84,8 @@ const navStructure = [
   items: [
   { name: "Landing Page", href: "LandingPageManager", icon: HomeIcon, featureFlag: "show_landing_page_manager_link", requireSuperAdmin: true },
   { name: "Sales Pages", href: "SalesPageManager", icon: BookOpen, featureFlag: "show_sales_page_manager_link", requireSuperAdmin: true },
-  { name: "Pricing", href: "Pricing", icon: Coins, featureFlag: "show_pricing_link", requireSuperAdmin: true }]
-
+  { name: "Pricing", href: "Pricing", icon: Coins, featureFlag: "show_pricing_link", requireSuperAdmin: true },
+  { name: "Dashboard Banners", href: "DashboardBannerManager", icon: Sparkles, requireSuperAdmin: true }]
 },
 
 // Admin Category
@@ -102,15 +105,19 @@ const navStructure = [
   { name: "API Docs", href: "MidjourneyApiDocs", icon: BookOpen, featureFlag: "show_api_docs_link" },
   { name: "LLM Settings", href: "AdminLLM", icon: Sparkles, featureFlag: "show_llm_settings_link" },
   { name: "SEO Setup", href: "AdminSEO", icon: Settings, featureFlag: "show_admin_seo_link" },
-  { name: "Endpoints", href: "FaqEndpointAdmin", icon: Settings, featureFlag: "show_endpoints_link" }]
-
+  { name: "Endpoints", href: "FaqEndpointAdmin", icon: Settings, featureFlag: "show_endpoints_link" },
+  { name: "Educational Videos", href: "Educational", icon: Video, requireSuperAdmin: true },
+  { name: "WordPress Logs", href: "WordPressPublishLogs", icon: FileText, requireSuperAdmin: true },
+  // NEW: Visual Type Examples Admin
+  { name: "Infographic Examples", href: "InfographicExamplesAdmin", icon: ImageIcon, requireSuperAdmin: true }
+  ]
 }];
 
 
 
 const NavLink = ({ href, active, children, isMobile = false }) =>
 <Link
-  to={href} className="bg-slate-50 text-slate-800 px-3 py-2 text-sm font-medium rounded-md flex items-center transition-colors duration-200">
+  to={href} className={`bg-slate-50 text-slate-800 px-3 py-2 text-sm font-medium rounded-md flex items-center transition-colors duration-200 ${active ? 'bg-slate-100' : ''}`}>
     {children}
   </Link>;
 
@@ -216,6 +223,77 @@ const GatedMobileNavItem = ({ item, currentPageName, user }) => {
   return null;
 };
 
+// NEW: Component to handle dropdown category with feature flag
+const GatedDropdownCategory = ({ item, user, children }) => {
+  const { enabled: categoryEnabled } = useFeatureFlag(item.featureFlag, {
+    currentUser: user,
+    defaultEnabled: true
+  });
+
+  // Check for superAdmin requirement
+  if (item.requireSuperAdmin && !(user?.is_superadmin || user?.role === 'admin')) {
+    return null;
+  }
+
+  if (!categoryEnabled) {
+    return null;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="bg-slate-50 text-slate-800 px-3 py-2 text-sm font-medium justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-slate-100 hover:text-slate-900 h-10 rounded-md flex items-center transition-colors duration-200 gap-2">
+          <item.icon className="w-4 h-4" />
+          {item.name}
+          <ChevronDown className="w-4 h-4 ml-1" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="bg-white border border-slate-200 text-slate-900 w-56">
+        {children}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+// NEW: Component to handle mobile dropdown category with feature flag
+const GatedMobileDropdownCategory = ({ item, user, currentPageName, isSuperadmin }) => {
+  const { enabled: categoryEnabled } = useFeatureFlag(item.featureFlag, {
+    currentUser: user,
+    defaultEnabled: true
+  });
+
+  // Check for superAdmin requirement
+  if (item.requireSuperAdmin && !(user?.is_superadmin || user?.role === 'admin')) {
+    return null;
+  }
+
+  if (!categoryEnabled) {
+    return null;
+  }
+
+  return (
+    <div key={item.name} className="pt-2">
+      <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{item.name}</h3>
+      {(item.items || []).map((subItem) => {
+        if (subItem.type === 'separator') {
+          return null;
+        }
+        return (
+          <GatedMobileNavLink
+            key={subItem.name}
+            item={subItem}
+            currentPageName={currentPageName}
+            user={user}
+            isSuperadmin={isSuperadmin}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
 // NEW: Workspace Selector Component - Updated to remove dark theme
 const WorkspaceSelector = () => {
   const { assignedUsernames, selectedUsername, setSelectedUsername, isLoading } = useWorkspace();
@@ -233,7 +311,7 @@ const WorkspaceSelector = () => {
           <ChevronDown className="w-4 h-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-white border border-slate-200 text-slate-900 w-56">
+      <DropdownMenuContent className="bg-white border border-slate-200 text-slate-900 w-56 max-h-[400px] overflow-y-auto">
         <div className="px-2 py-1.5 text-xs font-semibold text-slate-500">Workspaces</div>
         {assignedUsernames.map((username) =>
         <DropdownMenuItem
@@ -259,13 +337,98 @@ function LayoutContent({ children, currentPageName }) {
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [navReady, setNavReady] = useState(false); // NEW: Track when navigation is ready to render
+  const [showTokenHelpVideo, setShowTokenHelpVideo] = useState(false);
+  const [tokenHelpVideoUrl, setTokenHelpVideoUrl] = useState("");
+
+  // NEW: Page tutorial system
+  const { showVideo: showPageTutorial, videoUrl: pageTutorialUrl, videoTitle: pageTutorialTitle, closeVideo: closePageTutorial } = usePageTutorial(currentPageName);
 
   const { enabled: useWorkspaceScoping } = useFeatureFlag("use_workspace_scoping", {
     currentUser: user,
     defaultEnabled: false
   });
 
-  // NEW: Prevent Editor remounts while publishing (blocks pushState/replaceState to Editor)
+  // Helper: normalize token balance for display (default 20 for brand new users)
+  const getDisplayTokenBalance = (u) => {
+    if (!u) return 0;
+    const v = u.token_balance;
+    if (v === undefined || v === null) {
+      // Brand-new accounts start with 20 tokens (schema default)
+      return 20;
+    }
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  // NEW: helper to ensure a username exists for current user
+  const ensureUsernameAssigned = async (currentUser) => {
+    if (!currentUser) return currentUser;
+    if (Array.isArray(currentUser.assigned_usernames) && currentUser.assigned_usernames.length > 0) {
+      return currentUser;
+    }
+
+    // CHANGED: Build candidate from full_name (not random). Fallback to email local part.
+    const baseFromFullName = (currentUser.full_name || "")
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 24);
+
+    const emailLocal = ((currentUser.email || "user").split("@")[0] || "user")
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 24);
+
+    const candidate = baseFromFullName || emailLocal || "user";
+
+    // CHANGED: Always call backend function to guarantee uniqueness + RLS-safe creation
+    try {
+      const res = await base44.functions.invoke("autoAssignUsername", {
+        preferred_user_name: candidate,
+        display_name: currentUser.full_name || candidate
+      });
+      const uniqueName = res?.data?.username || candidate;
+      const updated = await base44.auth.updateMe({ assigned_usernames: [uniqueName] });
+      return updated;
+    } catch (_e) {
+      // If the backend function fails for any reason, return the original user
+      // We don't want to block the user from logging in just because username assignment failed.
+      console.error("Failed to auto-assign username:", _e);
+      return currentUser;
+    }
+  };
+
+  // NEW: helper to ensure token_balance is persisted (20 on first login) – idempotent
+  const ensureWelcomeTokens = async (currentUser) => {
+    if (!currentUser) return currentUser;
+    const marker = "welcome_seeded_20";
+    const processed = Array.isArray(currentUser.processed_stripe_payments)
+      ? currentUser.processed_stripe_payments
+      : [];
+    const alreadySeeded = processed.includes(marker);
+
+    const numericBalance =
+      currentUser.token_balance === undefined || currentUser.token_balance === null
+        ? NaN
+        : Number(currentUser.token_balance);
+
+    // seed only if not yet seeded and balance is not positive
+    if (!alreadySeeded && (!Number.isFinite(numericBalance) || numericBalance <= 0)) {
+      const updated = await base44.auth.updateMe({
+        token_balance: 20,
+        processed_stripe_payments: [...processed, marker],
+      });
+      return updated;
+    }
+    return currentUser;
+  };
+
+  // Prevent Editor remounts while publishing (blocks pushState/replaceState to Editor)
   useEffect(() => {
     if (currentPageName !== 'Editor') return;
 
@@ -329,31 +492,24 @@ function LayoutContent({ children, currentPageName }) {
         setUser(fetchedUser);
         setIsSuperadmin(!!fetchedUser?.is_superadmin);
 
-        // --- NEW ONBOARDING REDIRECTION LOGIC ---
+        // --- UPDATED ONBOARDING REDIRECTION LOGIC ---
         const hasCompletedWelcome = fetchedUser.completed_tutorial_ids?.includes("welcome_onboarding");
-        const hasPlan = !!fetchedUser.plan_price_id;
 
         // Define pages that are exceptions to the redirection rules
-        const redirectExceptions = ['post-payment', 'AccountSettings', 'Home'];
+        const redirectExceptions = ['post-payment', 'AccountSettings', 'Contact', 'Affiliate'];
 
         if (!redirectExceptions.includes(currentPageName)) {
-          // Scenario 1: New user, no plan. Force to Pricing page.
-          if (!hasPlan && currentPageName !== 'Pricing') {
-            setIsRedirecting(true); // Set redirecting state
-            navigate(createPageUrl('Pricing'));
-            return;
-          }
-
-          // Scenario 2: User has a plan, but hasn't done welcome onboarding. Force to Welcome page.
-          if (hasPlan && !hasCompletedWelcome && currentPageName !== 'Welcome') {
-            setIsRedirecting(true); // Set redirecting state
+          // NEW SCENARIO: First-time user (hasn't completed welcome) → Welcome page
+          if (!hasCompletedWelcome && currentPageName !== 'Welcome') {
+            setIsRedirecting(true);
             navigate(createPageUrl('Welcome'));
             return;
           }
         }
-        // Scenario 3: Onboarded user tries to access Welcome page. Redirect to Dashboard.
+        
+        // Scenario: Onboarded user tries to access Welcome page → redirect to Dashboard
         if (hasCompletedWelcome && currentPageName === 'Welcome') {
-          setIsRedirecting(true); // Set redirecting state
+          setIsRedirecting(true);
           navigate(createPageUrl('Dashboard'));
           return;
         }
@@ -373,6 +529,52 @@ function LayoutContent({ children, currentPageName }) {
     };
     fetchUserAndRedirect();
   }, [location.pathname, navigate, currentPageName]); // Re-run on every path change to ensure logic is always applied
+
+  // NEW: Self-heal effect right after user is fetched – fixes race where username/tokens not set yet
+  React.useEffect(() => {
+    let cancelled = false;
+    const runFixes = async () => {
+      if (!user) return;
+
+      // 1) Ensure a brand username exists
+      let u = await ensureUsernameAssigned(user);
+      // 2) Ensure real token balance is persisted (20) for first-time accounts
+      u = await ensureWelcomeTokens(u);
+
+      if (!cancelled && u && u.id === user.id) {
+        // Update in-memory user so header/Token Top Up reflect the true balance immediately
+        setUser(u);
+        // Notify listeners that rely on token balance/usernames
+        try {
+          window.dispatchEvent(new CustomEvent("userUpdated", { detail: { user: u } }));
+          if (typeof u.token_balance === "number") {
+            window.dispatchEvent(new CustomEvent("tokenBalanceUpdated", { detail: { newBalance: u.token_balance } }));
+          }
+        } catch (_) {}
+      }
+    };
+    runFixes();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  // Removed: Firecrawl webhook notifier effect (was causing duplicate sends)
+  // Webhook is now called ONLY from TopicsOnboardingModal.handleComplete
+
+  // Load token help video URL
+  useEffect(() => {
+    const loadTokenHelpVideo = async () => {
+      try {
+        const settings = await AppSettings.list();
+        const videoSetting = settings.find(s => s.key === "token_help_video");
+        if (videoSetting?.value) {
+          setTokenHelpVideoUrl(videoSetting.value);
+        }
+      } catch (error) {
+        console.error("Failed to load token help video:", error);
+      }
+    };
+    loadTokenHelpVideo();
+  }, []);
 
   // Listen for token balance updates
   useEffect(() => {
@@ -404,22 +606,14 @@ function LayoutContent({ children, currentPageName }) {
 
   const handleLogout = async () => {
     await User.logout();
-    setUser(null);
-    window.location.href = createPageUrl('Home');
+    window.location.href = '/';
   };
 
   // Filter navigation based on feature flags (no more role-based filtering)
   const visibleNav = navStructure;
 
   // Hide layout for pages that should be standalone
-  if (currentPageName === 'Home' || currentPageName === 'Welcome') {
-    return <>{children}</>;
-  }
-
-  // NEW: Hide layout for new users on the Pricing page
-  // This check should happen AFTER user is loaded, but BEFORE the main layout renders.
-  // If `isUserLoading` is true, it's handled by the global loading screen below.
-  if (!isUserLoading && currentPageName === 'Pricing' && user && !user.plan_price_id) {
+  if (currentPageName === 'Welcome') {
     return <>{children}</>;
   }
 
@@ -428,7 +622,7 @@ function LayoutContent({ children, currentPageName }) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-pulse mx-auto mb-4"></div>
           <p className="text-slate-600 text-lg font-medium">Loading your workspace...</p>
         </div>
       </div>);
@@ -439,7 +633,7 @@ function LayoutContent({ children, currentPageName }) {
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <header className="bg-white backdrop-blur-lg border-b border-slate-200 sticky top-0 z-50">
         <AnimatePresence>
-          {isUserLoading && // This progress bar is for ongoing background loading, not initial app load
+          {isUserLoading && 
           <motion.div
             className="absolute top-0 left-0 right-0 h-0.5 bg-cyan-400"
             initial={{ width: 0 }}
@@ -474,38 +668,36 @@ function LayoutContent({ children, currentPageName }) {
                   {useWorkspaceScoping && <WorkspaceSelector />}
 
                   {visibleNav.map((item) => {
-                    if (item.requireSuperAdmin && !(user?.is_superadmin || user?.role === 'admin')) {
-                      return null;
+                    // Direct link items
+                    if (item.href) {
+                      return (
+                        <GatedNavItem
+                          key={item.name}
+                          item={item}
+                          currentPageName={currentPageName}
+                          user={user}
+                        />
+                      );
                     }
-                    return item.href ?
-                    <GatedNavItem
-                      key={item.name}
-                      item={item}
-                      currentPageName={currentPageName}
-                      user={user} /> :
 
-                    <DropdownMenu key={item.name}>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                          variant="ghost" className="bg-slate-50 text-slate-800 px-3 py-2 text-sm font-medium justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-slate-100 hover:text-slate-900 h-10 rounded-md flex items-center transition-colors duration-200 gap-2">
-
-                            <item.icon className="w-4 h-4" />
-                            {item.name}
-                            <ChevronDown className="w-4 h-4 ml-1" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-white border border-slate-200 text-slate-900 w-56">
-                          {(item.items || []).map((subItem, index) => {
+                    // Dropdown categories - now using GatedDropdownCategory component
+                    return (
+                      <GatedDropdownCategory key={item.name} item={item} user={user}>
+                        {(item.items || []).map((subItem, index) => {
                           if (subItem.type === 'separator') {
                             return <DropdownMenuSeparator key={`separator-${item.name}-${index}`} />;
                           }
                           return (
-                            <GatedDropdownMenuItem key={subItem.name} item={subItem} user={user} isSuperadmin={isSuperadmin} />);
-
+                            <GatedDropdownMenuItem
+                              key={subItem.name}
+                              item={subItem}
+                              user={user}
+                              isSuperadmin={isSuperadmin}
+                            />
+                          );
                         })}
-                        </DropdownMenuContent>
-                      </DropdownMenu>;
-
+                      </GatedDropdownCategory>
+                    );
                   })}
                 </nav>
               )}
@@ -513,13 +705,26 @@ function LayoutContent({ children, currentPageName }) {
 
             {/* User menu and Mobile menu button */}
             <div className="flex items-center gap-4">
-              {/* NEW: Token balance pill - positioned right before user dropdown */}
+              {/* Token balance pill with help icon */}
               {user && showTokenBalance && navReady &&
-              <div
-                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-800"
-                title="AI tokens available">
-                  <Coins className="w-4 h-4 text-green-500" />
-                  <span>{Number(user.token_balance ?? 0)}</span>
+              <div className="flex items-center gap-2">
+                <Link to={createPageUrl('TokenPacketsTopUp')}>
+                  <div
+                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-800 hover:bg-slate-50 hover:border-slate-300 transition-colors cursor-pointer"
+                    title="Click to top up AI tokens">
+                      <Coins className="w-4 h-4 text-green-500" />
+                      <span>{getDisplayTokenBalance(user)}</span>
+                    </div>
+                  </Link>
+                  {tokenHelpVideoUrl && (
+                    <button
+                      onClick={() => setShowTokenHelpVideo(true)}
+                      className="p-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors"
+                      title="Watch token help video"
+                    >
+                      <Video className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               }
 
@@ -538,7 +743,7 @@ function LayoutContent({ children, currentPageName }) {
                     <DropdownMenuItem disabled className="flex items-center gap-2 opacity-100 md:hidden">
                           <Coins className="w-4 h-4 text-green-500" />
                           <span className="text-slate-700">
-                            Tokens: {Number(user?.token_balance ?? 0)}
+                            Tokens: {getDisplayTokenBalance(user)}
                           </span>
                         </DropdownMenuItem>
                     }
@@ -548,6 +753,20 @@ function LayoutContent({ children, currentPageName }) {
                           <span>Account Settings</span>
                         </Link>
                       </DropdownMenuItem>
+                      {/* Affiliate Program */}
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('Affiliate')} className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-slate-500" />
+                          <span>Affiliate Program</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      {/* Contact */}
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('Contact')} className="flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-slate-500" />
+                          <span>Contact</span>
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2">
                         <LogOut className="w-4 h-4 text-slate-500" />
                         <span>Log Out</span>
@@ -555,7 +774,7 @@ function LayoutContent({ children, currentPageName }) {
                     </DropdownMenuContent>
                   </DropdownMenu> :
 
-                <NavLink href="#" onClick={() => User.loginWithRedirect(createPageUrl(currentPageName || 'Dashboard'))}>
+                <NavLink href="#" onClick={() => User.loginWithRedirect(window.location.href)}>
                     Log In
                   </NavLink>
               ) : (
@@ -577,35 +796,34 @@ function LayoutContent({ children, currentPageName }) {
         </div>
 
         {/* Mobile Menu - only show when nav is ready */}
-        {mobileMenuOpen && navReady &&
-        <div className="lg:hidden px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-slate-200">
+        {mobileMenuOpen && navReady && (
+          <div className="lg:hidden px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-slate-200">
             {visibleNav.map((item) => {
-            if (item.requireSuperAdmin && !(user?.is_superadmin || user?.role === 'admin')) {
-              return null;
-            }
-            return item.href ?
-            <GatedMobileNavItem
-              key={item.name}
-              item={item}
-              currentPageName={currentPageName}
-              user={user} /> :
-
-
-            <div key={item.name} className="pt-2">
-                  <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{item.name}</h3>
-                  {(item.items || []).map((subItem) => {
-                if (subItem.type === 'separator') {
-                  return null;
-                }
+              // Direct link items
+              if (item.href) {
                 return (
-                  <GatedMobileNavLink key={subItem.name} item={subItem} currentPageName={currentPageName} user={user} isSuperadmin={isSuperadmin} />);
+                  <GatedMobileNavItem
+                    key={item.name}
+                    item={item}
+                    currentPageName={currentPageName}
+                    user={user}
+                  />
+                );
+              }
 
-              })}
-                </div>;
-
-          })}
+              // Dropdown categories - now using GatedMobileDropdownCategory component
+              return (
+                <GatedMobileDropdownCategory
+                  key={item.name}
+                  item={item}
+                  user={user}
+                  currentPageName={currentPageName}
+                  isSuperadmin={isSuperadmin}
+                />
+              );
+            })}
           </div>
-        }
+        )}
       </header>
 
       {/* Token top-up banner (auto-hides if user has tokens) */}
@@ -639,6 +857,22 @@ function LayoutContent({ children, currentPageName }) {
           }
         </AnimatePresence>
       </main>
+
+      {/* Token Help Video Modal */}
+      <VideoModal
+        isOpen={showTokenHelpVideo}
+        onClose={() => setShowTokenHelpVideo(false)}
+        videoUrl={tokenHelpVideoUrl}
+        title="How to Use AI Tokens"
+      />
+
+      {/* NEW: Page Tutorial Video Modal */}
+      <VideoModal
+        isOpen={showPageTutorial}
+        onClose={closePageTutorial}
+        videoUrl={pageTutorialUrl}
+        title={pageTutorialTitle}
+      />
 
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 

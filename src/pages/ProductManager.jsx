@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter } from
+
 "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -20,12 +21,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle } from
+
 "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ShoppingBag, Trash2, Edit, Loader2, Link as LinkIcon, Wand2, X } from "lucide-react";
+import { Plus, ShoppingBag, Trash2, Edit, Loader2, Link as LinkIcon, Wand2, X, ShoppingCart, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { extractProductMeta } from "@/api/functions";
 import { InvokeLLM } from "@/api/integrations";
@@ -35,7 +37,18 @@ import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import { motion, AnimatePresence } from "framer-motion";
+import { Testimonial } from "@/api/entities";
+import { AmazonProductVideo } from "@/api/entities";
+import { amazonProduct } from "@/api/functions";
 
+
+// NEW: Helper function to detect Amazon ASIN
+function extractAsinFromUrl(url) {
+  if (!url) return null;
+  const str = String(url).trim();
+  const match = str.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
+  return match ? match[1].toUpperCase() : null;
+}
 
 // New ProductForm component that renders inline (no Dialog wrapper)
 function InlineProductForm({
@@ -94,59 +107,234 @@ function InlineProductForm({
       return;
     }
 
-    const result = await consumeTokensForFeature('ai_product_url_import');
-    if (!result.success) {
-      return;
-    }
+    // NEW: Detect if this is an Amazon URL
+    const asin = extractAsinFromUrl(url);
+    const isAmazonUrl = !!asin;
 
-    setIsFetchingMeta(true);
-    try {
-      const { data } = await extractProductMeta({ url });
-      if (!data?.success) {
-        setFetchError(data?.error || "Failed to fetch product details.");
-        toast.error("Could not fetch product details from URL.");
-      } else {
-        const [mainImage, ...additionalImages] = data.images || [];
+    if (isAmazonUrl) {
+      // Use Amazon import flow
+      const currentUsername = useWorkspaceScoping ? (globalUsername && globalUsername !== 'all' ? globalUsername : null) :
+        (newProduct.user_name || null);
 
-        setNewProduct((prev) => ({
-          ...prev,
-          name: data.title || prev.name,
-          description: data.description || prev.description,
-          image_url: mainImage || prev.image_url,
-          product_url: data.url || prev.product_url,
-          button_url: prev.button_url || data.url || prev.product_url,
-          price: data.price || prev.price
-        }));
+      if (!currentUsername) {
+        setFetchError("Please select a username to assign the imported product.");
+        return;
+      }
 
-        toast.success("Product details imported from URL!");
+      const tokenCheck = await consumeTokensForFeature("image_library_amazon_import");
+      if (!tokenCheck?.success) {
+        return;
+      }
 
-        if (additionalImages.length > 0) {
-          if (newProduct.user_name) {
-            const libraryItems = additionalImages.map((imgUrl) => ({
-              url: imgUrl,
-              alt_text: `${data.title || newProduct.name} - additional image`,
-              source: "product_import",
-              user_name: newProduct.user_name,
-              tags: ["product-import", data.title || newProduct.name].filter(Boolean)
-            }));
-
-            try {
-              await ImageLibraryItem.bulkCreate(libraryItems);
-              toast.success(`${additionalImages.length} additional image(s) saved to library for user: ${newProduct.user_name}.`);
-            } catch (e) {
-              console.error("Failed to save additional images to library:", e);
-              toast.warning("Could not save additional images to library.");
-            }
+      setIsFetchingMeta(true);
+      try {
+        const { data: res } = await amazonProduct({ url: url });
+        if (!res?.success) {
+          if (res?.error && res.error.includes("exceeded the MONTHLY quota")) {
+            setFetchError("Amazon Import Quota Reached. You've used all your free Amazon data requests for the month.");
           } else {
-            toast.info("Additional images were found, but no username is selected to save them to the library.");
+            setFetchError(res?.error || "Failed to fetch product details from Amazon.");
+          }
+          setIsFetchingMeta(false);
+          return;
+        }
+
+        const p = res.data;
+
+        // Build enriched description
+        let enrichedDescription = "";
+        if (p.product_description) {
+          enrichedDescription += p.product_description + "\n\n";
+        }
+        if (p.product_information && typeof p.product_information === 'object') {
+          enrichedDescription += "\n";
+          Object.entries(p.product_information).forEach(([key, value]) => {
+            if (key && value) {
+              enrichedDescription += `${key}: ${value}\n`;
+            }
+          });
+        }
+        if (p.product_details && typeof p.product_details === 'object') {
+          enrichedDescription += "\n";
+          Object.entries(p.product_details).forEach(([key, value]) => {
+            if (key && value) {
+              enrichedDescription += `${key}: ${value}\n`;
+            }
+          });
+        }
+
+        // Collect images
+        const allImageUrls = new Set();
+        if (p.product_photos && Array.isArray(p.product_photos)) {
+          p.product_photos.forEach(imgUrl => {
+            if (imgUrl) allImageUrls.add(imgUrl);
+          });
+        }
+        if (p.color && Array.isArray(p.color)) {
+          p.color.forEach(colorVariant => {
+            if (colorVariant.image) {
+              allImageUrls.add(colorVariant.image);
+            }
+          });
+        }
+
+        // Save images to library
+        let createdImages = 0;
+        for (const imageUrl of allImageUrls) {
+          try {
+            await ImageLibraryItem.create({
+              url: imageUrl,
+              alt_text: `${p.product_title || 'Amazon Product'} - Image`,
+              source: 'upload',
+              user_name: currentUsername,
+              tags: ['amazon-import', p.asin].filter(Boolean)
+            });
+            createdImages++;
+          } catch (err) {
+            console.error("Failed to create image:", err);
           }
         }
+        if (createdImages > 0) {
+          toast.success(`Added ${createdImages} images to Image Library`);
+        }
+
+        // Create testimonials from reviews
+        if (p.top_reviews && Array.isArray(p.top_reviews)) {
+          let createdTestimonials = 0;
+          for (const review of p.top_reviews) {
+            try {
+              await Testimonial.create({
+                source: "amazon",
+                asin: p.asin,
+                country: p.country || "US",
+                review_id: review.review_id || "",
+                review_title: review.review_title || "",
+                review_comment: review.review_comment || "",
+                review_star_rating: parseFloat(review.review_star_rating) || 0,
+                review_link: review.review_link || "",
+                review_author: review.review_author || "Anonymous",
+                review_author_avatar: review.review_author_avatar || "",
+                review_date: review.review_date || "",
+                is_verified_purchase: review.is_verified_purchase || false,
+                helpful_vote_statement: review.helpful_vote_statement || "",
+                images: review.review_images || [],
+                product_title: p.product_title || "",
+                user_name: currentUsername
+              });
+              createdTestimonials++;
+            } catch (err) {
+              console.error("Failed to create testimonial:", err);
+            }
+          }
+          if (createdTestimonials > 0) {
+            toast.success(`Created ${createdTestimonials} testimonials from Amazon reviews`);
+          }
+        }
+
+        // Create videos
+        if (p.product_videos && Array.isArray(p.product_videos)) {
+          let createdVideos = 0;
+          for (const video of p.product_videos) {
+            try {
+              await AmazonProductVideo.create({
+                video_id: video.id || "",
+                title: video.title || "",
+                video_url: video.video_url || "",
+                thumbnail_url: video.thumbnail_url || "",
+                product_asin: video.product_asin || p.asin || "",
+                parent_asin: video.parent_asin || p.asin || "",
+                video_height: video.video_height || null,
+                video_width: video.video_width || null,
+                user_name: currentUsername
+              });
+              createdVideos++;
+            } catch (err) {
+              console.error("Failed to create video:", err);
+            }
+          }
+          if (createdVideos > 0) {
+            toast.success(`Added ${createdVideos} videos to Video Library`);
+          }
+        }
+
+        // Update form with Amazon data
+        setNewProduct((prev) => ({
+          ...prev,
+          name: p.product_title || prev.name,
+          description: enrichedDescription.trim(),
+          image_url: allImageUrls.size > 0 ? Array.from(allImageUrls)[0] : (p.product_photo || prev.image_url),
+          product_url: p.product_url || url,
+          button_url: prev.button_url || p.product_url || url,
+          price: p.product_price || prev.price,
+          sku: p.asin || prev.sku,
+          in_stock: p.product_availability?.toLowerCase().includes("in stock") ?? true,
+          review_count: p.product_num_ratings || 0,
+          star_rating: parseFloat(p.product_star_rating) || 0
+        }));
+
+        // REMOVED: toast.success("Product details imported from Amazon!"); // This line is removed.
+      } catch (e) {
+        setFetchError(e?.message || "Unexpected error while fetching from Amazon.");
+        toast.error("Unexpected error while fetching Amazon product.");
       }
-    } catch (e) {
-      setFetchError(e?.message || "Unexpected error while fetching metadata.");
-      toast.error("Unexpected error while fetching product details.");
+      setIsFetchingMeta(false);
+
+    } else {
+      // Use standard product import flow
+      const result = await consumeTokensForFeature('ai_product_url_import');
+      if (!result.success) {
+        return;
+      }
+
+      setIsFetchingMeta(true);
+      try {
+        const { data } = await extractProductMeta({ url });
+        if (!data?.success) {
+          setFetchError(data?.error || "Failed to fetch product details.");
+          toast.error("Could not fetch product details from URL.");
+        } else {
+          const [mainImage, ...additionalImages] = data.images || [];
+
+          setNewProduct((prev) => ({
+            ...prev,
+            name: data.title || prev.name,
+            description: data.description || prev.description,
+            image_url: mainImage || prev.image_url,
+            product_url: data.url || prev.product_url,
+            button_url: prev.button_url || data.url || prev.product_url,
+            price: data.price || prev.price
+          }));
+
+          // REMOVED: toast.success("Product details imported from URL!"); // This line is removed.
+
+          if (additionalImages.length > 0) {
+            if (newProduct.user_name) {
+              const libraryItems = additionalImages.map((imgUrl) => ({
+                url: imgUrl,
+                alt_text: `${data.title || newProduct.name} - additional image`,
+                source: "product_import",
+                user_name: newProduct.user_name,
+                tags: ["product-import", data.title || newProduct.name].filter(Boolean)
+              }));
+
+              try {
+                await ImageLibraryItem.bulkCreate(libraryItems);
+                toast.success(`${additionalImages.length} additional image(s) saved to library for user: ${newProduct.user_name}.`);
+              } catch (e) {
+                console.error("Failed to save additional images to library:", e);
+                toast.warning("Could not save additional images to library.");
+              }
+            } else {
+              toast.info("Additional images were found, but no username is selected to save them to the library.");
+            }
+          }
+        }
+      } catch (e) {
+        setFetchError(e?.message || "Unexpected error while fetching metadata.");
+        toast.error("Unexpected error while fetching product details.");
+      }
+      setIsFetchingMeta(false);
     }
-    setIsFetchingMeta(false);
   };
 
   const rewriteField = async (field) => {
@@ -371,7 +559,7 @@ Title (context): "${newProduct.name || ""}"`;
         </div>
 
         <div className="flex justify-end gap-3 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving} className="bg-background text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:text-accent-foreground h-10">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving} className="bg-background text-slate-900 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 border border-input hover:bg-accent hover:text-accent-foreground h-10">
             Cancel
           </Button>
           <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white" disabled={isSaving}>
@@ -387,7 +575,7 @@ Title (context): "${newProduct.name || ""}"`;
 export default function ProductManager() {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showInlineForm, setShowInlineForm] = useState(false); // NEW: Controls inline form visibility
+  const [showInlineForm, setShowInlineForm] = useState(false);
   const [productFormData, setProductFormData] = useState(null);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
@@ -395,10 +583,21 @@ export default function ProductManager() {
   const [currentUser, setCurrentUser] = useState(null);
   const [availableUsernames, setAvailableUsernames] = useState([]);
   const [filterUsername, setFilterUsername] = useState("all");
+  
+  // NEW: Amazon Import inline state
+  const [amazonExpanded, setAmazonExpanded] = useState(false);
+  const [amazonUrl, setAmazonUrl] = useState("");
+  const [amazonLoading, setAmazonLoading] = useState(false);
 
   const { consumeTokensForFeature } = useTokenConsumption();
   const { selectedUsername: globalUsername } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
+
+  // NEW: Feature flag for Amazon import button
+  const { enabled: showAmazonImportButton } = useFeatureFlag('ai-hub-promoted-product-import-from-amazon', {
+    currentUser: currentUser,
+    defaultEnabled: true
+  });
 
   const activeFilterUsername = useWorkspaceScoping ? globalUsername || "all" : filterUsername;
 
@@ -459,9 +658,11 @@ export default function ProductManager() {
       sku: "",
       in_stock: true,
       review_count: 0,
-      star_rating: 0
+      star_rating: 0,
+      category: ""
     });
     setShowInlineForm(true);
+    setAmazonExpanded(false); // Close Amazon if open
   };
 
   const handleEditClick = (product) => {
@@ -472,15 +673,17 @@ export default function ProductManager() {
       review_count: product.review_count || 0,
       star_rating: product.star_rating || 0,
       product_url: product.product_url || "",
-      button_url: product.button_url || product.product_url || ""
+      button_url: product.button_url || product.product_url || "",
+      category: product.category || ""
     });
     setShowInlineForm(true);
+    setAmazonExpanded(false); // Close Amazon if open
   };
 
   const handleProductFormSave = async (productData) => {
     setIsSavingProduct(true);
     try {
-      if (productData.id) {// Check if it's an existing product by looking for an ID
+      if (productData.id) {
         await PromotedProduct.update(productData.id, productData);
         toast.success("Product updated successfully!");
       } else {
@@ -518,6 +721,192 @@ export default function ProductManager() {
     }
   };
 
+  // NEW: Amazon Import Handler (using full AmazonImport page logic)
+  const handleAmazonImport = async () => {
+    const url = amazonUrl.trim();
+    if (!url) {
+      toast.error("Please enter an Amazon product URL.");
+      return;
+    }
+
+    const currentUsername = useWorkspaceScoping ? (globalUsername && globalUsername !== 'all' ? globalUsername : null) :
+      (filterUsername !== "all" ? filterUsername : null);
+
+    if (!currentUsername) {
+      toast.error("Please select a username in the workspace selector or filter to assign the imported product.");
+      return;
+    }
+
+    const tokenCheck = await consumeTokensForFeature("image_library_amazon_import");
+    if (!tokenCheck?.success) {
+      return;
+    }
+
+    setAmazonLoading(true);
+    try {
+      const { data: res } = await amazonProduct({ url: amazonUrl });
+      if (!res?.success) {
+        if (res?.error && res.error.includes("exceeded the MONTHLY quota")) {
+          toast.error("Amazon Import Quota Reached", {
+            description: "You've used all your free Amazon data requests for the month. To continue, please upgrade your plan on RapidAPI.",
+            duration: 10000,
+          });
+        } else {
+          toast.error(res?.error || "Failed to fetch product details.");
+        }
+        return;
+      }
+
+      const p = res.data;
+
+      // Build enriched description
+      let enrichedDescription = "";
+      
+      if (p.product_description) {
+        enrichedDescription += p.product_description + "\n\n";
+      }
+      
+      if (p.product_information && typeof p.product_information === 'object') {
+        enrichedDescription += "\n";
+        Object.entries(p.product_information).forEach(([key, value]) => {
+          if (key && value) {
+            enrichedDescription += `${key}: ${value}\n`;
+          }
+        });
+      }
+      
+      if (p.product_details && typeof p.product_details === 'object') {
+        enrichedDescription += "\n";
+        Object.entries(p.product_details).forEach(([key, value]) => {
+          if (key && value) {
+            enrichedDescription += `${key}: ${value}\n`;
+          }
+        });
+      }
+
+      // Create images ONLY from product_photos and color array
+      const allImageUrls = new Set();
+      
+      if (p.product_photos && Array.isArray(p.product_photos)) {
+        p.product_photos.forEach(imgUrl => {
+          if (imgUrl) allImageUrls.add(imgUrl);
+        });
+      }
+      
+      if (p.color && Array.isArray(p.color)) {
+        p.color.forEach(colorVariant => {
+          if (colorVariant.image) {
+            allImageUrls.add(colorVariant.image);
+          }
+        });
+      }
+
+      let createdImages = 0;
+      for (const imageUrl of allImageUrls) {
+        try {
+          await ImageLibraryItem.create({
+            url: imageUrl,
+            alt_text: `${p.product_title || 'Amazon Product'} - Image`,
+            source: 'upload',
+            user_name: currentUsername,
+            tags: ['amazon-import', p.asin].filter(Boolean)
+          });
+          createdImages++;
+        } catch (err) {
+          console.error("Failed to create image:", err);
+        }
+      }
+      if (createdImages > 0) {
+        toast.success(`Added ${createdImages} images to Image Library`);
+      }
+
+      // Create testimonials from top_reviews
+      if (p.top_reviews && Array.isArray(p.top_reviews)) {
+        let createdTestimonials = 0;
+        for (const review of p.top_reviews) {
+          try {
+            await Testimonial.create({
+              source: "amazon",
+              asin: p.asin,
+              country: p.country || "US",
+              review_id: review.review_id || "",
+              review_title: review.review_title || "",
+              review_comment: review.review_comment || "",
+              review_star_rating: parseFloat(review.review_star_rating) || 0,
+              review_link: review.review_link || "",
+              review_author: review.review_author || "Anonymous",
+              review_author_avatar: review.review_author_avatar || "",
+              review_date: review.review_date || "",
+              is_verified_purchase: review.is_verified_purchase || false,
+              helpful_vote_statement: review.helpful_vote_statement || "",
+              images: review.review_images || [],
+              product_title: p.product_title || "",
+              user_name: currentUsername
+            });
+            createdTestimonials++;
+          } catch (err) {
+            console.error("Failed to create testimonial:", err);
+          }
+        }
+        if (createdTestimonials > 0) {
+          toast.success(`Created ${createdTestimonials} testimonials from Amazon reviews`);
+        }
+      }
+
+      // Create videos from product_videos
+      if (p.product_videos && Array.isArray(p.product_videos)) {
+        let createdVideos = 0;
+        for (const video of p.product_videos) {
+          try {
+            await AmazonProductVideo.create({
+              video_id: video.id || "",
+              title: video.title || "",
+              video_url: video.video_url || "",
+              thumbnail_url: video.thumbnail_url || "",
+              product_asin: video.product_asin || p.asin || "",
+              parent_asin: video.parent_asin || p.asin || "",
+              video_height: video.video_height || null,
+              video_width: video.video_width || null,
+              user_name: currentUsername
+            });
+            createdVideos++;
+          } catch (err) {
+            console.error("Failed to create video:", err);
+          }
+        }
+        if (createdVideos > 0) {
+          toast.success(`Added ${createdVideos} videos to Video Library`);
+        }
+      }
+
+      // Create the promoted product
+      await PromotedProduct.create({
+        name: p.product_title || 'Amazon Product',
+        description: enrichedDescription.trim(),
+        image_url: allImageUrls.size > 0 ? Array.from(allImageUrls)[0] : (p.product_photo || ""),
+        product_url: p.product_url || amazonUrl,
+        button_url: p.product_url || amazonUrl,
+        price: p.product_price || '',
+        user_name: currentUsername,
+        sku: p.asin || '',
+        in_stock: p.product_availability?.toLowerCase().includes("in stock") ?? true,
+        review_count: p.product_num_ratings || 0,
+        star_rating: parseFloat(p.product_star_rating) || 0
+      });
+
+      toast.success(`Successfully imported "${p.product_title || 'Amazon Product'}"!`);
+      await loadProducts(currentUser);
+      setAmazonExpanded(false);
+      setAmazonUrl("");
+
+    } catch (error) {
+      console.error("Amazon import error:", error);
+      toast.error(error.message || "Failed to import from Amazon.");
+    } finally {
+      setAmazonLoading(false);
+    }
+  };
+
   const filteredProducts = products.filter((p) => activeFilterUsername === 'all' || p.user_name === activeFilterUsername);
 
   return (
@@ -529,39 +918,136 @@ export default function ProductManager() {
             <ShoppingBag className="w-8 h-8 text-blue-900" />
             Promoted Product Manager
           </h1>
-          <Button onClick={handleAddClick} className="bg-blue-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" /> Add Product
-          </Button>
+          <div className="flex gap-2">
+            {showAmazonImportButton && (
+              <Button
+                onClick={() => {setAmazonExpanded(!amazonExpanded);setShowInlineForm(false);setProductFormData(null);}}
+                variant="outline"
+                className={`bg-white border-slate-300 text-slate-700 hover:bg-slate-50 inline-flex items-center gap-2 ${amazonExpanded ? "bg-slate-100" : ""}`}
+                disabled={isSavingProduct}>
+
+                <ShoppingCart className="w-4 h-4" />
+                Import from Amazon
+                <ChevronDown className={`w-4 h-4 transition-transform ${amazonExpanded ? "rotate-180" : ""}`} />
+              </Button>
+            )}
+            <Button onClick={handleAddClick} className="bg-blue-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-blue-700"
+            disabled={isSavingProduct}>
+
+              <Plus className="w-4 h-4 mr-2" /> Add Product
+            </Button>
+          </div>
         </div>
 
-        {/* Inline Form */}
+        {/* Amazon Import Inline Form */}
         <AnimatePresence>
-          {showInlineForm && productFormData &&
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden">
+          {amazonExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden mb-6"
+            >
+              <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold text-slate-900">Import from Amazon</h3>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {setAmazonExpanded(false);setAmazonUrl("");}}
+                    className="text-slate-400 hover:text-slate-600">
+
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                {/* Permission Notice */}
+                <div className="mb-4 p-3 bg-lime-400 border border-lime-500 rounded-lg">
+                  <p className="text-slate-900 text-sm font-medium">
+                    You must be the owner of this product, a registered Amazon Affiliate, or have express permission to use these images
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="amazon-url-product" className="text-slate-700 mb-2 block">Amazon Product URL</Label>
+                    <Input
+                      id="amazon-url-product"
+                      placeholder="https://www.amazon.com/dp/B0123456789"
+                      value={amazonUrl}
+                      onChange={(e) => setAmazonUrl(e.target.value)}
+                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
+                      disabled={amazonLoading}
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleAmazonImport}
+                      disabled={amazonLoading || !amazonUrl.trim()}
+                      className="bg-orange-600 hover:bg-orange-700 text-white flex-1"
+                    >
+                      {amazonLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          Import Product
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {setAmazonExpanded(false);setAmazonUrl("");}}
+                      disabled={amazonLoading}
+                      className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+
+                  <div className="text-xs text-slate-500">
+                    This will import the product details, images, reviews, and videos into your library
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Inline Product Form */}
+        <AnimatePresence>
+          {showInlineForm && productFormData && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="overflow-hidden">
 
               <InlineProductForm
-              initialProduct={productFormData}
-              onSave={handleProductFormSave}
-              onCancel={handleInlineFormClose}
-              availableUsernames={availableUsernames}
-              isSaving={isSavingProduct}
-              currentUser={currentUser}
-              globalUsername={globalUsername}
-              useWorkspaceScoping={useWorkspaceScoping}
-              consumeTokensForFeature={consumeTokensForFeature} />
+                initialProduct={productFormData}
+                onSave={handleProductFormSave}
+                onCancel={handleInlineFormClose}
+                availableUsernames={availableUsernames}
+                isSaving={isSavingProduct}
+                currentUser={currentUser}
+                globalUsername={globalUsername}
+                useWorkspaceScoping={useWorkspaceScoping}
+                consumeTokensForFeature={consumeTokensForFeature} />
 
             </motion.div>
-          }
+          )}
         </AnimatePresence>
 
         {/* Filters */}
-        {!useWorkspaceScoping &&
-        <div className="mb-6 max-w-sm">
+        {!useWorkspaceScoping && (
+          <div className="mb-6 max-w-sm">
             <Label htmlFor="filter-username" className="text-slate-700">Filter by Username</Label>
             <Select value={filterUsername} onValueChange={setFilterUsername}>
               <SelectTrigger id="filter-username" className="bg-white border-slate-300 text-slate-900 px-3 py-2 text-sm flex h-10 w-full items-center justify-between rounded-md ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1">
@@ -570,29 +1056,29 @@ export default function ProductManager() {
               <SelectContent className="bg-white border-slate-200 text-slate-900">
                 <SelectItem value="all">All Users</SelectItem>
                 {availableUsernames.map((username) =>
-              <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
-              )}
+                  <SelectItem key={username} value={username} className="hover:bg-slate-100">{username}</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
-        }
+        )}
 
         {/* Product Grid or No Products Message */}
         {isLoading ?
-        <div className="text-center py-10 text-slate-600">Loading products...</div> :
-        filteredProducts.length === 0 ?
-        <div className="text-center py-10 bg-white rounded-lg border border-slate-200">
+          <div className="text-center py-10 text-slate-600">Loading products...</div> :
+          filteredProducts.length === 0 ?
+            <div className="text-center py-10 bg-white rounded-lg border border-slate-200">
               <p className="text-slate-600">No products found for the selected user.</p>
             </div> :
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) =>
-          <div key={product.id} className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+                <div key={product.id} className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
                   {product.image_url &&
-            <img
-              src={product.image_url}
-              alt={product.name}
-              className="w-full h-40 object-cover rounded-md mb-4" />
-            }
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-40 object-cover rounded-md mb-4" />
+                  }
                   <h3 className="text-xl font-semibold mb-2 text-blue-900 line-clamp-2 min-h-[3rem]">
                     {product.name}
                   </h3>
@@ -610,7 +1096,7 @@ export default function ProductManager() {
                     </Button>
                   </div>
                 </div>
-          )}
+              )}
             </div>
         }
       </div>
@@ -630,6 +1116,6 @@ export default function ProductManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>);
-
+    </div>
+  );
 }

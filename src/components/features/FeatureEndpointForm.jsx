@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { FeatureFlag } from "@/api/entities";
 import { toast } from "sonner";
@@ -17,7 +16,7 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
   const [description, setDescription] = useState("");
   const [tokenCost, setTokenCost] = useState(1);
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [loomUrl, setLoomUrl] = useState(""); // New state for Loom URL
+  const [loomUrl, setLoomUrl] = useState("");
   const [requiredPlanKeys, setRequiredPlanKeys] = useState([]);
 
   const [callType, setCallType] = useState("internal_function");
@@ -34,7 +33,6 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
     integration_core: []
   });
 
-  // Load selectable targets for dropdowns
   useEffect(() => {
     (async () => {
       try {
@@ -55,13 +53,12 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
       setDescription(flag?.description || "");
       setTokenCost(flag?.token_cost || 1);
       setYoutubeUrl(flag?.youtube_tutorial_url || "");
-      setLoomUrl(flag?.loom_tutorial_url || ""); // Initialize Loom URL
+      setLoomUrl(flag?.loom_tutorial_url || "");
       setRequiredPlanKeys(flag?.required_plan_keys || []);
       setCallType(flag?.call_type || "internal_function");
       setTargetName(flag?.target_name || "");
       setHttpMethod(flag?.http_method || "POST");
 
-      // Safely stringify JSON for display in textareas
       try {
         setHeaders(flag?.headers ? JSON.stringify(flag.headers, null, 2) : "");
         setReqSchema(flag?.request_schema ? JSON.stringify(flag.request_schema, null, 2) : "");
@@ -85,15 +82,14 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
         name,
         description,
         token_cost: Number(tokenCost) || 0,
-        youtube_tutorial_url: youtubeUrl || null, // Changed from undefined to null
-        loom_tutorial_url: loomUrl || null,       // Changed from undefined to null
+        youtube_tutorial_url: youtubeUrl || null,
+        loom_tutorial_url: loomUrl || null,
         required_plan_keys: requiredPlanKeys,
         call_type: callType,
         target_name: targetName || undefined,
         http_method: callType === "external_webhook" ? httpMethod : undefined,
       };
 
-      // Safely parse JSON fields
       try {
         if (headers) payload.headers = JSON.parse(headers);
         if (reqSchema) payload.request_schema = JSON.parse(reqSchema);
@@ -114,7 +110,7 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
 
       onSave(savedFlag);
       toast.success(`Feature '${savedFlag.name}' saved.`);
-      onClose(); // Close the dialog on successful save
+      onClose();
     } catch (error) {
       toast.error(error?.message || "Failed to save feature.");
       console.error(error);
@@ -158,13 +154,12 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
                 </div>
                 <div>
                     <Label className="text-slate-700">Token Cost</Label>
-                    <Input className="mt-1 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" type="number" value={tokenCost} onChange={(e) => setTokenCost(e.target.value)} />
+                    <Input className="mt-1 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" type="number" step="0.5" min="0" value={tokenCost} onChange={(e) => setTokenCost(e.target.value)} />
                 </div>
                 <div>
                     <Label className="text-slate-700">YouTube Tutorial URL</Label>
                     <Input className="mt-1 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." />
                 </div>
-                {/* New input for Loom Tutorial URL */}
                 <div>
                     <Label className="text-slate-700">Loom Tutorial URL</Label>
                     <Input className="mt-1 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" value={loomUrl} onChange={(e) => setLoomUrl(e.target.value)} placeholder="https://www.loom.com/share/..." />
@@ -188,7 +183,7 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
                 <Label className="text-slate-700">Call Type</Label>
                 <Select value={callType || ""} onValueChange={(v) => {
                   setCallType(v);
-                  setTargetName(""); // Reset target when call type changes
+                  setTargetName("");
                 }}>
                   <SelectTrigger className="mt-1 bg-white border-slate-300 text-slate-900">
                     <SelectValue placeholder="Choose how to call" />

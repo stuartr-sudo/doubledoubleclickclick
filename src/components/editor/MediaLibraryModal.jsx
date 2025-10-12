@@ -19,6 +19,7 @@ import { Username } from "@/api/entities";
 import { PromotedProduct } from "@/api/entities";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag"; // NEW: Import useFeatureFlag
 
 // Import required functions
 import { youtubeSearch } from "@/api/functions";
@@ -179,13 +180,25 @@ const YouTubeTabContent = ({ youtubeQuery, setYoutubeQuery, handleYouTubeSearch,
         <Loader2 className="h-8 w-8 text-slate-400 animate-spin" />
       </div> :
       youtubeResults.length > 0 ?
-        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {youtubeResults.map((video) =>
-            <div key={video.videoId} className="flex gap-3 items-center p-2 hover:bg-slate-200 rounded-md cursor-pointer bg-white border border-slate-200" onClick={() => onVideoSelect(video)}>
-              <img src={video.thumbnail} alt={video.title} className="w-24 h-16 object-cover rounded" />
-              <div className="flex-1">
-                <p className="font-medium line-clamp-2 text-slate-800">{video.title}</p>
-                <p className="text-xs text-slate-500">{video.channelTitle} • {video.duration}</p>
+            <div
+              key={video.videoId}
+              className="group relative bg-white rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-red-500 transition-all shadow-sm hover:shadow-md"
+              onClick={() => onVideoSelect(video)}
+            >
+              <div className="relative aspect-video">
+                <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" loading="lazy" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
+              </div>
+              <div className="p-3">
+                <p className="font-medium line-clamp-2 text-sm text-slate-800 group-hover:text-red-600 transition-colors">
+                  {video.title}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">{video.channelTitle}</p>
+                {video.duration && (
+                  <p className="text-xs text-slate-400 mt-1">{video.duration}</p>
+                )}
               </div>
             </div>
           )}
@@ -266,13 +279,22 @@ const TikTokTabContent = ({ tiktokQuery, setTiktokQuery, handleTikTokSearch, tik
           <Loader2 className="h-8 w-8 text-slate-400 animate-spin" />
         </div> :
         tiktokResults.length > 0 ?
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {tiktokResults.map((video) =>
-              <div key={video.video_id} className="flex gap-3 items-center p-2 hover:bg-slate-200 rounded-md cursor-pointer bg-white border border-slate-200" onClick={() => insertTikTokFromSearch(video)}>
-                <img src={video.cover_url} alt={video.title} className="w-24 h-32 object-cover rounded" />
-                <div className="flex-1">
-                  <p className="font-medium line-clamp-3 text-slate-800">{video.title}</p>
-                  <p className="text-xs text-slate-500">by @{video.author_name}</p>
+              <div
+                key={video.video_id}
+                className="group relative bg-white rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all shadow-sm hover:shadow-md"
+                onClick={() => insertTikTokFromSearch(video)}
+              >
+                <div className="relative aspect-[9/16]">
+                  <img src={video.cover_url} alt={video.title} className="w-full h-full object-cover" loading="lazy" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
+                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                    <p className="text-white text-xs font-medium line-clamp-2">{video.title}</p>
+                  </div>
+                </div>
+                <div className="p-2">
+                  <p className="text-xs text-slate-600">by @{video.author_name}</p>
                 </div>
               </div>
             )}
@@ -414,6 +436,26 @@ export default function MediaLibraryModal({
   // Use workspace username if available, otherwise fall back to preselected
   const effectiveUsernameFilter = selectedUsername || preselectedUsername || "all";
 
+  // NEW: Feature flag for Amazon Import tab
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = await User.me();
+        setCurrentUser(user);
+      } catch (e) {
+        setCurrentUser(null);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const { enabled: showAmazonImportTab } = useFeatureFlag('ask-ai_amazon', {
+    currentUser,
+    defaultEnabled: true
+  });
+
   const loadInitialData = useCallback(async () => {
     setLoading(true);
     try {
@@ -484,10 +526,15 @@ export default function MediaLibraryModal({
   useEffect(() => {
     if (isOpen) {
       loadInitialData();
+      // Determine the initial active tab based on prop and feature flag
+      let newActiveTab = initialTab || "images";
+      if (newActiveTab === "amazon-import" && !showAmazonImportTab) {
+        newActiveTab = "images"; // Fallback to images if Amazon tab is disabled
+      }
+      setActiveTab(newActiveTab);
     } else {
+      // When closing, reset states and tabs
       setSearchQuery("");
-      setActiveTab(initialTab || "images");
-      // Clear search results and input fields when modal closes
       setYoutubeResults([]);
       setTiktokResults([]);
       setYoutubeQuery("");
@@ -495,18 +542,16 @@ export default function MediaLibraryModal({
       setAmazonUrl("");
       setImportUrl("");
       setImportAltText("");
-      // Clear bulk mode states
       setSelectedIds(new Set());
       setBulkMode(false);
+      // Reset activeTab for next open, defaulting to images if initialTab isn't allowed
+      let newActiveTab = initialTab || "images";
+      if (newActiveTab === "amazon-import" && !showAmazonImportTab) {
+        newActiveTab = "images";
+      }
+      setActiveTab(newActiveTab);
     }
-  }, [isOpen, loadInitialData, initialTab]);
-
-  // Set initial tab when prop changes
-  useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
+  }, [isOpen, loadInitialData, initialTab, showAmazonImportTab, setSelectedIds]);
 
   // Handles selection of an image from the library
   const handleImageInsert = async (image) => {
@@ -893,6 +938,9 @@ export default function MediaLibraryModal({
     }
   };
 
+  // Dynamically calculate grid columns for TabsList
+  const tabsListGridCols = showAmazonImportTab ? "grid-cols-6" : "grid-cols-5";
+
 
   return (
     <>
@@ -942,7 +990,7 @@ export default function MediaLibraryModal({
             </div>
 
             <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setBulkMode(false); setSelectedIds(new Set()); }} className="flex flex-col flex-1 min-h-0">
-              <TabsList className="grid w-full grid-cols-6 bg-white border border-slate-200">
+              <TabsList className={`grid w-full ${tabsListGridCols} bg-white border border-slate-200`}>
                 <TabsTrigger value="images" className="flex items-center gap-2 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">
                   <ImageIcon className="w-4 h-4" />
                   Images
@@ -958,10 +1006,12 @@ export default function MediaLibraryModal({
                 <TabsTrigger value="tiktok" className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800">
                   Search TikTok
                 </TabsTrigger>
-                <TabsTrigger value="amazon-import" className="flex items-center gap-2 data-[state=active]:bg-orange-100 data-[state=active]:text-orange-800">
-                  <Package className="w-4 h-4" />
-                  Import Amazon
-                </TabsTrigger>
+                {showAmazonImportTab && (
+                  <TabsTrigger value="amazon-import" className="flex items-center gap-2 data-[state=active]:bg-orange-100 data-[state=active]:text-orange-800">
+                    <Package className="w-4 h-4" />
+                    Import Amazon
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="url-import" className="flex items-center gap-2 data-[state=active]:bg-green-100 data-[state=active]:text-green-800">
                   <Download className="w-4 h-4" />
                   Import URL
@@ -1015,14 +1065,16 @@ export default function MediaLibraryModal({
                         selectedUsername={selectedUsername}
                       />
                     </TabsContent>
-                    <TabsContent value="amazon-import" className="mt-4">
-                      <AmazonImportTabContent
-                        amazonUrl={amazonUrl}
-                        setAmazonUrl={setAmazonUrl}
-                        runAmazonImport={runAmazonImport}
-                        amazonLoading={amazonLoading}
-                      />
-                    </TabsContent>
+                    {showAmazonImportTab && (
+                      <TabsContent value="amazon-import" className="mt-4">
+                        <AmazonImportTabContent
+                          amazonUrl={amazonUrl}
+                          setAmazonUrl={setAmazonUrl}
+                          runAmazonImport={runAmazonImport}
+                          amazonLoading={amazonLoading}
+                        />
+                      </TabsContent>
+                    )}
                     <TabsContent value="url-import" className="mt-4">
                       <UrlImportTabContent
                         importUrl={importUrl}

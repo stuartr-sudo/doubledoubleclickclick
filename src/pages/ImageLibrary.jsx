@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { ImageLibraryItem } from "@/api/entities";
 import { Username } from "@/api/entities";
 import { User } from "@/api/entities";
+import { AppProduct } from "@/api/entities"; // NEW: Import AppProduct
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -10,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Search, Loader2, Trash2, Edit, CheckSquare, Sparkles, Download, Plus, Image as ImageIcon, RefreshCw, ShoppingBag, Package, ChevronDown, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"; // Added DialogFooter
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { generateImageFalAi } from "@/api/functions";
@@ -21,6 +22,7 @@ import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import { extractProductMeta } from "@/api/functions";
 import { amazonProduct } from "@/api/functions";
+import { UploadFile } from "@/api/integrations"; // NEW import
 
 export default function ImageLibrary() {
   const [loading, setLoading] = useState(true);
@@ -33,12 +35,18 @@ export default function ImageLibrary() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showImportFromUrl, setShowImportFromUrl] = useState(false);
+  const [urlImportFormExpanded, setUrlImportFormExpanded] = useState(false);
   const [importUrl, setImportUrl] = useState("");
   const [importAltText, setImportAltText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const { consumeTokensForFeature } = useTokenConsumption();
-  const [showGenerator, setShowGenerator] = useState(false);
+
+  // Replaced showGenerator with showUploadDialog and related states
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadAltText, setUploadAltText] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+
   const [currentUser, setCurrentUser] = useState(null);
   const [showEditorDialog, setShowEditorDialog] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
@@ -62,6 +70,12 @@ export default function ImageLibrary() {
   const { enabled: canImportFromAmazon } = useFeatureFlag('image_library_amazon_import', {
     currentUser,
     defaultEnabled: false
+  });
+
+  // NEW: Feature flag for Amazon import button visibility
+  const { enabled: showAmazonImport } = useFeatureFlag('media_library_images_importfromamazon', {
+    currentUser,
+    defaultEnabled: true // Defaulted to true as per outline
   });
 
   // Determine active username filter based on workspace scoping
@@ -97,7 +111,6 @@ export default function ImageLibrary() {
       }
       setAllImages(Array.isArray(displayImages) ? displayImages : []);
 
-      // REMOVED: setImportUsername is no longer needed, we use globalUsername from workspace
     } catch (error) {
       toast.error("Failed to load image library.");
       console.error(error);
@@ -109,8 +122,6 @@ export default function ImageLibrary() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  // REMOVED: Sync import username with workspace selection is no longer needed as there's no dedicated importUsername state.
 
   // --- FILTERING ---
   const filteredImages = useMemo(() => {
@@ -203,7 +214,9 @@ export default function ImageLibrary() {
 
     if (isImporting) return;
 
-    const result = await consumeTokensForFeature('image_library_access'); // Assuming this feature flag covers general imports
+    // The token consumption for image_library_access is a generic gate.
+    // If more specific token consumption is needed for URL imports, a new flag should be created.
+    const result = await consumeTokensForFeature('image_library_access');
     if (!result.success) {
       return;
     }
@@ -221,7 +234,7 @@ export default function ImageLibrary() {
         toast.success("Image imported successfully!");
         setImportUrl("");
         setImportAltText("");
-        setShowImportFromUrl(false);
+        setUrlImportFormExpanded(false); // Use the new state variable
         await loadData();
       } else {
         toast.error(data?.error || "Failed to import image.");
@@ -357,49 +370,161 @@ export default function ImageLibrary() {
     }
   };
 
+  // NEW: Handle file upload with plan-based limits
+  const handleFileUpload = async () => {
+    if (!uploadFile) {
+      toast.error("Please select a file to upload");
+      return;
+    }
+
+    if (!globalUsername || globalUsername === 'all') {
+      toast.error("Please select a workspace before uploading");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Check user's plan and enforce limits
+      const user = await User.me();
+      const userPlanPriceId = user.plan_price_id;
+
+      // Determine plan limits
+      let uploadLimit = 5; // Default for free_trial
+      let planName = "Free Trial";
+
+      if (userPlanPriceId) {
+        // Fetch AppProduct to determine plan_key
+        const appProducts = await AppProduct.filter({ stripe_price_id: userPlanPriceId });
+        if (appProducts.length > 0) {
+          const planKey = appProducts[0].plan_key;
+
+          switch (planKey) {
+            case 'growth':
+              uploadLimit = 100;
+              planName = "Growth";
+              break;
+            case 'brand':
+              uploadLimit = 1000;
+              planName = "Brand";
+              break;
+            case 'agency':
+              uploadLimit = -1; // -1 means unlimited
+              planName = "Agency";
+              break;
+            default:
+              uploadLimit = 5;
+              planName = "Free Trial";
+          }
+        }
+      }
+
+      // Count existing images for this user
+      if (uploadLimit !== -1) {
+        const existingImages = await ImageLibraryItem.filter({ user_name: globalUsername });
+        const currentCount = existingImages.length;
+
+        if (currentCount >= uploadLimit) {
+          toast.error(`Upload limit reached! Your ${planName} plan allows ${uploadLimit} images. Please upgrade to upload more.`);
+          setIsUploading(false);
+          return;
+        }
+      }
+
+      // Upload file to storage
+      const { data: uploadResult } = await UploadFile({ file: uploadFile });
+
+      if (!uploadResult?.file_url) {
+        throw new Error("Failed to upload file");
+      }
+
+      // Save to ImageLibraryItem
+      await ImageLibraryItem.create({
+        url: uploadResult.file_url,
+        alt_text: uploadAltText || uploadFile.name,
+        source: 'upload',
+        user_name: globalUsername
+      });
+
+      toast.success("Image uploaded successfully!");
+      setShowUploadDialog(false);
+      setUploadFile(null);
+      setUploadAltText("");
+      await loadData();
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // NEW: Toggle functions for inline forms, closing others when one opens
+  const toggleProductForm = () => {
+    setProductFormExpanded(prev => !prev);
+    setAmazonFormExpanded(false);
+    setUrlImportFormExpanded(false);
+  };
+
+  const toggleAmazonForm = () => {
+    setAmazonFormExpanded(prev => !prev);
+    setProductFormExpanded(false);
+    setUrlImportFormExpanded(false);
+  };
+
+  const toggleUrlImportForm = () => {
+    setUrlImportFormExpanded(prev => !prev);
+    setProductFormExpanded(false);
+    setAmazonFormExpanded(false);
+  };
+
+
   // --- RENDER ---
   return (
     <>
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <div className="p-8">
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Image Library</h1>
-              <p className="text-slate-600 mt-1">Manage your uploaded and generated images</p>
+              <h1 className="text-2xl font-bold text-slate-800">Image Library</h1>
+              <p className="text-slate-600">Manage your uploaded and generated images</p>
             </div>
-            <div className="flex gap-3">
-              {canImportFromProduct && (
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={toggleProductForm}
+                variant="outline"
+                className={`bg-white border-slate-300 text-slate-700 hover:bg-slate-50 inline-flex items-center gap-2 ${productFormExpanded ? "bg-slate-100" : ""}`}
+              >
+                <ShoppingBag className="w-4 h-4" />
+                Import from Product
+                <ChevronDown className={`w-4 h-4 transition-transform ${productFormExpanded ? "rotate-180" : ""}`} />
+              </Button>
+
+              {showAmazonImport && (
                 <Button
-                  onClick={() => setProductFormExpanded(!productFormExpanded)}
-                  className={`hover:text-white border-2 border-emerald-500 px-4 py-2 text-sm font-medium hover:border-emerald-400 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 ${
-                    productFormExpanded
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'bg-slate-800 text-white hover:bg-slate-700'
-                  }`}
+                  onClick={toggleAmazonForm}
+                  variant="outline"
+                  className={`bg-white border-slate-300 text-slate-700 hover:bg-slate-50 inline-flex items-center gap-2 ${amazonFormExpanded ? "bg-slate-100" : ""}`}
                 >
-                  <ShoppingBag className="w-4 h-4 mr-2" />
-                  Import from Product
-                  <ChevronDown className={`w-4 h-4 ml-1 transition-transform duration-200 ${productFormExpanded ? 'rotate-180' : ''}`} />
-                </Button>
-              )}
-              {canImportFromAmazon && (
-                <Button
-                  onClick={() => setAmazonFormExpanded(!amazonFormExpanded)} // Toggle inline Amazon form
-                  className={`hover:text-white border-2 border-orange-500 px-4 py-2 text-sm font-medium hover:border-orange-400 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 ${
-                    amazonFormExpanded
-                      ? 'bg-orange-600 text-white border-orange-600'
-                      : 'bg-slate-800 text-white hover:bg-slate-700'
-                  }`}
-                >
-                  <Package className="w-4 h-4 mr-2" />
+                  <Package className="w-4 h-4" />
                   Import from Amazon
-                  <ChevronDown className={`w-4 h-4 ml-1 transition-transform duration-200 ${amazonFormExpanded ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 transition-transform ${amazonFormExpanded ? "rotate-180" : ""}`} />
                 </Button>
               )}
-              <Button onClick={() => setShowImportFromUrl(!showImportFromUrl)} className="bg-slate-800 text-white border-2 border-blue-500 px-4 py-2 text-sm font-medium hover:bg-slate-700 hover:border-blue-400 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10">
-                <Download className="w-4 h-4 mr-2" />
+
+              <Button
+                onClick={toggleUrlImportForm}
+                variant="outline"
+                className={`bg-white border-slate-300 text-slate-700 hover:bg-slate-50 inline-flex items-center gap-2 ${urlImportFormExpanded ? "bg-slate-100" : ""}`}
+              >
+                <Download className="w-4 h-4" />
                 Import from URL
+                <ChevronDown className={`w-4 h-4 transition-transform ${urlImportFormExpanded ? "rotate-180" : ""}`} />
+              </Button>
+
+              <Button onClick={() => setShowUploadDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Upload Image
               </Button>
             </div>
           </div>
@@ -416,8 +541,7 @@ export default function ImageLibrary() {
                     setProductFormExpanded(false);
                     setProductUrl(""); // Clear product URL on close
                   }}
-                  className="text-slate-500 hover:text-slate-700"
-                >
+                  className="text-slate-500 hover:text-slate-700">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -430,28 +554,24 @@ export default function ImageLibrary() {
                     value={productUrl}
                     onChange={(e) => setProductUrl(e.target.value)}
                     className="bg-white border-slate-300"
-                    disabled={isImportingProduct}
-                  />
+                    disabled={isImportingProduct} />
                 </div>
-                {/* REMOVED USERNAME FIELD */}
               </div>
               <div className="flex gap-2 pt-4">
                 <Button
                   onClick={handleProductImport}
                   disabled={isImportingProduct || !productUrl.trim() || !globalUsername}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1"
-                >
-                  {isImportingProduct ? (
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1">
+                  {isImportingProduct ?
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Importing...
-                    </>
-                  ) : (
+                    </> :
                     <>
                       <ShoppingBag className="w-4 h-4 mr-2" />
                       Import Images
                     </>
-                  )}
+                  }
                 </Button>
                 <Button
                   variant="outline"
@@ -460,8 +580,7 @@ export default function ImageLibrary() {
                     setProductUrl("");
                   }}
                   disabled={isImportingProduct}
-                  className="bg-white border-slate-300"
-                >
+                  className="bg-white border-slate-300">
                   Cancel
                 </Button>
               </div>
@@ -480,11 +599,18 @@ export default function ImageLibrary() {
                     setAmazonFormExpanded(false);
                     setAmazonUrl(""); // Clear Amazon URL on close
                   }}
-                  className="text-slate-500 hover:text-slate-700"
-                >
+                  className="text-slate-500 hover:text-slate-700">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
+
+              {/* Permission Notice */}
+              <div className="bg-orange-100 mb-4 p-3 border border-lime-500 rounded-lg">
+                <p className="text-slate-900 text-sm font-medium">
+                  You must be the owner of this product, a registered Amazon Affiliate, or have express permission to use these images
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="amazon-url-inline" className="text-slate-700 mb-2 block">Amazon Product URL</Label>
@@ -494,28 +620,24 @@ export default function ImageLibrary() {
                     value={amazonUrl}
                     onChange={(e) => setAmazonUrl(e.target.value)}
                     className="bg-white border-slate-300"
-                    disabled={isImportingAmazon}
-                  />
+                    disabled={isImportingAmazon} />
                 </div>
-                {/* REMOVED USERNAME FIELD */}
               </div>
               <div className="flex gap-2 pt-4">
                 <Button
                   onClick={handleAmazonImport}
                   disabled={isImportingAmazon || !amazonUrl.trim() || !globalUsername}
-                  className="bg-orange-600 hover:bg-orange-700 text-white flex-1"
-                >
-                  {isImportingAmazon ? (
+                  className="bg-orange-600 hover:bg-orange-700 text-white flex-1">
+                  {isImportingAmazon ?
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Importing...
-                    </>
-                  ) : (
+                    </> :
                     <>
                       <Package className="w-4 h-4 mr-2" />
                       Import Images
                     </>
-                  )}
+                  }
                 </Button>
                 <Button
                   variant="outline"
@@ -524,8 +646,7 @@ export default function ImageLibrary() {
                     setAmazonUrl("");
                   }}
                   disabled={isImportingAmazon}
-                  className="bg-white border-slate-300"
-                >
+                  className="bg-white border-slate-300">
                   Cancel
                 </Button>
               </div>
@@ -533,7 +654,7 @@ export default function ImageLibrary() {
           </div>
 
           {/* Import from URL Section */}
-          {showImportFromUrl && (
+          {urlImportFormExpanded &&
             <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 mb-6">
               <h3 className="font-medium text-slate-800 mb-4">Import Image from URL</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -543,28 +664,23 @@ export default function ImageLibrary() {
                   onChange={(e) => setImportUrl(e.target.value)}
                   className="bg-white border-slate-300"
                   disabled={isImporting} />
-
                 <Input
                   placeholder="Alt text (optional)"
                   value={importAltText}
                   onChange={(e) => setImportAltText(e.target.value)}
                   className="bg-white border-slate-300"
                   disabled={isImporting} />
-                
-                {/* REMOVED USERNAME FIELD */}
               </div>
               <div className="flex gap-2 mt-4">
                 <Button
                   onClick={handleImportFromUrl}
                   disabled={isImporting || !importUrl.trim() || !globalUsername}
                   className="bg-blue-600 hover:bg-blue-700 text-white">
-
                   {isImporting ?
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Importing...
                     </> :
-
                     <>
                       <Plus className="w-4 h-4 mr-2" />
                       Import Image
@@ -574,18 +690,17 @@ export default function ImageLibrary() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    setShowImportFromUrl(false);
+                    setUrlImportFormExpanded(false);
                     setImportUrl("");
                     setImportAltText("");
                   }}
                   className="bg-white border-slate-300"
                   disabled={isImporting}>
-
                   Cancel
                 </Button>
               </div>
             </div>
-          )}
+          }
 
           {/* Search and filter controls */}
           <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
@@ -597,7 +712,6 @@ export default function ImageLibrary() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className="pl-9 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" />
-
               </div>
               {/* Username filter - conditionally rendered */}
               {!useWorkspaceScoping &&
@@ -634,9 +748,8 @@ export default function ImageLibrary() {
               <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200">
                 <ImageIcon className="w-12 h-12 mx-auto mb-4 text-slate-300" />
                 <p>No images found for the selected filter.</p>
-                <p className="text-sm mt-2">Try importing or generating some images.</p>
+                <p className="text-sm mt-2">Try importing or uploading some images.</p>
               </div> :
-
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredImages.map((image) =>
                   <div
@@ -646,13 +759,11 @@ export default function ImageLibrary() {
                       "group relative bg-white rounded-lg overflow-hidden border transition-all cursor-pointer",
                       selectedImage?.id === image.id ? "border-blue-500 ring-2 ring-blue-500" : "border-slate-200 hover:shadow-md"
                     )}>
-
                     <div className="aspect-square">
                       <img
                         src={image.url}
                         alt={image.alt_text || "No alt text"}
                         className="w-full h-full object-cover" />
-
                     </div>
 
                     {/* NEW: Delete button */}
@@ -660,7 +771,6 @@ export default function ImageLibrary() {
                       onClick={(e) => handleGridDelete(image, e)}
                       className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow-lg"
                       title="Delete image">
-
                       <Trash2 className="w-3 h-3" />
                     </button>
 
@@ -754,7 +864,6 @@ export default function ImageLibrary() {
                 <Button
                   onClick={handleDeleteImage}
                   variant="destructive" className="bg-red-600 text-destructive-foreground px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-destructive/90 h-10 w-full"
-
                   disabled={isDeleting}>
                   {isDeleting ?
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
@@ -775,24 +884,66 @@ export default function ImageLibrary() {
         </DialogContent>
       </Dialog>
 
-
-      {/* Generator Section */}
-      {showGenerator &&
-        <Dialog open={showGenerator} onOpenChange={setShowGenerator}>
-          <DialogContent className="max-w-4xl p-0">
-            <ImageGeneratorPanel
-              onClose={() => setShowGenerator(false)}
-              onImageGenerated={async (imageUrl, altText, username) => {
-                toast.success("Image generated and saved!");
-                await loadData();
+      {/* NEW: Upload Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Image</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="file-upload" className="block mb-2">Select Image</Label>
+              <Input
+                id="file-upload"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setUploadFile(e.target.files?.[0])}
+                disabled={isUploading}
+              />
+            </div>
+            <div>
+              <Label htmlFor="upload-alt-text" className="block mb-2">Alt Text (optional)</Label>
+              <Input
+                id="upload-alt-text"
+                placeholder="Describe the image..."
+                value={uploadAltText}
+                onChange={(e) => setUploadAltText(e.target.value)}
+                disabled={isUploading}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowUploadDialog(false);
+                setUploadFile(null);
+                setUploadAltText("");
               }}
-              currentUser={currentUser}
-              availableUsernames={allUsernames.map((u) => u.user_name)}
-              defaultUsername={useWorkspaceScoping && globalUsername ? globalUsername : undefined} />
-
-          </DialogContent>
-        </Dialog>
-      }
+              disabled={isUploading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleFileUpload}
+              disabled={isUploading || !uploadFile}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Upload
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

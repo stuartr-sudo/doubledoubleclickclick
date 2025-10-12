@@ -3,14 +3,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import { User } from "@/api/entities";
 import { Username } from "@/api/entities";
 import { IntegrationCredential } from "@/api/entities";
-import { CrmCredential } from "@/api/entities"; // Added missing import
+import { CrmCredential } from "@/api/entities";
+import { AppSettings } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import MiniMultiSelect from "@/components/common/MiniMultiSelect";
-import { Loader2, Users, Shield, Plus, Copy, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, Users, Shield, Plus, Copy, RefreshCw, Trash2, Clock, CheckCircle } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import CredentialQuickAdd from "@/components/credentials/CredentialQuickAdd";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,11 +25,90 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle } from
-"@/components/ui/alert-dialog";
+  AlertDialogTitle
+} from
+  "@/components/ui/alert-dialog";
 import CrmQuickAdd from "@/components/crm/CrmQuickAdd";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import DailySignupReport from "@/components/users/DailySignupReport";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+// CRITICAL: Username blacklist - only Stuart Asta can use these terms
+const BLACKLIST = [
+  // Stuart Asta variations
+  'stuartasta',
+  'stuarta',
+  'stuartas',
+  'stuartast',
+  'stuart-asta',
+  'stuartasta1',
+  'stuartasta_',
+  'stuart_asta',
+  'stuartasta-',
+  'sasta',
+  's-asta',
+  's_asta',
+  'stasta',
+  'stasta1',
+
+  // DoubleClick variations
+  'doubleclick',
+  'double-click',
+  'double_click',
+  'doubleclk',
+  'doublecl1ck',
+  'doubleclicks',
+  'double-clicks',
+  'doubleclick', // capital i instead of l - this will be effectively the same as 'doubleclick' due to toLowerCase()
+  'doubleclick', // capital i instead of l - this will be effectively the same as 'doubleclick' due to toLowerCase()
+  'doubleclick1',
+  'doubleclick_',
+  'doubleclick-',
+  'dbleclick',
+  'dbl-click',
+  'dblclick',
+  'dclick',
+  'd-click',
+  'db1eclick',
+  'doub1eclick',
+
+  // DC variations (your logo/abbreviation)
+  'dc-work',
+  'dcwork',
+  'dc_work',
+
+  // Domain variations
+  'doubleclickwork',
+  'doubleclick-work',
+  'doubleclick_work',
+  'doubleclck',
+  'double-clck',
+
+  // Leet speak / common substitutions
+  'doub1eck1ick',
+  'd0ubleclick',
+  'd0uble-click',
+  'doubieclick', // i instead of l
+  '2bleclick',
+  'doubl3click'
+];
+
+// Stuart Asta's email - only this user can create blacklisted usernames
+const STUART_EMAIL = 'stuartr@doubleclick.work';
+
+// Function to check if username contains any blacklisted terms
+function isBlacklisted(username) {
+  const lower = username.toLowerCase();
+  return BLACKLIST.some(term => lower.includes(term));
+}
 
 export default function UserManagement() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -47,7 +127,7 @@ export default function UserManagement() {
   const [isSavingPermsMap, setIsSavingPermsMap] = useState({}); // permissions saving state
   const [userToDelete, setUserToDelete] = useState(null);
   const [crmCreds, setCrmCreds] = useState([]);
-  const [isSavingCrmMap, setIsSavingCrmMap] = useState({});
+  const [isSavingCrmMap, setIsSavingCrmMap] = useState({}); // FIX: initialize as React state, not a plain object (prevents "is not iterable" error)
   const [quickAddCrm, setQuickAddCrm] = useState({ open: false, provider: "mailchimp", user_name: null, usernameId: null });
   const [isSavingTokensMap, setIsSavingTokensMap] = useState({}); // per-user token saving state
 
@@ -55,9 +135,64 @@ export default function UserManagement() {
   const [showUsernameDeleteConfirm, setShowUsernameDeleteConfirm] = useState(false);
   const [isDeletingUsername, setIsDeletingUsername] = useState(false);
 
+  const [lastUserCount, setLastUserCount] = useState(0);
+
+  // NEW: State for timer controls modal
+  const [timerControlsUser, setTimerControlsUser] = useState(null);
+  const [timerControlsUsername, setTimerControlsUsername] = useState("");
+  const [timerOverride, setTimerOverride] = useState(false);
+  const [timerHours, setTimerHours] = useState(12);
+  const [isSavingTimer, setIsSavingTimer] = useState(false);
+
+  // NEW: State for global default timer setting
+  const [defaultTimerHours, setDefaultTimerHours] = useState(12);
+  const [isSavingDefaultTimer, setIsSavingDefaultTimer] = useState(false);
+
+  // NEW: State for managing topics completion
+  const [editingTopics, setEditingTopics] = useState({});
+
   useEffect(() => {
     loadData();
   }, []);
+
+  // NEW: Load global default timer setting
+  useEffect(() => {
+    const loadDefaultTimer = async () => {
+      try {
+        const settings = await AppSettings.list();
+        const timerSetting = settings.find(s => s.key === "topics_default_timer_hours");
+        if (timerSetting?.value) {
+          const hours = parseInt(timerSetting.value, 10);
+          if (!isNaN(hours) && hours > 0) {
+            setDefaultTimerHours(hours);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading default timer:", error);
+      }
+    };
+    if (currentUser?.role === "admin") {
+      loadDefaultTimer();
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const allUsers = await User.list();
+        if (allUsers.length > lastUserCount) {
+          console.log(`New users detected: ${allUsers.length - lastUserCount} new user(s)`);
+          setUsers(allUsers);
+          setLastUserCount(allUsers.length);
+          toast.success(`${allUsers.length - lastUserCount} new user(s) detected!`);
+        }
+      } catch (e) {
+        console.error("Auto-refresh error:", e);
+      }
+    }, 30000); // Poll every 30 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [lastUserCount]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -67,12 +202,13 @@ export default function UserManagement() {
 
       if (me.role === "admin") {
         const [allUsers, allUsernames, creds, crm] = await Promise.all([
-        User.list(),
-        Username.list("-created_date").catch(() => []),
-        IntegrationCredential.list("-created_date").catch(() => []),
-        CrmCredential.list("-created_date").catch(() => [])]
+          User.list(),
+          Username.list("-created_date").catch(() => []),
+          IntegrationCredential.list("-created_date").catch(() => []),
+          CrmCredential.list("-created_date").catch(() => [])]
         );
         setUsers(allUsers);
+        setLastUserCount(allUsers.length); // Track initial count
         setUsernames(allUsernames);
         setIntegrationCreds(creds);
         setCrmCreds(crm);
@@ -86,25 +222,45 @@ export default function UserManagement() {
   const isAdmin = !!(currentUser && currentUser.role === "admin");
 
   const usernameOptions = useMemo(() => {
-    return (usernames || []).
-    filter((u) => u.is_active !== false).
-    map((u) => ({
-      value: u.user_name,
-      label: u.display_name || u.user_name
-    }));
+    return (usernames || [])
+      .filter((u) => u.is_active !== false)
+      .map((u) => ({
+        value: u.user_name,
+        label: u.display_name || u.user_name
+      }));
   }, [usernames]);
 
   const filteredUsers = useMemo(() => {
     const q = userFilter.trim().toLowerCase();
     if (!q) return users;
     return users.filter((u) =>
-    (u.full_name || "").toLowerCase().includes(q) ||
-    (u.email || "").toLowerCase().includes(q)
+      (u.full_name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q)
     );
   }, [users, userFilter]);
 
   const updateAssignedUsernames = async (user, nextList) => {
     if (!isAdmin) return;
+
+    // CRITICAL: Check if any of the assigned usernames are blacklisted
+    // FIX: Superadmin or the reserved owner can assign any usernames; also allow assigning to superadmin targets.
+    const operatorIsSuperadmin = !!currentUser?.is_superadmin;
+    const targetIsSuperadmin = !!user?.is_superadmin;
+    const targetIsStuart = (user.email === STUART_EMAIL);
+
+    const bypassReserved = operatorIsSuperadmin || targetIsSuperadmin || targetIsStuart;
+
+    if (!bypassReserved) {
+      const blacklistedAssignments = nextList.filter(isBlacklisted);
+      if (blacklistedAssignments.length > 0) {
+        toast.error("Cannot assign reserved usernames to this user.", {
+          description: `The following usernames are reserved: ${blacklistedAssignments.join(', ')}`,
+          duration: 5000
+        });
+        return;
+      }
+    }
+
     setIsSavingMap((prev) => ({ ...prev, [user.id]: true }));
     try {
       await User.update(user.id, { assigned_usernames: nextList });
@@ -117,11 +273,67 @@ export default function UserManagement() {
     setIsSavingMap((prev) => ({ ...prev, [user.id]: false }));
   };
 
+  // NEW: Toggle topics onboarding completion for a specific username
+  const toggleTopicsCompletion = async (user, username) => {
+    const currentTopics = Array.isArray(user.topics) ? user.topics : [];
+    const isCurrentlyComplete = currentTopics.includes(username);
+
+    const updatedTopics = isCurrentlyComplete
+      ? currentTopics.filter(u => u !== username)
+      : [...currentTopics, username];
+
+    const updatedCompletionTimestamps = { ...(user.topics_onboarding_completed_at || {}) };
+
+    if (!isCurrentlyComplete) {
+      updatedCompletionTimestamps[username] = new Date().toISOString();
+    } else {
+      delete updatedCompletionTimestamps[username];
+    }
+
+    setEditingTopics((prev) => ({ ...prev, [user.id]: true }));
+    try {
+      await User.update(user.id, {
+        topics: updatedTopics,
+        topics_onboarding_completed_at: updatedCompletionTimestamps
+      });
+
+      setUsers((prev) => prev.map((u) =>
+        u.id === user.id
+          ? {
+            ...u,
+            topics: updatedTopics,
+            topics_onboarding_completed_at: updatedCompletionTimestamps
+          }
+          : u
+      ));
+
+      toast.success(
+        isCurrentlyComplete
+          ? `Unmarked "${username}" onboarding for ${user.full_name || user.email}`
+          : `Marked "${username}" onboarding complete for ${user.full_name || user.email}`
+      );
+    } catch (e) {
+      console.error("Failed to update topics completion:", e);
+      toast.error("Failed to update topics onboarding status.");
+    }
+    setEditingTopics((prev) => ({ ...prev, [user.id]: false }));
+  };
+
+
   const handleCreateUsername = async (e) => {
     e.preventDefault();
     const value = (newUsername.user_name || "").trim();
     if (!value) {
       toast.error("Username is required.");
+      return;
+    }
+
+    // CRITICAL: Check blacklist (only Stuart can use these terms)
+    if (isBlacklisted(value) && currentUser.email !== STUART_EMAIL) {
+      toast.error("This username is reserved and cannot be used.", {
+        description: "Please choose a different username.",
+        duration: 5000
+      });
       return;
     }
 
@@ -246,6 +458,7 @@ export default function UserManagement() {
     try {
       await User.delete(userToDelete.id);
       setUsers((prev) => prev.filter((user) => user.id !== userToDelete.id));
+      setLastUserCount((prev) => prev - 1); // Decrement user count on delete
       toast.success(`User ${userToDelete.full_name || userToDelete.email} has been deleted.`);
     } catch (error) {
       toast.error("Failed to delete user.");
@@ -256,6 +469,7 @@ export default function UserManagement() {
   };
 
   const handleDeleteUsername = async (username) => {
+    handleCloseTimerControls(); // Ensure modal is closed if username is being deleted
     setUsernameToDelete(username);
     setShowUsernameDeleteConfirm(true);
   };
@@ -267,12 +481,29 @@ export default function UserManagement() {
     try {
       // First, remove this username from all users who have it assigned
       const usersWithThisUsername = users.filter((user) =>
-      user.assigned_usernames && user.assigned_usernames.includes(usernameToDelete.user_name)
+        user.assigned_usernames && user.assigned_usernames.includes(usernameToDelete.user_name)
       );
 
       for (const user of usersWithThisUsername) {
-        const updatedUsernames = user.assigned_usernames.filter((un) => un !== usernameToDelete.user_name);
-        await User.update(user.id, { assigned_usernames: updatedUsernames });
+        const updatedAssignedUsernames = user.assigned_usernames.filter((un) => un !== usernameToDelete.user_name);
+        // Also remove any timer overrides/hours for this username
+        const updatedTopicsTimerOverride = { ...(user.topics_timer_override || {}) };
+        delete updatedTopicsTimerOverride[usernameToDelete.user_name];
+        const updatedTopicsTimerHours = { ...(user.topics_timer_hours || {}) };
+        delete updatedTopicsTimerHours[usernameToDelete.user_name];
+        // NEW: Remove topics completion status for this username
+        const updatedTopicsCompletion = (user.topics || []).filter((un) => un !== usernameToDelete.user_name);
+        const updatedTopicsCompletionTimestamps = { ...(user.topics_onboarding_completed_at || {}) };
+        delete updatedTopicsCompletionTimestamps[usernameToDelete.user_name];
+
+
+        await User.update(user.id, {
+          assigned_usernames: updatedAssignedUsernames,
+          topics_timer_override: updatedTopicsTimerOverride,
+          topics_timer_hours: updatedTopicsTimerHours,
+          topics: updatedTopicsCompletion, // NEW
+          topics_onboarding_completed_at: updatedTopicsCompletionTimestamps, // NEW
+        });
       }
 
       // Then delete the username entity
@@ -283,7 +514,15 @@ export default function UserManagement() {
       setUsers((prev) => prev.map((user) => ({
         ...user,
         assigned_usernames: user.assigned_usernames ?
-        user.assigned_usernames.filter((un) => un !== usernameToDelete.user_name) : []
+          user.assigned_usernames.filter((un) => un !== usernameToDelete.user_name) : [],
+        topics_timer_override: user.topics_timer_override ?
+          Object.fromEntries(Object.entries(user.topics_timer_override).filter(([key]) => key !== usernameToDelete.user_name)) : {},
+        topics_timer_hours: user.topics_timer_hours ?
+          Object.fromEntries(Object.entries(user.topics_timer_hours).filter(([key]) => key !== usernameToDelete.user_name)) : {},
+        topics: user.topics ?
+          user.topics.filter((un) => un !== usernameToDelete.user_name) : [], // NEW
+        topics_onboarding_completed_at: user.topics_onboarding_completed_at ?
+          Object.fromEntries(Object.entries(user.topics_onboarding_completed_at).filter(([key]) => key !== usernameToDelete.user_name)) : {}, // NEW
       })));
 
       toast.success(`Username "${usernameToDelete.display_name || usernameToDelete.user_name}" deleted successfully.`);
@@ -299,11 +538,11 @@ export default function UserManagement() {
 
   const providerLabel = (p) => {
     switch (p) {
-      case "notion":return "Notion";
-      case "shopify":return "Shopify";
-      case "wordpress":return "WordPress";
-      case "webflow":return "Webflow";
-      default:return "Google Docs";
+      case "notion": return "Notion";
+      case "shopify": return "Shopify";
+      case "wordpress": return "WordPress";
+      case "webflow": return "Webflow";
+      default: return "Google Docs";
     }
   };
 
@@ -332,15 +571,97 @@ export default function UserManagement() {
 
   const crmProviderLabel = (p) => {
     switch (p) {
-      case "mailchimp":return "Mailchimp";
-      case "klaviyo":return "Klaviyo";
-      case "active_campaign":return "ActiveCampaign";
-      case "hubspot":return "HubSpot";
-      case "convertkit":return "ConvertKit";
-      case "mailerlite":return "MailerLite";
-      case "webhook":return "Webhook";
-      default:return "None";
+      case "mailchimp": return "Mailchimp";
+      case "klaviyo": return "Klaviyo";
+      case "active_campaign": return "ActiveCampaign";
+      case "hubspot": return "HubSpot";
+      case "convertkit": return "ConvertKit";
+      case "mailerlite": return "MailerLite";
+      case "webhook": return "Webhook";
+      default: return "None";
     }
+  };
+
+  // NEW: Save global default timer
+  const handleSaveDefaultTimer = async () => {
+    setIsSavingDefaultTimer(true);
+    try {
+      const settings = await AppSettings.list();
+      const existing = settings.find(s => s.key === "topics_default_timer_hours");
+
+      if (existing) {
+        await AppSettings.update(existing.id, {
+          value: String(defaultTimerHours)
+        });
+      } else {
+        await AppSettings.create({
+          key: "topics_default_timer_hours",
+          value: String(defaultTimerHours),
+          description: "Default number of hours to wait after Topics onboarding before showing keywords"
+        });
+      }
+      toast.success("Default timer updated successfully");
+    } catch (error) {
+      console.error("Error saving default timer:", error);
+      toast.error("Failed to save default timer");
+    }
+    setIsSavingDefaultTimer(false);
+  };
+
+  // NEW: Open timer controls for a specific user/username
+  const openTimerControls = (user, username) => {
+    setTimerControlsUser(user);
+    setTimerControlsUsername(username);
+
+    // Load existing values or defaults
+    const override = user.topics_timer_override?.[username] || false;
+    const hours = user.topics_timer_hours?.[username] || defaultTimerHours;
+
+    setTimerOverride(override);
+    setTimerHours(hours);
+  };
+
+  const handleCloseTimerControls = () => {
+    setTimerControlsUser(null);
+    setTimerControlsUsername("");
+    setTimerOverride(false);
+    setTimerHours(12); // Reset to default or initial state
+  };
+
+  // NEW: Save timer controls for specific user/username
+  const handleSaveTimerControls = async () => {
+    if (!timerControlsUser || !timerControlsUsername) return;
+
+    setIsSavingTimer(true);
+    try {
+      const updatedOverride = {
+        ...(timerControlsUser.topics_timer_override || {}),
+        [timerControlsUsername]: timerOverride
+      };
+
+      const updatedHours = {
+        ...(timerControlsUser.topics_timer_hours || {}),
+        [timerControlsUsername]: timerOverride ? null : timerHours // If overridden, hours might be null/irrelevant
+      };
+
+      await User.update(timerControlsUser.id, {
+        topics_timer_override: updatedOverride,
+        topics_timer_hours: updatedHours
+      });
+
+      setUsers(prev => prev.map(u =>
+        u.id === timerControlsUser.id
+          ? { ...u, topics_timer_override: updatedOverride, topics_timer_hours: updatedHours }
+          : u
+      ));
+
+      toast.success("Timer controls updated successfully");
+      handleCloseTimerControls();
+    } catch (error) {
+      console.error("Error saving timer controls:", error);
+      toast.error("Failed to save timer controls");
+    }
+    setIsSavingTimer(false);
   };
 
   if (isLoading) {
@@ -374,10 +695,10 @@ export default function UserManagement() {
           </div>
           <div className="flex items-center gap-2">
             {isAdmin &&
-            <Button
-              onClick={() => setShowAddBrand(true)} className="bg-pink-500 text-white px-4 py-2 text-sm font-bold inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-pink-400 hover:shadow-[0_0_30px_rgba(236,72,153,0.7)] shadow-[0_0_15px_rgba(236,72,153,0.4)] border border-pink-400"
+              <Button
+                onClick={() => setShowAddBrand(true)} className="bg-pink-500 text-white px-4 py-2 text-sm font-bold inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-pink-400 hover:shadow-[0_0_30px_rgba(236,72,153,0.7)] shadow-[0_0_15px_rgba(236,72,153,0.4)] border border-pink-400"
 
-              title="Create a new brand, assign a user, and generate a payment link">
+                title="Create a new brand, assign a user, and generate a payment link">
 
                 <Plus className="w-4 h-4 mr-2" />
                 Add Another Brand
@@ -404,6 +725,39 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
+        {/* Daily Signup Report */}
+        <DailySignupReport users={users} />
+
+        {/* NEW: Global Timer Controls */}
+        <Card className="bg-white border border-slate-200">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <Clock className="w-5 h-5 text-blue-600 shrink-0" />
+              <div className="flex-1">
+                <Label htmlFor="default-timer-input" className="text-sm text-slate-700 font-semibold block mb-1">Default Topics Timer (Hours)</Label>
+                <p className="text-xs text-slate-500 mb-2">This sets the default time users must wait after Topics onboarding before keywords are shown. Individual usernames can override this.</p>
+                <Input
+                  id="default-timer-input"
+                  type="number"
+                  min="1"
+                  max="72"
+                  value={defaultTimerHours}
+                  onChange={(e) => setDefaultTimerHours(Math.min(72, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-24 mt-1"
+                />
+              </div>
+              <Button
+                onClick={handleSaveDefaultTimer}
+                disabled={isSavingDefaultTimer}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 min-w-[100px]"
+              >
+                {isSavingDefaultTimer ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Save Default"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Add Username */}
         <Card className="bg-white border border-slate-200">
           <CardContent className="p-4">
@@ -423,12 +777,12 @@ export default function UserManagement() {
 
               <Button type="submit" disabled={isCreatingUsername} className="bg-gray-800 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-indigo-700">
                 {isCreatingUsername ?
-                <>
+                  <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Adding…
                   </> :
 
-                <>
+                  <>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Username
                   </>
@@ -436,25 +790,25 @@ export default function UserManagement() {
               </Button>
             </form>
             {!!usernames.length &&
-            <div className="mt-3">
+              <div className="mt-3">
                 <div className="text-sm text-slate-600 mb-2">Existing usernames:</div>
                 <div className="flex flex-wrap gap-2">
                   {usernames.slice(0, 12).map((u) =>
-                <div key={u.id} className="flex items-center gap-1 bg-slate-100 border border-slate-300 rounded-md px-2 py-1">
+                    <div key={u.id} className="flex items-center gap-1 bg-slate-100 border border-slate-300 rounded-md px-2 py-1">
                       <span className="text-sm text-slate-700">
                         {u.display_name || u.user_name} (@{u.user_name})
                       </span>
                       <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteUsername(u)}
-                    className="h-4 w-4 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                    title={`Delete ${u.display_name || u.user_name}`}>
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteUsername(u)}
+                        className="h-4 w-4 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        title={`Delete ${u.display_name || u.user_name}`}>
 
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
-                )}
+                  )}
                   {usernames.length > 12 && <span className="text-sm text-slate-500">+{usernames.length - 12} more</span>}
                 </div>
               </div>
@@ -471,204 +825,299 @@ export default function UserManagement() {
 
 
         {/* Users table */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex flex-wrap items-center gap-3">
+        <Card className="bg-white border border-slate-200"> {/* Updated to Card */}
+          <CardHeader className="p-4 border-b border-slate-200 flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-slate-900">
+              <Users className="w-5 h-5 text-indigo-600" />
+              Users ({users.length})
+            </CardTitle>
             <Input
               placeholder="Search users by name or email…"
               value={userFilter}
               onChange={(e) => setUserFilter(e.target.value)}
-              className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 w-full sm:w-auto flex-1 min-w-[220px]" />
+              className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 w-full sm:w-auto flex-1 min-w-[220px] max-w-xs" />
+          </CardHeader>
+          <CardContent className="p-0 divide-y divide-slate-200"> {/* p-0 to let user div handle padding */}
+            {isLoading ? ( // Using isLoading here as per existing code base
+              <div className="text-center py-12 text-slate-600">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-600" />
+                <p>Loading users...</p>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>No users found</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-200">
+                {filteredUsers.map((u) => {
+                  const current = Array.isArray(u.assigned_usernames) ? u.assigned_usernames : [];
+                  const role = u.role || "user";
+                  const access = u.access_level || "edit";
+                  const dept = u.department || "";
+                  const showPublish = !!u.show_publish_options;
+                  const canToggleSuper = !!currentUser?.is_superadmin;
+                  const isSavingAny = !!isSavingMap[u.id] || !!isSavingPermsMap[u.id] || !!isSavingTokensMap[u.id] || !!editingTopics[u.id]; // NEW: Added editingTopics
 
-            <div className="text-slate-500 text-sm ml-auto">{filteredUsers.length} user(s)</div>
-          </div>
-          <div className="divide-y divide-slate-200">
-            {filteredUsers.map((u) => {
-              const current = Array.isArray(u.assigned_usernames) ? u.assigned_usernames : [];
-              const role = u.role || "user";
-              const access = u.access_level || "edit";
-              const dept = u.department || "";
-              const showPublish = !!u.show_publish_options;
-              const canToggleSuper = !!currentUser?.is_superadmin;
-              const isSavingAny = !!isSavingMap[u.id] || !!isSavingPermsMap[u.id] || !!isSavingTokensMap[u.id];
+                  const userTopics = Array.isArray(u.topics) ? u.topics : []; // NEW: Get user topics completion
+                  const topicsOnboardingCompletedAt = u.topics_onboarding_completed_at || {}; // NEW: Get topics completion timestamps
 
-              return (
-                <div key={u.id} className="p-4">
-                  <div className="grid grid-cols-1 gap-4 items-start 2xl:[grid-template-columns:2fr_3fr_220px]">
-                    {/* Identity */}
-                    <div className="min-w-0">
-                      <div className="font-semibold text-slate-900 break-words">{u.full_name || u.email}</div>
-                      <div className="text-xs text-slate-500 break-words">{u.email}</div>
-                      <div className="text-xs text-slate-400 mt-1">Role: {role} • Access: {access}</div>
-                    </div>
-
-                    {/* Controls */}
-                    <div className="space-y-3 min-w-0">
-                      <div className="min-w-0">
-                        <Label className="text-slate-700 text-sm mb-1 block">Assign usernames</Label>
+                  return (
+                    <div key={u.id} className="p-4">
+                      <div className="grid grid-cols-1 gap-4 items-start 2xl:[grid-template-columns:2fr_3fr_220px]">
+                        {/* Identity */}
                         <div className="min-w-0">
-                          <MiniMultiSelect
-                            options={usernameOptions}
-                            value={current}
-                            onChange={(next) => updateAssignedUsernames(u, next)}
-                            placeholder="Assign usernames…" />
-
-                        </div>
-                        {!current?.length && <div className="text-xs text-amber-600 mt-1">No usernames assigned.</div>}
-                      </div>
-
-                      {/* Responsive grid for controls */}
-                      <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
-                        {/* Role radios */}
-                        <div className="bg-white border border-slate-200 rounded-md p-3 min-w-0">
-                          <Label className="text-slate-700 text-xs">Role</Label>
-                          <div className="mt-2 overflow-x-auto -mx-1 px-1">
-                            <RadioGroup
-                              value={role}
-                              onValueChange={(val) => updateUserPermissions(u, { role: val })}
-                              className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3 whitespace-nowrap">
-
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id={`role-${u.id}-user`} value="user" />
-                                <Label htmlFor={`role-${u.id}-user`} className="text-slate-800">User</Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id={`role-${u.id}-admin`} value="admin" />
-                                <Label htmlFor={`role-${u.id}-admin`} className="text-slate-800">Admin</Label>
-                              </div>
-                            </RadioGroup>
-                          </div>
+                          <div className="font-semibold text-slate-900 break-words">{u.full_name || u.email}</div>
+                          <div className="text-xs text-slate-500 break-words">{u.email}</div>
+                          <div className="text-xs text-slate-400 mt-1">Role: {role} • Access: {access}</div>
+                          {u.is_superadmin && (
+                            <Badge className="mt-1 bg-purple-100 text-purple-800">Superadmin</Badge>
+                          )}
                         </div>
 
-                        {/* Access radios */}
-                        <div className="bg-white border border-slate-200 rounded-md p-3 min-w-0">
-                          <Label className="text-slate-700 text-xs">Access</Label>
-                          <div className="mt-2 overflow-x-auto -mx-1 px-1">
-                            <RadioGroup
-                              value={access}
-                              onValueChange={(val) => updateUserPermissions(u, { access_level: val })}
-                              className="grid grid-cols-3 gap-2 md:flex md:flex-wrap md:gap-3 whitespace-nowrap">
-
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id={`access-${u.id}-view`} value="view" />
-                                <Label htmlFor={`access-${u.id}-view`} className="text-slate-800">View</Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id={`access-${u.id}-edit`} value="edit" />
-                                <Label htmlFor={`access-${u.id}-edit`} className="text-slate-800">Edit</Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id={`access-${u.id}-full`} value="full" />
-                                <Label htmlFor={`access-${u.id}-full`} className="text-slate-800">Full</Label>
-                              </div>
-                            </RadioGroup>
-                          </div>
-                        </div>
-
-                        {/* Show Publish radios */}
-                        <div className="bg-white border border-slate-200 rounded-md p-3 min-w-0">
-                          <Label className="text-slate-700 text-xs">Show Publish</Label>
-                          <div className="mt-2 overflow-x-auto -mx-1 px-1">
-                            <RadioGroup
-                              value={showPublish ? "yes" : "no"}
-                              onValueChange={(v) => updateUserPermissions(u, { show_publish_options: v === "yes" })}
-                              className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3 whitespace-nowrap">
-
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id={`pub-${u.id}-yes`} value="yes" />
-                                <Label htmlFor={`pub-${u.id}-yes`} className="text-slate-800">Yes</Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem id={`pub-${u.id}-no`} value="no" />
-                                <Label htmlFor={`pub-${u.id}-no`} className="text-slate-800">No</Label>
-                              </div>
-                            </RadioGroup>
-                          </div>
-                        </div>
-
-                        {/* Department + Tokens */}
-                        <div className="grid gap-3 min-w-0 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
+                        {/* Controls */}
+                        <div className="space-y-3 min-w-0">
                           <div className="min-w-0">
-                            <Label className="text-slate-700 text-xs mb-1 block">Department</Label>
-                            <Input
-                              defaultValue={dept}
-                              onBlur={(e) => {
-                                const val = e.target.value.trim();
-                                if (val !== dept) updateUserPermissions(u, { department: val });
-                              }}
-                              className="bg-white border-slate-300 text-slate-900 h-10 w-full min-w-0"
-                              placeholder="e.g., Marketing" />
+                            <Label className="text-slate-700 text-sm mb-1 block">Assign usernames</Label>
+                            <div className="min-w-0">
+                              <MiniMultiSelect // Kept MiniMultiSelect from original code
+                                options={usernameOptions}
+                                value={current}
+                                onChange={(next) => updateAssignedUsernames(u, next)}
+                                placeholder="Assign usernames…" />
 
+                            </div>
+                            {!current?.length && <div className="text-xs text-amber-600 mt-1">No usernames assigned.</div>}
                           </div>
-                          <div className="min-w-0">
-                            <Label className="text-slate-700 text-xs mb-1 block">Tokens</Label>
-                            <Input
-                              type="number"
-                              min={0}
-                              defaultValue={Number(u.token_balance || 0)}
-                              onBlur={(e) => updateUserTokens(u, e.target.value)}
-                              disabled={!isAdmin || !!isSavingTokensMap[u.id]}
-                              className="bg-white border-slate-300 text-slate-900 h-10 w-full min-w-0"
-                              placeholder="0" />
 
-                          </div>
-                        </div>
-                      </div>
+                          {/* NEW: Topics Onboarding Status */}
+                          {current && current.length > 0 && (
+                            <div className="border-t border-slate-200 pt-3">
+                              <Label className="text-slate-700 text-sm mb-2 block">
+                                Topics Onboarding Completion
+                              </Label>
+                              <div className="space-y-2">
+                                {current.map((username) => {
+                                  const isComplete = userTopics.includes(username);
+                                  const completedAt = topicsOnboardingCompletedAt[username];
 
-                      {/* Superadmin radios (only visible to superadmin) */}
-                      {canToggleSuper &&
-                      <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-amber-900 text-xs">Superadmin</Label>
-                            <div className="overflow-x-auto -mx-1 px-1">
-                              <RadioGroup
-                              value={u.is_superadmin ? "yes" : "no"}
-                              onValueChange={(v) => updateUserPermissions(u, { is_superadmin: v === "yes" })}
-                              className="grid grid-cols-2 gap-3 sm:flex sm:gap-4 whitespace-nowrap">
+                                  return (
+                                    <div key={`${u.id}-${username}-topics`} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-sm text-slate-700 font-medium">{username}</span>
+                                        {isComplete && completedAt && (
+                                          <span className="text-xs text-slate-500">
+                                            Completed: {new Date(completedAt).toLocaleDateString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {isComplete ? (
+                                          <Badge className="bg-green-100 text-green-800">
+                                            <CheckCircle className="w-3 h-3 mr-1" />
+                                            Complete
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="border-slate-300 text-slate-600">
+                                            Pending
+                                          </Badge>
+                                        )}
+                                        <Button
+                                          onClick={() => toggleTopicsCompletion(u, username)}
+                                          variant="ghost"
+                                          size="sm"
+                                          disabled={!isAdmin || editingTopics[u.id]}
+                                          className="h-7 px-2 text-xs text-blue-600 hover:bg-blue-50"
+                                        >
+                                          {isComplete ? "Unmark" : "Mark Complete"}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
 
-                                <div className="flex items-center gap-2">
-                                  <RadioGroupItem id={`super-${u.id}-yes`} value="yes" />
-                                  <Label htmlFor={`super-${u.id}-yes`} className="text-amber-900">Yes</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <RadioGroupItem id={`super-${u.id}-no`} value="no" />
-                                  <Label htmlFor={`super-${u.id}-no`} className="text-amber-900">No</Label>
-                                </div>
-                              </RadioGroup>
+                          {/* NEW: Per-Username Topics Timer Controls */}
+                          {current && current.length > 0 && (
+                            <div className="border-t border-slate-200 pt-3">
+                              <Label className="text-slate-700 text-sm mb-2 block">Topics Timer Controls:</Label>
+                              <div className="flex flex-wrap gap-2">
+                                {current.map((username) => {
+                                  const override = u.topics_timer_override?.[username] || false;
+                                  const hours = u.topics_timer_hours?.[username] || defaultTimerHours;
+
+                                  return (
+                                    <Button
+                                      key={`${u.id}-${username}-timer-btn`}
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => openTimerControls(u, username)}
+                                      className="text-xs h-8 px-3 inline-flex items-center gap-1 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                                    >
+                                      <Clock className="w-3 h-3" />
+                                      {username}: {override ? "Override (Instant)" : `${hours}h`}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+
+                          {/* Responsive grid for controls */}
+                          <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
+                            {/* Role radios */}
+                            <div className="bg-white border border-slate-200 rounded-md p-3 min-w-0">
+                              <Label className="text-slate-700 text-xs">Role</Label>
+                              <div className="mt-2 overflow-x-auto -mx-1 px-1">
+                                <RadioGroup
+                                  value={role}
+                                  onValueChange={(val) => updateUserPermissions(u, { role: val })}
+                                  className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3 whitespace-nowrap">
+
+                                  <div className="flex items-center gap-2">
+                                    <RadioGroupItem id={`role-${u.id}-user`} value="user" />
+                                    <Label htmlFor={`role-${u.id}-user`} className="text-slate-800">User</Label>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <RadioGroupItem id={`role-${u.id}-admin`} value="admin" />
+                                    <Label htmlFor={`role-${u.id}-admin`} className="text-slate-800">Admin</Label>
+                                  </div>
+                                </RadioGroup>
+                              </div>
+                            </div>
+
+                            {/* Access radios */}
+                            <div className="bg-white border border-slate-200 rounded-md p-3 min-w-0">
+                              <Label className="text-slate-700 text-xs">Access</Label>
+                              <div className="mt-2 overflow-x-auto -mx-1 px-1">
+                                <RadioGroup
+                                  value={access}
+                                  onValueChange={(val) => updateUserPermissions(u, { access_level: val })}
+                                  className="grid grid-cols-3 gap-2 md:flex md:flex-wrap md:gap-3 whitespace-nowrap">
+
+                                  <div className="flex items-center gap-2">
+                                    <RadioGroupItem id={`access-${u.id}-view`} value="view" />
+                                    <Label htmlFor={`access-${u.id}-view`} className="text-slate-800">View</Label>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <RadioGroupItem id={`access-${u.id}-edit`} value="edit" />
+                                    <Label htmlFor={`access-${u.id}-edit`} className="text-slate-800">Edit</Label>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <RadioGroupItem id={`access-${u.id}-full`} value="full" />
+                                    <Label htmlFor={`access-${u.id}-full`} className="text-slate-800">Full</Label>
+                                  </div>
+                                </RadioGroup>
+                              </div>
+                            </div>
+
+                            {/* Show Publish radios */}
+                            <div className="bg-white border border-slate-200 rounded-md p-3 min-w-0">
+                              <Label className="text-slate-700 text-xs">Show Publish</Label>
+                              <div className="mt-2 overflow-x-auto -mx-1 px-1">
+                                <RadioGroup
+                                  value={showPublish ? "yes" : "no"}
+                                  onValueChange={(v) => updateUserPermissions(u, { show_publish_options: v === "yes" })}
+                                  className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3 whitespace-nowrap">
+
+                                  <div className="flex items-center gap-2">
+                                    <RadioGroupItem id={`pub-${u.id}-yes`} value="yes" />
+                                    <Label htmlFor={`pub-${u.id}-yes`} className="text-slate-800">Yes</Label>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <RadioGroupItem id={`pub-${u.id}-no`} value="no" />
+                                    <Label htmlFor={`pub-${u.id}-no`} className="text-slate-800">No</Label>
+                                  </div>
+                                </RadioGroup>
+                              </div>
+                            </div>
+
+                            {/* Department + Tokens */}
+                            <div className="grid gap-3 min-w-0 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
+                              <div className="min-w-0">
+                                <Label className="text-slate-700 text-xs mb-1 block">Department</Label>
+                                <Input
+                                  defaultValue={dept}
+                                  onBlur={(e) => {
+                                    const val = e.target.value.trim();
+                                    if (val !== dept) updateUserPermissions(u, { department: val });
+                                  }}
+                                  className="bg-white border-slate-300 text-slate-900 h-10 w-full min-w-0"
+                                  placeholder="e.g., Marketing" />
+
+                              </div>
+                              <div className="min-w-0">
+                                <Label className="text-slate-700 text-xs mb-1 block">Tokens</Label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  defaultValue={Number(u.token_balance || 0)}
+                                  onBlur={(e) => updateUserTokens(u, e.target.value)}
+                                  disabled={!isAdmin || !!isSavingTokensMap[u.id]}
+                                  className="bg-white border-slate-300 text-slate-900 h-10 w-full min-w-0"
+                                  placeholder="0" />
+
+                              </div>
                             </div>
                           </div>
+
+                          {/* Superadmin radios (only visible to superadmin) */}
+                          {canToggleSuper &&
+                            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-amber-900 text-xs">Superadmin</Label>
+                                <div className="overflow-x-auto -mx-1 px-1">
+                                  <RadioGroup
+                                    value={u.is_superadmin ? "yes" : "no"}
+                                    onValueChange={(v) => updateUserPermissions(u, { is_superadmin: v === "yes" })}
+                                    className="grid grid-cols-2 gap-3 sm:flex sm:gap-4 whitespace-nowrap">
+
+                                    <div className="flex items-center gap-2">
+                                      <RadioGroupItem id={`super-${u.id}-yes`} value="yes" />
+                                      <Label htmlFor={`super-${u.id}-yes`} className="text-amber-900">Yes</Label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <RadioGroupItem id={`super-${u.id}-no`} value="no" />
+                                      <Label htmlFor={`super-${u.id}-no`} className="text-amber-900">No</Label>
+                                    </div>
+                                  </RadioGroup>
+                                </div>
+                              </div>
+                            </div>
+                          }
                         </div>
-                      }
-                    </div>
 
-                    {/* Status + actions */}
-                    <div className="flex items-center justify-between gap-3 2xl:flex-col 2xl:items-end">
-                      {isSavingAny ?
-                      <span className="inline-flex items-center text-slate-600 text-sm">
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving…
-                        </span> :
+                        {/* Status + actions */}
+                        <div className="flex items-center justify-between gap-3 2xl:flex-col 2xl:items-end">
+                          {isSavingAny ?
+                            <span className="inline-flex items-center text-slate-600 text-sm">
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Saving…
+                            </span> :
 
-                      <span className="text-slate-400 text-sm">Up to date</span>
-                      }
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => setUserToDelete(u)}
-                        className="w-9 h-9 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
-                        title={`Delete ${u.full_name || u.email}`}>
+                            <span className="text-slate-400 text-sm">Up to date</span>
+                          }
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => setUserToDelete(u)}
+                            className="w-9 h-9 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
+                            title={`Delete ${u.full_name || u.email}`}>
 
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>);
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>);
 
-            })}
-            {filteredUsers.length === 0 &&
-            <div className="p-8 text-center text-slate-500">No users found.</div>
-            }
-          </div>
-        </div>
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <AlertDialog open={!!userToDelete} onOpenChange={(isOpen) => !isOpen && setUserToDelete(null)}>
@@ -716,17 +1165,84 @@ export default function UserManagement() {
               className="bg-red-600 hover:bg-red-700">
 
               {isDeletingUsername ?
-              <>
+                <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Deleting...
                 </> :
 
-              'Delete Username'
+                'Delete Username'
               }
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* NEW: Timer Controls Modal */}
+      <Dialog open={!!timerControlsUser} onOpenChange={(open) => !open && handleCloseTimerControls()}>
+        <DialogContent className="bg-white border border-slate-200 text-slate-900">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-600" />
+              Topics Timer Controls
+            </DialogTitle>
+            <DialogDescription className="mt-2">
+              Configure post-onboarding timer for username <strong className="text-slate-900">"{timerControlsUsername}"</strong> assigned to <strong>{timerControlsUser?.email}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="timer-override"
+                checked={timerOverride}
+                onChange={(e) => setTimerOverride(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <Label htmlFor="timer-override" className="text-sm cursor-pointer text-slate-700">
+                Override Timer (show keywords immediately)
+              </Label>
+            </div>
+
+            {!timerOverride && (
+              <div>
+                <Label htmlFor="timer-duration-input" className="text-sm text-slate-700 block mb-1">Timer Duration (Hours)</Label>
+                <Input
+                  id="timer-duration-input"
+                  type="number"
+                  min="1"
+                  max="72"
+                  value={timerHours}
+                  onChange={(e) => setTimerHours(Math.min(72, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="mt-1"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Default: {defaultTimerHours} hours. Max: 72 hours (3 days).
+                  Setting to 1 hour will essentially remove the timer for topics for this username.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCloseTimerControls}
+              disabled={isSavingTimer}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveTimerControls}
+              disabled={isSavingTimer}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isSavingTimer ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Quick-add credential modal */}
       <CredentialQuickAdd
@@ -760,21 +1276,21 @@ export default function UserManagement() {
 
       {/* Add Another Brand modal */}
       {isAdmin &&
-      <AddBrandModal
-        open={showAddBrand}
-        onClose={() => setShowAddBrand(false)}
-        users={users}
-        existingUsernames={usernames}
-        onComplete={async ({ link }) => {
-          if (link) {
-            try {await navigator.clipboard.writeText(link);} catch {}
-            toast.success("Payment link created and copied to clipboard.");
-          } else {
-            toast.message("Brand created. No payment link was returned.");
-          }
-          setShowAddBrand(false);
-          await loadData();
-        }} />
+        <AddBrandModal
+          open={showAddBrand}
+          onClose={() => setShowAddBrand(false)}
+          users={users}
+          existingUsernames={usernames}
+          onComplete={async ({ link }) => {
+            if (link) {
+              try { await navigator.clipboard.writeText(link); } catch { }
+              toast.success("Payment link created and copied to clipboard.");
+            } else {
+              toast.message("Brand created. No payment link was returned.");
+            }
+            setShowAddBrand(false);
+            await loadData();
+          }} />
 
       }
     </div>);

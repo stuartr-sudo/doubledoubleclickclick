@@ -12,7 +12,8 @@ const providerLabel = (p) => {
   switch (p) {
     case "notion": return "Notion";
     case "shopify": return "Shopify";
-    case "wordpress": return "WordPress";
+    case "wordpress_org": return "WordPress.org (Self-Hosted)";
+    case "wordpress_com": return "WordPress.com";
     case "webflow": return "Webflow";
     default: return p || "";
   }
@@ -28,7 +29,8 @@ export default function CredentialQuickAdd({ open, onClose, provider, userName, 
     collection_id: "",
     blog_id: "",
     username: "",
-    password: ""
+    password: "",
+    config: {} // Added for WordPress.com
   });
 
   const reset = () => {
@@ -40,7 +42,8 @@ export default function CredentialQuickAdd({ open, onClose, provider, userName, 
       collection_id: "",
       blog_id: "",
       username: "",
-      password: ""
+      password: "",
+      config: {} // Reset config as well
     });
   };
 
@@ -52,15 +55,23 @@ export default function CredentialQuickAdd({ open, onClose, provider, userName, 
         return ["name", "site_domain", "access_token", "blog_id"];
       case "webflow":
         return ["name", "access_token", "collection_id"];
-      case "wordpress":
+      case "wordpress_org":
         return ["name", "site_domain", "username", "password"];
+      case "wordpress_com":
+        return ["name", "config.client_id", "config.client_secret", "username", "password", "config.site_id"];
       default:
         return ["name"];
     }
   }, [provider]);
 
   const missing = useMemo(() => {
-    return fieldsNeeded.filter((f) => !String(form[f] || "").trim());
+    return fieldsNeeded.filter((f) => {
+      if (f.startsWith("config.")) {
+        const key = f.split(".")[1];
+        return !String(form.config?.[key] || "").trim();
+      }
+      return !String(form[f] || "").trim();
+    });
   }, [fieldsNeeded, form]);
 
   const handleSave = async () => {
@@ -84,7 +95,8 @@ export default function CredentialQuickAdd({ open, onClose, provider, userName, 
         collection_id: form.collection_id || undefined,
         blog_id: form.blog_id || undefined,
         username: form.username || undefined,
-        password: form.password || undefined
+        password: form.password || undefined,
+        config: Object.keys(form.config || {}).length > 0 ? form.config : undefined // Include config only if it has properties
       };
       const created = await IntegrationCredential.create(payload);
       toast.success(`${providerLabel(provider)} credential saved`);
@@ -92,6 +104,7 @@ export default function CredentialQuickAdd({ open, onClose, provider, userName, 
       reset();
       onClose && onClose();
     } catch (e) {
+      console.error("Failed to save credential:", e);
       toast.error("Failed to save credential.");
     }
     setSaving(false);
@@ -117,15 +130,15 @@ export default function CredentialQuickAdd({ open, onClose, provider, userName, 
           <>
             <div>
               <Label>Store Domain</Label>
-              <Input value={form.site_domain} onChange={(e) => setForm({ ...form, site_domain: e.target.value })} placeholder="yourstore.myshopify.com" />
+              <Input value={form.site_domain} onChange={(e) => setForm({ ...form, site_domain: e.target.value })} placeholder="yourstore.myshopify.com" className="bg-white border-slate-300 text-slate-900" />
             </div>
             <div>
               <Label>Admin API Access Token</Label>
-              <Input value={form.access_token} onChange={(e) => setForm({ ...form, access_token: e.target.value })} placeholder="shpat_xxx" />
+              <Input value={form.access_token} onChange={(e) => setForm({ ...form, access_token: e.target.value })} placeholder="shpat_xxx" className="bg-white border-slate-300 text-slate-900" />
             </div>
             <div>
               <Label>Blog ID</Label>
-              <Input value={form.blog_id} onChange={(e) => setForm({ ...form, blog_id: e.target.value })} placeholder="e.g., 123456789" />
+              <Input value={form.blog_id} onChange={(e) => setForm({ ...form, blog_id: e.target.value })} placeholder="e.g., 123456789" className="bg-white border-slate-300 text-slate-900" />
             </div>
           </>
         );
@@ -134,28 +147,69 @@ export default function CredentialQuickAdd({ open, onClose, provider, userName, 
           <>
             <div>
               <Label>API Token</Label>
-              <Input value={form.access_token} onChange={(e) => setForm({ ...form, access_token: e.target.value })} placeholder="pat_xxx" />
+              <Input value={form.access_token} onChange={(e) => setForm({ ...form, access_token: e.target.value })} placeholder="pat_xxx" className="bg-white border-slate-300 text-slate-900" />
             </div>
             <div>
               <Label>Collection ID</Label>
-              <Input value={form.collection_id} onChange={(e) => setForm({ ...form, collection_id: e.target.value })} placeholder="xxxxxxxxxxxxxxxx" />
+              <Input value={form.collection_id} onChange={(e) => setForm({ ...form, collection_id: e.target.value })} placeholder="xxxxxxxxxxxxxxxx" className="bg-white border-slate-300 text-slate-900" />
             </div>
           </>
         );
-      case "wordpress":
+      case "wordpress_org":
         return (
           <>
             <div>
               <Label>Site Base URL</Label>
-              <Input value={form.site_domain} onChange={(e) => setForm({ ...form, site_domain: e.target.value })} placeholder="https://example.com" />
+              <Input value={form.site_domain} onChange={(e) => setForm({ ...form, site_domain: e.target.value })} placeholder="https://example.com" className="bg-white border-slate-300 text-slate-900" />
             </div>
             <div>
               <Label>Username</Label>
-              <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="editor@example.com" />
+              <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="editor@example.com" className="bg-white border-slate-300 text-slate-900" />
             </div>
             <div>
               <Label>Application Password</Label>
-              <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="abcd efgh ijkl mnop" />
+              <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="abcd efgh ijkl mnop" className="bg-white border-slate-300 text-slate-900" />
+            </div>
+          </>
+        );
+      case "wordpress_com":
+        return (
+          <>
+            <div>
+              <Label>Client ID</Label>
+              <Input
+                value={form.config?.client_id || ""}
+                onChange={(e) => setForm({ ...form, config: { ...form.config, client_id: e.target.value } })}
+                placeholder="From developer.wordpress.com"
+                className="bg-white border-slate-300 text-slate-900"
+              />
+            </div>
+            <div>
+              <Label>Client Secret</Label>
+              <Input
+                type="password"
+                value={form.config?.client_secret || ""}
+                onChange={(e) => setForm({ ...form, config: { ...form.config, client_secret: e.target.value } })}
+                placeholder="App secret"
+                className="bg-white border-slate-300 text-slate-900"
+              />
+            </div>
+            <div>
+              <Label>WordPress.com Username</Label>
+              <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="wpcom_user" className="bg-white border-slate-300 text-slate-900" />
+            </div>
+            <div>
+              <Label>WordPress.com Password</Label>
+              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="password or app password" className="bg-white border-slate-300 text-slate-900" />
+            </div>
+            <div>
+              <Label>Site ID</Label>
+              <Input
+                value={form.config?.site_id || ""}
+                onChange={(e) => setForm({ ...form, config: { ...form.config, site_id: e.target.value } })}
+                placeholder="123456789"
+                className="bg-white border-slate-300 text-slate-900"
+              />
             </div>
           </>
         );

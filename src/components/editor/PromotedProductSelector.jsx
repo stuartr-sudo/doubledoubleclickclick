@@ -51,6 +51,9 @@ export default function PromotedProductSelector({ isOpen, onClose, onInsert }) {
   const [amazonProductData, setAmazonProductData] = useState(null);
   const [isRewriting, setIsRewriting] = useState({ name: false, description: false });
 
+  // State for current user to pass to feature flag hook
+  const [currentUser, setCurrentUser] = useState(null);
+
 
   const navigate = useNavigate();
   const { consumeTokensForFeature } = useTokenConsumption();
@@ -59,6 +62,26 @@ export default function PromotedProductSelector({ isOpen, onClose, onInsert }) {
 
   // Determine active username filter based on workspace scoping
   const selectedUsername = useWorkspaceScoping ? globalUsername || "all" : localSelectedUsername;
+
+  // NEW: Feature flag for Amazon import button
+  const { enabled: isAmazonImportEnabled } = useFeatureFlag('ask_ai_search_insert_amazon', {
+    currentUser,
+    defaultEnabled: true
+  });
+
+  useEffect(() => {
+    // Fetch current user details once on component mount
+    const fetchUser = async () => {
+      try {
+        const user = await User.me();
+        setCurrentUser(user);
+      } catch (e) {
+        console.error("Failed to fetch current user for feature flags:", e);
+        setCurrentUser(null);
+      }
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -407,17 +430,19 @@ export default function PromotedProductSelector({ isOpen, onClose, onInsert }) {
                 <div className="flex justify-end gap-2 mb-4">
                     {!showAmazonInput && !showProductImport ?
                 <>
+                        {isAmazonImportEnabled && ( // Conditionally render Amazon import button
                         <Button
-                    onClick={() => setShowAmazonInput(true)}
-                    className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2">
-                          <ShoppingCart className="w-4 h-4" />
-                          Import from Amazon
+                            onClick={() => setShowAmazonInput(true)}
+                            className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2">
+                            <ShoppingCart className="w-4 h-4" />
+                            Import from Amazon
                         </Button>
+                        )}
                         <Button
-                    onClick={() => setShowProductImport(true)}
-                    className="bg-slate-800 hover:bg-slate-900 text-white flex items-center gap-2">
-                          <Package className="w-4 h-4" />
-                          Import from Product URL
+                            onClick={() => setShowProductImport(true)}
+                            className="bg-slate-800 hover:bg-slate-900 text-white flex items-center gap-2">
+                            <Package className="w-4 h-4" />
+                            Import from Product URL
                         </Button>
                       </> :
                 showAmazonInput ?

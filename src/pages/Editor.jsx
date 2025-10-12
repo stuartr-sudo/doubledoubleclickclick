@@ -70,14 +70,25 @@ import TextEditorModal from "../components/editor/TextEditorModal";
 import InlineFormatToolbar from "../components/editor/InlineFormatToolbar";
 import FaqGeneratorModal from "../components/editor/FaqGeneratorModal";
 import MediaLibraryModal from "../components/editor/MediaLibraryModal";
+import InternalLinkerButton from "../components/editor/InternalLinkerButton";
+import LinksAndReferencesButton from "../components/editor/LinksAndReferencesButton";
+import AutoScanButton from "../components/editor/AutoScanButton";
+
+import { generateNapkinInfographic } from "@/api/functions";
+import InfographicsModal from "../components/editor/InfographicsModal";
 
 import { buildFaqAccordionHtml } from "@/components/editor/FaqAccordionBlock";
 import { generateArticleFaqs } from "@/api/functions";
 import { findSourceAndCite } from "@/api/functions";
 import { agentSDK } from "@/agents";
 
+import ImagineerModal from "../components/editor/ImagineerModal";
+import { ImagineerJob } from "@/api/entities";
+import { initiateImagineerGeneration } from "@/api/functions";
+import VoiceDictationModal from '../components/editor/VoiceDictationModal';
+
 function EditorErrorBoundary({ children }) {
-  const [error, setError] = React.useState(null);
+  const [error, React_useState_null] = React.useState(null);
   React.useEffect(() => {
     // noop – ensures React is available for hooks in this helper
   }, []); // Class-style boundary using hooks substitute
@@ -163,7 +174,7 @@ export default function Editor() {
   const [showVideoGenerator, setShowVideoGenerator] = useState(false);
   const [showVideoLibrary, setShowVideoLibrary] = useState(false);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
-  const [mediaLibraryInitialTab, setMediaLibraryInitialTab] = useState(undefined); // NEW STATE for MediaLibraryModal's initial tab
+  const [mediaLibraryInitialTab, setMediaLibraryInitialTab] = useState(undefined);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showTestimonialLibrary, setShowTestimonialLibrary] = useState(false);
   const [showVariantLibrary, setShowVariantLibrary] = useState(false);
@@ -175,6 +186,17 @@ export default function Editor() {
   const [showAffilify, setShowAffilify] = useState(false);
   const [showFaqGenerator, setShowFaqGenerator] = useState(false);
   const [isRewritingTitle, setIsRewritingTitle] = useState(false);
+  const [showInfographics, setShowInfographics] = useState(false);
+  const [pendingInfographicJobs, setPendingInfographicJobs] = useState([]);
+  const insertedInfographicIdsRef = useRef(new Set());
+  const infographicGeneratingRef = useRef(false);
+
+  const [showImagineer, setShowImagineer] = useState(false);
+  const [pendingImagineerJobs, setPendingImagineerJobs] = useState([]);
+  const imagineerJobsRef = useRef(new Set());
+
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+
 
   const [showWorkflowRunner, setShowWorkflowRunner] = React.useState(false);
 
@@ -190,7 +212,7 @@ export default function Editor() {
   const [loadingCredentials, setLoadingCredentials] = useState(false);
   const [pendingAudioJobs, setPendingAudioJobs] = useState([]);
 
-  const [userPlan, setUserPlan] = useState(null); // <-- NEW STATE for user plan
+  const [userPlan, setUserPlan] = useState(null);
 
   const [showShopifyModal, setShowShopifyModal] = React.useState(false);
   const shopifyPreset = React.useRef({ credentialId: null });
@@ -216,6 +238,7 @@ export default function Editor() {
   const insertedAudioJobKeysRef = React.useRef(new Set());
 
   const [showTextEditor, setShowTextEditor] = useState(false);
+
 
   const makeRandomSessionKey = () => `sess-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -247,6 +270,70 @@ export default function Editor() {
   useEffect(() => {
     contentRef.current = content;
   }, [content]);
+
+  // Definition for sendToPreview moved to correctly declare before its dependents
+  const sendToPreview = useCallback((msg) => {
+    const iframe = document.querySelector('iframe[title="Live HTML Preview"]');
+    const win = iframe?.contentWindow;
+    if (win) {
+      win.postMessage(msg, "*");
+    }
+  }, []);
+
+  const openLinkSelectorModal = React.useCallback(() => {
+    sendToPreview({ type: "editor-command", command: "saveSelection" });
+    setShowLinkSelector(true);
+  }, [sendToPreview]);
+
+  const applyPreviewWidth = React.useCallback((widthPercent) => {
+    if (!selectedMedia || !selectedMedia.id) return;
+
+    setSelectedMedia(prev => ({ ...prev, width: widthPercent }));
+
+    sendToPreview({
+      type: "update-media-style",
+      id: selectedMedia.id,
+      styles: {
+        width: `${widthPercent}%`,
+        maxWidth: `${widthPercent}%`
+      }
+    });
+  }, [selectedMedia, sendToPreview]);
+
+  const handlePreviewHtmlChange = React.useCallback((newHtml) => {
+    skipNextPreviewPushRef.current = true;
+    setContent(newHtml);
+  }, []);
+
+  const handlePreviewSelectionChange = React.useCallback((selectionData) => {
+    const selectedText = selectionData?.text || "";
+    setTextForAction(selectedText);
+    setIsTextSelected(!!selectedText);
+  }, []);
+
+  const handleLinkInsert = React.useCallback((linkData) => {
+    if (!linkData || !linkData.url) return;
+
+    const href = linkData.url;
+    const label = linkData.label || linkData.title || href;
+
+    sendToPreview({
+      type: "editor-command",
+      command: "restoreSelection"
+    });
+
+    setTimeout(() => {
+      sendToPreview({
+        type: "editor-command",
+        command: "wrap-link",
+        href: href,
+        label: label
+      });
+    }, 50);
+
+    setShowLinkSelector(false);
+  }, [sendToPreview]);
+
 
   const handleDeleteSelected = useCallback(() => {
     if (!selectedMedia) return;
@@ -306,14 +393,6 @@ export default function Editor() {
 </span>`.trim();
   };
 
-  const sendToPreview = useCallback((msg) => {
-    const iframe = document.querySelector('iframe[title="Live HTML Preview"]');
-    const win = iframe?.contentWindow;
-    if (win) {
-      win.postMessage(msg, "*");
-    }
-  }, []);
-
   const focusPreviewPreserve = useCallback(() => {
     const iframe = document.querySelector('iframe[title="Live HTML Preview"]');
     const win = iframe?.contentWindow;
@@ -357,7 +436,12 @@ export default function Editor() {
             if (doc.getElementById('b44-media-padding')) return;
             const style = doc.createElement('style');
             style.id = 'b44-media-padding';
-            style.textContent = 'img[data-b44-type="image"],img[data-b44-id],.youtube-video-container[data-b44-id],blockquote.tiktok-embed,.b44-promoted-product,.b44-callout,.b44-tldr,.b44-fact-card,.b44-testimonial{padding-top:1em;padding-bottom:1em;box-sizing:border-box;display:block;} .b44-audio-inline{padding-top:0;padding-bottom:0;}';
+            style.textContent =
+              'img[data-b44-type="image"],img[data-b44-id],.youtube-video-container[data-b44-id],blockquote.tiktok-embed,.b44-promoted-product,.b44-callout,.b44-tldr,.b44-fact-card,.b44-testimonial,.b44-infographic,.b44-imagineer-placeholder{padding-top:1em;padding-bottom:1em;box-sizing:border-box;display:block;}' +
+              ' .b44-audio-inline{padding-top:0;padding-bottom:0;}' +
+              // Force TL;DR to be left-aligned and not centered by inline margin:auto snippets
+              ' .b44-tldr{margin:24px 0 !important;max-width:none !important;width:100% !important;text-align:left !important;}' +
+              ' .b44-tldr *{text-align:left !important;}';
             doc.head.appendChild(style);
           })();
 
@@ -400,19 +484,17 @@ export default function Editor() {
 
           // NEW: Ensure TikTok embeds work properly
           (function ensureTikTokEmbeds() {
-            // Function to load and execute TikTok embed script
             const loadTikTokScript = () => {
               if (window.tiktokEmbedInitialized) return;
-              
+
               const existingScript = doc.querySelector('script[src*="tiktok.com/embed.js"]');
               if (existingScript) existingScript.remove();
-              
+
               const script = doc.createElement('script');
               script.async = true;
               script.src = 'https://www.tiktok.com/embed.js';
               script.onload = () => {
                 window.tiktokEmbedInitialized = true;
-                // Process any existing TikTok embeds
                 if (window.tiktokEmbed && typeof window.tiktokEmbed.lib === 'object') {
                   window.tiktokEmbed.lib.render(doc.body);
                 }
@@ -420,16 +502,14 @@ export default function Editor() {
               doc.head.appendChild(script);
             };
 
-            // Initial load
             loadTikTokScript();
 
-            // Re-process TikTok embeds when new content is added
             const observer = new MutationObserver((mutations) => {
               let foundTikTok = false;
               for (const mutation of mutations) {
                 for (const node of mutation.addedNodes || []) {
-                  if (node.nodeType === 1 && 
-                      (node.matches && node.matches('blockquote.tiktok-embed') || 
+                  if (node.nodeType === 1 &&
+                      (node.matches && node.matches('blockquote.tiktok-embed') ||
                        node.querySelector && node.querySelector('blockquote.tiktok-embed'))) {
                     foundTikTok = true;
                     break;
@@ -437,7 +517,7 @@ export default function Editor() {
                 }
                 if (foundTikTok) break;
               }
-              
+
               if (foundTikTok) {
                 setTimeout(() => {
                   if (window.tiktokEmbed && typeof window.tiktokEmbed.lib === 'object') {
@@ -448,7 +528,6 @@ export default function Editor() {
                 }, 100);
               }
             });
-            
             observer.observe(doc.body, { childList: true, subtree: true });
           })();
 
@@ -597,7 +676,7 @@ export default function Editor() {
           };
 
           const dehighlight = () => {
-            if (state.selectedEl) {
+            if (state.selectedEl && state.selectedEl.style) {
               try {
                 state.selectedEl.style.removeProperty("outline");
                 state.selectedEl.style.removeProperty("outline-offset");
@@ -609,12 +688,12 @@ export default function Editor() {
 
           const highlight = (el) => {
             try {
-              if (state.selectedEl && state.selectedEl !== el) {
+              if (state.selectedEl && state.selectedEl !== el && state.selectedEl.style) {
                 state.selectedEl.style.removeProperty("outline");
                 state.selectedEl.style.removeProperty("outline-offset");
               }
               state.selectedEl = el;
-              el.style.setProperty("outline", "2px solid #0ea5e9", "important"); // cyan outline
+              el.style.setProperty("outline", "2px solid #0ea5e9", "important");
               el.style.setProperty("outline-offset", "2px", "important");
             } catch (e) {
               console.warn("[B44] selection-fix: outline error", e);
@@ -634,59 +713,53 @@ export default function Editor() {
             if (el.matches(".b44-audio-inline, .b44-audio-inline *") || el.tagName === "AUDIO") return "audio";
             if (el.tagName === "IMG") return "image";
             if (el.tagName === "IFRAME" || el.classList.contains("youtube-video-container") || el.matches("blockquote.tiktok-embed, blockquote.tiktok-embed *")) return "video";
-            // NEW: treat TL;DR as its own selectable type
             if (el.matches(".b44-tldr, .b44-tldr *")) return "tldr";
-            // NEW: treat FAQ blocks as their own selectable type
             if (el.matches(".b44-faq-block, .b44-faq-block *")) return "faq";
-            // NEW: treat testimonials as their own selectable type
             if (el.matches(".b44-testimonial, .b44-testimonial *")) return "testimonial";
+            if (el.matches(".b44-infographic, .b44-infographic *")) return "infographic";
+            if (el.matches(".b44-imagineer-placeholder, .b44-imagineer-placeholder *")) return "imagineer-placeholder";
             return el.dataset?.b44Type || "unknown";
           };
 
           const findSelectable = (node) => {
             if (!node) return null;
-            // Prefer explicit markers
             let el = node.closest?.("[data-b44-id]");
             if (el) return el;
 
-            // Audio wrapper or the audio itself
             if (node.matches?.(".b44-audio-inline, .b44-audio-inline *") || node.tagName === "AUDIO") {
               return node.closest?.(".b44-audio-inline") || node;
             }
-            // YouTube container or iframe
             if (node.tagName === "IFRAME") {
               return node.closest(".youtube-video-container") || node;
             }
-            // TikTok oEmbed blocks
             const tiktok = node.closest?.("blockquote.tiktok-embed");
             if (tiktok) return tiktok;
 
-            // NEW: TL;DR block
             const tldr = node.closest?.(".b44-tldr");
             if (tldr) return tldr;
 
-            // NEW: FAQ block
             const faqBlock = node.closest?.(".b44-faq-block");
             if (faqBlock) return faqBlock;
 
-            // NEW: Testimonial block
             const testimonial = node.closest?.(".b44-testimonial");
             if (testimonial) return testimonial;
 
-            // Plain images
+            const infographic = node.closest?.(".b44-infographic");
+            if (infographic) return infographic;
+            
+            const imagineer = node.closest?.(".b44-imagineer-placeholder");
+            if (imagineer) return imagineer;
+
             if (node.tagName === "IMG") return node;
 
             return null;
           };
 
-          // Add small selection handles to video and audio embeds so they can be selected/deleted easily
           const installOverlayHandles = () => {
             const addHandle = (container) => {
               try {
-                // Avoid duplicates
                 if (container.querySelector('.b44-select-handle')) return;
 
-                // Ensure container is positioned
                 const currentPos = (container.style && container.style.position) || '';
                 if (!currentPos || currentPos === 'static') {
                   container.style.position = 'relative';
@@ -701,7 +774,7 @@ export default function Editor() {
                   'width:24px',
                   'height:24px',
                   'border-radius:6px',
-                  'background:rgba(14,165,233,0.85)',   /* cyan-500 */
+                  'background:rgba(14,165,233,0.85)',
                   'box-shadow:0 1px 2px rgba(0,0,0,0.2)',
                   'cursor:pointer',
                   'z-index:5'
@@ -713,9 +786,8 @@ export default function Editor() {
                   const id = ensureId(container);
                   highlight(container);
 
-                  // Compute width and alignment hints if present
                   let widthPct = 100;
-                  const styleWidth = container.style?.width || '';
+                  const styleWidth = container.style && container.style.width || '';
                   const m = String(styleWidth).match(/(\d+)%/);
                   if (m) { widthPct = parseInt(m[1], 10); }
 
@@ -724,7 +796,7 @@ export default function Editor() {
                     type: 'media-selected',
                     id,
                     mediaType,
-                    width: mediaType === 'video' ? 100 : widthPct, // Video width is always 100% (container width)
+                    width: mediaType === 'video' ? 100 : widthPct,
                   }, '*');
                 });
 
@@ -734,28 +806,18 @@ export default function Editor() {
               }
             };
 
-            // Initial pass: YouTube, TikTok, Audio wrappers, and TL;DR blocks
-            doc.querySelectorAll('.youtube-video-container').forEach(addHandle);
-            doc.querySelectorAll('blockquote.tiktok-embed').forEach(addHandle);
-            doc.querySelectorAll('.b44-audio-inline').forEach(addHandle);
-            // NEW: TL;DR handle
-            doc.querySelectorAll('.b44-tldr').forEach(addHandle);
-            // NEW: FAQ handle
-            doc.querySelectorAll('.b44-faq-block').forEach(addHandle);
-            // NEW: Testimonial handle
-            doc.querySelectorAll('.b44-testimonial').forEach(addHandle);
+            doc.querySelectorAll('[data-b44-id]').forEach(addHandle);
 
-            // Observe for dynamically added embeds/blocks
             const mo = new MutationObserver((mutations) => {
               for (const m of mutations) {
                 for (const node of m.addedNodes || []) {
                   if (node.nodeType !== 1) continue;
                   try {
-                    if (node.matches && (node.matches('.youtube-video-container') || node.matches('blockquote.tiktok-embed') || node.matches('.b44-audio-inline') || node.matches('.b44-tldr') || node.matches('.b44-faq-block') || node.matches('.b44-testimonial'))) {
+                    if (node.matches && node.matches('[data-b44-id]')) {
                       addHandle(node);
                     }
                     if (node.querySelector) {
-                      node.querySelectorAll('.youtube-video-container, blockquote.tiktok-embed, .b44-audio-inline, .b44-tldr, .b44-faq-block, .b44-testimonial').forEach(addHandle);
+                      node.querySelectorAll('[data-b44-id]').forEach(addHandle);
                     }
                   } catch (_) { }
                 }
@@ -764,19 +826,17 @@ export default function Editor() {
             mo.observe(doc.body, { childList: true, subtree: true });
           };
 
-          // Delegated click handler (capture phase to be reliable)
           const onClick = (e) => {
             const el = findSelectable(e.target);
             if (!el) {
-              dehighlight(); // Dehighlight if no selectable element is clicked
+              dehighlight();
               return;
             }
             const id = ensureId(el);
             highlight(el);
 
-            // Compute width (percentage if set) and align hints
             let widthPct = 100;
-            const styleWidth = el.style?.width || "";
+            const styleWidth = el.style && el.style.width || "";
             const m = String(styleWidth).match(/(\d+)%/);
             if (m) { widthPct = parseInt(m[1], 10); }
 
@@ -785,18 +845,16 @@ export default function Editor() {
               type: "media-selected",
               id,
               mediaType,
-              width: mediaType === 'video' ? 100 : widthPct, // Video width is always 100% (container width)
+              width: mediaType === 'video' ? 100 : widthPct,
             }, "*");
             console.log("[B44] selection-fix: media-selected", { id, mediaType, width: widthPct });
           };
           doc.addEventListener("click", onClick, true);
 
-          // Message listeners from parent (delete/update/request-html)
           const onMsg = (ev) => {
             const d = ev?.data || {};
             if (!d || !d.type) return;
 
-            // NEW: color + selection commands from toolbar
             if (d.type === "editor-command") {
               const cmd = d.command;
               if (cmd === "saveSelection") {
@@ -815,14 +873,12 @@ export default function Editor() {
                 applyColorCommand(cmd, d.value);
                 return;
               }
-              // NEW: link wrapper
               if (cmd === "wrap-link") {
                 const ok = wrapSelectionWithLink(d.href || "", d.label || "");
                 if (ok) window.parent.postMessage({ type: "html-updated", html: doc.body.innerHTML }, "*");
                 return;
               }
-              
-              // Generic handler for standard text formatting commands
+
               const supportedCommands = [
                 "bold", "italic", "underline", "strikeThrough", "formatBlock",
                 "insertUnorderedList", "insertOrderedList", "removeFormat",
@@ -834,7 +890,6 @@ export default function Editor() {
                   focusEditable();
                   restoreSelection();
                   doc.execCommand(cmd, false, d.value || null);
-                  // Notify parent that HTML has changed so it can be saved
                   window.parent.postMessage({ type: "html-updated", html: doc.body.innerHTML }, "*");
                 } catch (e) {
                   console.error("[B44] execCommand failed for:", cmd, e);
@@ -847,7 +902,6 @@ export default function Editor() {
               const el = doc.querySelector('[data-b44-id="' + d.id + '"]');
               console.log("[B44] selection-fix: delete-element", d.id, !!el);
               if (el) {
-                // If TikTok blockquote, also attempt to remove its following embed script for cleanliness
                 if (el.matches("blockquote.tiktok-embed")) {
                   const next = el.nextElementSibling;
                   if (next && next.tagName === "SCRIPT" && (next.src || "").includes("tiktok.com")) {
@@ -879,7 +933,6 @@ export default function Editor() {
           };
           window.addEventListener("message", onMsg, false);
 
-          // Install selection handles
           installOverlayHandles();
 
           console.log("[B44] selection-fix: ready");
@@ -891,7 +944,6 @@ export default function Editor() {
     doc.head.appendChild(script);
   }, []);
 
-  // Ensure we inject the selection-fix right after the iframe reports ready
   React.useEffect(() => {
     const onMsg = (e) => {
       if (e?.data?.type === "b44-ready") {
@@ -903,7 +955,6 @@ export default function Editor() {
     return () => window.removeEventListener("message", onMsg);
   }, [injectSelectionFix]);
 
-  // Also attempt injection once after load to be safe (e.g., if 'b44-ready' was missed)
   React.useEffect(() => {
     const t = setTimeout(() => injectSelectionFix(), 400);
     return () => clearTimeout(t);
@@ -1223,18 +1274,337 @@ export default function Editor() {
     return () => clearInterval(interval);
   }, [backgroundJobs, currentPost, currentWebhook, insertContentAtPoint]);
 
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeTokensForFeature, consumeTokensOptimistic } = useTokenConsumption();
+
+  const handleGenerateInfographic = async (config) => {
+    // Prevent duplicate submissions
+    if (infographicGeneratingRef.current) {
+      toast.message("Infographic is already being generated. Please wait.");
+      return;
+    }
+
+    // Check and consume tokens BEFORE generation
+    const tokenResult = await consumeTokensForFeature('ai_infographics');
+
+    if (!tokenResult.success) {
+      // Token consumption failed - error already shown by the hook
+      return;
+    }
+
+    infographicGeneratingRef.current = true;
+    const jobId = `infographic-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    setPendingInfographicJobs(prev => [...prev, {
+      id: jobId,
+      config,
+      status: 'pending',
+      attempts: 0,
+      startedAt: Date.now(),
+      insertMode: isTextSelected ? 'after-selection' : 'at-caret' // Capture current selection mode
+    }]);
+
+    toast.message("Generating infographic in background...");
+  };
+
+  // Poll for infographic generation
+  useEffect(() => {
+    if (!pendingInfographicJobs.length) {
+      infographicGeneratingRef.current = false; // Reset when no jobs are pending
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      const updates = await Promise.all(pendingInfographicJobs.map(async (job) => {
+        if (job.done) return job; // If the job is already marked as done, no need to re-call the API.
+
+        try {
+          const attempts = (job.attempts || 0) + 1;
+
+          // Add delay between attempts to avoid rate limiting
+          if (attempts > 1) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+
+          const { data } = await generateNapkinInfographic(job.config);
+
+          if (data.success && data.file_url) {
+            return { ...job, attempts, done: true, success: true, data };
+          }
+
+          if (data.error) {
+            return { ...job, attempts, done: true, success: false, error: data.error };
+          }
+
+          // Max 60 attempts * 5s = 5 minutes timeout
+          if (attempts > 60) {
+            return { ...job, attempts, done: true, success: false, error: "Infographic generation timed out." };
+          }
+
+          return { ...job, attempts }; // Job still pending, increment attempts
+        } catch (e) {
+          return { ...job, done: true, success: false, error: e?.message || "Infographic generation error." };
+        }
+      }));
+
+      setPendingInfographicJobs((currentJobs) => {
+        const nextJobs = updates.filter((job) => {
+          if (job.done && !job.inserted) {
+            // Process completed/failed jobs for insertion or toast message
+            if (job.success && job.data && job.data.file_url) {
+              const alreadyInserted = insertedInfographicIdsRef.current.has(job.id);
+
+              if (!alreadyInserted) {
+                const wrapperId = `infographic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+                // Display infographics at full size without image resizing restrictions
+                const imgHtml = `<div data-b44-id="${wrapperId}" data-b44-type="infographic" style="width: 100%; margin: 20px 0; padding: 0; display: block; clear: both; text-align: center;"><img src="${job.data.file_url}" alt="Generated infographic" style="width: 100%; max-width: 100%; height: auto; display: block; border-radius: 8px;" /></div>`;
+
+                insertContentAtPoint({ html: imgHtml, mode: job.insertMode }); // Use job's insertMode
+                insertedInfographicIdsRef.current.add(job.id);
+                toast.success("Infographic inserted!");
+              } else {
+                // If already inserted, just acknowledge but don't re-insert
+                toast.message("Infographic generated (already present, skipped duplicate).");
+              }
+            } else {
+              toast.error(job.error || "Infographic generation failed.");
+            }
+
+            // Mark job as inserted/processed to remove it from pending list
+            job.inserted = true;
+          }
+          // Only keep jobs that are NOT inserted yet (i.e., still pending or just completed and awaiting insertion)
+          return !job.inserted;
+        });
+
+        // After processing updates, check if there are any remaining active jobs.
+        // If not, reset the global generation flag.
+        if (nextJobs.length === 0) {
+          infographicGeneratingRef.current = false;
+        }
+
+        return nextJobs;
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [pendingInfographicJobs, insertContentAtPoint]);
+
+  // Poll for completed Imagineer jobs and replace placeholders
+  useEffect(() => {
+    if (pendingImagineerJobs.length === 0) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const jobIds = pendingImagineerJobs.map(j => j.job_id);
+        
+        // Fetch up to 100 most recent jobs to find relevant ones.
+        const allJobs = await ImagineerJob.list('-created_date', 100); 
+        const relevantJobs = allJobs.filter(j => jobIds.includes(j.job_id));
+
+        // Create a temporary array for jobs that are still pending after this poll cycle
+        const nextPendingJobs = [...pendingImagineerJobs];
+
+        for (const job of relevantJobs) {
+          const pendingJobIndex = nextPendingJobs.findIndex(pj => pj.job_id === job.job_id);
+          
+          // If the job is not found in our current pending list, it's already processed or not ours.
+          if (pendingJobIndex === -1) continue; 
+
+          if (job.status === 'completed' && job.image_url) {
+            // RACE FIX: Remove from pending immediately to prevent duplicate processing
+            nextPendingJobs.splice(pendingJobIndex, 1);
+            
+            // Replace placeholder with actual image
+            const iframe = document.querySelector('iframe[title="Live HTML Preview"]');
+            const iframeDoc = iframe?.contentDocument || iframe?.contentWindow?.document;
+            
+            if (iframeDoc) {
+              const placeholder = iframeDoc.querySelector(`[data-imagineer-job="${job.job_id}"]`);
+              
+              if (placeholder) {
+                // Create the image element
+                const imgElement = iframeDoc.createElement('img');
+                imgElement.src = job.image_url;
+                imgElement.alt = job.prompt || 'Generated image';
+                imgElement.style.cssText = 'width: 100%; max-width: 100%; height: auto; display: block; border-radius: 8px;';
+                
+                // Create the wrapper div, similar to infographics
+                const wrapperDiv = iframeDoc.createElement('div');
+                wrapperDiv.setAttribute('data-b44-id', job.job_id); // Use job_id as the ID for selection
+                wrapperDiv.setAttribute('data-b44-type', 'infographic'); // Use 'infographic' type for full width display
+                wrapperDiv.style.cssText = 'width: 100%; margin: 20px 0; padding: 0; display: block; clear: both; text-align: center;';
+                wrapperDiv.appendChild(imgElement);
+
+                placeholder.replaceWith(wrapperDiv); // Replace placeholder with the new wrapper
+                
+                // Trigger content update in React state
+                const updatedHtml = iframeDoc.body.innerHTML;
+                skipNextPreviewPushRef.current = true;
+                setContent(updatedHtml);
+                
+                toast.success('Imagineer image generated successfully!');
+              }
+            }
+          } else if (job.status === 'failed') {
+            // RACE FIX: Remove from pending immediately
+            nextPendingJobs.splice(pendingJobIndex, 1);
+            
+            // Remove placeholder on failure
+            const iframe = document.querySelector('iframe[title="Live HTML Preview"]');
+            const iframeDoc = iframe?.contentDocument || iframe?.contentWindow?.document;
+            
+            if (iframeDoc) {
+              const placeholder = iframeDoc.querySelector(`[data-imagineer-job="${job.job_id}"]`);
+              if (placeholder) {
+                placeholder.remove();
+                
+                // Trigger content update in React state
+                const updatedHtml = iframeDoc.body.innerHTML;
+                skipNextPreviewPushRef.current = true;
+                setContent(updatedHtml);
+              }
+            }
+            
+            toast.error('Imagineer image generation failed');
+          }
+        }
+        // Update the component's state with the modified list of pending jobs
+        setPendingImagineerJobs(nextPendingJobs);
+      } catch (error) {
+        console.error('Error polling Imagineer jobs:', error);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [pendingImagineerJobs, setContent, skipNextPreviewPushRef]);
+
+
+  const handleImagineerGenerate = async ({ prompt, style, influence, dimensions }) => {
+    const jobId = `imagineer-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    
+    // NEW: Deduct tokens for 'imagineer' feature immediately (non-blocking)
+    consumeTokensOptimistic('imagineer');
+    
+    try {
+      // Get the iframe and its selection BEFORE doing anything
+      const iframe = document.querySelector('iframe[title="Live HTML Preview"]');
+      const iframeDoc = iframe?.contentDocument || iframe?.contentWindow?.document;
+      
+      if (!iframeDoc) {
+        throw new Error("Cannot access editor preview");
+      }
+
+      const iframeWindow = iframe.contentWindow;
+      const selection = iframeWindow.getSelection();
+      
+      if (!selection || selection.rangeCount === 0) {
+        throw new Error("No text selected");
+      }
+
+      const range = selection.getRangeAt(0);
+      
+      // CRITICAL: Find the parent block element
+      let parentBlock = range.endContainer;
+      while (parentBlock && parentBlock.nodeType !== 1) {
+        parentBlock = parentBlock.parentNode;
+      }
+      
+      // Walk up to find a true block-level element
+      while (parentBlock && !['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'SECTION', 'ARTICLE', 'UL', 'OL'].includes(parentBlock.nodeName)) {
+        parentBlock = parentBlock.parentNode;
+      }
+
+      // CRITICAL FIX: If we're inside a list item, walk up to the list container (OL/UL)
+      if (parentBlock && parentBlock.nodeName === 'LI') {
+        let listContainer = parentBlock.parentNode;
+        while (listContainer && !['UL', 'OL'].includes(listContainer.nodeName)) {
+          listContainer = listContainer.parentNode;
+        }
+        if (listContainer) {
+          parentBlock = listContainer;
+        }
+      }
+
+      if (!parentBlock || parentBlock === iframeDoc.body) {
+        parentBlock = iframeDoc.body;
+      }
+
+      // CRITICAL: Clear selection IMMEDIATELY before creating placeholder
+      selection.removeAllRanges();
+
+      const selectedUsername = currentPost?.user_name || currentWebhook?.user_name || null;
+
+      // Call backend to initiate generation
+      await initiateImagineerGeneration({
+        job_id: jobId,
+        prompt,
+        style,
+        influence,
+        dimensions,
+        placeholder_id: jobId,
+        user_name: selectedUsername
+      });
+
+      // Create a completely fresh placeholder element (no inheritance possible)
+      const placeholderDiv = iframeDoc.createElement('div');
+      placeholderDiv.setAttribute('data-imagineer-job', jobId);
+      placeholderDiv.setAttribute('data-b44-id', jobId);
+      placeholderDiv.setAttribute('data-b44-type', 'imagineer-placeholder'); // Ensure type is set for selection
+      placeholderDiv.style.cssText = 'margin: 20px 0; padding: 20px; border: 2px dashed #9333ea; border-radius: 8px; text-align: center; background: #faf5ff;';
+      placeholderDiv.innerHTML = `
+        <div style="display: inline-flex; align-items: center; gap: 8px; color: #9333ea; font-weight: 500;">
+          <svg class="animate-spin" style="width: 20px; height: 20px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle style="opacity: 0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path style="opacity: 0.75;" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Generating image...
+        </div>
+      `;
+      
+      // Insert AFTER the parent block element as a clean sibling (OUTSIDE any list structure)
+      if (parentBlock === iframeDoc.body) {
+        iframeDoc.body.appendChild(placeholderDiv);
+      } else if (parentBlock.nextSibling) {
+        parentBlock.parentNode.insertBefore(placeholderDiv, parentBlock.nextSibling);
+      } else {
+        parentBlock.parentNode.appendChild(placeholderDiv);
+      }
+
+      // Update the main component's content state
+      const updatedHtml = iframeDoc.body.innerHTML;
+      skipNextPreviewPushRef.current = true;
+      setContent(updatedHtml);
+
+      toast.success("Image generation started! The image will appear here once ready.");
+      
+      setPendingImagineerJobs(prev => [...prev, {
+        job_id: jobId,
+        placeholder_id: jobId,
+        prompt,
+        style,
+        influence,
+        dimensions,
+        startedAt: Date.now(),
+      }]);
+
+    } catch (error) {
+      console.error("Imagineer generation error:", error);
+      toast.error(error.message || "Failed to start image generation");
+    }
+  };
+
+
   const { enabled: isAiTitleRewriteEnabled } = useFeatureFlag('ai_title_rewrite', { currentUser });
 
   const handleRewriteTitle = async () => {
-    // Allow rewriting with title-only. Just ensure the feature is enabled.
     if (!isAiTitleRewriteEnabled) {
       toast.message("AI Title Rewrite is not enabled for your account.");
       return;
     }
 
-    const result = await consumeTokensForFeature('ai_title_rewrite');
-    if (!result.success) {
+    const tokenResult = await consumeTokensForFeature('ai_title_rewrite');
+    if (!tokenResult.success) {
       return;
     }
 
@@ -1248,7 +1618,6 @@ export default function Editor() {
         throw new Error("Could not start a conversation with the AI agent.");
       }
 
-      // Use article content if available, otherwise proceed with empty content (title-only rewrite)
       const truncatedContent = (content || "").substring(0, 15000);
       const prompt = `Rewrite the blog post title to be highly optimized for SEO while remaining natural and compelling.
 Constraints:
@@ -1284,7 +1653,6 @@ Current Title: ${title}`;
 
         if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || lastMessage.content)) {
           let contentStr = lastMessage.content || "";
-          // Clean up response to be a single title string
           newTitle = contentStr
             .replace(/^["']|["']$/g, "")
             .replace(/^\*\*|\*\*$/g, "")
@@ -1299,7 +1667,6 @@ Current Title: ${title}`;
       if (newTitle && newTitle.length > 5) {
         setTitle(newTitle);
         toast.success("AI successfully rewrote the title!");
-        // Notify token balance update already handled in consumeTokensForFeature
       } else {
         throw new Error("AI did not generate a valid title. Please try again.");
       }
@@ -1389,16 +1756,14 @@ Current Title: ${title}`;
   };
 
   const handleMediaInsert = (media) => {
-    // It's video HTML
     if (typeof media === 'string') {
         insertContentAtPoint({ html: media, mode: 'at-caret' });
     }
-    // It's an image object from ImageLibraryItem
     else if (typeof media === 'object' && media.url && media.source) {
         handleImageInsertFromLibrary(media);
     }
-    setShowMediaLibrary(false); // Close the modal after insertion
-    setMediaLibraryInitialTab(undefined); // Reset initial tab on close
+    setShowMediaLibrary(false);
+    setMediaLibraryInitialTab(undefined);
   };
 
   const openImageGenerator = () => {
@@ -1407,10 +1772,13 @@ Current Title: ${title}`;
     setShowImageLibrary(true);
   };
 
-  const openInfographicGenerator = () => {
-    setImageLibraryDefaultProvider("infographic");
-    setImageLibraryGenerateOnly(true);
-    setShowImageLibrary(true);
+  const handleVoiceInsert = (transcribedText) => {
+    if (!transcribedText) return;
+    
+    const html = `<p>${transcribedText}</p>`;
+    insertContentAtPoint({ html, mode: isTextSelected ? 'after-selection' : 'at-caret' });
+    setShowVoiceModal(false);
+    toast.success('Transcription inserted');
   };
 
   const handleQuickPick = (actionId) => {
@@ -1441,7 +1809,13 @@ Current Title: ${title}`;
         return;
 
       case "generate-image":
-        openImageGenerator();
+        consumeTokensForFeature('ai_generate_image').then(result => {
+          if (result.success) openImageGenerator();
+        });
+        return;
+
+      case "imagineer":
+        setShowImagineer(true);
         return;
 
       case "generate-video":
@@ -1471,14 +1845,16 @@ Current Title: ${title}`;
       case "localize":
         setShowLocalize(true);
         return;
+
       case "tiktok":
         consumeTokensForFeature('ai_tiktok').then(result => {
           if (result.success) {
-            setMediaLibraryInitialTab("tiktok"); // Open MediaLibraryModal to the TikTok tab
+            setMediaLibraryInitialTab("tiktok");
             setShowMediaLibrary(true);
           }
         });
         return;
+
       case "audio": {
         let latest = (textForAction || "").trim();
         try {
@@ -1490,9 +1866,6 @@ Current Title: ${title}`;
             }
           }
         } catch (_) { }
-        if (!latest) {
-          try { latest = (localStorage.getItem("b44_audio_selected_text") || "").trim(); } catch (_) { }
-        }
         if (latest) {
           setTextForAction(latest);
           setIsTextSelected(true);
@@ -1500,46 +1873,89 @@ Current Title: ${title}`;
         setShowAudioModal(true);
         return;
       }
+
+      case "voice":
+        setShowVoiceModal(true);
+        return;
+
       case "brand-it":
         consumeTokensForFeature('ai_brand_it').then(result => {
           if(result.success) setShowBrandIt(true);
         });
         return;
+
       case "affilify":
         consumeTokensForFeature('ai_affilify').then(result => {
           if (result.success) setShowAffilify(true);
         });
         return;
+
       case "ai-agent":
         setShowWorkflowRunner(true);
         return;
+
       case "media-library":
-        setMediaLibraryInitialTab(undefined); // Ensure default tab is opened
+        setMediaLibraryInitialTab(undefined);
         setShowMediaLibrary(true);
         return;
+
       case "video-library":
         setShowVideoLibrary(true);
         return;
+
       case "cta":
         setShowCtaSelector(true);
         return;
+
       case "promoted-product":
         setShowProductSelector(true);
         return;
+
       case "manual-link":
-        openLinkSelectorModal(); // Use the dedicated function to save selection
+        openLinkSelectorModal();
         return;
+
       case "testimonials":
         setShowTestimonialLibrary(true);
         return;
+
       case "clean-html":
         setShowHTMLCleanup(true);
         return;
+
       case "ai-detection":
         setShowAIDetection(true);
         return;
+
       case "amazon-import":
         setShowAmazonImport(true);
+        return;
+
+      case "infographics":
+        // Capture the current selected text before opening modal
+        let infographicText = (textForAction || "").trim();
+        if (!infographicText) {
+          // Try to get selection from iframe if textForAction is empty
+          try {
+            const iframe = document.querySelector('iframe[title="Live HTML Preview"]');
+            const win = iframe?.contentWindow;
+            if (win && typeof win.getSelection === "function") {
+              infographicText = (win.getSelection()?.toString() || "").trim();
+            }
+          } catch (_) {}
+        }
+
+        // Store the text in state before opening modal
+        if (infographicText) {
+          setTextForAction(infographicText);
+          setIsTextSelected(true);
+        } else {
+          // If no text is selected, ensure textForAction is cleared for the modal,
+          // so it doesn't use stale selection.
+          setTextForAction("");
+          setIsTextSelected(false);
+        }
+        setShowInfographics(true);
         return;
 
       default:
@@ -1588,8 +2004,6 @@ Current Title: ${title}`;
     },
     { enabled: true }
   );
-
-  // REMOVED old useEffect for currentUser (its logic is now in initializeEditor)
 
   const loadPostContent = useCallback(async (postId) => {
     try {
@@ -1718,12 +2132,13 @@ Current Title: ${title}`;
     localStorage.removeItem('autosave-content');
     insertedAudioUrlsRef.current.clear();
     insertedAudioJobKeysRef.current.clear();
+    insertedInfographicIdsRef.current.clear(); // Clear for infographic jobs too
+    imagineerJobsRef.current.clear(); // Clear for imagineer jobs too
 
-    // Fetch user details first
     try {
       const u = await User.me();
       setCurrentUser(u);
-      setUserPlan(u?.plan_price_id || null); // <-- SET USER PLAN HERE
+      setUserPlan(u?.plan_price_id || null);
     } catch (e) {
       setCurrentUser(null);
       setUserPlan(null);
@@ -1765,16 +2180,14 @@ Current Title: ${title}`;
     } finally {
       setIsLoading(false);
     }
-  }, [loadPostContent, loadWebhookContent, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setIsLoading, setIsTextSelected, setPriority, setTextForAction, setTitle, setCurrentUser, setUserPlan]); // <-- Updated dependencies
+  }, [loadPostContent, loadWebhookContent, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setIsLoading, setIsTextSelected, setPriority, setTextForAction, setTitle, setCurrentUser, setUserPlan]);
 
   useEffect(() => {
     initializeEditor();
   }, [location.search, initializeEditor]);
 
-  // Check if user is on free trial plan
   const isFreeTrial = useMemo(() => {
     if (!userPlan) return false;
-    // These are example price IDs for free trials, adjust as needed
     return userPlan === 'price_1S7VhHQ1L6eczTxdoaAAaAZK' || userPlan === 'sddsg';
   }, [userPlan]);
 
@@ -1807,7 +2220,6 @@ Current Title: ${title}`;
     const onMsg = (e) => {
       const d = e?.data;
       if (d?.type === "media-selected") {
-        // Ensure video types are properly categorized
         let mediaType = d.mediaType;
         if (d.mediaType === "video" || mediaType === "iframe" || mediaType === "youtube" || mediaType === "tiktok") {
           mediaType = "video";
@@ -1832,28 +2244,27 @@ Current Title: ${title}`;
 
   const loadPublishCredentials = useCallback(async () => {
     if (!currentUser) return;
-    
+
     setLoadingCredentials(true);
     try {
-      const assignedUsernames = Array.isArray(currentUser.assigned_usernames) 
-        ? currentUser.assigned_usernames 
+      const assignedUsernames = Array.isArray(currentUser.assigned_usernames)
+        ? currentUser.assigned_usernames
         : [];
-      
+
       const postUsername = currentPost?.user_name || currentWebhook?.user_name;
-      
+
       let filtered = [];
-      
+
       if (postUsername) {
-        // ✅ SERVER-SIDE FILTER by user_name
         filtered = await IntegrationCredential.filter({ user_name: postUsername }, "-updated_date");
       } else if (assignedUsernames.length > 0) {
-        const credPromises = assignedUsernames.map(username => 
+        const credPromises = assignedUsernames.map(username =>
           IntegrationCredential.filter({ user_name: username }, "-updated_date")
         );
         const credArrays = await Promise.all(credPromises);
         filtered = credArrays.flat();
       }
-      
+
       setPublishCredentials(filtered || []);
     } catch (error) {
       console.error("Failed to load credentials:", error);
@@ -1865,28 +2276,294 @@ Current Title: ${title}`;
   }, [currentUser, currentPost, currentWebhook]);
 
   useEffect(() => {
-    // This useEffect needs to run when currentUser changes, which is now handled within initializeEditor.
-    // However, initializeEditor runs only on location.search changes.
-    // If we want credentials to load when currentUser is set even if location.search doesn't change,
-    // this useEffect should remain, and currentUser should be in its dependency array.
-    // Since currentUser is now set inside initializeEditor, this works as intended when editor re-initializes.
-    // The previous useEffect for currentUser was removed, so this becomes the primary trigger for credentials based on currentUser state.
     if (currentUser) {
       loadPublishCredentials();
     }
   }, [currentUser, loadPublishCredentials]);
 
 
-  // ✅ Refresh credentials when CMS modal closes
   const handleCMSModalClose = useCallback(() => {
     setShowCMSModal(false);
-    loadPublishCredentials(); // Reload to show newly created credentials
+    loadPublishCredentials();
   }, [loadPublishCredentials]);
 
 
   const extractFirstImageUrl = (html) => {
     const m = String(html || "").match(/<img[^>]*src=["']([^"']+)["']/i);
     return m && m[1] ? m[1] : "";
+  };
+
+  const buildWordPressHtmlIslandBlock = (rawHtml) => {
+    const cleanHtml = (html) => {
+      let cleaned = String(html || "");
+
+      cleaned = cleaned.replace(/<([a-z0-9:-]+)\b[^>]*class=["'][^"']*b44-select-handle\b[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, '');
+
+      cleaned = cleaned.replace(/\s+data-filename=["'][^"']*["']/gi, '');
+      cleaned = cleaned.replace(/\s+data-linenumber=["'][^"']*["']/gi, '');
+      cleaned = cleaned.replace(/\s+data-visual-selector-id=["'][^"']*["']/gi, '');
+
+      cleaned = cleaned.replace(/\s+data-b44-id=["'][^"']*["']/gi, '');
+      cleaned = cleaned.replace(/\s+data-b44-type=["'][^"']*["']/gi, '');
+      cleaned = cleaned.replace(/\s+data-b44-processed=["'][^"']*["']/gi, '');
+
+      cleaned = cleaned.replace(/\s+on(click|mouseover|mouseout|focus|blur|change|submit|load|error)=["'][^"']*["']/gi, '');
+
+      cleaned = cleaned.replace(/style=(["'])([\s\S]*?)\1/gi, (m, q, styles) => {
+        const out = styles.replace(/\boutline(?:-offset)?\s*:\s*[^;"]*;?/gi, '').trim();
+        return out ? `style=${q}${out}${q}` : '';
+      });
+
+      cleaned = cleaned.replace(/\s+style=["']\s*["']/gi, '');
+
+      const tiktokEmbedScriptRegex = /<script[^>]*id=["']ttEmbedLibScript["'][^>]*>[\s\S]*?<\/script>/gi;
+      const tiktokMatches = [...cleaned.matchAll(tiktokEmbedScriptRegex)];
+      if (tiktokMatches.length > 1) {
+        cleaned = cleaned.replace(tiktokEmbedScriptRegex, '');
+        cleaned += tiktokMatches[0][0];
+      }
+
+      const faqSchemas = [];
+      cleaned = cleaned.replace(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi, (m, content) => {
+        try {
+          const parsed = JSON.parse(content);
+          if (parsed['@type'] === 'FAQPage') {
+            const key = JSON.stringify(parsed.mainEntity || []);
+            if (faqSchemas.includes(key)) return '';
+            faqSchemas.push(key);
+          }
+        } catch {}
+        return m;
+      });
+
+      cleaned = cleaned.replace(/\s{2,}/g, ' ');
+      cleaned = cleaned.replace(/\s+>/g, '>');
+
+      return cleaned.trim();
+    };
+
+    const normalizeH2SpanIds = (html) =>
+      String(html).replace(
+        /<h2(\s[^>]*)?>\s*<span\s+id=["']([^"']+)["'][^!]*>([\s\S]*?)<\/span>\s*<\/h2>/gi,
+        (m, attrs = "", id, inner) => `<h2 id="${id}"${attrs || ""}>${inner}</h2>`
+      );
+
+    const addSequentialH2Ids = (html) => {
+      let counter = 0;
+      return String(html).replace(/<h2(\s[^>]*)?>([\s\S]*?)<\/h2>/gi, (m, attrs = "", inner) => {
+        if (/\sid="[^"]+"/i.test(m)) return m;
+        if (/<(span|a|em|strong)[^!]*\sid=["'][^"']+["']/i.test(inner)) return m;
+        counter += 1;
+        const id = `topic${counter}`;
+        return `<h2 id="${id}"${attrs || ""}>${inner}</h2>`;
+      });
+    };
+
+    const css = `/* Scoped article styles */
+.ls-article,.ls-article *{box-sizing:border-box}
+.ls-article{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  color:#0f172a;font-size:20px;line-height:1.78;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  overflow-wrap:break-word;word-break:normal
+}
+.ls-article{max-width:880px;width:100%;margin:0 auto;padding:40px 24px 72px}
+.ls-article a{color:#1d4ed8;text-decoration:none}
+.ls-article img,.ls-article video,.ls-article iframe{max-width:100%;height:auto;display:block}
+
+.ls-article h1,.ls-article h2,.ls-article h3{line-height:1.25;color:#0b1220;margin:0}
+.ls-article h1{font-size:2.6rem;margin:14px 0 10px}
+.ls-article h2{font-size:1.8rem;margin-top:36px;scroll-margin-top:96px}
+.ls-article h3{font-size:1.3rem;margin-top:26px;scroll-margin-top:96px}
+.ls-article p{margin:16px 0}
+.ls-article ul,.ls-article ol{padding-left:22px;margin:14px 0}
+.ls-article li{margin:8px 0}
+.ls-article .muted{color:#475569;font-size:.97em}
+
+.ls-article .toc{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:18px;margin-top:8px}
+.ls-article .callout{background:#f1f5ff;border:1px solid #c7d2fe;padding:16px;border-radius:12px}
+
+.ls-article .table-wrap{overflow-x:auto}
+.ls-article table{width:100%;border-collapse:collapse;margin:18px 0}
+.ls-article th,.ls-article td{border:1px solid #e2e8f0;padding:14px;vertical-align:top;text-align:left}
+.ls-article th{background:#f1f5f9}
+
+.ls-article .b44-cta{margin:2rem 0;padding:1.25rem 1.5rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px}
+.ls-article .b44-cta a,
+.ls-article .b44-cta .cta-btn{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:.5rem;
+  padding:12px 18px !important;
+  background:#4f46e5 !important;
+  color:#fff !important;
+  text-decoration:none !important;
+  font-weight:700 !important;
+  border:0 !important;
+  border-radius:10px !important;
+  line-height:1 !important;
+  white-space:normal !important;
+  box-shadow:0 2px 8px rgba(79,70,229,.25) !important;
+  transform:none !important;
+}
+.ls-article .b44-cta a:hover,
+.ls-article .b44-cta .cta-btn:hover{background:#4338ca !important}
+.ls-article .b44-cta a::before,
+.ls-article .b44-cta a::after,
+.ls-article .b44-cta .cta-btn::before,
+.ls-article .b44-cta .cta-btn::after{content:none !important;display:none !important}
+
+.ls-article .b44-faq-block input[type="checkbox"],
+.ls-article input[type="checkbox"][id^="faq-"],
+.ls-article input[type="checkbox"][id^="accordion-"]{position:absolute;left:-9999px;opacity:0}
+
+.ls-article [class*="faq-"],
+.ls-article [class*="accordion"]{background:transparent !important;border:0 !important;box-shadow:none !important}
+
+.ls-article [class*="faq-"][class$="-wrap"],
+.ls-article .faq-wrap,
+.ls-article .faq-container{
+  margin:24px 0 !important;
+  padding:16px !important;
+  background:#f9fafb !important;
+  border:1px solid #e5e7eb !important;
+  border-radius:8px !important;
+}
+
+.ls-article .faq-item,
+.ls-article .b44-faq-block .faq-item,
+.ls-article [class*="faq-"][class$="-item"]{
+  background:#fff !important;
+  border:0 !important;
+  border-bottom:1px solid #e5e7eb !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  padding:18px 16px !important;
+  margin:0 !important;
+}
+.ls-article .faq-item:last-child{border-bottom:0 !important}
+
+.ls-article [class*="faq-"][class$="-trigger"],
+.ls-article .faq-question,
+.ls-article label[for^="faq-"]{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:12px;
+  margin:0 !important;
+  padding:8px 0 !important;
+  font-weight:700 !important;
+  color:#0b1220 !important;
+  cursor:pointer !important;
+  min-height:44px !important;
+  user-select:none !important;
+  -webkit-user-select:none !important;
+}
+
+.ls-article [class*="faq-"][class$="-trigger"]:hover,
+.ls-article .faq-question:hover,
+.ls-article label[for^="faq-"]:hover{
+  color:#4f46e5 !important;
+}
+
+.ls-article [class*="faq-"] [class$="-q"],
+.ls-article .faq-q{font-weight:700 !important;margin:0 !important}
+
+.ls-article [class*="faq-"][class$="-content"],
+.ls-article .faq-answer,
+.ls-article [id^="faq-content-"]{
+  max-height:0;
+  overflow:hidden;
+  transition:max-height .25s ease,padding .25s ease;
+  padding:0 !important;
+  margin:0 !important;
+}
+
+.ls-article [class*="faq-"][class$="-toggle"]:checked ~ [class$="-content"],
+.ls-article input[type="checkbox"][id^="faq-"]:checked ~ [id^="faq-content-"],
+.ls-article input[type="checkbox"][id^="faq-"]:checked ~ .faq-answer{
+  max-height:1200px !important;
+  padding:12px 0 !important;
+}
+
+@media (max-width:1024px){
+  .ls-article{font-size:19px}
+  .ls-article .container{padding:36px 20px 64px}
+  .ls-article h1{font-size:2.3rem}
+  .ls-article h2{font-size:1.7rem}
+  .ls-article h3{font-size:1.25rem}
+}
+@media (max-width:640px){
+  .ls-article{font-size:18.5px}
+  .ls-article .container{padding:28px 16px 56px}
+  .ls-article h1{font-size:2.1rem}
+  .ls-article h2{font-size:1.55rem}
+  .ls-article h3{font-size:1.22rem}
+  .ls-article ul,.ls-article ol{padding-left:18px}
+  .ls-article .toc{padding:16px}
+  .ls-article .b44-cta a,.ls-article .b44-cta .cta-btn{width:100%}
+  .ls-article .faq-item{padding:16px 12px !important}
+}
+@media (prefers-reduced-motion:reduce){.ls-article *{animation:none!important;transition:none!important}}`;
+
+    const faqToggleScript = `
+<script>
+(function() {
+  if (typeof window === 'undefined') return;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const labels = document.querySelectorAll('label[for^="faq-"], label[for^="accordion-"]');
+    labels.forEach(function(label) {
+      label.style.cursor = 'pointer';
+      label.addEventListener('click', function(e) {
+        const forAttr = this.getAttribute('for');
+        if (!forAttr) return;
+
+        const checkbox = document.getElementById(forAttr);
+        if (checkbox && checkbox.type === 'checkbox') {
+          e.preventDefault();
+          checkbox.checked = !checkbox.checked;
+
+          this.setAttribute('aria-expanded', checkbox.checked ? 'true' : 'false');
+          const controlId = checkbox.getAttribute('aria-controls');
+          if (controlId) {
+            const content = document.getElementById(controlId);
+            if (content) {
+              content.setAttribute('aria-hidden', checkbox.checked ? 'false' : 'true');
+            }
+          }
+        }
+      });
+    });
+
+    document.querySelectorAll('input[type="checkbox"][id^="faq-"], input[type="checkbox"][id^="accordion-"]').forEach(function(cb) {
+      const label = document.querySelector('label[for="' + cb.id + '"]');
+      if (label) {
+        label.setAttribute('aria-expanded', cb.checked ? 'true' : 'false');
+      }
+      const controlId = cb.getAttribute('aria-controls');
+      if (controlId) {
+        const content = document.getElementById(controlId);
+        if (content) {
+          content.setAttribute('aria-hidden', cb.checked ? 'false' : 'true');
+        }
+      }
+    });
+  });
+})();
+</script>`;
+
+    let html = cleanHtml(rawHtml);
+    html = normalizeH2SpanIds(html);
+    html = addSequentialH2Ids(html);
+
+    const hasWrapper = /class=["'][^"']*\bls-article\b[^"']*["']/.test(html);
+    const wrapped = hasWrapper ? html : `<div class="ls-article"><main class="container">${html}</main></div>`;
+    const hasStyle = /<style[\s>][\s\S]*?<\/style>/i.test(wrapped) && /\.ls-article/.test(wrapped);
+    const htmlWithStyle = hasStyle ? wrapped : `<style>${css}</style>\n${wrapped}`;
+
+    return `${htmlWithStyle}\n${faqToggleScript}`;
   };
 
   const publishToDefaultNow = async (postToPublish) => {
@@ -1906,6 +2583,31 @@ Current Title: ${title}`;
       return;
     }
 
+    if (provider === "wordpress" || provider === "wordpress_org") {
+      const htmlForWp = postToPublish.overrideHtml
+        || buildWordPressHtmlIslandBlock(postToPublish.content || "");
+
+      const payload = {
+        provider: provider,
+        credentialId: credentialId,
+        title: postToPublish.title || "Untitled",
+        content: htmlForWp,
+        content_html: htmlForWp,
+        text: String(postToPublish.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+        status: "publish"
+      };
+
+      const { data } = await securePublish(payload);
+
+      if (data?.success || data?.ok) {
+        toast.success(`Published to ${label || "WordPress"}.`);
+      } else {
+        toast.error(data?.error || "Publishing to WordPress failed.");
+      }
+      setIsPublishing(false);
+      return;
+    }
+
     setIsPublishing(true);
     try {
       const plainText = String(postToPublish.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1921,12 +2623,8 @@ Current Title: ${title}`;
           coverUrl: coverCandidate || undefined,
           status: "published"
         });
-
-        if (data?.success || data?.ok) {
-          toast.success(`Published to ${label || "Webhook"}.`);
-        } else {
-          toast.error(data?.error || "Webhook publish failed.");
-        }
+        if (data?.success || data?.ok) toast.success(`Published to ${label || "Webhook"}.`);
+        else toast.error(data?.error || "Webhook publish failed.");
         return;
       }
 
@@ -1936,12 +2634,11 @@ Current Title: ${title}`;
           try {
             localStorage.setItem("cms_default_provider", "notion");
             localStorage.setItem("cms_default_credential_id", credentialId);
-          } catch (_) { }
+          } catch (_) {}
           toast.message("Pick a cover image before publishing to Notion.");
           setShowCMSModal(true);
           return;
         }
-
         const { data } = await securePublish({
           provider: "notion",
           credentialId: credentialId,
@@ -1950,12 +2647,8 @@ Current Title: ${title}`;
           text: plainText,
           coverUrl: coverCandidate
         });
-
-        if (data?.success || data?.ok) {
-          toast.success(`Published to ${label || "Notion"}.`);
-        } else {
-          toast.error(data?.error || "Publishing to Notion failed.");
-        }
+        if (data?.success || data?.ok) toast.success(`Published to ${label || "Notion"}.`);
+        else toast.error(data?.error || "Publishing to Notion failed.");
         return;
       }
 
@@ -1966,10 +2659,8 @@ Current Title: ${title}`;
         html: postToPublish.content || "",
         text: plainText
       });
-
-      if (data?.success || data?.ok) {
-        toast.success(`Published to ${label || provider}.`);
-      } else if (provider === 'notion' && data?.code === 'COVER_REQUIRED') {
+      if (data?.success || data?.ok) toast.success(`Published to ${label || provider}.`);
+      else if (provider === 'notion' && data?.code === 'COVER_REQUIRED') {
         try {
           localStorage.setItem("cms_default_provider", "notion");
           localStorage.setItem("cms_default_credential_id", credentialId);
@@ -1995,110 +2686,6 @@ Current Title: ${title}`;
     } finally {
       setIsPublishing(false);
     }
-  };
-
-  const openLinkSelectorModal = () => {
-    sendToPreview({ type: "editor-command", command: "saveSelection" });
-    setShowLinkSelector(true);
-  };
-
-  const handleLinkInsert = (linkInput) => {
-    const isAnchorHtml = typeof linkInput === 'string' && /<a\b[^>]*>/i.test(linkInput);
-    const isUrl = typeof linkInput === 'string' && /^https?:\/\//i.test(linkInput);
-
-    if (isAnchorHtml) {
-      insertContentAtPoint(linkInput);
-      return;
-    }
-
-    // This command tells the iframe to wrap the saved selection with the given URL
-    if (isUrl) {
-      sendToPreview({ type: "editor-command", command: "wrap-link", href: linkInput, label: textForAction });
-      setTimeout(() => sendToPreview({ type: "request-html" }), 50);
-      return;
-    }
-    
-    // Fallback for full HTML snippets or other content
-    insertContentAtPoint(linkInput);
-  };
-
-  const handlePreviewHtmlChange = (newHtml) => {
-    skipNextPreviewPushRef.current = true;
-    setContent(newHtml);
-  };
-
-  const handlePreviewSelectionChange = ({ text, isSelected }) => {
-    setTextForAction(text || "");
-    setIsTextSelected(isSelected);
-    try { localStorage.setItem("b44_audio_selected_text", (text || "").trim()); } catch (_) { }
-  };
-
-  const applyPreviewWidth = (width) => {
-    if (!selectedMedia) return;
-    // For video, we disable resizing, so we shouldn't apply width changes
-    if (selectedMedia.type === 'video') return;
-
-    const newWidth = parseInt(width, 10);
-
-    setSelectedMedia((prev) => ({ ...prev, width: newWidth }));
-
-    const styles = {
-      width: `${newWidth}%`,
-      'max-width': '100%',
-      'box-sizing': 'border-box'
-    };
-
-    if (selectedMedia.type === 'image') {
-      styles.height = 'auto';
-      styles['object-fit'] = 'contain';
-      styles.display = 'block';
-    } else { // Generic handling for other types if they were ever resizable
-      styles.height = 'auto';
-      styles.overflow = 'visible';
-      styles.display = 'block';
-    }
-
-    sendToPreview({
-      type: 'update-media-style',
-      id: selectedMedia.id,
-      styles
-    });
-
-    clearTimeout(resizeCommitTimerRef.current);
-    resizeCommitTimerRef.current = setTimeout(() => {
-      sendToPreview({ type: 'request-html' });
-    }, 500);
-  };
-
-  const findExistingPostByHeuristics = async () => {
-    return null;
-  };
-  const findBySessionKey = async () => {
-    if (!sessionKeyRef.current) return null;
-    const matches = await BlogPost.filter({ client_session_key: sessionKeyRef.current });
-    return matches.length > 0 ? matches[0].id : null;
-  };
-
-
-  const resolveExistingPostId = async () => {
-    if (currentPost && currentPost.id) return currentPost.id;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const idFromUrl = urlParams.get('post');
-    if (idFromUrl) return idFromUrl;
-
-    const procId =
-      currentPost && currentPost.processing_id ||
-      currentWebhook && currentWebhook.processing_id ||
-      null;
-
-    if (procId) {
-      const matches = await BlogPost.filter({ processing_id: procId }, "-updated_date");
-      if (Array.isArray(matches) && matches.length > 0) {
-        return matches[0].id;
-      }
-    }
-    return null;
   };
 
   const generateSchemaForPost = async (postTitle, htmlContent) => {
@@ -2169,14 +2756,13 @@ ${truncatedHtml}`;
     savingGuardRef.current = true;
 
     const isPublishFlow = status === 'published';
-    // Use isPublishing for button-level feedback only, not full-screen loader
     if (!isPublishFlow) setIsSaving(true);
     else setIsPublishing(true);
 
-    let finalContent = content;
+    let finalContent = options.overrideHtml !== undefined ? options.overrideHtml : content;
     let postData = {
       title: title || "Untitled Post",
-      content: content,
+      content: finalContent,
       status,
       reading_time: Math.ceil(content.replace(/<[^>]*>/g, '').split(' ').length / 200),
       scheduled_publish_date: options.scheduledPublishDate || null,
@@ -2267,14 +2853,14 @@ ${truncatedHtml}`;
           }
           window.open("https://docs.google.com/document/create", "_blank");
         } else if (options.useDefaultProvider) {
-          // This path might become unused with the new UI.
           await publishToDefaultNow(savedPost);
-        } else if (options.publishTo) { // This path is now used by `handlePublishToCredential`
+        } else if (options.publishTo) {
           await publishToDefaultNow({
             ...savedPost,
             _overrideProvider: options.publishTo.provider,
             _overrideCredentialId: options.publishTo.credentialId,
-            _overrideLabel: options.publishTo.labelOverride
+            _overrideLabel: options.publishTo.labelOverride,
+            overrideHtml: options.overrideHtml
           });
         }
 
@@ -2297,7 +2883,6 @@ ${truncatedHtml}`;
     } catch (error) {
       toast.error(`Failed to ${status === 'published' ? 'publish' : 'save'} post. ${error.message}`);
     } finally {
-      // Use proper state for each flow
       if (isPublishFlow) setIsPublishing(false);
       else setIsSaving(false);
       savingGuardRef.current = false;
@@ -2313,9 +2898,8 @@ ${truncatedHtml}`;
         try {
           webhookBody = JSON.parse(webhookBody);
         } catch (e) {
-          // Keep completely silent for users; log for debugging
           console.warn("Airtable: malformed webhook_data string.", e, webhookBody);
-          return; // abort silently
+          return;
         }
       }
 
@@ -2328,7 +2912,6 @@ ${truncatedHtml}`;
       const recordId = webhookBody?.["record-id"];
 
       if (!recordId || !tableId) {
-        // Missing routing info - silent
         console.warn("Airtable: missing record-id or table id.");
         return;
       }
@@ -2343,21 +2926,18 @@ ${truncatedHtml}`;
       const response = await publishToAirtable(payload);
 
       if (response?.data?.success) {
-        // Silent success
         console.debug?.("Airtable publish: success (silent).");
       } else {
-        // Silent failure
         const errorMessage = response?.data?.error || "Unknown Airtable update error.";
         console.warn("Airtable publish failed (silent):", errorMessage, response?.data);
       }
     } catch (error) {
-      // Fully silent for users; log for developers
       console.warn("Airtable publish exception (silent):", error);
     }
   };
 
   const handleSave = () => savePost('draft');
-  
+
   const handlePublishGoogleDocs = async () => {
     setIsPublishing(true);
     try {
@@ -2374,15 +2954,21 @@ ${truncatedHtml}`;
   const handlePublishToCredential = async (credential) => {
     setIsPublishing(true);
     try {
+      const isWordPress = credential?.provider === "wordpress" || credential?.provider === "wordpress_org";
+      const original = content;
+      const htmlForWp = isWordPress ? buildWordPressHtmlIslandBlock(original) : original;
+
       await savePost('published', {
         publishTo: {
           provider: credential.provider,
           credentialId: credential.id,
           labelOverride: credential.name
-        }
+        },
+        overrideHtml: isWordPress ? htmlForWp : undefined
       });
       toast.success(`Published to ${credential.name}`);
-    } catch (error) {
+    } catch (error)
+      {
       console.error("Publish error:", error);
       toast.error(`Failed to publish: ${error.message}`);
     } finally {
@@ -2395,7 +2981,6 @@ ${truncatedHtml}`;
     setCurrentPost((prev) => ({
       ...prev,
       ...newMetadata,
-      // Also update top-level fields if they are present in metadata
       ...(newMetadata.meta_title && { meta_title: newMetadata.meta_title }),
       ...(newMetadata.slug && { slug: newMetadata.slug }),
       ...(newMetadata.meta_description && { meta_description: newMetadata.meta_description }),
@@ -2421,6 +3006,7 @@ ${truncatedHtml}`;
       case 'ai-rewrite': setShowAIModal(true); break;
       case 'humanize': setShowHumanizeModal(true); break;
       case 'generate-image': openImageGenerator(); break;
+      case 'imagineer': setShowImagineer(true); break;
       case 'generate-video': setShowVideoGenerator(true); break;
       case 'callout': setCalloutType("callout"); setShowCalloutGenerator(true); break;
       case 'fact': setCalloutType("fact"); setShowFactGenerator(true); break;
@@ -2430,6 +3016,9 @@ ${truncatedHtml}`;
       case 'ai-agent': setShowWorkflowRunner(true); break;
       case 'faq':
         setShowFaqGenerator(true);
+        break;
+      case 'voice':
+        setShowVoiceModal(true);
         break;
       default: break;
     }
@@ -2577,50 +3166,46 @@ ${truncatedHtml}`;
     return currentPost?.user_name || currentWebhook?.user_name;
   };
 
-  // FIXED: More aggressive HTML cleaning function
   const cleanHtmlForExport = (htmlString) => {
     if (!htmlString) return "";
-    
+
     let cleaned = String(htmlString);
-    
-    // Remove ALL HTML comments (including multi-line)
+
     cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
-    
-    // Remove ALL data-* attributes (multiple passes to catch everything)
-    // Pattern 1: data-attribute="value"
+
+    cleaned = cleaned.replace(/<([a-z0-9:-]+)\b[^>]*class=["'][^"']*b44-select-handle\b[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, '');
+
+    cleaned = cleaned.replace(/\sdata-b44-[\w-]+=(["'])[\s\S]*?\1/gi, '');
+
+    cleaned = cleaned.replace(/style=(["'])([\s\S]*?)\1/gi, (m, q, styles) => {
+      const out = styles.replace(/\boutline(?:-offset)?\s*:\s*[^;"]*;?/gi, '').trim();
+      return out ? `style=${q}${out}${q}` : '';
+    });
+
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*"[^"]*"/gi, '');
-    // Pattern 2: data-attribute='value'
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*'[^']*'/gi, '');
-    // Pattern 3: data-attribute=value (no quotes)
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*[^\s>'"]+/gi, '');
-    // Pattern 4: catch any remaining data- attributes with values
-    cleaned = cleaned.replace(/\s+data-[^\s=]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-    
-    // Remove any stray data- attributes without values (e.g., data-something)
+    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+
     cleaned = cleaned.replace(/\s+data-[\w-]+(?=[\s>])/gi, '');
-    
-    // Clean up multiple spaces
+
     cleaned = cleaned.replace(/\s{2,}/g, ' ');
-    
-    // Clean up space before closing tags
+
     cleaned = cleaned.replace(/\s+>/g, '>');
-    
-    // Trim
+
     cleaned = cleaned.trim();
-    
+
     return cleaned;
   };
 
   const handleDownloadTxt = () => {
     let exportContent = "";
 
-    // Add clean title
     if (title) {
       const cleanTitle = cleanHtmlForExport(title);
       exportContent += `<title>${cleanTitle}</title>\n\n`;
     }
 
-    // Add SEO metadata if available (cleaned)
     if (currentPost?.meta_title || currentPost?.meta_description || currentPost?.focus_keyword || currentPost?.tags?.length > 0 || currentPost?.slug || currentPost?.excerpt) {
       exportContent += "<!-- SEO METADATA -->\n";
 
@@ -2657,7 +3242,6 @@ ${truncatedHtml}`;
       exportContent += "\n";
     }
 
-    // Add JSON-LD Schema if available
     if (currentPost?.generated_llm_schema) {
       try {
         const schema = typeof currentPost.generated_llm_schema === 'string'
@@ -2673,14 +3257,11 @@ ${truncatedHtml}`;
       }
     }
 
-    // Add main content - AGGRESSIVELY CLEANED
     const cleanedContent = cleanHtmlForExport(content);
     exportContent += cleanedContent;
 
-    // Final pass to remove any remaining data-* attributes from the entire export
     exportContent = cleanHtmlForExport(exportContent);
 
-    // Create and download the file
     const blob = new Blob([exportContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -2694,6 +3275,37 @@ ${truncatedHtml}`;
     toast.success("Content downloaded as TXT");
   };
 
+
+  const findExistingPostByHeuristics = async () => {
+    return null;
+  };
+  const findBySessionKey = async () => {
+    if (!sessionKeyRef.current) return null;
+    const matches = await BlogPost.filter({ client_session_key: sessionKeyRef.current });
+    return matches.length > 0 ? matches[0].id : null;
+  };
+
+
+  const resolveExistingPostId = async () => {
+    if (currentPost && currentPost.id) return currentPost.id;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const idFromUrl = urlParams.get('post');
+    if (idFromUrl) return idFromUrl;
+
+    const procId =
+      currentPost && currentPost.processing_id ||
+      currentWebhook && currentWebhook.processing_id ||
+      null;
+
+    if (procId) {
+      const matches = await BlogPost.filter({ processing_id: procId }, "-updated_date");
+      if (Array.isArray(matches) && matches.length > 0) {
+        return matches[0].id;
+      }
+    }
+    return null;
+  };
 
   if (isLoading) {
     return (
@@ -2749,8 +3361,7 @@ ${truncatedHtml}`;
 
         #editor-neon .b44-title-input { text-align: center !important; }
         #editor-neon .b44-title-input::placeholder { text-align: center; }
-        
-        /* CTA Styling for proper spacing */
+
         .b44-cta {
           margin: 2rem 0 !important;
           padding: 1.5rem !important;
@@ -2872,6 +3483,38 @@ ${truncatedHtml}`;
                       Paste
                     </Button>
 
+                    <InternalLinkerButton
+                      html={content}
+                      userName={currentUsername}
+                      onApply={(updatedHtml) => {
+                        skipNextPreviewPushRef.current = true;
+                        setContent(updatedHtml);
+                        sendToPreview({ type: "set-html", html: updatedHtml });
+                      }}
+                      disabled={isSaving || isPublishing}
+                    />
+
+                    <LinksAndReferencesButton
+                      html={content}
+                      userName={currentUsername}
+                      onApply={(updatedHtml) => {
+                        skipNextPreviewPushRef.current = true;
+                        setContent(updatedHtml);
+                        sendToPreview({ type: "set-html", html: updatedHtml });
+                      }}
+                      disabled={isSaving || isPublishing}
+                    />
+
+                    <AutoScanButton
+                      html={content}
+                      onApply={(updatedHtml) => {
+                        skipNextPreviewPushRef.current = true;
+                        setContent(updatedHtml);
+                        sendToPreview({ type: "set-html", html: updatedHtml });
+                      }}
+                      disabled={isSaving || isPublishing}
+                    />
+
                     <div className="hidden">
                       <EditorToolbar
                         onUndo={handleUndo}
@@ -2895,10 +3538,9 @@ ${truncatedHtml}`;
                       </Button>
                     }
                     <Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2" onClick={handleSave} disabled={isSaving}>
-                      {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
+                      {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4" />} Save
                     </Button>
 
-                    {/* Publish Dropdown */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -2915,17 +3557,17 @@ ${truncatedHtml}`;
                           <Download className="w-4 h-4 mr-2" />
                           Download TXT
                         </DropdownMenuItem>
-                        
+
                         <DropdownMenuItem onSelect={handlePublishGoogleDocs}>
                           <Download className="w-4 h-4 mr-2" />
                           Publish to Google Docs
                         </DropdownMenuItem>
-                        
+
                         {publishCredentials.length > 0 && (
                           <>
                             <DropdownMenuSeparator />
                             {publishCredentials.map((cred) => (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 key={cred.id}
                                 onSelect={() => {
                                   if (isFreeTrial) {
@@ -2934,7 +3576,7 @@ ${truncatedHtml}`;
                                     handlePublishToCredential(cred);
                                   }
                                 }}
-                                disabled={isPublishing || loadingCredentials || isFreeTrial} // <-- ADDED isFreeTrial
+                                disabled={isPublishing || loadingCredentials || isFreeTrial}
                               >
                                 {isPublishing && (!isFreeTrial) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
                                 Publish to {cred.name}
@@ -2942,17 +3584,10 @@ ${truncatedHtml}`;
                             ))}
                           </>
                         )}
-                        
+
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onSelect={() => {
-                            if (isFreeTrial) {
-                              toast.info("Free Trial users cannot configure publishing directly to CMS. Upgrade to unlock this feature.");
-                            } else {
-                              setShowCMSModal(true);
-                            }
-                          }}
-                          disabled={isFreeTrial} // <-- ADDED isFreeTrial
+                          onSelect={() => setShowCMSModal(true)}
                         >
                           <Settings className="w-4 h-4 mr-2" />
                           Configure Publishing...
@@ -2971,13 +3606,17 @@ ${truncatedHtml}`;
               <div className="bg-slate-50 pt-3 pb-5">
                 <div className="mt-3 max-w-5xl mx-auto px-6">
                   <div className="relative">
-                    <Textarea
+                    <textarea
                       placeholder="Enter your blog post title..."
                       value={title}
                       onChange={handleTitleChange}
-                      className="b44-title-input w-full text-[1.6rem] md:text-[1.95rem] font-bold py-2 leading-tight bg-white text-slate-900 placeholder:text-slate-600 border border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-300 resize-none overflow-hidden pr-12"
+                      onInput={(e) => {
+                        e.target.style.height = 'auto';
+                        e.target.style.height = e.target.scrollHeight + 'px';
+                      }}
+                      className="b44-title-input w-full text-[1.6rem] md:text-[1.95rem] font-bold py-2 leading-tight bg-white text-slate-900 placeholder:text-slate-600 border border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-300 pr-12 resize-none overflow-hidden"
                       rows={1}
-                      style={{ minHeight: '56px' }}
+                      style={{ minHeight: '56px', height: 'auto' }}
                     />
                     {isAiTitleRewriteEnabled && (
                       <Button
@@ -3002,7 +3641,7 @@ ${truncatedHtml}`;
                   <div className="h-full bg-white text-slate-900 flex flex-col">
                     {selectedMedia && (
                       <div className="bg-slate-50 text-slate-950 p-2 text-xs flex-shrink-0 flex items-center gap-3">
-                        {selectedMedia.type === 'image' ? (
+                        {selectedMedia.type === 'image' || selectedMedia.type === 'infographic' || selectedMedia.type === 'imagineer-placeholder' ? (
                           <>
                             <span className="opacity-70 whitespace-nowrap">Image width</span>
                             <div className="bg-slate-50 flex items-center gap-3 flex-1">
@@ -3329,9 +3968,30 @@ ${truncatedHtml}`;
               selectedText={isTextSelected ? textForAction : content}
               onInsert={insertContentAtPoint} />
 
+            <InfographicsModal
+              isOpen={showInfographics}
+              onClose={() => setShowInfographics(false)}
+              selectedText={textForAction}
+              articleTitle={title}
+              onGenerate={handleGenerateInfographic}
+            />
+
+            <ImagineerModal
+              isOpen={showImagineer}
+              onClose={() => setShowImagineer(false)}
+              initialPrompt={textForAction}
+              onGenerate={handleImagineerGenerate}
+            />
+
+            <VoiceDictationModal
+              isOpen={showVoiceModal}
+              onClose={() => setShowVoiceModal(false)}
+              onInsert={handleVoiceInsert}
+            />
+
           </div>
         </div>
       </div>
-    </EditorErrorBoundary>);
-
+    </EditorErrorBoundary>
+  );
 }

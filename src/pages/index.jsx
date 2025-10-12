@@ -22,8 +22,6 @@ import EmailFormManager from "./EmailFormManager";
 
 import VideoLibrary from "./VideoLibrary";
 
-import Home from "./Home";
-
 import WaitlistManager from "./WaitlistManager";
 
 import Contact from "./Contact";
@@ -134,6 +132,18 @@ import AffiliatePackManager from "./AffiliatePackManager";
 
 import ProductLibrary from "./ProductLibrary";
 
+import Affiliate from "./Affiliate";
+
+import Media from "./Media";
+
+import DashboardBannerManager from "./DashboardBannerManager";
+
+import Educational from "./Educational";
+
+import WordPressPublishLogs from "./WordPressPublishLogs";
+
+import InfographicExamplesAdmin from "./InfographicExamplesAdmin";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -159,8 +169,6 @@ const PAGES = {
     EmailFormManager: EmailFormManager,
     
     VideoLibrary: VideoLibrary,
-    
-    Home: Home,
     
     WaitlistManager: WaitlistManager,
     
@@ -272,6 +280,18 @@ const PAGES = {
     
     ProductLibrary: ProductLibrary,
     
+    Affiliate: Affiliate,
+    
+    Media: Media,
+    
+    DashboardBannerManager: DashboardBannerManager,
+    
+    Educational: Educational,
+    
+    WordPressPublishLogs: WordPressPublishLogs,
+    
+    InfographicExamplesAdmin: InfographicExamplesAdmin,
+    
 }
 
 function _getCurrentPage(url) {
@@ -320,8 +340,6 @@ function PagesContent() {
                 <Route path="/EmailFormManager" element={<EmailFormManager />} />
                 
                 <Route path="/VideoLibrary" element={<VideoLibrary />} />
-                
-                <Route path="/Home" element={<Home />} />
                 
                 <Route path="/WaitlistManager" element={<WaitlistManager />} />
                 
@@ -432,6 +450,18 @@ function PagesContent() {
                 <Route path="/AffiliatePackManager" element={<AffiliatePackManager />} />
                 
                 <Route path="/ProductLibrary" element={<ProductLibrary />} />
+                
+                <Route path="/Affiliate" element={<Affiliate />} />
+                
+                <Route path="/Media" element={<Media />} />
+                
+                <Route path="/DashboardBannerManager" element={<DashboardBannerManager />} />
+                
+                <Route path="/Educational" element={<Educational />} />
+                
+                <Route path="/WordPressPublishLogs" element={<WordPressPublishLogs />} />
+                
+                <Route path="/InfographicExamplesAdmin" element={<InfographicExamplesAdmin />} />
                 
             </Routes>
         </Layout>

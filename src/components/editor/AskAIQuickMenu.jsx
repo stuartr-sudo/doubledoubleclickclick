@@ -60,8 +60,11 @@ const MateriaOrb = ({ type, size = 16 }) => {
       'tldr': 'core',
       'fact': 'core',
       'ai-faq': 'core',
+      'voice': 'core', // Added voice
       'generate-image': 'media',
+      'imagineer': 'media',
       'generate-video': 'media',
+      'infographics': 'media',
       'audio': 'media',
       'media-library': 'media',
       'youtube': 'media',
@@ -76,7 +79,7 @@ const MateriaOrb = ({ type, size = 16 }) => {
       'cite-sources': 'advanced',
       'ai-detection': 'advanced',
       'ai-agent': 'advanced',
-      'affilify': 'utilities' // FIX: Changed from 'advanced' to 'utilities' to match its group in the menu
+      'affilify': 'utilities',
     };
 
     const scheme = colorSchemes[typeMapping[actionType] || 'core'];
@@ -130,7 +133,6 @@ const ActionItem = ({ icon: Icon, label, onClick, isComingSoon, showVideo, onPla
       disabled={isComingSoon}
       className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group hover:bg-slate-700/50"
     >
-      {/* Re-added MateriaOrb */}
       <MateriaOrb type={actionType} size={16} />
       <span className="flex-1">{label}</span>
       {showTokenCosts && tokenCost > 0 && (
@@ -235,6 +237,12 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
     return null;
   }
 
+  // NEW: normalize imagineer feature (supports 'ai_imagineer' or 'imagineer')
+  const imagineerFeature = features.ai_imagineer || features.imagineer;
+  
+  // NEW: normalize voice-ai feature (supports 'voice-ai' or 'voice_ai')
+  const voiceFeature = features['voice-ai'] || features.voice_ai;
+
   const handlePick = (actionId) => {
     // Open immediately, token checking will happen inside each feature when user clicks execute
     if (typeof onPick === 'function') onPick(actionId);
@@ -263,7 +271,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_rewrite.isComingSoon,
           youtube_tutorial_url: features.ai_rewrite.youtube_tutorial_url,
           loom_tutorial_url: features.ai_rewrite.loom_tutorial_url,
-          tokenCost: features.ai_rewrite.token_cost || 0
+          tokenCost: features.ai_rewrite.token_cost
         },
         features.ai_humanize && {
           id: 'humanize',
@@ -272,7 +280,17 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_humanize.isComingSoon,
           youtube_tutorial_url: features.ai_humanize.youtube_tutorial_url,
           loom_tutorial_url: features.ai_humanize.loom_tutorial_url,
-          tokenCost: features.ai_humanize.token_cost || 0
+          tokenCost: features.ai_humanize.token_cost
+        },
+        // FIXED: Voice Dictation now pulls from voice-ai feature flag
+        voiceFeature && {
+          id: 'voice',
+          label: 'Voice',
+          actionType: 'voice',
+          isComingSoon: voiceFeature.isComingSoon,
+          youtube_tutorial_url: voiceFeature.youtube_tutorial_url,
+          loom_tutorial_url: voiceFeature.loom_tutorial_url,
+          tokenCost: voiceFeature.token_cost
         },
         features.ai_key_takeaway && {
           id: 'tldr',
@@ -281,7 +299,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_key_takeaway.isComingSoon,
           youtube_tutorial_url: features.ai_key_takeaway.youtube_tutorial_url,
           loom_tutorial_url: features.ai_key_takeaway.loom_tutorial_url,
-          tokenCost: features.ai_key_takeaway.token_cost || 0
+          tokenCost: features.ai_key_takeaway.token_cost
         },
         features.ai_fact_box && {
           id: 'fact',
@@ -290,7 +308,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_fact_box.isComingSoon,
           youtube_tutorial_url: features.ai_fact_box.youtube_tutorial_url,
           loom_tutorial_url: features.ai_fact_box.loom_tutorial_url,
-          tokenCost: features.ai_fact_box.token_cost || 0
+          tokenCost: features.ai_fact_box.token_cost
         },
         features.ai_cite_sources && {
           id: 'cite-sources',
@@ -299,7 +317,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_cite_sources.isComingSoon,
           youtube_tutorial_url: features.ai_cite_sources.youtube_tutorial_url,
           loom_tutorial_url: features.ai_cite_sources.loom_tutorial_url,
-          tokenCost: features.ai_cite_sources.token_cost || 0
+          tokenCost: features.ai_cite_sources.token_cost
         },
         features.ai_faq && {
           id: 'faq',
@@ -308,7 +326,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_faq.isComingSoon,
           youtube_tutorial_url: features.ai_faq.youtube_tutorial_url,
           loom_tutorial_url: features.ai_faq.loom_tutorial_url,
-          tokenCost: features.ai_faq.token_cost || 0
+          tokenCost: features.ai_faq.token_cost
         },
       ].filter(a => a && (!HIDE_COMING_SOON || !a.isComingSoon)),
     },
@@ -322,7 +340,17 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_generate_image.isComingSoon,
           youtube_tutorial_url: features.ai_generate_image.youtube_tutorial_url,
           loom_tutorial_url: features.ai_generate_image.loom_tutorial_url,
-          tokenCost: features.ai_generate_image.token_cost || 0
+          tokenCost: features.ai_generate_image.token_cost
+        },
+        // UPDATED: use normalized feature for Imagineer so it appears with a flag named "imagineer"
+        imagineerFeature && {
+          id: 'imagineer',
+          label: 'Imagineer',
+          actionType: 'imagineer',
+          isComingSoon: imagineerFeature.isComingSoon,
+          youtube_tutorial_url: imagineerFeature.youtube_tutorial_url,
+          loom_tutorial_url: imagineerFeature.loom_tutorial_url,
+          tokenCost: imagineerFeature.token_cost
         },
         features.ai_generate_video && {
           id: 'generate-video',
@@ -331,7 +359,16 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_generate_video.isComingSoon,
           youtube_tutorial_url: features.ai_generate_video.youtube_tutorial_url,
           loom_tutorial_url: features.ai_generate_video.loom_tutorial_url,
-          tokenCost: features.ai_generate_video.token_cost || 0
+          tokenCost: features.ai_generate_video.token_cost
+        },
+        features.ai_infographics && { // Infographics feature added
+          id: 'infographics',
+          label: 'Infographics',
+          actionType: 'infographics',
+          isComingSoon: features.ai_infographics.isComingSoon,
+          youtube_tutorial_url: features.ai_infographics.youtube_tutorial_url,
+          loom_tutorial_url: features.ai_infographics.loom_tutorial_url,
+          tokenCost: features.ai_infographics.token_cost
         },
         features.ai_audio && {
           id: 'audio',
@@ -340,7 +377,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_audio.isComingSoon,
           youtube_tutorial_url: features.ai_audio.youtube_tutorial_url,
           loom_tutorial_url: features.ai_audio.loom_tutorial_url,
-          tokenCost: features.ai_audio.token_cost || 0
+          tokenCost: features.ai_audio.token_cost
         },
         // Combined Image and Video Libraries into a single Media Library entry
         features.ai_image_library && { // Using ai_image_library as the primary feature flag for the combined entry
@@ -350,7 +387,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_image_library.isComingSoon, // Using image library's coming soon status
           youtube_tutorial_url: features.ai_image_library.youtube_tutorial_url, // Using image library's tutorial URL
           loom_tutorial_url: features.ai_image_library.loom_tutorial_url, // Using image library's tutorial URL
-          tokenCost: features.ai_image_library.token_cost || 0 // Using image library's token cost
+          tokenCost: features.ai_image_library.token_cost
         },
         // REMOVED: YouTube and TikTok search entries
       ].filter(a => a && (!HIDE_COMING_SOON || !a.isComingSoon)),
@@ -365,7 +402,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_manual_link.isComingSoon,
           youtube_tutorial_url: features.ai_manual_link.youtube_tutorial_url,
           loom_tutorial_url: features.ai_manual_link.loom_tutorial_url,
-          tokenCost: features.ai_manual_link.token_cost || 0
+          tokenCost: features.ai_manual_link.token_cost
         },
         features.ai_promoted_product && {
           id: 'promoted-product',
@@ -374,7 +411,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_promoted_product.isComingSoon,
           youtube_tutorial_url: features.ai_promoted_product.youtube_tutorial_url,
           loom_tutorial_url: features.ai_promoted_product.loom_tutorial_url,
-          tokenCost: features.ai_promoted_product.token_cost || 0
+          tokenCost: features.ai_promoted_product.token_cost
         },
         features.ai_testimonials && {
           id: 'testimonials',
@@ -383,7 +420,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_testimonials.isComingSoon,
           youtube_tutorial_url: features.ai_testimonials.youtube_tutorial_url,
           loom_tutorial_url: features.ai_testimonials.loom_tutorial_url,
-          tokenCost: features.ai_testimonials.token_cost || 0
+          tokenCost: features.ai_testimonials.token_cost
         },
         features.ai_cta && {
           id: 'cta',
@@ -392,7 +429,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_cta.isComingSoon,
           youtube_tutorial_url: features.ai_cta.youtube_tutorial_url,
           loom_tutorial_url: features.ai_cta.loom_tutorial_url,
-          tokenCost: features.ai_cta.token_cost || 0
+          tokenCost: features.ai_cta.token_cost
         },
       ].filter(a => a && (!HIDE_COMING_SOON || !a.isComingSoon)),
     },
@@ -406,7 +443,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_localize.isComingSoon,
           youtube_tutorial_url: features.ai_localize.youtube_tutorial_url,
           loom_tutorial_url: features.ai_localize.loom_tutorial_url,
-          tokenCost: features.ai_localize.token_cost || 0
+          tokenCost: features.ai_localize.token_cost
         },
         features.ai_clean_html && {
           id: 'clean-html',
@@ -415,7 +452,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_clean_html.isComingSoon,
           youtube_tutorial_url: features.ai_clean_html.youtube_tutorial_url,
           loom_tutorial_url: features.ai_clean_html.loom_tutorial_url,
-          tokenCost: features.ai_clean_html.token_cost || 0
+          tokenCost: features.ai_clean_html.token_cost
         },
         features.ai_detection && {
           id: 'ai-detection',
@@ -424,7 +461,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_detection.isComingSoon,
           youtube_tutorial_url: features.ai_detection.youtube_tutorial_url,
           loom_tutorial_url: features.ai_detection.loom_tutorial_url,
-          tokenCost: features.ai_detection.token_cost || 0
+          tokenCost: features.ai_detection.token_cost
         },
         features.ai_agent && {
           id: 'ai-agent',
@@ -433,7 +470,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_agent.isComingSoon,
           youtube_tutorial_url: features.ai_agent.youtube_tutorial_url,
           loom_tutorial_url: features.ai_agent.loom_tutorial_url,
-          tokenCost: features.ai_agent.token_cost || 0
+          tokenCost: features.ai_agent.token_cost
         },
         features.ai_brand_it && {
           id: 'brand-it',
@@ -442,7 +479,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_brand_it.isComingSoon,
           youtube_tutorial_url: features.ai_brand_it.youtube_tutorial_url,
           loom_tutorial_url: features.ai_brand_it.loom_tutorial_url,
-          tokenCost: features.ai_brand_it.token_cost || 0
+          tokenCost: features.ai_brand_it.token_cost
         },
         features.ai_affilify && {
           id: 'affilify',
@@ -451,7 +488,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           isComingSoon: features.ai_affilify.isComingSoon,
           youtube_tutorial_url: features.ai_affilify.youtube_tutorial_url,
           loom_tutorial_url: features.ai_affilify.loom_tutorial_url,
-          tokenCost: features.ai_affilify.token_cost || 0
+          tokenCost: features.ai_affilify.token_cost
         },
       ].filter(a => a && (!HIDE_COMING_SOON || !a.isComingSoon)),
     },
@@ -492,12 +529,6 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
             opacity: 1;
             transform: scale(1.3);
           }
-        }
-
-        .materia-orb {
-          position: relative;
-          cursor: pointer;
-          transition: all 0.3s ease;
         }
 
         .materia-orb:hover {
@@ -542,7 +573,7 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
                     showVideo={!!(action.youtube_tutorial_url || action.loom_tutorial_url)}
                     onPlayVideo={(e) => handlePlayVideo(e, action.youtube_tutorial_url, action.loom_tutorial_url, `How To Guide: ${action.label}`)}
                     actionType={action.actionType}
-                    tokenCost={action.tokenCost || 0}
+                    tokenCost={action.tokenCost}
                   />
                 ))}
               </div>

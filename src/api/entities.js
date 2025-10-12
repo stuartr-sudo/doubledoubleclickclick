@@ -101,6 +101,18 @@ export const Affiliate = base44.entities.Affiliate;
 
 export const AffiliatePack = base44.entities.AffiliatePack;
 
+export const AppSettings = base44.entities.AppSettings;
+
+export const AmazonProductVideo = base44.entities.AmazonProductVideo;
+
+export const DashboardBanner = base44.entities.DashboardBanner;
+
+export const WordPressPublishLog = base44.entities.WordPressPublishLog;
+
+export const ImagineerJob = base44.entities.ImagineerJob;
+
+export const InfographicVisualTypeExample = base44.entities.InfographicVisualTypeExample;
+
 
 
 // auth sdk:

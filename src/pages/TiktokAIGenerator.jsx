@@ -57,6 +57,9 @@ export default function TiktokAIGenerator() {
 
   const isSuperadmin = useMemo(() => !!currentUser?.is_superadmin || currentUser?.role === "admin", [currentUser]);
 
+  // Helper: normalize user_name keys consistently
+  const normalizeName = (s) => (s || "").trim().toLowerCase();
+
   const hydrateOembedCache = useCallback(async (items) => {
     const uncached = items.filter((v) => !v.oembed_html && v.url);
     for (const v of uncached) {
@@ -93,14 +96,16 @@ export default function TiktokAIGenerator() {
 
       if (useWorkspaceScoping) {
         if (globalUsername) {
-          visibleVideos = allVideos.filter((v) => v.user_name === globalUsername);
+          // CASE-INSENSITIVE FILTERING BY user_name
+          const target = normalizeName(globalUsername);
+          visibleVideos = allVideos.filter((v) => normalizeName(v.user_name) === target);
           usernamesForDropdown = assignedUsernames; // Use assignedUsernames from workspace context for reassign options
         } else if (user?.role === 'admin' || user?.is_superadmin) {
           visibleVideos = allVideos; // Admins see all if no global workspace is selected
           usernamesForDropdown = assignedUsernames; // Use assignedUsernames from workspace context
         } else {
-          const userAssigned = new Set(user?.assigned_usernames || []);
-          visibleVideos = allVideos.filter((v) => userAssigned.has(v.user_name));
+          const userAssigned = new Set((user?.assigned_usernames || []).map(normalizeName));
+          visibleVideos = allVideos.filter((v) => userAssigned.has(normalizeName(v.user_name)));
           usernamesForDropdown = Array.from(userAssigned).sort();
         }
         // When useWorkspaceScoping is true, assignToUsername and usernameFilter states are not directly controlled by UI,
@@ -116,9 +121,10 @@ export default function TiktokAIGenerator() {
           visibleVideos = allVideos;
           usernamesForDropdown = allDbUsernames;
         } else {
-          const assigned = new Set(user?.assigned_usernames || []);
-          visibleVideos = allVideos.filter((v) => assigned.has(v.user_name));
-          usernamesForDropdown = Array.from(assigned).filter((name) => allDbUsernames.includes(name)).sort();
+          const assignedLower = new Set((user?.assigned_usernames || []).map(normalizeName));
+          visibleVideos = allVideos.filter((v) => assignedLower.has(normalizeName(v.user_name)));
+          // Keep dropdown values as originally stored in DB but ensure intersection by case-insensitive compare
+          usernamesForDropdown = allDbUsernames.filter((name) => assignedLower.has(normalizeName(name))).sort();
         }
 
         setAssignToUsername(usernamesForDropdown[0] || ""); // Set default for save target (when not scoped)
@@ -140,7 +146,7 @@ export default function TiktokAIGenerator() {
     } finally {
       setIsLibraryLoading(false);
     }
-  }, [hydrateOembedCache, useWorkspaceScoping, globalUsername, assignedUsernames]);
+  }, [hydrateOembedCache, useWorkspaceScoping, globalUsername, assignedUsernames, setSavedVideoIds]);
 
   useEffect(() => {
     loadInitialData();
@@ -180,16 +186,23 @@ export default function TiktokAIGenerator() {
     const id = item.video_id;
     setSavingId(id);
     try {
+      // NORMALIZE THE SAVED user_name TO PREVENT MISMATCHES ON RELOAD
+      const userNameNormalized = normalizeName(effectiveSaveUsername);
+
       const newVideo = await TikTokVideo.create({
         title: item.title,
         video_id: item.video_id,
         url: item.web_video_url,
         cover_url: item.cover_url,
         author_name: item.author_name,
-        user_name: effectiveSaveUsername
+        user_name: userNameNormalized
       });
 
-      setSavedVideoIds((prev) => new Set(prev).add(id));
+      setSavedVideoIds((prev) => {
+        const s = new Set(prev);
+        s.add(id);
+        return s;
+      });
       toast.success("TikTok video added to library!");
 
       // Add to importedVideos. Filtering logic for display is handled by loadInitialData.
@@ -212,8 +225,9 @@ export default function TiktokAIGenerator() {
     }
     setReassigningId(video.id);
     try {
-      const updatedUsername = newUsername === "__none__" ? null : newUsername;
-      await TikTokVideo.update(video.id, { user_name: updatedUsername });
+      // NORMALIZE REASSIGNMENT FOR CONSISTENCY
+      const normalized = newUsername === "__none__" ? null : normalizeName(newUsername);
+      await TikTokVideo.update(video.id, { user_name: normalized });
       toast.success("TikTok video reassigned.");
       // Reload initial data to reflect changes based on user's scope
       loadInitialData(); // Re-trigger load to update library view based on new assignment
@@ -266,8 +280,8 @@ export default function TiktokAIGenerator() {
             <Button
               onClick={() => setShowSearch(!showSearch)}
               variant="outline"
-              className={`bg-white border-slate-300 text-slate-700 hover:bg-slate-50 ${showSearch ? 'bg-slate-100' : ''}`}
-            >
+              className={`bg-white border-slate-300 text-slate-700 hover:bg-slate-50 ${showSearch ? 'bg-slate-100' : ''}`}>
+
               <Search className="w-4 h-4 mr-2" />
               Search TikTok
               <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showSearch ? 'rotate-180' : ''}`} />
@@ -275,52 +289,52 @@ export default function TiktokAIGenerator() {
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <AnimatePresence>
-              {showSearch && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="overflow-hidden"
-                >
+              {showSearch &&
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="overflow-hidden">
+
                   <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 pb-6">
                     <div className="relative">
                       <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <Input
-                        placeholder="Search TikTok (e.g., dog training hacks)"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleTikTokSearch()}
-                        className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
+                      placeholder="Search TikTok (e.g., dog training hacks)"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleTikTokSearch()}
+                      className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
                     </div>
                     <Input
-                      type="number"
-                      min={1} max={10} // UPDATED: Max results to 10
-                      value={searchCount}
-                      onChange={(e) => setSearchCount(Math.min(10, Math.max(1, Number(e.target.value))))} // UPDATED: Max 10
-                      className="w-24 bg-white border-slate-300 text-slate-900"
-                      title="Max results (1-10)" />
+                    type="number"
+                    min={1} max={10} // UPDATED: Max results to 10
+                    value={searchCount}
+                    onChange={(e) => setSearchCount(Math.min(10, Math.max(1, Number(e.target.value))))} // UPDATED: Max 10
+                    className="w-24 bg-white border-slate-300 text-slate-900"
+                    title="Max results (1-10)" />
                     <Button onClick={handleTikTokSearch} disabled={isSearching} className="bg-indigo-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 rounded-md ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-indigo-700 hover:shadow-[0_0_20px_rgba(0,0,128,0.6),0_0_40px_rgba(0,0,128,0.4)] whitespace-nowrap">
                       {isSearching ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Searching...</> : <><Search className="w-4 h-4 mr-2" /> Search</>}
                     </Button>
                   </div>
                 </motion.div>
-              )}
+              }
             </AnimatePresence>
 
             {error && <div className="text-red-600 text-sm">{error}</div>}
 
             {isSearching ?
-              <div className="min-h-[120px] py-16 flex items-center justify-center text-slate-500"><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Loading results...</div> :
-              searchResults.length > 0 ? (
-                <div className="min-h-[120px]">
+            <div className="min-h-[120px] py-16 flex items-center justify-center text-slate-500"><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Loading results...</div> :
+            searchResults.length > 0 ?
+            <div className="min-h-[120px]">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {searchResults.map((item) => {
-                    const id = item.video_id;
-                    const isSaved = savedVideoIds.has(id);
-                    const isSaving = savingId === id;
-                    return (
-                      <div key={id} className="rounded-lg border border-slate-200 overflow-hidden bg-white flex flex-col">
+                  const id = item.video_id;
+                  const isSaved = savedVideoIds.has(id);
+                  const isSaving = savingId === id;
+                  return (
+                    <div key={id} className="rounded-lg border border-slate-200 overflow-hidden bg-white flex flex-col">
                           <div className="aspect-[9/16] bg-slate-100 grid place-items-center overflow-hidden">
                             {item.cover_url ? <img src={item.cover_url} alt={item.title} className="w-full h-full object-cover" /> : <div className="text-slate-400">No thumbnail</div>}
                           </div>
@@ -330,26 +344,26 @@ export default function TiktokAIGenerator() {
                             <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                               {item.web_video_url && <a href={item.web_video_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-sm"><ExternalLink className="w-4 h-4" /> Open</a>}
                               <Button
-                              size="sm"
-                              onClick={() => handleSaveToLibrary(item)}
-                              disabled={!effectiveSaveUsername || effectiveSaveUsername === 'all' || isSaving || isSaved}
-                              className={`ml-auto ${isSaved ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
-                              title={!effectiveSaveUsername || effectiveSaveUsername === 'all' ? "Select a workspace to save" : isSaved ? "Added to library" : "Save to Library"}>
+                            size="sm"
+                            onClick={() => handleSaveToLibrary(item)}
+                            disabled={!effectiveSaveUsername || effectiveSaveUsername === 'all' || isSaving || isSaved}
+                            className={`ml-auto ${isSaved ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
+                            title={!effectiveSaveUsername || effectiveSaveUsername === 'all' ? "Select a workspace to save" : isSaved ? "Added to library" : "Save to Library"}>
                                 {isSaving ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving</> : isSaved ? <><Save className="w-4 h-4 mr-1" /> Added</> : <><Save className="w-4 h-4 mr-1" /> Save</>}
                               </Button>
                             </div>
                           </div>
                         </div>);
-                  })}
+                })}
                   </div>
-                </div>
-              ) : ( // No search results, display prompts if search form is open, then the Imported Videos section
-                <>
-                  {showSearch && (searchQuery.trim() === "" ? (
-                    <div className="min-h-[120px] py-16 text-center text-slate-500">Start by searching for a topic to see TikTok results here.</div>
-                  ) : (
-                    <div className="min-h-[120px] py-16 text-center text-slate-500">No TikTok results found for "{searchQuery}". Try a different query.</div>
-                  ))}
+                </div> :
+            // No search results, display prompts if search form is open, then the Imported Videos section
+            <>
+                  {showSearch && (searchQuery.trim() === "" ?
+              <div className="min-h-[120px] py-16 text-center text-slate-500">Start by searching for a topic to see TikTok results here.</div> :
+
+              <div className="min-h-[120px] py-16 text-center text-slate-500">No TikTok results found for "{searchQuery}". Try a different query.</div>)
+              }
 
                   <div className="mt-2">
                     <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
@@ -364,60 +378,60 @@ export default function TiktokAIGenerator() {
                           <Input id="library-filter" value={libraryFilter} onChange={(e) => setLibraryFilter(e.target.value)} placeholder="Filter imported..." className="h-9 w-full sm:w-[220px] bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
                         </div>
                         {/* Removed the Select for usernameFilter as per outline */}
-                        <Button onClick={loadInitialData} disabled={isLibraryLoading} variant="outline" className="bg-background text-slate-50 px-3 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 border-slate-300 hover:bg-slate-50">
+                        <Button onClick={loadInitialData} disabled={isLibraryLoading} variant="outline" className="bg-background text-slate-700 px-3 py-2 text-sm font-medium border hover:text-accent-foreground inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 border-slate-300 hover:bg-slate-50">
                           <RefreshCw className={`w-4 h-4 ${isLibraryLoading ? "animate-spin" : ""}`} />
                         </Button>
                       </div>
                     </div>
 
                     {isLibraryLoading ?
-                    <div className="py-10 flex items-center justify-center text-slate-500"><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading library...</div> :
-                    importedVideos.length === 0 && (useWorkspaceScoping ? !globalUsername : usernameFilter === "all") ? // Adjusted empty message logic
-                    <div className="py-10 text-slate-500 text-center">No imported videos yet, or no workspace selected.</div> :
-                    filteredLibraryVideos.length === 0 ?
-                    <div className="py-10 text-slate-500 text-center">No imported videos matching your filter criteria.</div> :
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {filteredLibraryVideos.map((v) =>
-                      <div key={v.id} className="rounded-lg border border-slate-200 overflow-hidden bg-white flex flex-col">
-                            <TikTokEmbed videoId={v.video_id} url={v.url} coverUrl={v.cover_url} title={v.title} cachedHtml={v.oembed_html} />
-                            <div className="p-4 flex-1 flex flex-col gap-2">
-                              <div className="font-medium line-clamp-2 text-slate-900">{v.title || "TikTok Video"}</div>
-                              <div className="text-xs text-slate-500">{v.author_name ? `by ${v.author_name}` : ""}</div>
-                              <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                                {v.url && <a href={v.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-sm"><ExternalLink className="w-4 h-4" /> Open</a>}
-                                <div className="flex items-center gap-2 ml-auto">
-                                  {/* Reassign dropdown only visible for Superadmin and when not using Workspace Scoping */}
-                                  {isSuperadmin && !useWorkspaceScoping ?
-                              <Select value={v.user_name || "__none__"} onValueChange={(val) => handleReassignUsername(v, val)} disabled={reassigningId === v.id}>
-                                      <SelectTrigger className="h-8 w-[150px] bg-white border-slate-300 text-slate-900"><SelectValue placeholder="Assign username" /></SelectTrigger>
-                                      <SelectContent className="max-h-60 overflow-y-auto bg-white border-slate-200 text-slate-900">
-                                        <SelectItem value="__none__" className="hover:bg-slate-100">Unassigned</SelectItem>
-                                        {(availableUsernames || []).map((u) => <SelectItem key={u} value={u} className="hover:bg-slate-100">{u}</SelectItem>)}
-                                      </SelectContent>
-                                    </Select> :
-                              // Show badge if assigned username exists
-                              v.user_name && <Badge variant="outline" className="border-slate-200 text-slate-600">{v.user_name}</Badge>
-                              }
-                                  <TooltipProvider delayDuration={200}>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => {setVideoToDelete(v);setShowDeleteConfirm(true);}}>
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Delete from library</TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+                <div className="py-10 flex items-center justify-center text-slate-500"><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading library...</div> :
+                importedVideos.length === 0 && (useWorkspaceScoping ? !globalUsername : usernameFilter === "all") ? // Adjusted empty message logic
+                <div className="py-10 text-slate-500 text-center">No imported videos yet, or no workspace selected.</div> :
+                filteredLibraryVideos.length === 0 ?
+                <div className="py-10 text-slate-500 text-center">No imported videos matching your filter criteria.</div> :
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                            {filteredLibraryVideos.map((v) =>
+                  <div key={v.id} className="rounded-lg border border-slate-200 overflow-hidden bg-white flex flex-col">
+                                <TikTokEmbed videoId={v.video_id} url={v.url} coverUrl={v.cover_url} title={v.title} cachedHtml={v.oembed_html} />
+                                <div className="p-4 flex-1 flex flex-col gap-2">
+                                  <div className="font-medium line-clamp-2 text-slate-900">{v.title || "TikTok Video"}</div>
+                                  <div className="text-xs text-slate-500">{v.author_name ? `by ${v.author_name}` : ""}</div>
+                                  <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                                    {v.url && <a href={v.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-sm"><ExternalLink className="w-4 h-4" /> Open</a>}
+                                    <div className="flex items-center gap-2 ml-auto">
+                                      {/* Reassign dropdown only visible for Superadmin and when not using Workspace Scoping */}
+                                      {isSuperadmin && !useWorkspaceScoping ?
+                          <Select value={v.user_name || "__none__"} onValueChange={(val) => handleReassignUsername(v, val)} disabled={reassigningId === v.id}>
+                                          <SelectTrigger className="h-8 w-[150px] bg-white border-slate-300 text-slate-900"><SelectValue placeholder="Assign username" /></SelectTrigger>
+                                          <SelectContent className="max-h-60 overflow-y-auto bg-white border-slate-200 text-slate-900">
+                                            <SelectItem value="__none__" className="hover:bg-slate-100">Unassigned</SelectItem>
+                                            {(availableUsernames || []).map((u) => <SelectItem key={u} value={u} className="hover:bg-slate-100">{u}</SelectItem>)}
+                                          </SelectContent>
+                                        </Select> :
+                          // Show badge if assigned username exists
+                          v.user_name && <Badge variant="outline" className="border-slate-200 text-slate-600">{v.user_name}</Badge>
+                          }
+                                      <TooltipProvider delayDuration={200}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => {setVideoToDelete(v);setShowDeleteConfirm(true);}}>
+                                              <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Delete from library</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
+                  )}
                           </div>
-                      )}
-                      </div>
-                    }
+                }
                   </div>
                 </>
-              )
+
             }
           </CardContent>
         </Card>

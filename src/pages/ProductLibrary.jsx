@@ -354,7 +354,8 @@ export default function ProductLibrary() {
         "Page Name": productData.cleanName.trim(),
         "Page Content": productData.content || "",
         "URL": productUrl.trim(),
-        "client_username": username
+        "client_username": username,
+        "Status": "Add to Pinecone"  // ADDED: Automatically set Status field
       };
 
       console.log("💾 Saving fields:", fields);

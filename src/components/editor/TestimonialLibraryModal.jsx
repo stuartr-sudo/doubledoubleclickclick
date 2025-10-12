@@ -63,6 +63,21 @@ export default function TestimonialLibraryModal({
   const { selectedUsername: globalUsername } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
 
+  // State to hold the current user, used for feature flags and other logic
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // NEW: Feature flag for Amazon import button
+  const { enabled: showAmazonImportButton } = useFeatureFlag('ask_ai_search_insert_amazon_testimonials', {
+    currentUser: currentUser, // Pass the currentUser state to the feature flag hook
+    defaultEnabled: true
+  });
+
+  // NEW: Feature flag for Trust Pilot import button
+  const { enabled: showTrustPilotImportButton } = useFeatureFlag('ask_ai_search_insert_trust-pilot_testimonials', {
+    currentUser: currentUser,
+    defaultEnabled: true
+  });
+
   // Determine active username filter based on workspace scoping
   const selectedUsername = useWorkspaceScoping ? (globalUsername || "all") : "all";
 
@@ -100,6 +115,7 @@ export default function TestimonialLibraryModal({
     setLoading(true);
     try {
       const user = await User.me();
+      setCurrentUser(user); // Set the current user here for feature flag evaluation
       let testimonialsData = [];
 
       if (user.role === 'admin') {
@@ -122,6 +138,7 @@ export default function TestimonialLibraryModal({
         description: "Failed to load testimonial data. Please try again.",
         variant: "destructive",
       });
+      setCurrentUser(null); // Reset user on error
     } finally {
       setLoading(false);
     }
@@ -501,44 +518,49 @@ export default function TestimonialLibraryModal({
                 Testimonials
               </span>
               <div className="flex items-center gap-2">
-                {/* Trustpilot toggle button – ensure readable contrast (white text on dark bg) */}
-                <Button
-                  onClick={() => {
-                    setShowTrustpilot(v => !v);
-                    setShowAmazonImport(false);
-                    setAmazonUrl("");
-                    setShowInlineForm(false);
-                    resetInlineForm();
-                    setTpResults([]);
-                  }}
-                  variant="default"
-                  className="inline-flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800"
-                >
-                  Import from Trust Pilot
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showTrustpilot ? "rotate-180" : ""}`} />
-                </Button>
+                {/* Trustpilot toggle button - gated by feature flag */}
+                {showTrustPilotImportButton && (
+                  <Button
+                    onClick={() => {
+                      setShowTrustpilot(v => !v);
+                      setShowAmazonImport(false);
+                      setAmazonUrl("");
+                      setShowInlineForm(false);
+                      resetInlineForm();
+                      setTpResults([]);
+                    }}
+                    variant="default"
+                    className="inline-flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800"
+                  >
+                    Import from Trust Pilot
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showTrustpilot ? "rotate-180" : ""}`} />
+                  </Button>
+                )}
 
-                <Button
-                  onClick={() => {
-                    setShowAmazonImport(!showAmazonImport);
-                    setShowInlineForm(false);
-                    resetInlineForm();
-                    setShowTrustpilot(false); // Close Trustpilot if Amazon import is opened
-                    setTpDomain("");
-                    setTpResults([]);
-                  }}
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
-                >
-                  <Package className="w-4 h-4 mr-2" />
-                  Import from Amazon
-                </Button>
+                {/* Amazon import button - gated by feature flag */}
+                {showAmazonImportButton && (
+                  <Button
+                    onClick={() => {
+                      setShowAmazonImport(!showAmazonImport);
+                      setShowInlineForm(false);
+                      resetInlineForm();
+                      setShowTrustpilot(false);
+                      setTpDomain("");
+                      setTpResults([]);
+                    }}
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    <Package className="w-4 h-4 mr-2" />
+                    Import from Amazon
+                  </Button>
+                )}
                 {!showInlineForm ? (
                   <Button
                     onClick={() => {
                       setShowInlineForm(true);
                       setShowAmazonImport(false);
                       setAmazonUrl("");
-                      setShowTrustpilot(false); // Close Trustpilot if inline form is opened
+                      setShowTrustpilot(false);
                       setTpDomain("");
                       setTpResults([]);
                     }}

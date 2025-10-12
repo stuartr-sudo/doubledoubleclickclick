@@ -241,7 +241,7 @@ export default function GroupedFaqTable({ rows = [], tableId, options, handleUpd
                                         </Button>
                                       </Link> :
 
-                            <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs px-1.5 py-0.5">
+                            <Badge className="inline-flex items-center rounded-full font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-blue-800 bg-blue-900 text-white border border-blue-700 text-xs px-1.5 py-0.5">
                                         Writing Article
                                       </Badge>)
 

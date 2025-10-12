@@ -1,119 +1,115 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Affiliate } from '@/api/entities';
-import { User } from '@/api/entities';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { createPageUrl } from '@/utils';
-import { Loader2, CheckCircle2, Users, TrendingUp, DollarSign } from 'lucide-react';
+import React, { useState } from "react";
+import { Affiliate } from "@/api/entities";
+import { SendEmail } from "@/api/integrations";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle, Users, Loader2, AlertCircle, Clock } from "lucide-react"; // Added Clock
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function AffiliateSignup() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    unique_code: '',
-    commission_rate: 20
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", commission_rate: 50 });
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  // Check auth status to decide post-submit CTA
-  React.useEffect(() => {
-    User.me().then(() => setIsLoggedIn(true)).catch(() => setIsLoggedIn(false));
-  }, []);
-
-  const generateUniqueCode = (name, email) => {
-    const namepart = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 4);
-    const emailpart = email.toLowerCase().split('@')[0].replace(/[^a-z0-9]/g, '').slice(0, 4);
-    const random = Math.random().toString(36).substring(2, 6);
-    return `${namepart}${emailpart}${random}`.slice(0, 12);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: value,
-      ...(name === 'name' || name === 'email' ? {
-        unique_code: generateUniqueCode(
-          name === 'name' ? value : prev.name,
-          name === 'email' ? value : prev.email
-        )
-      } : {})
-    }));
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setError(""); // Clear error when user types
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.unique_code) {
-      toast.error('Please fill in all required fields.');
-      return;
-    }
+    setSubmitting(true);
+    setError("");
 
-    setIsSubmitting(true);
     try {
-      // Check if unique code or email already exists
-      const existingCode = await Affiliate.filter({ unique_code: formData.unique_code });
-      const existingEmail = await Affiliate.filter({ email: formData.email });
+      const emailLower = form.email.trim().toLowerCase();
+
+      // Check if affiliate with this email already exists
+      const existingAffiliates = await Affiliate.filter({ email: emailLower });
       
-      if (existingCode.length > 0) {
-        toast.error('This referral code is already taken. Please modify it.');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      if (existingEmail.length > 0) {
-        toast.error('An affiliate account with this email already exists.');
-        setIsSubmitting(false);
+      if (existingAffiliates && existingAffiliates.length > 0) {
+        setError("An affiliate account with this email already exists. Please log in instead.");
+        toast.error("This email is already registered as an affiliate.");
+        setSubmitting(false);
         return;
       }
 
+      // Generate unique code from email
+      const uniqueCode = emailLower.split('@')[0].replace(/[^a-z0-9]/g, '') + Date.now().toString().slice(-4);
+
+      // Create affiliate record - INACTIVE by default (requires manual approval)
       await Affiliate.create({
-        ...formData,
-        is_active: false // Requires admin approval
+        name: form.name.trim(),
+        email: emailLower,
+        unique_code: uniqueCode,
+        commission_rate: form.commission_rate || 50,
+        is_active: false  // ⚠️ CHANGED: Requires manual approval from admin
       });
 
-      setIsSuccess(true);
-      toast.success('Application submitted successfully!');
+      // Send email notification to admin
+      await SendEmail({
+        to: "stuartr@doubleclick.work",
+        subject: "🆕 New Affiliate Application - Pending Approval",
+        body: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1e293b; border-bottom: 2px solid #f59e0b; padding-bottom: 10px;">
+              🆕 New Affiliate Application
+            </h2>
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <p style="margin: 0; color: #92400e; font-weight: bold;">⚠️ ACTION REQUIRED: This affiliate is pending approval</p>
+            </div>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 10px 0;"><strong>Name:</strong> ${form.name}</p>
+              <p style="margin: 10px 0;"><strong>Email:</strong> ${emailLower}</p>
+              <p style="margin: 10px 0;"><strong>Unique Code:</strong> ${uniqueCode}</p>
+              <p style="margin: 10px 0;"><strong>Commission Rate:</strong> ${form.commission_rate}%</p>
+              <p style="margin: 10px 0;"><strong>Status:</strong> <span style="color: #d97706; font-weight: bold;">PENDING APPROVAL</span></p>
+            </div>
+            <p style="color: #64748b; font-size: 14px;">
+              Go to <strong>Affiliate Manager</strong> to review and activate this affiliate.
+            </p>
+          </div>
+        `
+      });
+
+      setSuccess(true);
+      toast.success("Application submitted successfully!");
+      
+      // Removed redirect as account is not active yet.
     } catch (error) {
-      console.error('Signup error:', error);
-      toast.error('Failed to submit application. Please try again.');
+      console.error("Error creating affiliate:", error);
+      setError("Failed to register. Please try again or contact support.");
+      toast.error("Failed to register. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  if (isSuccess) {
+  if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <Card className="max-w-md w-full bg-white border border-slate-200">
           <CardContent className="pt-6 text-center">
-            <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-4">
+              <Clock className="w-8 h-8 text-amber-600" />
+            </div>
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Application Submitted!</h2>
-            <p className="text-slate-600 mb-6">
-              Thank you for your interest in becoming an affiliate. We'll review your application and get back to you within 24 hours.
+            <p className="text-slate-600 mb-4">
+              Your affiliate application has been received and is pending approval.
             </p>
-
-            {isLoggedIn ? (
-              <Link to={createPageUrl('Dashboard')}>
-                <Button className="w-full">Go to Dashboard</Button>
-              </Link>
-            ) : (
-              <Button
-                className="w-full"
-                onClick={() => {
-                  const callbackUrl = `${window.location.origin}${createPageUrl('Dashboard')}`;
-                  User.loginWithRedirect(callbackUrl);
-                }}
-              >
-                Create your account to access the Dashboard
-              </Button>
-            )}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-sm text-amber-800">
+                You'll receive an email notification once your account is approved and activated.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -121,113 +117,105 @@ export default function AffiliateSignup() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link to={createPageUrl('Home')} className="flex items-center">
-              <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/689715479cd170f6c2aa04f2/d056b0101_logo.png" alt="Logo" className="w-8 h-8 rounded-full mr-3" />
-              <span className="text-xl font-bold text-slate-900">DoubleClick</span>
-            </Link>
-            <Link to={createPageUrl('AffiliateLogin')}>
-              <Button variant="outline">Affiliate Login</Button>
-            </Link>
+    <div className="min-h-screen bg-slate-50 p-6">
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+            <Users className="w-8 h-8 text-blue-600" />
           </div>
+          <h1 className="text-4xl font-bold text-slate-900 mb-3">Become an Affiliate</h1>
+          <p className="text-lg text-slate-600">
+            Join our affiliate program and start earning 50% commission by referring customers to DoubleClick.
+          </p>
         </div>
-      </header>
 
-      <div className="py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Hero Section */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-slate-900 mb-4">
-              Join Our Affiliate Program
-            </h1>
-            <p className="text-lg text-slate-600">
-              Earn generous commissions by promoting DoubleClick's AI-powered content tools to your audience.
-            </p>
-          </div>
+        <Card className="bg-white border border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-2xl text-slate-900">Sign Up Form</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {error && (
+              <Alert className="mb-6 border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">
+                  {error}
+                  {error.includes("already exists") && (
+                    <div className="mt-2">
+                      <Button
+                        variant="link"
+                        className="text-red-600 hover:text-red-700 p-0 h-auto"
+                        onClick={() => navigate(createPageUrl('AffiliateLogin'))}
+                      >
+                        Click here to log in instead
+                      </Button>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {/* Benefits Grid */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <DollarSign className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">High Commissions</h3>
-                <p className="text-slate-600">Earn up to 50% recurring commission on every sale you refer.</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <Users className="w-12 h-12 text-blue-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">Marketing Support</h3>
-                <p className="text-slate-600">Get access to high-converting marketing materials and campaigns.</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <TrendingUp className="w-12 h-12 text-purple-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">Real-time Tracking</h3>
-                <p className="text-slate-600">Monitor your referrals, conversions, and earnings in real-time.</p>
-              </CardContent>
-            </Card>
-          </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <Label htmlFor="name" className="text-slate-700 font-medium mb-2 block">Full Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  className="bg-white border-slate-300 text-slate-900"
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
 
-          {/* Signup Form */}
-          <div className="max-w-md mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-center">Apply to Become an Affiliate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      placeholder="Enter your full name"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email Address *</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="unique_code">Preferred Referral Code *</Label>
-                    <Input
-                      id="unique_code"
-                      name="unique_code"
-                      value={formData.unique_code}
-                      onChange={handleInputChange}
-                      placeholder="Your custom referral code"
-                      required
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      This will be your unique referral code (e.g., ?ref={formData.unique_code})
-                    </p>
-                  </div>
-                  <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Submit Application
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              <div>
+                <Label htmlFor="email" className="text-slate-700 font-medium mb-2 block">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="bg-white border-slate-300 text-slate-900"
+                  placeholder="john@example.com"
+                  required
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Commission:</strong> You'll earn 50% commission on all successful referrals for 12 months.
+                </p>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  "Join Affiliate Program"
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center text-sm text-slate-600">
+              Already have an account?{" "}
+              <Button
+                variant="link"
+                className="text-blue-600 hover:text-blue-700 p-0 h-auto"
+                onClick={() => navigate(createPageUrl('AffiliateLogin'))}
+              >
+                Log in here
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

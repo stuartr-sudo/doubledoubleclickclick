@@ -5,11 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Loader2, Globe, MapPin, Languages, Target, Package } from "lucide-react";
+import { Loader2, Globe, MapPin, Languages, Target, Package, CheckCircle } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { airtableCreateRecord } from "@/api/functions";
+import { airtableUpdateRecord } from "@/api/functions";
 import { extractWebsiteContent } from "@/api/functions";
+import { amazonProduct } from "@/api/functions";
 import { toast } from "sonner";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { AppSettings } from "@/api/entities";
+import { agentSDK } from "@/agents";
+import { User } from "@/api/entities";
+import { base44 } from "@/api/base44Client"; // Added import
 
 const COUNTRY_OPTIONS = [
   { label: "Algeria", value: "2012" }, { label: "Angola", value: "2024" }, { label: "Azerbaijan", value: "2031" },
@@ -55,7 +62,7 @@ const LANGUAGE_OPTIONS = [
   { label: "Greek", value: "el" }, { label: "Estonian", value: "et" }, { label: "Finnish", value: "fi" },
   { label: "Hebrew", value: "he" }, { label: "Hindi", value: "hi" }, { label: "Hungarian", value: "hu" },
   { label: "Indonesian", value: "id" }, { label: "Italian", value: "it" }, { label: "Japanese", value: "ja" },
-  { label: "Kazakh", value: "kk" }, { label: "Korean", value: "ko" }, { label: "Latvian", value: "lv" },
+  { label: "Kazakh", value: "kk" }, { label: "Jordan", value: "jo" }, { label: "Korean", value: "ko" }, { label: "Latvian", value: "lv" },
   { label: "Lithuanian", value: "lt" }, { label: "Malay", value: "ms" }, { label: "Maltese", value: "mt" },
   { label: "Norwegian", value: "no" }, { label: "Polish", value: "pl" }, { label: "Portuguese", value: "pt" },
   { label: "Romanian", value: "ro" }, { label: "Russian", value: "ru" }, { label: "Serbian", value: "sr" },
@@ -64,29 +71,127 @@ const LANGUAGE_OPTIONS = [
   { label: "Vietnamese", value: "vi" }
 ];
 
-export default function TopicsOnboardingModal({ 
-  open, 
-  onClose, 
-  username, 
-  onCompleted, 
+// normalize incoming URLs to ensure they include protocol and are valid
+const normalizeUrl = (input) => {
+  if (!input) return "";
+  let url = String(input).trim();
+  if (!/^https?:\/\//i.test(url)) {
+    url = "https://" + url;
+  }
+  try {
+    const u = new URL(url);
+    return u.toString();
+  } catch {
+    return "";
+  }
+};
+
+// Helper: ensure a compact string, trimmed and length-limited
+const toCleanString = (val, maxLen = 4000) => {
+  try {
+    if (val == null) return "";
+    const s = String(val).replace(/\s+/g, " ").trim();
+    return s.length > maxLen ? s.slice(0, maxLen) : s;
+  } catch {
+    return "";
+  }
+};
+
+// Robust agent summarizer with polling + timeout and string-only return
+const summarizeProductWithAgent = async (pageTitle, pageText, { timeoutMs = 30000, pollIntervalMs = 2000 } = {}) => {
+  const title = toCleanString(pageTitle, 200) || "Untitled Product";
+  const text = toCleanString(pageText, 12000); // guard extremely long pages
+
+  const conversation = await agentSDK.createConversation({
+    agent_name: "product_summarizer",
+    metadata: { name: `Summarize: ${title.slice(0, 60)}` }
+  });
+
+  if (!conversation || !conversation.id) {
+    throw new Error("Failed to create product_summarizer conversation");
+  }
+
+  await agentSDK.addMessage(conversation, {
+    role: "user",
+    content: `Summarize the following product page into ~250-300 words, focusing on benefits and key features. 
+Return ONLY the summary text, no headings, lists, or markdown.
+
+Title: ${title}
+Content:
+${text}`
+  });
+
+  const startTime = Date.now();
+  let summaryContent = null;
+
+  while (Date.now() - startTime < timeoutMs) {
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs)); // Wait before checking
+
+    const updatedConversation = await agentSDK.getConversation(conversation.id);
+    const messages = updatedConversation?.messages || [];
+    const lastMessage = messages[messages.length - 1];
+
+    // Check if we have a complete assistant response (is_complete or sufficient content length)
+    if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || (lastMessage.content && lastMessage.content.length > 50))) {
+      summaryContent = toCleanString(lastMessage.content);
+      break;
+    }
+  }
+
+  if (summaryContent) {
+    return summaryContent;
+  } else {
+    throw new Error(`product_summarizer timed out after ${timeoutMs / 1000} seconds without a complete summary.`);
+  }
+};
+
+export default function TopicsOnboardingModal({
+  open,
+  onClose,
+  username,
+  onCompleted,
   companyInfoTableId,
   targetMarketTableId,
-  companyProductsTableId
+  companyProductsTableId,
+  usersTableId = "Users"
 }) {
   const [step, setStep] = React.useState(1);
   const [website, setWebsite] = React.useState("");
   const [geo, setGeo] = React.useState("");
   const [lang, setLang] = React.useState("");
   const [targetMarket, setTargetMarket] = React.useState("");
+  const [targetMarketName, setTargetMarketName] = React.useState(""); // NEW
   const [generatingTargetMarket, setGeneratingTargetMarket] = React.useState(false);
   const [productUrl, setProductUrl] = React.useState("");
-  const [productData, setProductData] = React.useState({ title: "", content: "", cleanName: "" });
-  const [scrapingProduct, setScrapingProduct] = React.useState(false);
+  const [productData, setProductData] = React.useState({ title: "", content: "", cleanName: "" }); // Data for submission
+  const [scrapedProductDisplay, setScrapedProductDisplay] = React.useState(null); // Data for display in step 5
+  const [isScrapingProduct, setIsScrapingProduct] = React.useState(false); // Renamed from scrapingProduct
   const [saving, setSaving] = React.useState(false);
+  const [videoEmbedCode, setVideoEmbedCode] = React.useState("");
+  const lastScrapeIdRef = React.useRef(0); // prevent race conditions across clicks
 
   const { consumeTokensForFeature } = useTokenConsumption();
 
   const isValidTblId = (val) => typeof val === "string" && /^tbl[a-zA-Z0-9]{14}$/.test(val);
+
+  // Load video embed code
+  React.useEffect(() => {
+    const loadVideo = async () => {
+      try {
+        const settings = await AppSettings.list();
+        const videoSetting = settings.find(s => s.key === "topics_onboarding_video");
+        if (videoSetting?.value) {
+          setVideoEmbedCode(videoSetting.value);
+        }
+      } catch (error) {
+        console.error("Error loading video:", error);
+      }
+    };
+
+    if (open) {
+      loadVideo();
+    }
+  }, [open]);
 
   const next = () => {
     if (step === 1 && !website.trim()) {
@@ -101,8 +206,8 @@ export default function TopicsOnboardingModal({
       toast.error("Please select a language");
       return;
     }
-    if (step === 4 && !targetMarket.trim()) {
-      toast.error("Please enter or generate a target market description");
+    if (step === 4 && (!targetMarketName.trim() || !targetMarket.trim())) {
+      toast.error("Please enter both a name and description for your target market");
       return;
     }
     if (step < 5) setStep(step + 1);
@@ -129,6 +234,14 @@ export default function TopicsOnboardingModal({
       return;
     }
 
+    // sanitize website URL before calling extractWebsiteContent
+    const sanitized = normalizeUrl(website);
+    if (!sanitized) {
+      toast.error("Please enter a valid website URL (e.g., https://example.com)");
+      return;
+    }
+    if (sanitized !== website) setWebsite(sanitized);
+
     const result = await consumeTokensForFeature('topics_onboarding_ai_target_market');
     if (!result.success) {
       return;
@@ -136,10 +249,10 @@ export default function TopicsOnboardingModal({
 
     setGeneratingTargetMarket(true);
     try {
-      console.log('Fetching website content from:', website);
-      const response = await extractWebsiteContent({ url: website });
+      console.log('Fetching website content from:', sanitized);
+      const response = await extractWebsiteContent({ url: sanitized });
       console.log('Website content response:', response);
-      
+
       const websiteData = response?.data;
       if (websiteData?.success && websiteData?.text) {
         const prompt = `Based on this website content, write a concise 2-3 sentence description of the target market:\n\n${websiteData.text.substring(0, 3000)}`;
@@ -159,45 +272,126 @@ export default function TopicsOnboardingModal({
     }
   };
 
-  const scrapeProduct = async () => {
+  const handleScrapeProduct = async () => { // Renamed from scrapeProduct
     if (!productUrl.trim()) {
       toast.error("Please enter a product URL");
       return;
     }
 
-    const result = await consumeTokensForFeature('topics_onboarding_product_scrape');
-    if (!result.success) {
+    const sanitized = normalizeUrl(productUrl);
+    if (!sanitized) {
+      toast.error("Please enter a valid product URL (e.g., https://example.com/product)");
       return;
     }
+    if (sanitized !== productUrl) setProductUrl(sanitized);
 
-    setScrapingProduct(true);
+    const tokenRes = await consumeTokensForFeature('topics_onboarding_product_scrape');
+    if (!tokenRes.success) return;
+
+    const myId = Date.now();
+    lastScrapeIdRef.current = myId; // Mark this scrape operation with a unique ID
+
+    setIsScrapingProduct(true); // Updated state name
+    let productTitle = "";
+    let productRawContent = "";
+    let cleanName = "";
+    let summary = "";
+    let productImage = ""; // To store image URL for display
+
     try {
-      console.log('Scraping product from:', productUrl);
-      const response = await extractWebsiteContent({ url: productUrl });
-      console.log('Product scrape response:', response);
-      
-      const productPageData = response?.data;
-      if (productPageData?.success && productPageData?.text && productPageData?.title) {
-        const cleanName = generateCleanProductName(productPageData.title);
-        setProductData({ 
-          title: productPageData.title, 
-          content: productPageData.text,
-          cleanName: cleanName
-        });
-        toast.success("Product page scraped successfully");
+      const isAmazonUrl = sanitized.includes('amazon.com') || sanitized.includes('amzn.');
+
+      if (isAmazonUrl) {
+        console.log('Scraping Amazon product from:', sanitized);
+        const { data: amazonData } = await amazonProduct({ url: sanitized });
+
+        if (!amazonData?.success) {
+          if (amazonData?.error && amazonData.error.includes("exceeded the MONTHLY quota")) {
+            toast.error("Amazon Import Quota Reached", {
+              description: "You've used all your free Amazon data requests for the month. Please try a different product URL.",
+              duration: 10000
+            });
+          } else {
+            toast.error(amazonData?.error || "Failed to fetch Amazon product details.");
+          }
+          return; // Early exit, still in finally
+        }
+
+        const p = amazonData.data;
+        productTitle = toCleanString(p.product_title || "", 200);
+        productRawContent = toCleanString(p.product_description || "", 12000);
+        if (Array.isArray(p.about_product)) {
+          productRawContent += "\n\n" + toCleanString(p.about_product.join("\n"), 12000 - productRawContent.length);
+        }
+        cleanName = generateCleanProductName(productTitle || "Untitled Product");
+        productImage = p.main_image_url || ""; // Capture main image URL
+
       } else {
-        console.error('Failed to extract product info:', productPageData);
-        toast.error("Could not extract product information. Please continue without scraping.");
+        console.log('Scraping generic product from:', sanitized);
+        const response = await extractWebsiteContent({ url: sanitized });
+        const productPageData = response?.data;
+
+        if (!productPageData?.success || !productPageData?.text) {
+          toast.error("Could not extract product information from the URL.");
+          return; // Early exit, still in finally
+        }
+
+        productTitle = toCleanString(productPageData.title || "", 200);
+        productRawContent = toCleanString(productPageData.text || "", 12000);
+        cleanName = generateCleanProductName(productTitle || "Untitled Product");
+        // No image extraction for generic pages for now
       }
+
+      // If another scrape was initiated while we were fetching content, abort this one
+      if (myId !== lastScrapeIdRef.current) {
+        console.log("Aborting current scrape, new scrape initiated.");
+        return;
+      }
+      
+      // Step 2: Call product_summarizer agent
+      try {
+        summary = await summarizeProductWithAgent(productTitle, productRawContent);
+        toast.success("Product page summarized successfully");
+      } catch (agentError) {
+        console.warn("Product summarization agent failed or timed out:", agentError.message);
+        toast.warning("Product summarization timed out. Using raw content for description.");
+        summary = productRawContent; // Fallback to raw content if summarization fails
+      }
+      
+      // If another scrape was initiated while we were waiting for the agent, abort this one
+      if (myId !== lastScrapeIdRef.current) {
+        console.log("Aborting current scrape after agent, new scrape initiated.");
+        return;
+      }
+
+      // Update state for submission
+      setProductData({
+        title: productTitle,
+        content: summary, // Use summarized content or raw content fallback
+        cleanName: cleanName
+      });
+      // Update state for display in the modal
+      setScrapedProductDisplay({
+        name: productTitle,
+        description: summary,
+        image_url: productImage
+      });
+
     } catch (error) {
       console.error('Error scraping product:', error);
-      toast.error("Failed to scrape product page. Please continue without scraping.");
+      const msg = toCleanString(error?.message || "Unknown error", 100);
+      toast.error(`Failed to scrape or summarize product page. ${msg ? `(${msg})` : ""}`);
     } finally {
-      setScrapingProduct(false);
+      if (myId === lastScrapeIdRef.current) { // Only set scrapingProduct to false if this is the latest operation
+        setIsScrapingProduct(false); // Updated state name
+      }
     }
   };
 
   const submit = async () => {
+    // Guard against multiple submissions
+    if (saving) return;
+
     setSaving(true);
     try {
       const resolvedCompanyInfoTable = isValidTblId(companyInfoTableId) ? companyInfoTableId : "Company Information";
@@ -212,24 +406,22 @@ export default function TopicsOnboardingModal({
         "Geographic Location": countryLabel,
         "Language": languageLabel
       };
-      
+
       console.log('Submitting to Company Information:', fieldsPayload);
       await airtableCreateRecord({
         tableId: resolvedCompanyInfoTable,
         fields: fieldsPayload
       });
 
-      // Submit to Target Market table
-      if (targetMarket.trim()) {
-        const randomDigits = Math.floor(100 + Math.random() * 900);
-        const targetMarketName = `${username || "brand"}-${randomDigits}`;
+      // Submit to Target Market table - USE USER-PROVIDED NAME
+      if (targetMarket.trim() && targetMarketName.trim()) {
         const resolvedTargetMarketTable = isValidTblId(targetMarketTableId) ? targetMarketTableId : "Target Market";
-        
+
         console.log('Submitting to Target Market table:', resolvedTargetMarketTable);
         await airtableCreateRecord({
           tableId: resolvedTargetMarketTable,
           fields: {
-            "Target Market Name": targetMarketName,
+            "Target Market Name": targetMarketName.trim(), // Use the user-provided name
             "Target Market Description": targetMarket,
             "username": username || ""
           }
@@ -239,7 +431,7 @@ export default function TopicsOnboardingModal({
       // Submit to Company Product table
       if (productUrl.trim()) {
         const resolvedProductTable = isValidTblId(companyProductsTableId) ? companyProductsTableId : "Company Products";
-        
+
         console.log('Submitting to Company Product table:', resolvedProductTable);
         await airtableCreateRecord({
           tableId: resolvedProductTable,
@@ -247,13 +439,59 @@ export default function TopicsOnboardingModal({
             "Page Name": productData.cleanName || productData.title || "",
             "Page Content": productData.content || "",
             "URL": productUrl,
-            "client_username": username || ""
+            "client_username": username || "",
+            "Status": "Add to Pinecone" // Automatically set Status field
           }
         });
       }
 
+      // Store timestamp for countdown timer and update user topics
+      const me = await User.me().catch(() => null);
+      let timestamp = null; // Declare timestamp here
+      if (me && username) { // Ensure username is present before storing
+        const raw = me.topics_onboarding_completed_at;
+        let completedMap = {};
+        if (typeof raw === 'string' && raw.trim()) {
+          try { completedMap = JSON.parse(raw); } catch { completedMap = {}; }
+        } else if (raw && typeof raw === 'object') {
+          completedMap = raw;
+        }
+
+        timestamp = new Date().toISOString(); // Assign value to timestamp
+        completedMap[username] = timestamp;
+
+        await User.updateMyUserData({ 
+          topics_onboarding_completed_at: JSON.stringify(completedMap),
+          topics: Array.from(new Set([username, ...(me.topics || [])])) // Update topics field for the user
+        });
+      }
+
+      // CRITICAL: Send Firecrawl webhook once per username (no timestamp in key)
+      if (username && website) { // Ensure all necessary data is available
+        const lsKey = `firecrawl_onboarding_${username}`;
+        if (localStorage.getItem(lsKey) !== '1') {
+          try {
+            await base44.functions.invoke('notifyFirecrawlWebsite', {
+              username: username,
+              website_url: website || ""
+            });
+            localStorage.setItem(lsKey, '1');
+            console.log('[Firecrawl] Webhook sent successfully:', { 
+              username: username, 
+              website_url: website 
+            });
+          } catch (e) {
+            console.error('[Firecrawl] Webhook failed:', e?.message || e);
+            // Don't block onboarding completion if webhook fails
+          }
+        } else {
+            console.log('[Firecrawl] Webhook already sent for this username, skipping');
+        }
+      }
+
+
       toast.success("Setup complete!");
-      onCompleted?.({ website, geo: countryLabel, lang: languageLabel, targetMarket, product: productData });
+      onCompleted?.({ website, geo: countryLabel, lang: languageLabel, targetMarket, targetMarketName, product: productData });
       onClose?.();
     } catch (error) {
       console.error('Error submitting onboarding data:', error);
@@ -263,97 +501,108 @@ export default function TopicsOnboardingModal({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={(o) => !saving && !o && onClose?.()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Quick setup for {username}</DialogTitle>
-          <DialogDescription>Just five quick steps to tailor Topics for your business.</DialogDescription>
-        </DialogHeader>
-
-        <div className="flex items-center gap-2 mb-4">
-          {[1, 2, 3, 4, 5].map((s) => (
-            <div
-              key={s}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center font-semibold ${
-                s <= step ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"
-              }`}
-            >
-              {s}
+  const renderStep = () => {
+    if (step === 1) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <Globe className="w-5 h-5 text-indigo-600 mt-1" />
+            <div className="flex-1">
+              <Label htmlFor="website" className="text-base font-medium">Website</Label>
+              <Input
+                id="website"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://example.com"
+                className="mt-2"
+              />
             </div>
-          ))}
-          <div className="ml-auto text-sm text-gray-500">Step {step} of 5</div>
+          </div>
         </div>
+      );
+    }
 
-        {step === 1 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Globe className="w-5 h-5 text-indigo-600" />
-              <h3 className="text-lg font-semibold">Website</h3>
-            </div>
-            <Input
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              placeholder="https://example.com"
-              className="w-full"
-            />
+    if (step === 2) {
+      return (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <MapPin className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-lg font-semibold">Geographic Location</h3>
           </div>
-        )}
+          <Select value={geo} onValueChange={setGeo}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a country/region" />
+            </SelectTrigger>
+            <SelectContent>
+              {COUNTRY_OPTIONS.map((c) => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
 
-        {step === 2 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="w-5 h-5 text-indigo-600" />
-              <h3 className="text-lg font-semibold">Geographic Location</h3>
-            </div>
-            <Select value={geo} onValueChange={setGeo}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a country/region" />
-              </SelectTrigger>
-              <SelectContent>
-                {COUNTRY_OPTIONS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    if (step === 3) {
+      return (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Languages className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-lg font-semibold">Language</h3>
           </div>
-        )}
+          <Select value={lang} onValueChange={setLang}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a language" />
+            </SelectTrigger>
+            <SelectContent>
+              {LANGUAGE_OPTIONS.map((l) => (
+                <SelectItem key={l.value} value={l.value}>
+                  {l.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
 
-        {step === 3 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Languages className="w-5 h-5 text-indigo-600" />
-              <h3 className="text-lg font-semibold">Language</h3>
-            </div>
-            <Select value={lang} onValueChange={setLang}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a language" />
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGE_OPTIONS.map((l) => (
-                  <SelectItem key={l.value} value={l.value}>
-                    {l.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    if (step === 4) {
+      return (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-lg font-semibold">Target Market</h3>
           </div>
-        )}
-
-        {step === 4 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Target className="w-5 h-5 text-indigo-600" />
-              <h3 className="text-lg font-semibold">Target Market</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="target-market-name" className="text-slate-700 font-medium mb-2 block">
+                Target Market Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="target-market-name"
+                value={targetMarketName}
+                onChange={(e) => setTargetMarketName(e.target.value)}
+                placeholder="e.g., Small Business Owners, Tech Enthusiasts, Pet Owners"
+                className="w-full"
+              />
             </div>
-            <Textarea
-              value={targetMarket}
-              onChange={(e) => setTargetMarket(e.target.value)}
-              placeholder="Describe your target market..."
-              className="w-full h-32 mb-3"
-            />
+
+            <div>
+              <Label htmlFor="target-market-desc" className="text-slate-700 font-medium mb-2 block">
+                Target Market Description <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="target-market-desc"
+                value={targetMarket}
+                onChange={(e) => setTargetMarket(e.target.value)}
+                placeholder="Describe your target market in detail..."
+                className="w-full h-32"
+              />
+            </div>
+
             <Button
               onClick={generateTargetMarket}
               disabled={generatingTargetMarket}
@@ -370,43 +619,99 @@ export default function TopicsOnboardingModal({
               )}
             </Button>
           </div>
-        )}
+        </div>
+      );
+    }
 
-        {step === 5 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Package className="w-5 h-5 text-indigo-600" />
-              <h3 className="text-lg font-semibold">Add Your First Product</h3>
-            </div>
+    if (step === 5) {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Package className="w-6 h-6 text-indigo-600" />
+            <h3 className="text-xl font-semibold text-slate-900">Add Your First Product</h3>
+          </div>
+
+          <div className="space-y-4">
             <Input
+              placeholder="https://example.com/product"
               value={productUrl}
               onChange={(e) => setProductUrl(e.target.value)}
-              placeholder="https://example.com/product"
-              className="w-full mb-3"
+              className="text-base"
             />
             <Button
-              onClick={scrapeProduct}
-              disabled={scrapingProduct}
-              variant="outline"
-              className="w-full mb-3"
+              onClick={handleScrapeProduct}
+              disabled={isScrapingProduct || !productUrl.trim()}
+              className="w-full bg-indigo-600 hover:bg-indigo-700"
             >
-              {scrapingProduct ? (
+              {isScrapingProduct ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Scraping...
+                  Scraping product page...
                 </>
               ) : (
                 "Scrape product page"
               )}
             </Button>
-            {productData.title && (
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="text-sm font-semibold text-gray-700 mb-1">{productData.title}</div>
-                <div className="text-xs text-gray-500 line-clamp-3">{productData.content}</div>
+          </div>
+
+          {scrapedProductDisplay && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-green-900">{scrapedProductDisplay.name}</p>
+                  <p className="text-sm text-green-700 mt-1 line-clamp-3">{scrapedProductDisplay.description}</p>
+                  {scrapedProductDisplay.image_url && (
+                    <img
+                      src={scrapedProductDisplay.image_url}
+                      alt={scrapedProductDisplay.name}
+                      className="mt-2 w-32 h-32 object-cover rounded"
+                    />
+                  )}
+                </div>
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !saving && !o && onClose?.()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Quick setup for {username}</DialogTitle>
+          <DialogDescription>Just five quick steps to tailor Topics for your business.</DialogDescription>
+        </DialogHeader>
+
+        {/* Video embed at top */}
+        {videoEmbedCode && (
+          <div className="mb-4">
+            <div
+              dangerouslySetInnerHTML={{ __html: videoEmbedCode }}
+              className="w-full aspect-video [&>iframe]:w-full [&>iframe]:h-full rounded-md overflow-hidden"
+            />
           </div>
         )}
+
+        <div className="flex items-center gap-2 mb-4">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <div
+              key={s}
+              className={`w-10 h-10 rounded-lg flex items-center justify-center font-semibold ${
+                s <= step ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              {s}
+            </div>
+          ))}
+          <div className="ml-auto text-sm text-gray-500">Step {step} of 5</div>
+        </div>
+
+        {renderStep()}
 
         <div className="flex justify-between mt-6">
           <Button onClick={back} disabled={step === 1 || saving} variant="outline">

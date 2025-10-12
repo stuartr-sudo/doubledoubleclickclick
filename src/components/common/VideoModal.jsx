@@ -122,7 +122,7 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title = "Tutoria
           />
         </div>
         <div className="p-4 border-t">
-          <h3 className="text-slate-50 font-medium">{title}</h3>
+          <h3 className="text-slate-900 font-medium">{title}</h3>
           <div className="flex justify-end mt-2">
             <Button variant="outline" onClick={onClose} className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50">
               Close

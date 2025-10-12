@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { YouTubeVideo } from "@/api/entities";
 import { TikTokVideo } from "@/api/entities";
+import { AmazonProductVideo } from "@/api/entities"; // New import
 import { User } from "@/api/entities";
 import {
   Dialog,
@@ -22,15 +23,16 @@ import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
   const [youtubeVideos, setYoutubeVideos] = useState([]);
   const [tiktokVideos, setTiktokVideos] = useState([]);
+  const [amazonVideos, setAmazonVideos] = useState([]); // New state variable
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [localSelectedUsername, setLocalSelectedUsername] = useState("all"); // Renamed to localSelectedUsername
+  const [localSelectedUsername, setLocalSelectedUsername] = useState("all");
   const [availableUsernames, setAvailableUsernames] = useState([]);
   const { consumeTokensForFeature } = useTokenConsumption();
 
-  const { selectedUsername: globalUsername } = useWorkspace(); // Get selectedUsername from workspace context
-  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping'); // Feature flag for workspace scoping
+  const { selectedUsername: globalUsername } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
 
   // Determine the active username for filtering based on feature flag
   const activeUsername = useWorkspaceScoping ? (globalUsername || "all") : localSelectedUsername;
@@ -56,9 +58,12 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
       // Load TikTok videos  
       const ttVideos = await TikTokVideo.list("-created_date");
 
+      // Load Amazon videos
+      const azVideos = await AmazonProductVideo.list("-created_date");
+
       // Get unique usernames for filtering
       const allUsernames = new Set();
-      [...ytVideos, ...ttVideos].forEach((video) => {
+      [...ytVideos, ...ttVideos, ...azVideos].forEach((video) => { // Include azVideos
         if (video.user_name) allUsernames.add(video.user_name);
       });
 
@@ -74,6 +79,7 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
       setAvailableUsernames(visibleUsernames);
       setYoutubeVideos(ytVideos);
       setTiktokVideos(ttVideos);
+      setAmazonVideos(azVideos); // Set Amazon videos
     } catch (error) {
       console.error("Error loading videos:", error);
       toast.error("Failed to load video library.");
@@ -128,6 +134,30 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
     toast.success("TikTok video inserted!");
   };
 
+  const handleInsertAmazon = async (video) => {
+    // Check and consume tokens before inserting
+    const result = await consumeTokensForFeature('video_library_insert');
+    if (!result.success) {
+      return;
+    }
+
+    const videoHtml = `
+<div class="amazon-video-container" style="position: relative; width: 100%; max-width: 640px; margin: 2rem auto;">
+  <video 
+    controls
+    poster="${video.thumbnail_url}"
+    style="width: 100%; height: auto; border-radius: 8px;"
+  >
+    <source src="${video.video_url}" type="application/x-mpegURL">
+    Your browser does not support the video tag.
+  </video>
+  <p style="text-align: center; margin-top: 0.5rem; font-size: 0.875rem; color: #666;">${video.title}</p>
+</div>`;
+    onInsert(videoHtml);
+    onClose();
+    toast.success("Amazon video inserted!");
+  };
+
   const filterVideosByUsername = (videos) => {
     return videos.filter((video) =>
       activeUsername === "all" || video.user_name === activeUsername
@@ -149,6 +179,7 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
 
   const filteredYouTubeVideos = getFilteredVideos(youtubeVideos);
   const filteredTikTokVideos = getFilteredVideos(tiktokVideos);
+  const filteredAmazonVideos = getFilteredVideos(amazonVideos); // New filtered videos
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -189,18 +220,21 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
           </div>
 
           <Tabs defaultValue="youtube" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-lg">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-1 rounded-lg"> {/* Changed to grid-cols-3 */}
               <TabsTrigger
                 value="youtube"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-600">
-
                 YouTube
               </TabsTrigger>
               <TabsTrigger
                 value="tiktok"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-600">
-
                 TikTok
+              </TabsTrigger>
+              <TabsTrigger
+                value="amazon"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-600">
+                Amazon {/* New Tab */}
               </TabsTrigger>
             </TabsList>
 
@@ -295,6 +329,56 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
                 </div>
               )}
             </TabsContent>
+
+            {/* New Amazon Tab Content */}
+            <TabsContent value="amazon" className="space-y-4">
+              {isLoading ? (
+                <div className="text-center py-8 text-slate-500">Loading Amazon videos...</div>
+              ) : filteredAmazonVideos.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Video className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                  <p>No Amazon videos found.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                  {filteredAmazonVideos.map((video) => (
+                    <div key={video.id} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 space-y-3">
+                      <div className="aspect-video relative">
+                        <img
+                          src={video.thumbnail_url}
+                          alt={video.title}
+                          className="w-full h-full object-cover rounded"
+                        />
+                      </div>
+                      <h4 className="font-medium line-clamp-2 text-sm text-slate-800">{video.title}</h4>
+                      <div className="space-y-2">
+                        <span className="text-xs text-slate-500 block">ASIN: {video.product_asin}</span>
+                        <span className="text-xs text-slate-500 block">Username: {video.user_name}</span>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleInsertAmazon(video)}
+                            size="sm"
+                            className="bg-blue-900 text-slate-50 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 rounded-md hover:bg-gray-800 flex-1">
+                            <Plus className="w-4 h-4 mr-1" />
+                            Insert
+                          </Button>
+                          <Button
+                            onClick={() => window.open(video.video_url, '_blank')}
+                            size="sm"
+                            variant="outline"
+                            className="bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            {/* End New Amazon Tab Content */}
+
           </Tabs>
         </div>
       </DialogContent>

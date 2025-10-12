@@ -369,7 +369,7 @@ export default function Content() {
           <div className="px-4 py-3 border-b border-slate-200">
             <div className="flex items-center justify-between">
               <div className="text-slate-600">{loading ? "Loading…" : `${filtered.length} item${filtered.length === 1 ? "" : "s"}`}</div>
-              <div className="text-xs text-slate-500">Only scoped to your brands</div>
+              {/* Removed the 'Only scoped to your brands' text */}
             </div>
           </div>
 

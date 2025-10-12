@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ export default function AmazonTestimonials() {
   const reviews = useMemo(() => (data && data.reviews) || [], [data]);
 
   const handleFetch = async () => {
-    setError("");
+    setError(""); // Clear any previous errors
     const val = input.trim();
     const as = /^[A-Z0-9]{10}$/i.test(val) ? val.toUpperCase() : extractAsinFromUrl(val) || "";
     if (!as) {
@@ -77,14 +78,20 @@ export default function AmazonTestimonials() {
       return;
     }
 
+    // Token consumption check
     const result = await consumeTokensForFeature('amazon_testimonials_import');
     if (!result.success) {
+      setError(`Token error: ${result.error || 'Failed to consume tokens'}`);
       return;
     }
 
     setAsin(as);
     setLoading(true);
+    setError(""); // Clear any previous errors after token check and before fetch attempt
+    
     try {
+      console.log('Fetching Amazon reviews for ASIN:', as);
+      
       const { data: resp } = await amazonReviews({
         asin: as,
         country,
@@ -95,17 +102,45 @@ export default function AmazonTestimonials() {
         images_or_videos_only: mediaOnly,
         current_format_only: currentFormatOnly
       });
-      if (!(resp && resp.success)) {
-        throw new Error((resp && resp.error) || "Failed to fetch reviews.");
+
+      console.log('Amazon API Response:', resp);
+
+      // Check if response indicates success
+      if (!resp || resp.success === false) {
+        const errorMsg = resp?.error || 'Failed to fetch reviews from Amazon API';
+        console.error('Amazon API Error:', errorMsg);
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setData(null); // Clear previous data
+        setLoading(false); // Ensure loading is reset on early exit
+        return;
       }
-      setData((resp && resp.data) || {});
+
+      // Check if we have data
+      const reviewsData = resp.data || {};
+      const fetchedReviewsFromApi = Array.isArray(reviewsData.reviews) ? reviewsData.reviews : [];
+      
+      console.log('Parsed reviews count:', fetchedReviewsFromApi.length);
+
+      if (fetchedReviewsFromApi.length === 0) {
+        setError("No reviews found for this product. Try adjusting filters or check if the ASIN is correct.");
+        toast.error("No reviews found");
+      } else {
+        toast.success(`Found ${fetchedReviewsFromApi.length} reviews`);
+      }
+
+      setData(reviewsData);
       setSelectedIds(new Set());
+      
     } catch (e) {
-      const msg = (e && e.message) ? e.message : "Unexpected error while fetching reviews.";
+      console.error('Amazon fetch error:', e);
+      const msg = e?.message || "Unexpected error while fetching reviews.";
       setError(msg);
       toast.error(msg);
+      setData(null); // Clear previous data
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const toggleSelect = (id) => {
@@ -171,14 +206,15 @@ export default function AmazonTestimonials() {
             <div className="flex gap-2 mt-1">
               <Input
                 id="asin-input"
-                placeholder="https://www.amazon.com/dp/XXXXXXXXXX"
+                placeholder="https://www.amazon.com/dp/XXXXXXXXXX or B08XXXXXXXXX"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 className="flex-1 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
+                disabled={loading}
               />
-              <Button onClick={handleFetch} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              <Button onClick={handleFetch} disabled={loading || !input.trim()} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                <span className="ml-2">Fetch</span>
+                <span className="ml-2">{loading ? 'Fetching...' : 'Fetch'}</span>
               </Button>
             </div>
             <p className="text-sm text-slate-500 mt-1">Paste a full Amazon URL or a 10-character ASIN.</p>
@@ -187,7 +223,7 @@ export default function AmazonTestimonials() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label className="text-slate-700">Country</Label>
-              <Select value={country} onValueChange={setCountry}>
+              <Select value={country} onValueChange={setCountry} disabled={loading}>
                 <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                   <SelectValue />
                 </SelectTrigger>
@@ -200,7 +236,7 @@ export default function AmazonTestimonials() {
             </div>
             <div>
               <Label className="text-slate-700">Sort By</Label>
-              <Select value={sortBy} onValueChange={setSortBy}>
+              <Select value={sortBy} onValueChange={setSortBy} disabled={loading}>
                 <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                   <SelectValue />
                 </SelectTrigger>
@@ -212,7 +248,7 @@ export default function AmazonTestimonials() {
             </div>
             <div>
               <Label className="text-slate-700">Star Rating</Label>
-              <Select value={starRating} onValueChange={setStarRating}>
+              <Select value={starRating} onValueChange={setStarRating} disabled={loading}>
                 <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                   <SelectValue />
                 </SelectTrigger>
@@ -237,28 +273,36 @@ export default function AmazonTestimonials() {
                   setPage(clamped);
                 }}
                 className="w-full bg-white border-slate-300 text-slate-900"
+                disabled={loading}
               />
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <label className="inline-flex items-center gap-2 text-slate-700 whitespace-nowrap">
-              <Checkbox checked={verifiedOnly} onCheckedChange={(v) => setVerifiedOnly(Boolean(v))} />
+              <Checkbox checked={verifiedOnly} onCheckedChange={(v) => setVerifiedOnly(Boolean(v))} disabled={loading} />
               <span>Verified only</span>
             </label>
             <label className="inline-flex items-center gap-2 text-slate-700 whitespace-nowrap">
-              <Checkbox checked={mediaOnly} onCheckedChange={(v) => setMediaOnly(Boolean(v))} />
+              <Checkbox checked={mediaOnly} onCheckedChange={(v) => setMediaOnly(Boolean(v))} disabled={loading} />
               <span>Images/Videos only</span>
             </label>
             <label className="inline-flex items-center gap-2 text-slate-700 whitespace-nowrap">
-              <Checkbox checked={currentFormatOnly} onCheckedChange={(v) => setCurrentFormatOnly(Boolean(v))} />
+              <Checkbox checked={currentFormatOnly} onCheckedChange={(v) => setCurrentFormatOnly(Boolean(v))} disabled={loading} />
               <span>Current format only</span>
             </label>
           </div>
 
           {error && (
             <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
-              {error}
+              <strong>Error:</strong> {error}
+            </div>
+          )}
+
+          {loading && (
+            <div className="text-center py-8 text-slate-600">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+              <p>Fetching reviews from Amazon...</p>
             </div>
           )}
 

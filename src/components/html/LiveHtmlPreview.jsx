@@ -19,7 +19,7 @@ export default function LiveHtmlPreview({
   const skipNextSetRef = useRef(false); // prevent echo that moves caret
   const initialHtmlRef = useRef(html); // snapshot of initial html used only at mount
 
-  // NEW: Effect to load and inject custom CSS
+  // Effect to load and inject custom CSS
   useEffect(() => {
     const iframe = iframeRef.current; // Capture iframe instance
     if (!iframe || !userCssUsername) {
@@ -532,66 +532,122 @@ export default function LiveHtmlPreview({
             return el.parentElement && el.parentElement.closest('blockquote.tiktok-embed');
           }
         }
+        
+        // Improved getClosestBlockAncestor to include more common block-level tags
+        function getClosestBlockAncestor(node) {
+            if (!node) return document.body;
+            let el = node.nodeType === 1 ? node : node.parentElement;
+            while (el && el !== document.body) {
+                const display = window.getComputedStyle(el).display;
+                if (display === 'block' || display === 'list-item' || display === 'table' || display === 'flex' || display === 'grid' ||
+                    ['div', 'p', 'ul', 'ol', 'li', 'section', 'article', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(el.tagName.toLowerCase())) {
+                    return el;
+                }
+                el = el.parentElement;
+            }
+            return document.body; // If no block parent found before body, return body itself.
+        }
+
+        // The previous getTopLevelInsertionPoint function has been removed as its logic is now
+        // directly integrated and improved into insertHtmlAfterSelection.
 
         function insertHtmlAtSelection(html) {
           const sel = document.getSelection();
-          const range = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0) : ensureRange();
+          let range = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0) : ensureRange();
           if (!range) return;
+          
           range.deleteContents();
+
           const temp = document.createElement('div');
           temp.innerHTML = html;
           const frag = document.createDocumentFragment();
           var node, lastNode;
           while ((node = temp.firstChild)) { lastNode = frag.appendChild(node); }
-          range.insertNode(frag);
-          if (lastNode) {
-            sel.removeAllRanges();
-            const newRange = document.createRange();
-            newRange.setStartAfter(lastNode);
-            newRange.collapse(true);
-            sel.addRange(newRange);
-            lastRange = newRange.cloneRange();
+          
+          const blockParent = getClosestBlockAncestor(range.startContainer);
+          if (blockParent && blockParent !== document.body) {
+              blockParent.parentNode.insertBefore(frag, blockParent.nextSibling);
+              if (lastNode) {
+                  range.setStartAfter(lastNode);
+                  range.setEndAfter(lastNode);
+                  sel.removeAllRanges();
+                  sel.addRange(range);
+                  lastRange = range.cloneRange();
+              }
+          } else {
+              range.insertNode(frag); 
+              if (lastNode) {
+                  sel.removeAllRanges();
+                  const newRange = document.createRange();
+                  newRange.setStartAfter(lastNode);
+                  newRange.collapse(true);
+                  sel.addRange(newRange);
+                  lastRange = newRange.cloneRange();
+              }
           }
+
           assignIds();
           executePendingScripts();
           styleTikTokEmbedsDefault();
           const tik = nearestTikTok(lastNode);
           if (tik) select(tik);
           dumpHtml(true);
-          // record to history
           pushHistory('insert');
         }
 
         // insert content after current selection (do NOT replace selection)
+        // FIX: Insert infographic RIGHT AFTER the selected text's parent block, not at bottom
         function insertHtmlAfterSelection(html) {
           const sel = document.getSelection();
           let range = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : ensureRange();
           if (!range) return;
-          // Collapse to end so we are to the right of any highlighted text
-          range.collapse(false);
+          
           const temp = document.createElement('div');
           temp.innerHTML = html;
           const frag = document.createDocumentFragment();
-          var node, lastNode;
+          let lastNode = null;
+          let node;
           while ((node = temp.firstChild)) { lastNode = frag.appendChild(node); }
-          // Insert at collapsed caret
-          const caretRange = range;
-          caretRange.insertNode(frag);
-          if (lastNode) {
-            sel.removeAllRanges();
-            const newRange = document.createRange();
-            newRange.setStartAfter(lastNode);
-            newRange.collapse(true);
-            sel.addRange(newRange);
-            lastRange = newRange.cloneRange();
+          
+          let insertionPointElement = getClosestBlockAncestor(range.endContainer); // Use endContainer for insertion point
+
+          // If the closest block ancestor is an <li>, promote the insertion point to its parent <ul>/ol
+          if (insertionPointElement && insertionPointElement.tagName?.toLowerCase() === 'li') {
+            const parentList = insertionPointElement.closest('ul, ol');
+            if (parentList) {
+              insertionPointElement = parentList;
+            }
           }
+
+          if (insertionPointElement && insertionPointElement !== document.body) {
+              // Insert the fragment immediately after the determined insertionPointElement
+              if (insertionPointElement.parentNode) {
+                  insertionPointElement.parentNode.insertBefore(frag, insertionPointElement.nextSibling);
+              } else {
+                  // Fallback if insertionPointElement somehow has no parent (e.g., detached or direct child of documentFragment)
+                  document.body.appendChild(frag);
+              }
+          } else {
+              // If no suitable block ancestor found before body, or the closest ancestor is the body itself,
+              // append to the body.
+              document.body.appendChild(frag);
+          }
+
+          if (lastNode) {
+              sel.removeAllRanges();
+              const newRange = document.createRange();
+              newRange.setStartAfter(lastNode);
+              newRange.collapse(true);
+              sel.addRange(newRange);
+              lastRange = newRange.cloneRange();
+          }
+
           assignIds();
           executePendingScripts();
           styleTikTokEmbedsDefault();
           const tik = nearestTikTok(lastNode);
           if (tik) select(tik);
           dumpHtml(true);
-          // record to history
           pushHistory('insert-after');
         }
 
@@ -640,17 +696,23 @@ export default function LiveHtmlPreview({
 
           function applyTo(target) {
             if (!target) return;
-            if (typeof width === 'number') {
-              target.style.width = width + '%';
-              target.style.maxWidth = '100%';
-              target.style.minWidth = '0';
-              target.style.display = 'block';
-            }
-            if (align) {
-              target.style.display = 'block';
-              if (align === 'center') target.style.margin = '1rem auto';
-              else if (align === 'right') target.style.margin = '1rem 0 1rem auto';
-              else target.style.margin = '1rem 0';
+            // NEW: Do not apply width/margin for images with data-infographic="true"
+            if (target.matches('img[data-infographic="true"]')) {
+              // Skip width/margin changes for infographics, they are full-width
+              // Still allow outline/selection behavior
+            } else {
+              if (typeof width === 'number') {
+                target.style.width = width + '%';
+                target.style.maxWidth = '100%';
+                target.style.minWidth = '0';
+                target.style.display = 'block';
+              }
+              if (align) {
+                target.style.display = 'block';
+                if (align === 'center') target.style.margin = '1rem auto';
+                else if (align === 'right') target.style.margin = '1rem 0 1rem auto';
+                else target.style.margin = '1rem 0';
+              }
             }
           }
 
@@ -816,8 +878,13 @@ export default function LiveHtmlPreview({
             e.preventDefault();
             select(t.tagName === 'AUDIO' ? t : t.closest('.b44-audio-inline'));
             handledSelection = true;
+          } else if (t && t.closest && t.closest('[data-b44-type]')) {
+             // Generic handler: click inside any protected block selects the whole block
+             e.preventDefault();
+             const block = t.closest('[data-b44-type]');
+             selectGeneric(block, block.dataset.b44Type || 'block');
+             handledSelection = true;
           }
-
 
           if (!handledSelection) {
             clearSelections();
@@ -846,19 +913,40 @@ export default function LiveHtmlPreview({
             if (selected && selected.dataset && selected.dataset.b44Id) {
               elementToDelete = selected;
             } else {
-              // This part would be more for "implicitly selected" elements via outline,
-              // but since selectGeneric sets 'selected', the first branch usually handles it.
               const ctaSelected = document.querySelector('.b44-cta-block[style*="outline: 2px solid #10b981"], [data-b44-type="cta"][style*="outline: 2px solid #10b981"]');
               if (ctaSelected && ctaSelected.dataset && ctaSelected.dataset.b44Id) {
                 elementToDelete = ctaSelected;
               }
-              // NEW: Check for selected audio too if not already selected
               const audioSelected = document.querySelector('.b44-audio-inline[style*="outline: 2px solid #3b82f6"]');
               if (audioSelected && audioSelected.dataset && audioSelected.dataset.b44Id) {
                 elementToDelete = audioSelected;
               }
             }
 
+            // PROTECT CHILDREN OF ANY [data-b44-type] BLOCK:
+            // If caret or selection is inside a protected block and the target is a child,
+            // select the container instead (don't delete child on first press).
+            try {
+              const sel = document.getSelection();
+              const anchorEl = sel && sel.anchorNode ? (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement) : null;
+              const protectedAncestor = anchorEl && anchorEl.closest ? anchorEl.closest('[data-b44-type]') : null;
+
+              if (protectedAncestor) {
+                // If attempting to delete a child inside the protected block, select the block instead
+                if (elementToDelete && protectedAncestor.contains(elementToDelete) && elementToDelete !== protectedAncestor) {
+                  e.preventDefault();
+                  selectGeneric(protectedAncestor, protectedAncestor.dataset.b44Type || 'block');
+                  return;
+                }
+                // If nothing explicitly selected, but caret is inside, select the block
+                if (!elementToDelete) {
+                  e.preventDefault();
+                  selectGeneric(protectedAncestor, protectedAncestor.dataset.b44Type || 'block');
+                  return;
+                }
+              }
+            } catch (_) {}
+ 
             if (elementToDelete) {
               e.preventDefault();
               deleteElementById(String(elementToDelete.dataset.b44Id));
@@ -934,9 +1022,17 @@ export default function LiveHtmlPreview({
               try { window.focus(); document.body.focus(); } catch(err) {}
             }
             if (d && d.type === 'delete-element' && d.id) {
-              // The original logic here was redundant. deleteElementById already handles removal and dumpHtml(true).
-              deleteElementById(String(d.id)); // Calls deleteElementById which handles pushHistory and dumpHtml
-              return;
+               // Protect children: if the target is inside a protected block, select the container instead
+               const target = document.querySelector('[data-b44-id="' + String(d.id) + '"]');
+               if (target) {
+                 const container = target.closest('[data-b44-type]');
+                 if (container && target !== container) {
+                   selectGeneric(container, container.dataset.b44Type || 'block');
+                   return;
+                 }
+               }
+               deleteElementById(String(d.id));
+               return;
             }
             if (d && d.type === 'editor-command') {
               try {
@@ -1017,6 +1113,19 @@ export default function LiveHtmlPreview({
               const s = msg && msg.styles ? msg.styles : {};
               let normalized = Object.assign({}, msg);
 
+              // NEW: If element is an infographic, bypass width/align changes entirely
+              const el = normalized && normalized.id ? document.querySelector('[data-b44-id="' + normalized.id + '"]') : null;
+              if (el && el.matches('img[data-infographic="true"]')) {
+                // If it's an infographic, skip all width/align modifications
+                if ((s && s.commit) || normalized.commit) {
+                  dumpHtml(true);
+                } else {
+                  saveLastRange();
+                }
+                return; // Exit early for infographics
+              }
+
+
               if (s && typeof normalized.width === 'undefined') {
                 if (typeof s.widthPercent === 'number') normalized.width = s.widthPercent;
                 else if (typeof s.width === 'number') normalized.width = s.width; // assume percent
@@ -1029,7 +1138,7 @@ export default function LiveHtmlPreview({
               __origApplyChange(normalized);
 
               // Then apply extended properties (px width, float, custom margin) directly
-              const el = normalized && normalized.id ? document.querySelector('[data-b44-id="' + normalized.id + '"]') : null;
+              // el is already defined from above.
               if (el) {
                 // widthPx or width string (px/%)
                 if (typeof s.widthPx === 'number') {
@@ -1047,7 +1156,7 @@ export default function LiveHtmlPreview({
                 if (s.float === 'left' || s.float === 'right') {
                   el.style.float = s.float;
                   el.style.display = 'block';
-                  el.style.margin = s.float === 'left' ? '1rem 1rem 1rem 0' : '1rem 0 1rem 1rem';
+                  el.style.margin = '1rem ' + (s.float === 'left' ? '1rem 1rem 0' : '0 1rem 1rem 1rem'); // Correct margin for floats
                 } else if (s.float === 'none') {
                   el.style.float = 'none';
                 }
@@ -1072,7 +1181,7 @@ export default function LiveHtmlPreview({
                     else if (typeof s.width === 'string' && s.width.trim()) sib.style.width = s.width.trim();
                     if (s.float === 'left' || s.float === 'right') {
                       sib.style.float = s.float;
-                      sib.style.margin = s.float === 'left' ? '1rem 1rem 1rem 0' : '1rem 0 1rem 1rem';
+                      sib.style.margin = '1rem ' + (s.float === 'left' ? '1rem 1rem 0' : '0 1rem 1rem 1rem');
                     } else if (typeof s.margin === 'string') {
                       sib.style.margin = s.margin;
                     }
@@ -1090,7 +1199,7 @@ export default function LiveHtmlPreview({
                   if (s.float === 'left' || s.float === 'right') {
                     el.style.float = s.float;
                     el.style.display = 'block';
-                    el.style.margin = s.float === 'left' ? '1rem 1rem 1rem 0' : '1rem 0 1rem 1rem';
+                    el.style.margin = '1rem ' + (s.float === 'left' ? '1rem 1rem 0' : '0 1rem 1rem 1rem');
                   } else if (s.float === 'none') {
                     el.style.float = 'none';
                   }
@@ -1136,14 +1245,30 @@ export default function LiveHtmlPreview({
               padding: 20px 25%;
               background: white;
               color: #0f172a;
-              overflow-x: hidden; /* guard against any horizontal overflow from embedded blocks */
+              overflow-x: hidden;
             }
             @media (max-width: 1200px) { body { padding-left: 10%; padding-right: 10%; } }
             @media (max-width: 768px) { body { padding-left: 16px; padding-right: 16px; } }
             h1,h2,h3,h4,h5 { color:#0f172a; margin: 1.2rem 0 0.6rem; }
             p { margin: 0.75rem 0; }
             a { color:#2563eb; }
-            img { border-radius: 8px; max-width: 100%; max-height: 84vh; height: auto; display: block; margin: 1rem auto; object-fit: contain; }
+            /* Default image styling - EXCLUDES infographics */
+            img:not([data-infographic]) { 
+              width: 65%; 
+              border-radius: 8px; 
+              height: auto; 
+              display: block; 
+              margin: 0 auto; 
+            }
+            /* Infographics are FULL WIDTH, no restrictions */
+            img[data-infographic="true"] {
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              display: block !important;
+              margin: 20px 0 !important;
+              border-radius: 0 !important;
+            }
             audio { max-width: 100%; display: block; margin: 1rem 0;}
             .b44-audio-inline { max-width: 100%; display: block; margin: 1rem 0; }
             blockquote { padding: 12px 16px; border-left: 4px solid #94a3b8; background:#f8fafc; margin: 1rem 0; }
@@ -1181,7 +1306,6 @@ export default function LiveHtmlPreview({
     doc.write(docHtml);
     doc.close();
 
-    // Call once after initial write
     setTimeout(() => {
       try { __injectBlackText(); } catch(_) {}
     }, 0);

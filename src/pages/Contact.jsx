@@ -1,13 +1,12 @@
-
 import React, { useState } from "react";
 import { ContactMessage } from "@/api/entities";
+import { SendEmail } from "@/api/integrations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Layers, Send, Check } from "lucide-react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { Send, Check, Mail } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", message: "", subject: "" });
@@ -19,73 +18,133 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    await ContactMessage.create({
-      name: form.name.trim(),
-      email: String(form.email).trim().toLowerCase(),
-      message: form.message.trim(),
-      subject: form.subject.trim()
-    });
-    setSubmitting(false);
-    setSubmitted(true);
+    
+    try {
+      // Save to database
+      await ContactMessage.create({
+        name: form.name.trim(),
+        email: String(form.email).trim().toLowerCase(),
+        message: form.message.trim(),
+        subject: form.subject.trim()
+      });
+
+      // Send email notification using Resend
+      await SendEmail({
+        to: "stuartr@doubleclick.work", // Replace with your actual email
+        subject: `New Contact Form Submission${form.subject ? ': ' + form.subject : ''}`,
+        body: `
+          <h2>New Contact Form Submission</h2>
+          <p><strong>Name:</strong> ${form.name}</p>
+          <p><strong>Email:</strong> ${form.email}</p>
+          <p><strong>Subject:</strong> ${form.subject || 'N/A'}</p>
+          <p><strong>Message:</strong></p>
+          <p>${form.message.replace(/\n/g, '<br>')}</p>
+        `
+      });
+
+      setSubmitted(true);
+      toast.success("Message sent successfully!");
+    } catch (error) {
+      console.error("Error submitting contact form:", error);
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-neutral-800 text-white">
-      <header className="p-6">
-        <div className="container mx-auto flex items-center justify-between">
-          <Link to={createPageUrl('Home')}>
-            <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/689715479cd170f6c2aa04f2/d056b0101_logo.png" alt="Logo" className="w-10 h-10 rounded-full" />
-          </Link>
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="container mx-auto px-6 py-12 max-w-3xl">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+            <Mail className="w-8 h-8 text-blue-600" />
+          </div>
+          <h1 className="text-4xl font-bold text-slate-900 mb-3">Contact Us</h1>
+          <p className="text-lg text-slate-600">Have a question or want to work with us on DoubleClick? Send us a message and we'll get back to you.</p>
         </div>
-      </header>
-
-      <main className="container mx-auto px-6 py-10 max-w-3xl">
-        <h1 className="text-3xl md:text-4xl font-bold mb-6">Contact Us</h1>
-        <p className="text-slate-300 mb-8">Have a question or want to work with us on SEWO? Send us a message and we’ll get back to you.</p>
 
         {submitted ? (
-          <div className="bg-emerald-600/10 border border-emerald-600/30 rounded-xl p-6 flex items-start gap-3">
-            <Check className="w-5 h-5 text-emerald-400 mt-1" />
-            <div>
-              <h3 className="font-semibold text-emerald-300">Message sent</h3>
-              <p className="text-slate-300 mt-1">Thanks! We’ll be in touch shortly.</p>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-4">
+              <Check className="w-8 h-8 text-emerald-600" />
             </div>
+            <h3 className="text-xl font-semibold text-emerald-900 mb-2">Message Sent!</h3>
+            <p className="text-slate-600">Thanks! We'll be in touch shortly.</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-5 bg-white/5 border border-white/10 rounded-xl p-6">
+          <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm space-y-6">
             <div>
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" value={form.name} onChange={handleChange} className="bg-white/10 border-white/20" required />
+              <Label htmlFor="name" className="text-slate-700 font-medium mb-2 block">Name</Label>
+              <Input 
+                id="name" 
+                name="name" 
+                value={form.name} 
+                onChange={handleChange} 
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" 
+                placeholder="Your name"
+                required 
+              />
             </div>
+            
             <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" name="email" value={form.email} onChange={handleChange} className="bg-white/10 border-white/20" required />
+              <Label htmlFor="email" className="text-slate-700 font-medium mb-2 block">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                name="email" 
+                value={form.email} 
+                onChange={handleChange} 
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" 
+                placeholder="your@email.com"
+                required 
+              />
             </div>
+            
             <div>
-              <Label htmlFor="subject">Subject (optional)</Label>
-              <Input id="subject" name="subject" value={form.subject} onChange={handleChange} className="bg-white/10 border-white/20" />
+              <Label htmlFor="subject" className="text-slate-700 font-medium mb-2 block">Subject (optional)</Label>
+              <Input 
+                id="subject" 
+                name="subject" 
+                value={form.subject} 
+                onChange={handleChange} 
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" 
+                placeholder="What's this about?"
+              />
             </div>
+            
             <div>
-              <Label htmlFor="message">Message</Label>
-              <Textarea id="message" name="message" value={form.message} onChange={handleChange} className="bg-white/10 border-white/20 h-32" required />
+              <Label htmlFor="message" className="text-slate-700 font-medium mb-2 block">Message</Label>
+              <Textarea 
+                id="message" 
+                name="message" 
+                value={form.message} 
+                onChange={handleChange} 
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 min-h-[150px]" 
+                placeholder="Tell us more..."
+                required 
+              />
             </div>
-            <Button type="submit" disabled={submitting} className="bg-violet-600 hover:bg-violet-700">
-              <Send className="w-4 h-4 mr-2" />
-              {submitting ? 'Sending...' : 'Send Message'}
+            
+            <Button 
+              type="submit" 
+              disabled={submitting} 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {submitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Message
+                </>
+              )}
             </Button>
           </form>
         )}
-      </main>
-
-      <footer className="py-8 border-t border-slate-800">
-        <div className="container mx-auto px-6 text-slate-400 flex items-center justify-between">
-          <span>&copy; {new Date().getFullYear()} SEWO</span>
-          <nav className="flex items-center gap-6 text-sm">
-            <Link to={createPageUrl('PrivacyPolicy')} className="hover:text-white">Privacy Policy</Link>
-            <Link to={createPageUrl('TermsOfService')} className="hover:text-white">Terms of Service</Link>
-          </nav>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }
