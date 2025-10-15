@@ -620,13 +620,13 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
       `}</style>
 
       <div
-        className="fixed inset-0 z-[998]"
+        className="fixed inset-0 z-[9999]"
         onClick={onClose}
         onContextMenu={(e) => { e.preventDefault(); onClose(); }}
       />
       <div
         ref={menuRef}
-        className="fixed z-[999] w-72 rounded-xl bg-slate-800/95 p-2 text-white shadow-2xl backdrop-blur-lg border border-purple-500/20 transition-opacity duration-150"
+        className="fixed z-[10000] w-72 rounded-xl bg-slate-800/95 p-2 text-white shadow-2xl backdrop-blur-lg border border-purple-500/20 transition-opacity duration-150"
         style={positionStyle}
       >
         <div className="max-h-[70vh] overflow-y-auto pr-1 scrollbar-hidden">
