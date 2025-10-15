@@ -50,7 +50,7 @@ export default function FloatingPublishButton({
   isSavingAuto,
   lastSaved,
 }) {
-  const topOffset = getHeaderBottom();
+  // REMOVED: const topOffset = getHeaderBottom();
 
   // NEW: local visibility controller for the "Saved" pill
   const [showSaved, setShowSaved] = React.useState(false);
@@ -76,7 +76,7 @@ export default function FloatingPublishButton({
   return (
     <div
       className="fixed right-6 z-[300] flex flex-col items-end gap-2 pointer-events-auto"
-      style={{ top: topOffset }}
+      style={{ top: '200px' }}
     >
       {/* Publish dropdown button */}
       <DropdownMenu>
