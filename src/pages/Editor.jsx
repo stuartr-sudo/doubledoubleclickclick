@@ -2846,7 +2846,7 @@ Current Title: ${title}`;
           if (controlId) {
             const content = document.getElementById(controlId);
             if (content) {
-              content.setAttribute('aria-hidden', checkbox.checked ? 'true' : 'false'); // Fixed accessibility issue with aria-hidden logic
+              content.setAttribute('aria-hidden', checkbox.checked ? 'false' : 'true'); // Fixed accessibility issue with aria-hidden logic
             }
           }
         }
@@ -3605,7 +3605,7 @@ ${truncatedHtml}`;
 
   return (
     <EditorErrorBoundary>
-      <div id="editor-neon" className="h-full overflow-hidden" style={{ backgroundColor: "#ffffff" }}>
+      <div id="editor-neon" className="h-full overflow-hidden" style={{ backgroundColor: "#ffffff" }}> {/* Change 1: h-screen to h-full */}
         <style>{`
         #editor-neon {
           --bg: #ffffff;
@@ -3702,7 +3702,7 @@ ${truncatedHtml}`;
             style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.12), rgba(255,255,255,0) 70%)" }} />
         </div>
 
-        <div className="h-full flex flex-col relative z-10">
+        <div className="flex flex-col relative z-10 h-full">
 
           {/* Always-visible floating publish button */}
           <FloatingPublishButton
@@ -3717,10 +3717,12 @@ ${truncatedHtml}`;
             lastSaved={lastSaved}
           />
 
+          {/* EditorToolbar removed from here */}
+
           <div className="flex-1 flex flex-col overflow-auto" key={`${currentWebhook?.id || 'nw'}-${currentPost?.id || 'np'}`}>
-            <div className="border-b" style={{ borderColor: "var(--border)" }}>
-              <div className="bg-slate-50 pt-3 pb-0">
-                <div className="mt-3 max-w-5xl mx-auto px-6">
+            <div className="border-b flex flex-col" style={{ borderColor: "var(--border)" }}> {/* Change 2: Removed flex-1 */}
+              <div className="bg-slate-50 pt-3 pb-0 flex flex-col"> {/* Change 3: Removed flex-1 */}
+                <div className="mt-3 w-full px-6"> {/* CSS CHANGE: Full width title container instead of centered max-w-5xl */}
                   <div className="relative">
                     <textarea
                       placeholder="Enter your blog post title..."

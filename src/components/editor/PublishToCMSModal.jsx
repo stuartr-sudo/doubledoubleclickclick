@@ -151,26 +151,39 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       
       const assignedUsernames = Array.isArray(user.assigned_usernames) ? user.assigned_usernames : [];
       
-      // NEW: Empty credentials is a valid state for new users, not an error
+      // Empty credentials is a valid state for new users
       if (assignedUsernames.length === 0) {
         setCredentials([]);
-        setForm(prev => ({ ...prev, user_name: "" })); // Clear user_name if no assigned usernames
-        setLoading(false); // Stop loading indicator
-        return; // Exit gracefully - this is NOT an error
+        setForm(prev => ({ ...prev, user_name: "" }));
+        setLoading(false);
+        return;
       }
 
-      // Try to load credentials for assigned usernames
+      // Try to load credentials - with staggered requests to avoid burst rate limits
       try {
-        const credPromises = assignedUsernames.map(username => 
-          IntegrationCredential.filter({ user_name: username }, "-updated_date")
-        );
-        const credArrays = await Promise.all(credPromises);
-        const allCreds = credArrays.flat();
-        setCredentials(allCreds); // Could be empty array - that's fine
+        const allCreds = [];
+        for (let i = 0; i < assignedUsernames.length; i++) {
+          // Stagger requests by 300ms to avoid burst rate limits
+          if (i > 0) {
+            await new Promise(res => setTimeout(res, 300));
+          }
+          
+          try {
+            const creds = await IntegrationCredential.filter({ user_name: assignedUsernames[i] }, "-updated_date");
+            if (creds && creds.length > 0) {
+              allCreds.push(...creds);
+            }
+          } catch (credErr) {
+            // Silently skip this username if rate limited or error
+            console.log(`Could not load credentials for ${assignedUsernames[i]}:`, credErr);
+          }
+        }
+        
+        setCredentials(allCreds);
       } catch (credError) {
-        // NEW: Silently handle credential loading errors - user just has no credentials yet
+        // Silently handle - user just has no credentials yet
         console.log("No credentials found or error loading them:", credError);
-        setCredentials([]); // Treat as no credentials, don't crash
+        setCredentials([]);
       }
       
       // Determine target username from URL context
@@ -188,7 +201,6 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
             targetUsername = posts[0].user_name;
           }
         } catch (e) {
-          // Silently fail - just use default username
           console.log("Could not load post context:", e);
         }
       } else if (webhookId) {
@@ -199,29 +211,28 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
             targetUsername = webhooks[0].user_name;
           }
         } catch (e) {
-          // Silently fail - just use default username
           console.log("Could not load webhook context:", e);
         }
       }
       
       setForm(prev => ({ ...prev, user_name: targetUsername }));
-      setLoading(false); // NEW: Set loading to false on successful load
+      setLoading(false);
       
     } catch (error) {
-      console.error("Failed to load user or credentials:", error); // Updated message
+      console.log("Error loading user or credentials:", error);
       
-      // NEW: Only retry on rate limit, otherwise treat as no credentials
+      // Only retry on rate limit with longer delays
       if (error?.response?.status === 429 && attempt < 3) {
-        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500; // Keep jitter
+        const delay = Math.pow(2, attempt + 1) * 1000; // 2s, 4s, 8s
         console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
         setTimeout(() => loadCredentialsAndUser(attempt + 1), delay);
-        return; // Don't set loading to false yet
-      } else {
-        // NEW: Don't show error toast - just set empty state
-        setCredentials([]);
-        setCurrentUser(null); // Clear currentUser if User.me() failed
-        setLoading(false);
+        return;
       }
+      
+      // Silently degrade to empty state - NO error toast
+      setCredentials([]);
+      setCurrentUser(null);
+      setLoading(false);
     }
   };
 
