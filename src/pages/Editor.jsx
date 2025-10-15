@@ -34,6 +34,7 @@ import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import { useEditorContent } from "@/components/hooks/editor/useEditorContent";
 import { useEditorModals } from "@/components/hooks/editor/useEditorModals";
+import { useEditorAutoSave } from "@/components/hooks/editor/useEditorAutoSave";
 
 import EditorToolbar from "../components/editor/EditorToolbar";
 import AIRewriterModal from "../components/editor/AIRewriterModal";
@@ -277,7 +278,24 @@ export default function Editor() {
     setImageLibraryDefaultProvider, // Added for ImageLibrary config
   } = useEditorModals();
 
-  // ==================== OTHER STATE (Non-content, Non-modal related) ====================
+  // ==================== AUTO-SAVE HOOK ====================
+  const {
+    triggerAutoSave,
+    triggerImmediateSave,
+    forceSave,
+    clearAutoSaveTimer,
+    resetAutoSave,
+    getAutoSaveStatus,
+  } = useEditorAutoSave({
+    hasUnsavedChanges,
+    isSaving,
+    isLoading: contentLoading,
+    currentUser,
+    saveContent,
+    debounceMs: 3000
+  });
+
+  // ==================== OTHER STATE (Non-content, Non-modal, Non-autosave related) ====================
   const [currentUser, setCurrentUser] = useState(null);
   const [userPlan, setUserPlan] = useState(null);
 
@@ -368,19 +386,6 @@ export default function Editor() {
     };
     loadUserAndPlan();
   }, []); // Only runs once on mount
-
-  // ==================== AUTO-SAVE ====================
-  useEffect(() => {
-    // If the content is loading, or a save is already in progress, or no user is logged in, don't trigger auto-save.
-    // Also, only save if there are actual unsaved changes tracked by the hook.
-    if (!hasUnsavedChanges || isSaving || contentLoading || !currentUser) return;
-
-    const autoSaveTimer = setTimeout(() => {
-      saveContent(); // Trigger the hook's save function
-    }, 3000); // Auto-save after 3 seconds of inactivity
-
-    return () => clearTimeout(autoSaveTimer);
-  }, [hasUnsavedChanges, isSaving, contentLoading, saveContent, currentUser]);
 
 
   // Definition for sendToPreview moved to correctly declare before its dependents
@@ -1895,12 +1900,6 @@ Current Title: ${title}`;
 
   // Remove loadPostContent and loadWebhookContent and initializeEditor as they are now handled by useEditorContent hook.
 
-  // Helper to trigger auto-save (used by various modals/features)
-  const triggerAutoSave = useCallback(() => {
-    // This will trigger the useEffect for auto-save if hasUnsavedChanges is true
-    // No need to directly call saveContent here, as the useEffect already handles debouncing.
-  }, []);
-
   // NEW: Handler for the hidden InternalLinkerButton's onApply
   const handleApplyInternalLinks = useCallback((updatedHtml) => {
     skipNextPreviewPushRef.current = true;
@@ -2199,7 +2198,7 @@ Current Title: ${title}`;
     resetShortcuts
    } = useKeyboardShortcuts(
     {
-      save: () => handleSave(),
+      save: () => savePost('draft'), // Changed to use savePost, which wraps saveContent
       undo: () => handleUndo(),
       redo: () => handleRedo(),
       showShortcuts: () => setShowCheatsheet(true)
@@ -2299,7 +2298,7 @@ Current Title: ${title}`;
       console.error("Failed to load credentials:", error);
       if (error?.response?.status === 429 && retryAttemptsRef.current.credentials < 3) {
         const delay = Math.pow(2, retryAttemptsRef.current.credentials) * 1000 + (Math.random() * 500); // 1s, 2s, 4s + jitter
-        console.log(`Rate limited loading credentials, retrying in ${delay}ms (attempt ${retryAttemptsRef.current.credentials + 1}/3)`);
+        console.log(`Rate limited loading credentials, retrying in ${retryAttemptsRef.current.credentials + 1}/3)`);
         retryAttemptsRef.current.credentials++;
         setTimeout(() => loadPublishCredentials(), delay);
       } else {
@@ -3837,3 +3836,4 @@ ${truncatedHtml}`;
     </EditorErrorBoundary>
   );
 }
+
