@@ -1,6 +1,5 @@
-
 import React from "react";
-import { Edit3, Bot } from "lucide-react";
+import { Edit3, Bot, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LocalizeModal from "./LocalizeModal";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
@@ -13,6 +12,7 @@ export default function AskAIFloatingBar(props) {
     onClose,
     onAskAI,
     onEdit,
+    onFlash,
     getCurrentHtml,
     currentHtml,
     html,
@@ -68,11 +68,17 @@ export default function AskAIFloatingBar(props) {
     if (typeof onEdit === "function") onEdit();
   }, [onEdit]);
 
+  const handleFlash = React.useCallback((e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (typeof onFlash === "function") onFlash();
+  }, [onFlash]);
+
   // Now decide to hide after hooks run
   if (x == null || y == null || !barEnabled) return null;
 
   const topPos = Math.max(safeTopMin, y - 34);
-  const leftPos = Math.max(6, x - 36);
+  const leftPos = Math.max(6, x - 72);
 
   return (
     <>
@@ -96,6 +102,18 @@ export default function AskAIFloatingBar(props) {
         >
           <Edit3 className="w-3.5 h-3.5 mr-1" />
           Edit
+        </Button>
+
+        {/* Flash button (middle) */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-white/90 hover:bg-purple-500/10 hover:text-purple-300 rounded-full px-2.5"
+          onMouseDown={handleFlash}
+          title="Flash Workflow"
+        >
+          <Sparkles className="w-3.5 h-3.5 mr-1" />
+          Flash
         </Button>
 
         {/* Ask AI button (right) */}

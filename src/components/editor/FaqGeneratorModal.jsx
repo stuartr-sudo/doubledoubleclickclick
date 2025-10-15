@@ -12,6 +12,7 @@ import { InvokeLLM } from "@/api/integrations";
 import { ContentEndpoint } from "@/api/entities";
 import { callFaqEndpoint } from "@/api/functions";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { agentSDK } from "@/agents";
 
 // Basic HTML-safe replacer for text nodes
 const escapeHtml = (s) =>
@@ -130,6 +131,70 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
 
   const { consumeTokensForFeature } = useTokenConsumption();
 
+  // NEW: single-flight token to prevent race conditions
+  const runRef = React.useRef(0);
+
+  // NEW: wait for agent reply (same pattern used by Flash workflow)
+  const waitForAgentResponse = async (conversationId, timeoutSec = 120) => {
+    const deadline = Date.now() + timeoutSec * 1000;
+    while (Date.now() < deadline) {
+      const conv = await agentSDK.getConversation(conversationId);
+      const msgs = conv?.messages || [];
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const m = msgs[i];
+        if (m.role === "assistant" && m.content) {
+          return String(m.content).trim();
+        }
+      }
+      await new Promise((r) => setTimeout(r, 900));
+    }
+    throw new Error("FAQ agent timed out");
+  };
+
+  // NEW: call faq_agent with the full article HTML
+  const callFaqAgent = async (html, selection = "") => {
+    const conversation = await agentSDK.createConversation({
+      agent_name: "faq_agent",
+      metadata: { source: "ask_ai_menu" },
+    });
+    // Keep prompt minimal; agent is already instructed via config
+    const userMsg = selection && selection.trim().length > 80
+      ? `ARTICLE_HTML:\n${html}\n\nOPTIONAL_SELECTED_HTML:\n${selection}`
+      : `ARTICLE_HTML:\n${html}`;
+    await agentSDK.addMessage(conversation, { role: "user", content: userMsg });
+    const out = await waitForAgentResponse(conversation.id);
+    return out;
+  };
+
+  // NEW: extract the FAQ section from the agent's full HTML (so we only insert the block)
+  const extractFaqSection = (fullHtml) => {
+    if (!fullHtml) return null;
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(fullHtml, "text/html");
+      const faq = doc.querySelector(".b44-faq, [data-b44-type='faq']");
+      if (!faq) return null;
+      let html = faq.outerHTML || null;
+      if (!html) return null;
+      // ensure data-b44-type attribute for drag/drop/select
+      if (!/data-b44-type\s*=\s*["']faq["']/.test(html)) {
+        html = html.replace(/<section\b/i, '<section data-b44-type="faq"');
+      }
+      return html;
+    } catch {
+      // fallback regex if DOMParser fails
+      const m = String(fullHtml).match(/<section[^>]*class=["'][^"']*b44-faq[^"']*["'][\s\S]*?<\/section>/i);
+      if (m) {
+        let block = m[0];
+        if (!/data-b44-type\s*=\s*["']faq["']/.test(block)) {
+          block = block.replace(/<section\b/i, '<section data-b44-type="faq"');
+        }
+        return block;
+      }
+      return null;
+    }
+  };
+
   // NEW: helper to grab full editor HTML if selection is small/empty
   const getEditorHtml = useCallback(() => {
     try {
@@ -228,6 +293,9 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
     setIsGenerating(true);
     setError(null); // Clear previous errors/warnings
 
+    // single-flight guard
+    const myRun = ++runRef.current;
+
     try {
       const tokenResult = await consumeTokensForFeature('ai_faq');
       if (!tokenResult.success) {
@@ -236,12 +304,33 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
         return;
       }
 
-      let faqs = [];
       const selection = (selectedText || "").trim();
       const selectionIsRichEnough = selection.length > 120;
-      const articleHtml = selectionIsRichEnough ? selection : getEditorHtml() || selection;
+      const articleHtml = selectionIsRichEnough ? selection : (getEditorHtml() || selection);
 
-      // If an endpoint is configured, use it.
+      // Attempt 1: First, use the same AGENT as Flash uses (faq_agent)
+      try {
+        const agentHtml = await callFaqAgent(articleHtml, selectionIsRichEnough ? selection : "");
+        // If another run started, ignore this result
+        if (myRun !== runRef.current) return;
+
+        const faqSection = extractFaqSection(agentHtml);
+        if (faqSection) {
+          onInsert(faqSection);
+          onClose();
+          setIsGenerating(false);
+          return; // Agent call successful, done here.
+        }
+        // If agent returned full HTML but we couldn't extract a valid section,
+        // it means the agent's output was not in the expected format, so we fall through to legacy.
+        // Or if the agent failed, the catch block will lead to fallback.
+      } catch (agentErr) {
+        // console.warn("FAQ agent failed, falling back:", agentErr); // Silent fallback to legacy methods
+        // No need to set an error here, as we are attempting fallbacks.
+      }
+
+      // Attempt 2: Legacy flows (endpoint -> InvokeLLM) as fallback ONLY
+      let faqs = [];
       if (selectedEndpointId) {
         const { data } = await callFaqEndpoint({
           endpoint_id: selectedEndpointId,
@@ -251,12 +340,12 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
         faqs = Array.isArray(data?.faqs) ? data.faqs : [];
         if (!faqs.length) {
           setError("The configured FAQ endpoint returned no FAQs. Please verify the endpoint logic.");
-          setIsGenerating(false);
-          return;
+          // No return here, fall through to default LLM if endpoint yields nothing
         }
-      } else {
-        // Fallback to default InvokeLLM if no endpoint is configured
-        
+      } 
+      
+      // Attempt 3: If no endpoint provided FAQs, or none configured, fallback to default InvokeLLM
+      if (!faqs.length) {
         const baseText = toPlain(articleHtml);
         const prompt = `Based on the following article content, generate 3 to 5 relevant Frequently Asked Questions (FAQs).
 
@@ -298,15 +387,11 @@ ${baseText.slice(0, 12000)}
         if (!faqs.length) {
           setError("The default AI model did not return any FAQs. Please try again.");
           setIsGenerating(false);
-          return;
+          return; // If all fallbacks failed, exit
         }
       }
 
-      if (!faqs.length) {
-          setIsGenerating(false);
-          return; // Stop if no FAQs were generated
-      }
-
+      // If we reached here, we have FAQs (either from endpoint or InvokeLLM)
       // Sanitize the answers to remove extra spacing and newlines.
       const sanitizedFaqs = faqs.map(faq => ({
           ...faq,
@@ -316,16 +401,23 @@ ${baseText.slice(0, 12000)}
 
       // Render via template (with validation fallback)
       const tpl = getTemplate(); // getTemplate will also manage any template-specific errors
-      const html = tpl
+      let html = tpl
         ? renderFaqWithTemplate(tpl, sanitizedFaqs, { title, openFirst: true, includeJsonLd: true })
         : renderDefaultAccordion(sanitizedFaqs, { title, openFirst: true, includeJsonLd: true });
 
+      // Guarantee draggable/selectable marker for fallback methods
+      const withMarker = html.includes('data-b44-type=') ? html : html.replace(/<section\b/, '<section data-b44-type="faq"');
+
       // Insert directly and close modal
-      onInsert(html);
+      onInsert(withMarker);
       onClose();
     } catch (e) {
         setError(`An error occurred: ${e.message}`);
+    } finally {
+      // ensure this run finishes; future runs won't be blocked
+      if (myRun === runRef.current) {
         setIsGenerating(false);
+      }
     }
   };
 

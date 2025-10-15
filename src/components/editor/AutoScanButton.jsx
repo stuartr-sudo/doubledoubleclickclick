@@ -1,23 +1,32 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ScanText, Loader2 } from "lucide-react";
+import { HelpCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { agentSDK } from "@/agents";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
+import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
-import FeatureHelpIcon from "./FeatureHelpIcon";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-export default function AutoScanButton({ html, onApply, disabled }) {
+const AutoScanButton = React.forwardRef(({ html, onApply, disabled }, ref) => {
   const { enabled } = useFeatureFlag("ai_autoscan", { defaultEnabled: false });
+  const { consumeTokensForFeature } = useTokenConsumption();
   const [loading, setLoading] = React.useState(false);
   const [processing, setProcessing] = React.useState(false);
   const runIdRef = React.useRef(0);
   const [estimatedDuration, setEstimatedDuration] = React.useState(73);
 
-  if (!enabled) return null;
-
   const handleRun = async () => {
+    // NEW: real-time token deduction
+    const tokenRes = await consumeTokensForFeature("ai_autoscan");
+    if (!tokenRes?.success) {
+      if (tokenRes?.error) {
+        toast.error(tokenRes.error);
+      }
+      return;
+    }
+
     if (loading) return;
     if (!html || String(html).trim().length === 0) {
       toast.message("Add some content first, then try AutoScan.");
@@ -31,7 +40,6 @@ export default function AutoScanButton({ html, onApply, disabled }) {
     const myRun = ++runIdRef.current;
 
     try {
-      // Create conversation with autoscanner agent
       const conversation = await agentSDK.createConversation({
         agent_name: "autoscanner",
         metadata: { task: "restructure_for_readability" }
@@ -41,7 +49,6 @@ export default function AutoScanButton({ html, onApply, disabled }) {
         throw new Error("Could not start autoscanner agent conversation.");
       }
 
-      // Send article HTML to agent (limit to 150k chars for safety)
       const maxChars = 150000;
       const trimmedHtml = String(html).slice(0, maxChars);
 
@@ -50,8 +57,7 @@ export default function AutoScanButton({ html, onApply, disabled }) {
         content: `Please restructure this article for better readability:\n\n${trimmedHtml}`
       });
 
-      // Poll for response with timeout
-      const timeoutMs = 120000; // 2 minutes
+      const timeoutMs = 120000;
       const intervalMs = 2000;
       const start = Date.now();
       let finalMessage = null;
@@ -76,7 +82,6 @@ export default function AutoScanButton({ html, onApply, disabled }) {
         throw new Error("AutoScan did not return a response in time.");
       }
 
-      // Parse agent response (strip code fences)
       const raw = String(finalMessage.content)
         .replace(/^```json\s*/i, "")
         .replace(/^```\s*/i, "")
@@ -87,7 +92,6 @@ export default function AutoScanButton({ html, onApply, disabled }) {
       try {
         parsed = JSON.parse(raw);
       } catch (jsonError) {
-        // Try to extract JSON from response
         const match = raw.match(/\{[\s\S]*\}/);
         if (match && match[0]) {
           try {
@@ -106,7 +110,6 @@ export default function AutoScanButton({ html, onApply, disabled }) {
         throw new Error("AutoScan response missing updated_html.");
       }
 
-      // Check if run was cancelled
       if (myRun !== runIdRef.current) {
         return;
       }
@@ -118,10 +121,8 @@ export default function AutoScanButton({ html, onApply, disabled }) {
         return;
       }
 
-      // Apply changes
       onApply?.(updatedHtml);
       
-      // Show success message with summary if available
       const summary = parsed.changes_summary || "Article restructured for better readability";
       toast.success(summary);
 
@@ -139,6 +140,12 @@ export default function AutoScanButton({ html, onApply, disabled }) {
     }
   };
 
+  React.useImperativeHandle(ref, () => ({
+    run: handleRun
+  }));
+
+  if (!enabled) return null;
+
   return (
     <>
       <div className="flex items-center gap-1">
@@ -147,17 +154,29 @@ export default function AutoScanButton({ html, onApply, disabled }) {
           className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2"
           onClick={handleRun}
           disabled={disabled || loading}
-          title="Restructure article for better readability (breaks up paragraphs, adds bullets, improves flow)"
+          title="Restructure article for better readability"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />}
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <HelpCircle className="w-4 h-4" />
+                  )}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-sm">
+                <div className="text-sm font-medium mb-1">AutoScan</div>
+                <div className="text-xs text-slate-600 leading-relaxed">
+                  Improves readability by restructuring paragraphs and lists while preserving meaning.
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           AutoScan
         </Button>
-
-        <FeatureHelpIcon
-          featureFlagName="ai_autoscan"
-          label="AutoScan"
-          description="Improves readability by restructuring paragraphs, adding lists, and enhancing flow. Click to watch a short tutorial."
-        />
       </div>
 
       <MagicOrbLoader
@@ -167,4 +186,8 @@ export default function AutoScanButton({ html, onApply, disabled }) {
       />
     </>
   );
-}
+});
+
+AutoScanButton.displayName = "AutoScanButton";
+
+export default AutoScanButton;

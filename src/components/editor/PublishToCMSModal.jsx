@@ -143,7 +143,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     }
   };
 
-  const loadCredentialsAndUser = async () => {
+  const loadCredentialsAndUser = async (attempt = 0) => {
     setLoading(true);
     try {
       const user = await User.me();
@@ -151,17 +151,29 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       
       const assignedUsernames = Array.isArray(user.assigned_usernames) ? user.assigned_usernames : [];
       
-      if (assignedUsernames.length > 0) {
+      // NEW: Empty credentials is a valid state for new users, not an error
+      if (assignedUsernames.length === 0) {
+        setCredentials([]);
+        setForm(prev => ({ ...prev, user_name: "" })); // Clear user_name if no assigned usernames
+        setLoading(false); // Stop loading indicator
+        return; // Exit gracefully - this is NOT an error
+      }
+
+      // Try to load credentials for assigned usernames
+      try {
         const credPromises = assignedUsernames.map(username => 
           IntegrationCredential.filter({ user_name: username }, "-updated_date")
         );
         const credArrays = await Promise.all(credPromises);
         const allCreds = credArrays.flat();
-        setCredentials(allCreds);
-      } else {
-        setCredentials([]);
+        setCredentials(allCreds); // Could be empty array - that's fine
+      } catch (credError) {
+        // NEW: Silently handle credential loading errors - user just has no credentials yet
+        console.log("No credentials found or error loading them:", credError);
+        setCredentials([]); // Treat as no credentials, don't crash
       }
       
+      // Determine target username from URL context
       const urlParams = new URLSearchParams(window.location.search);
       const postId = urlParams.get('post');
       const webhookId = urlParams.get('webhook');
@@ -169,25 +181,47 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       let targetUsername = assignedUsernames[0] || "";
 
       if (postId) {
-        const { BlogPost } = await import("@/api/entities");
-        const posts = await BlogPost.filter({ id: postId });
-        if (posts && posts.length > 0 && posts[0].user_name) {
-          targetUsername = posts[0].user_name;
+        try {
+          const { BlogPost } = await import("@/api/entities");
+          const posts = await BlogPost.filter({ id: postId });
+          if (posts && posts.length > 0 && posts[0].user_name) {
+            targetUsername = posts[0].user_name;
+          }
+        } catch (e) {
+          // Silently fail - just use default username
+          console.log("Could not load post context:", e);
         }
       } else if (webhookId) {
-        const { WebhookReceived } = await import("@/api/entities");
-        const webhooks = await WebhookReceived.filter({ id: webhookId });
-        if (webhooks && webhooks.length > 0 && webhooks[0].user_name) {
-          targetUsername = webhooks[0].user_name;
+        try {
+          const { WebhookReceived } = await import("@/api/entities");
+          const webhooks = await WebhookReceived.filter({ id: webhookId });
+          if (webhooks && webhooks.length > 0 && webhooks[0].user_name) {
+            targetUsername = webhooks[0].user_name;
+          }
+        } catch (e) {
+          // Silently fail - just use default username
+          console.log("Could not load webhook context:", e);
         }
       }
       
       setForm(prev => ({ ...prev, user_name: targetUsername }));
+      setLoading(false); // NEW: Set loading to false on successful load
+      
     } catch (error) {
-      console.error("Failed to load credentials:", error);
-      toast.error("Failed to load credentials");
-    } finally {
-      setLoading(false);
+      console.error("Failed to load user or credentials:", error); // Updated message
+      
+      // NEW: Only retry on rate limit, otherwise treat as no credentials
+      if (error?.response?.status === 429 && attempt < 3) {
+        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500; // Keep jitter
+        console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
+        setTimeout(() => loadCredentialsAndUser(attempt + 1), delay);
+        return; // Don't set loading to false yet
+      } else {
+        // NEW: Don't show error toast - just set empty state
+        setCredentials([]);
+        setCurrentUser(null); // Clear currentUser if User.me() failed
+        setLoading(false);
+      }
     }
   };
 

@@ -1,268 +1,465 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { EditorWorkflow } from "@/api/entities";
 import { User } from "@/api/entities";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, ArrowUp, ArrowDown, Save, PencilLine } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, GripVertical, Save, X, Sparkles, Crown } from "lucide-react";
+import { toast } from "sonner";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
-const STEP_TYPES = [
-  { key: "html_cleanup", label: "HTML Cleanup" },
-  { key: "tldr", label: "TL;DR Summary" },
-  { key: "humanize", label: "Humanize Text" },
-  { key: "cite_sources", label: "Add Citations" },
-  { key: "add_internal_links", label: "Add Internal Links" },
-  { key: "affilify", label: "Affilify (Affiliate Style)" },
-  { key: "brand_it", label: "Brand It" }
+const AVAILABLE_STEPS = [
+  { value: "tldr", label: "Key Takeaway (TLDR)" },
+  { value: "faq", label: "FAQs" },
+  { value: "brand_it", label: "Brand It" },
+  { value: "html_cleanup", label: "Clean Up HTML" },
+  { value: "autolink", label: "AutoLink" },
+  { value: "autoscan", label: "AutoScan" },
+  { value: "seo", label: "SEO" },
+  { value: "schema", label: "Schema" },
+  { value: "links_references", label: "Links + References" }
 ];
 
-function StepRow({ step, idx, onChange, onRemove, onMoveUp, onMoveDown }) {
-  const handleType = (v) => onChange(idx, { ...step, type: v });
-  const handleParams = (e) => {
-    const val = e.target.value;
-    try {
-      const parsed = val ? JSON.parse(val) : {};
-      onChange(idx, { ...step, parameters: parsed });
-    } catch {
-      onChange(idx, { ...step, parameters_raw: val }); // keep raw for display until valid JSON
-    }
-  };
-
-  const paramsText = step.parameters_raw ?? JSON.stringify(step.parameters || {}, null, 2);
-
-  return (
-    <div className="p-3 rounded-lg border border-slate-200 bg-white flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <Select value={step.type} onValueChange={handleType}>
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder="Select step" />
-          </SelectTrigger>
-          <SelectContent>
-            {STEP_TYPES.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => onMoveUp(idx)}><ArrowUp className="w-4 h-4" /></Button>
-          <Button variant="outline" size="icon" onClick={() => onMoveDown(idx)}><ArrowDown className="w-4 h-4" /></Button>
-          <Button variant="destructive" size="icon" onClick={() => onRemove(idx)}><Trash2 className="w-4 h-4" /></Button>
-        </div>
-      </div>
-      <div>
-        <Label>Parameters (JSON)</Label>
-        <textarea
-          className="w-full min-h-[120px] text-sm bg-white border border-slate-300 rounded-md p-2 font-mono"
-          value={paramsText}
-          onChange={handleParams}
-          placeholder='{}'
-        />
-        {step.parameters_raw && (
-          <div className="text-xs text-red-600 mt-1">Invalid JSON, please fix.</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function EditorWorkflowManager() {
-  const [workflows, setWorkflows] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [editing, setEditing] = React.useState(null); // workflow object being edited
-  const [form, setForm] = React.useState({ name: "", description: "", is_active: true, workflow_steps: [] });
+  const [workflows, setWorkflows] = useState([]);
+  const [defaultWorkflows, setDefaultWorkflows] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    workflow_steps: [],
+    is_active: true,
+    is_default: false
+  });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const list = await EditorWorkflow.list("-updated_date", 200).catch(() => []);
-      setWorkflows(list || []);
-      setLoading(false);
-    })();
+  useEffect(() => {
+    loadData();
   }, []);
 
-  const resetForm = () => setForm({ name: "", description: "", is_active: true, workflow_steps: [] });
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [user, userWorkflows, defaults] = await Promise.all([
+        User.me(),
+        EditorWorkflow.filter({ is_default: false }, "-updated_date"),
+        EditorWorkflow.filter({ is_default: true }, "-updated_date")
+      ]);
+      
+      setCurrentUser(user);
+      setWorkflows(userWorkflows || []);
+      setDefaultWorkflows(defaults || []);
+    } catch (error) {
+      toast.error("Failed to load workflows");
+      console.error("Load error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (workflow) => {
+    setEditingId(workflow.id);
+    setFormData({
+      name: workflow.name || "",
+      description: workflow.description || "",
+      workflow_steps: workflow.workflow_steps || [],
+      is_active: workflow.is_active !== false,
+      is_default: workflow.is_default || false
+    });
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setFormData({
+      name: "",
+      description: "",
+      workflow_steps: [],
+      is_active: true,
+      is_default: false
+    });
+  };
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Please enter a workflow name");
+      return;
+    }
+
+    if (!formData.workflow_steps.length) {
+      toast.error("Please add at least one step");
+      return;
+    }
+
+    try {
+      const payload = {
+        name: formData.name.trim(),
+        description: formData.description?.trim() || "",
+        workflow_steps: formData.workflow_steps,
+        is_active: formData.is_active,
+        is_default: formData.is_default,
+        user_name: currentUser?.assigned_usernames?.[0] || ""
+      };
+
+      if (editingId) {
+        await EditorWorkflow.update(editingId, payload);
+        toast.success("Workflow updated");
+      } else {
+        await EditorWorkflow.create(payload);
+        toast.success("Workflow created");
+      }
+
+      await loadData();
+      handleCancel();
+    } catch (error) {
+      toast.error("Failed to save workflow");
+      console.error("Save error:", error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm("Delete this workflow?")) return;
+    
+    try {
+      await EditorWorkflow.delete(id);
+      toast.success("Workflow deleted");
+      await loadData();
+    } catch (error) {
+      toast.error("Failed to delete workflow");
+      console.error("Delete error:", error);
+    }
+  };
 
   const handleAddStep = () => {
-    setForm(f => ({ ...f, workflow_steps: [...(f.workflow_steps || []), { type: "html_cleanup", parameters: {} }] }));
-  };
-  const handleRemoveStep = (idx) => {
-    setForm(f => ({ ...f, workflow_steps: f.workflow_steps.filter((_, i) => i !== idx) }));
-  };
-  const handleMoveUp = (idx) => {
-    setForm(f => {
-      if (idx === 0) return f;
-      const arr = [...f.workflow_steps];
-      [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
-      return { ...f, workflow_steps: arr };
-    });
-  };
-  const handleMoveDown = (idx) => {
-    setForm(f => {
-      if (idx === f.workflow_steps.length - 1) return f;
-      const arr = [...f.workflow_steps];
-      [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
-      return { ...f, workflow_steps: arr };
-    });
-  };
-  const handleChangeStep = (idx, newStep) => {
-    setForm(f => {
-      const arr = [...f.workflow_steps];
-      const clean = { ...newStep };
-      if (clean.parameters_raw && !clean.parameters) clean.parameters = {};
-      delete clean.parameters_raw;
-      arr[idx] = clean;
-      return { ...f, workflow_steps: arr };
+    setFormData({
+      ...formData,
+      workflow_steps: [
+        ...formData.workflow_steps,
+        { type: "", enabled: true, parameters: {} }
+      ]
     });
   };
 
-  const save = async () => {
-    const payload = {
-      name: form.name.trim(),
-      description: form.description || "",
-      is_active: !!form.is_active,
-      workflow_steps: (form.workflow_steps || []).map(s => ({
-        type: s.type,
-        parameters: s.parameters || {}
-      }))
-    };
-    if (!payload.name || payload.workflow_steps.length === 0) return;
-
-    if (editing?.id) {
-      await EditorWorkflow.update(editing.id, payload);
-    } else {
-      await EditorWorkflow.create(payload);
-    }
-    const list = await EditorWorkflow.list("-updated_date", 200).catch(() => []);
-    setWorkflows(list || []);
-    setEditing(null);
-    resetForm();
+  const handleStepChange = (index, field, value) => {
+    const updated = [...formData.workflow_steps];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, workflow_steps: updated });
   };
 
-  const beginEdit = (wf) => {
-    setEditing(wf);
-    setForm({
-      name: wf.name || "",
-      description: wf.description || "",
-      is_active: wf.is_active !== false,
-      workflow_steps: (wf.workflow_steps || []).map(s => ({ type: s.type, parameters: s.parameters || {} }))
-    });
+  const handleRemoveStep = (index) => {
+    const updated = formData.workflow_steps.filter((_, i) => i !== index);
+    setFormData({ ...formData, workflow_steps: updated });
   };
 
-  const remove = async (wf) => {
-    await EditorWorkflow.delete(wf.id);
-    const list = await EditorWorkflow.list("-updated_date", 200).catch(() => []);
-    setWorkflows(list || []);
-    if (editing?.id === wf.id) {
-      setEditing(null);
-      resetForm();
-    }
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(formData.workflow_steps);
+    const [reordered] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reordered);
+
+    setFormData({ ...formData, workflow_steps: items });
   };
+
+  const isSuperAdmin = currentUser?.is_superadmin || currentUser?.role === 'admin';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-slate-600">Loading workflows...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 text-slate-900 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">AI Workflow Manager</h1>
-          {editing && (
-            <Button variant="outline" onClick={() => { setEditing(null); resetForm(); }}>
-              Cancel edit
-            </Button>
-          )}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Flash Workflow Builder</h1>
+          <p className="text-slate-600">Create custom workflows to automate your content enhancement process</p>
         </div>
 
-        <Card className="p-4 bg-white border border-slate-200 shadow-sm">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label>Name</Label>
-              <Input
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g., SEO Polish"
-                className="bg-white border-slate-300 text-slate-900"
-              />
-            </div>
-            <div className="flex items-end gap-2">
+        {/* Editor Form */}
+        <Card className="mb-8 bg-white border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-600" />
+              {editingId ? "Edit Workflow" : "Create New Workflow"}
+            </CardTitle>
+            <CardDescription>
+              Build a sequence of AI-powered steps to enhance your content
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4">
+              <div>
+                <Label>Workflow Name</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., SEO Optimizer, Content Polisher"
+                  className="bg-white border-slate-300"
+                />
+              </div>
+
+              <div>
+                <Label>Description</Label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Describe what this workflow does..."
+                  className="bg-white border-slate-300"
+                  rows={2}
+                />
+              </div>
+
+              {isSuperAdmin && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.is_default}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_default: checked })}
+                  />
+                  <Label className="flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-amber-600" />
+                    Make this a default workflow (available to all users)
+                  </Label>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
                 <Label>Active</Label>
-                <Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} />
               </div>
             </div>
-            <div className="md:col-span-2">
-              <Label>Description</Label>
-              <Input
-                value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
-                placeholder="What does this workflow do?"
-                className="bg-white border-slate-300 text-slate-900"
-              />
-            </div>
-          </div>
 
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium">Steps</h3>
-              <Button onClick={handleAddStep} className="gap-2">
-                <Plus className="w-4 h-4" /> Add Step
-              </Button>
-            </div>
-            <div className="space-y-3">
-              {(form.workflow_steps || []).map((s, i) => (
-                <StepRow
-                  key={i}
-                  step={s}
-                  idx={i}
-                  onChange={handleChangeStep}
-                  onRemove={handleRemoveStep}
-                  onMoveUp={handleMoveUp}
-                  onMoveDown={handleMoveDown}
-                />
-              ))}
-              {(!form.workflow_steps || form.workflow_steps.length === 0) && (
-                <div className="text-sm text-slate-500">No steps yet. Click "Add Step" to begin.</div>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <Label className="text-base font-semibold">Workflow Steps</Label>
+                <Button
+                  onClick={handleAddStep}
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Step
+                </Button>
+              </div>
+
+              {formData.workflow_steps.length === 0 ? (
+                <div className="text-center py-12 text-slate-500 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
+                  Click "Add Step" to begin.
+                </div>
+              ) : (
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="steps">
+                    {(provided) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className="space-y-3"
+                      >
+                        {formData.workflow_steps.map((step, index) => (
+                          <Draggable
+                            key={index}
+                            draggableId={`step-${index}`}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-lg"
+                              >
+                                <div {...provided.dragHandleProps}>
+                                  <GripVertical className="w-5 h-5 text-slate-400 cursor-grab" />
+                                </div>
+
+                                <div className="flex-1">
+                                  <Select
+                                    value={step.type}
+                                    onValueChange={(value) => handleStepChange(index, "type", value)}
+                                  >
+                                    <SelectTrigger className="bg-white border-slate-300">
+                                      <SelectValue placeholder="Select step type" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white border-slate-200">
+                                      {AVAILABLE_STEPS.map((opt) => (
+                                        <SelectItem
+                                          key={opt.value}
+                                          value={opt.value}
+                                          className="hover:bg-slate-100"
+                                        >
+                                          {opt.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <Switch
+                                  checked={step.enabled !== false}
+                                  onCheckedChange={(checked) =>
+                                    handleStepChange(index, "enabled", checked)
+                                  }
+                                />
+
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleRemoveStep(index)}
+                                  className="text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               )}
             </div>
-          </div>
 
-          <div className="mt-4 flex gap-2">
-            <Button onClick={save} className="gap-2">
-              <Save className="w-4 h-4" /> {editing ? "Update Workflow" : "Create Workflow"}
-            </Button>
-            {editing && (
-              <Button variant="outline" onClick={() => { setEditing(null); resetForm(); }}>
-                New Workflow
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleSave}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {editingId ? "Update Workflow" : "Create Workflow"}
               </Button>
-            )}
-          </div>
+              {editingId && (
+                <Button variant="outline" onClick={handleCancel}>
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </CardContent>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200 shadow-sm">
-          <h2 className="text-lg font-medium mb-3">Existing Workflows</h2>
-          {loading ? (
-            <div className="text-slate-600">Loading...</div>
-          ) : (
-            <div className="grid gap-3">
-              {workflows.map(wf => (
-                <div key={wf.id} className="p-3 rounded-lg border border-slate-200 bg-white flex items-center gap-3">
-                  <div className="flex-1">
-                    <div className="font-medium">{wf.name}</div>
-                    <div className="text-sm text-slate-600">{wf.description}</div>
-                    <div className="text-xs text-slate-500 mt-1">{(wf.workflow_steps || []).length} steps • {wf.is_active !== false ? "Active" : "Inactive"}</div>
-                  </div>
-                  <Button variant="outline" className="gap-2" onClick={() => beginEdit(wf)}>
-                    <PencilLine className="w-4 h-4" /> Edit
-                  </Button>
-                  <Button variant="destructive" className="gap-2" onClick={() => remove(wf)}>
-                    <Trash2 className="w-4 h-4" /> Delete
-                  </Button>
-                </div>
+        {/* Default Workflows */}
+        {defaultWorkflows.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <Crown className="w-5 h-5 text-amber-600" />
+              Default Workflows
+            </h2>
+            <div className="grid gap-4">
+              {defaultWorkflows.map((workflow) => (
+                <Card key={workflow.id} className="bg-white border-slate-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-slate-900 mb-1">
+                          {workflow.name}
+                        </h3>
+                        {workflow.description && (
+                          <p className="text-sm text-slate-600 mb-3">{workflow.description}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {(workflow.workflow_steps || []).map((step, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 text-xs rounded-md bg-indigo-100 text-indigo-800 border border-indigo-200"
+                            >
+                              {AVAILABLE_STEPS.find((s) => s.value === step.type)?.label || step.type}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {isSuperAdmin && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(workflow)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(workflow.id)}
+                            className="text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
-              {workflows.length === 0 && (
-                <div className="text-sm text-slate-500">No workflows yet.</div>
-              )}
+            </div>
+          </div>
+        )}
+
+        {/* User Workflows */}
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900 mb-4">Your Workflows</h2>
+          {workflows.length === 0 ? (
+            <div className="text-center py-12 text-slate-500 bg-white rounded-lg border border-slate-200">
+              No workflows yet. Create your first one above!
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {workflows.map((workflow) => (
+                <Card key={workflow.id} className="bg-white border-slate-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-slate-900 mb-1">
+                          {workflow.name}
+                        </h3>
+                        {workflow.description && (
+                          <p className="text-sm text-slate-600 mb-3">{workflow.description}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {(workflow.workflow_steps || []).map((step, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 text-xs rounded-md bg-slate-100 text-slate-700 border border-slate-200"
+                            >
+                              {AVAILABLE_STEPS.find((s) => s.value === step.type)?.label || step.type}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(workflow)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(workflow.id)}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );

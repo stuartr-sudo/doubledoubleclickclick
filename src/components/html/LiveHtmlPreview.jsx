@@ -131,6 +131,18 @@ export default function LiveHtmlPreview({
         let lastRange = null; // remember last valid caret/selection
         let lastSelectedId = null; // persist last selected element by its data-b44-id to restore after commits
 
+        // Add global drag state and helpers
+        var __dragState = { id: null, overEl: null, pos: 'before' };
+        var __dropSelector = '[data-b44-type], .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, p, div, section, article, h1, h2, h3, h4, h5, h6, li';
+        function clearDropClasses(){
+          try {
+            document.querySelectorAll('.b44-drop-before, .b44-drop-after').forEach(function(n){
+              n.classList.remove('b44-drop-before'); 
+              n.classList.remove('b44-drop-after');
+            });
+          } catch(_) {}
+        }
+
         // lightweight HTML history for reliable Undo/Redo (independent of execCommand)
         const HISTORY_LIMIT = 100;
         let __history = [];
@@ -246,7 +258,115 @@ export default function LiveHtmlPreview({
           });
         });
         try { __imgObserver.observe(document.body, { childList: true, subtree: true }); } catch(_) {}
+        
+        // NEW: Drag & Drop for feature blocks (TLDR, FAQ, Testimonial, CTA, product, etc.)
+        function markDraggable(el) {
+          try {
+            if (!el) return;
+            // NEW: in-memory flag that won't persist into saved HTML
+            if (el.__b44DragBound) return;
+            el.__b44DragBound = true;
 
+            el.setAttribute('draggable', 'true');
+
+            el.addEventListener('dragstart', function (ev) {
+              try {
+                ev.stopPropagation();
+                ev.dataTransfer.effectAllowed = 'move';
+                var id = el.dataset.b44Id || '';
+                ev.dataTransfer.setData('text/plain', id);
+                el.classList.add('b44-dragging');
+                __dragState.id = id; // remember globally
+                lastSelectedId = id;
+              } catch(_) {}
+            });
+
+            // Keep element-level dragover to allow drop on specific targets, but compute before/after by cursor Y
+            el.addEventListener('dragover', function (ev) {
+              try {
+                if (!__dragState.id) return;
+                ev.preventDefault();
+                var rect = el.getBoundingClientRect();
+                var pos = ((ev.clientY - rect.top) < rect.height / 2) ? 'before' : 'after';
+                clearDropClasses();
+                el.classList.add(pos === 'before' ? 'b44-drop-before' : 'b44-drop-after');
+                __dragState.overEl = el;
+                __dragState.pos = pos;
+              } catch(_) {}
+            });
+
+            el.addEventListener('dragleave', function () {
+              try { el.classList.remove('b44-drop-before'); el.classList.remove('b44-drop-after'); } catch(_) {}
+            });
+
+            el.addEventListener('drop', function (ev) {
+              try {
+                if (!__dragState.id) return;
+                ev.preventDefault();
+                ev.stopPropagation();
+                var src = document.querySelector('[data-b44-id=\"' + __dragState.id + '\"]');
+                var target = el;
+                if (!src || !target || src === target || src.contains(target)) {
+                  clearDropClasses();
+                  __dragState.id = null; __dragState.overEl = null; // Reset global state
+                  return;
+                }
+                if (__dragState.pos === 'before') {
+                  target.parentNode.insertBefore(src, target);
+                } else {
+                  target.parentNode.insertBefore(src, target.nextSibling);
+                }
+                clearDropClasses();
+                try { selectGeneric(src, src.dataset && src.dataset.b44Type ? src.dataset.b44Type : 'block'); } catch(_) {}
+                pushHistory('drag-drop');
+                dumpHtml(true);
+                __dragState.id = null; __dragState.overEl = null; // Reset global state
+              } catch(_) {}
+            });
+
+            el.addEventListener('dragend', function () {
+              try { clearDropClasses(); el.classList.remove('b44-dragging'); __dragState.id = null; __dragState.overEl = null; } catch(_) {}
+            });
+          } catch(_) {}
+        }
+
+        // Ensure feature blocks have required data attributes and bindings
+        function ensureFeatureDataAttrs(el, type) {
+          if (!el) return;
+          const t = (type || (el.dataset && el.dataset.b44Type) || '').toLowerCase();
+          if (!el.dataset) el.dataset = {};
+          if (!el.dataset.b44Type) el.dataset.b44Type = t || inferFeatureType(el);
+          if (!el.dataset.b44Id) el.dataset.b44Id = 'el-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+          markDraggable(el);
+        }
+
+        function inferFeatureType(el) {
+          if (!el) return 'block';
+          const c = (el.className || '').toString().toLowerCase();
+          if (c.includes('b44-faq')) return 'faq';
+          if (c.includes('b44-tldr')) return 'tldr';
+          if (c.includes('b44-promoted-product')) return 'product';
+          if (c.includes('b44-audio-inline')) return 'audio';
+          if (c.includes('testimonial')) return 'testimonial';
+          // NEW: detect references blocks
+          if (c.includes('b44-references')) return 'references';
+          return 'block';
+        }
+
+        // Click-to-select for feature blocks (so Delete works)
+        // This is a global listener, specific clicks will override.
+        document.addEventListener('click', function(e){
+          try {
+            const sel = '.b44-faq, .b44-tldr, .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, [data-b44-type]';
+            const block = e.target && e.target.closest && e.target.closest(sel);
+            if (!block) return;
+            ensureFeatureDataAttrs(block); // Ensure it's properly tagged if it wasn't already
+            if (typeof selectGeneric === 'function') {
+              selectGeneric(block, block.dataset.b44Type || 'block');
+            }
+          } catch(_) {}
+        }, true);
+        
         // recompute nextId to avoid collisions with existing IDs
         function recomputeNextId() {
           try {
@@ -307,7 +427,7 @@ export default function LiveHtmlPreview({
             n.style.outline = '0px solid transparent';
           });
           // also clear outlines for any selectable block types like FAQ
-          document.querySelectorAll('[data-b44-type], .b44-audio-inline').forEach(function(n){ // Added .b44-audio-inline
+          document.querySelectorAll('[data-b44-id],[data-b44-type], .b44-audio-inline').forEach(function(n){ // Added .b44-audio-inline
             n.style.outline = '0px solid transparent';
           });
         }
@@ -396,6 +516,94 @@ export default function LiveHtmlPreview({
           bindImageHandlers(document);
 
           styleTikTokEmbedsDefault();
+
+          // NEW: make feature blocks draggable (TLDR/FAQ/Testimonial/etc.)
+          try {
+            document.querySelectorAll('[data-b44-type]').forEach(markDraggable);
+            document.querySelectorAll('.b44-promoted-product').forEach(markDraggable);
+            document.querySelectorAll('.b44-audio-inline').forEach(markDraggable);
+            document.querySelectorAll('blockquote.tiktok-embed').forEach(markDraggable);
+            document.querySelectorAll('.youtube-video-container').forEach(markDraggable);
+
+            // NEW: Auto-tag Flash-generated FAQ / TLDR so they become selectable + draggable
+            document.querySelectorAll('.b44-faq').forEach(function(el){
+              ensureFeatureDataAttrs(el, 'faq');
+            });
+            document.querySelectorAll('.b44-tldr').forEach(function(el){
+              ensureFeatureDataAttrs(el, 'tldr');
+            });
+            // NEW: auto-tag references if present
+            document.querySelectorAll('.b44-references').forEach(function(el){
+              ensureFeatureDataAttrs(el, 'references');
+            });
+          } catch(_) {}
+        }
+
+        // Add a MutationObserver to capture future inserts (e.g., when Flash appends FAQ after run)
+        try {
+          const mo = new MutationObserver(function(muts){
+            for (const m of muts) {
+              (m.addedNodes || []).forEach(function(n){
+                if (!n || n.nodeType !== 1) return;
+                // Check if the added node itself matches
+                if (n.matches && (n.matches('.b44-faq, .b44-tldr, .b44-references') || n.matches('[data-b44-type]'))) {
+                  ensureFeatureDataAttrs(n);
+                } else if (n.querySelectorAll) {
+                  n.querySelectorAll('.b44-faq, .b44-tldr, .b44-references, [data-b44-type]').forEach(function(el){
+                    ensureFeatureDataAttrs(el);
+                  });
+                }
+              });
+            }
+          });
+          mo.observe(document.body, { childList: true, subtree: true });
+        } catch(_) {}
+
+        // Transient editor classes/styles that should NEVER persist across saves
+        function removeTransientClassesLive(root) {
+          try {
+            (root || document).querySelectorAll('.b44-dragging, .b44-drop-before, .b44-drop-after').forEach(function(n){
+              n.classList.remove('b44-dragging');
+              n.classList.remove('b44-drop-before');
+              n.classList.remove('b44-drop-after');
+            });
+            // NEW: strip legacy persisted drag-bound attributes so we can rebind after refresh
+            (root || document).querySelectorAll('[data-b44-drag-bound]').forEach(function(n){
+              try { n.removeAttribute('data-b44-drag-bound'); } catch(_) {}
+            });
+            // Clear selection outlines that could have been saved inline
+            (root || document).querySelectorAll('[data-b44-id],[data-b44-type]').forEach(function(n){
+              try { if (n.style && n.style.outline) n.style.outline = ''; } catch(_) {}
+            });
+          } catch(_) {}
+        }
+        function getCleanHtml() {
+          try {
+            const clone = document.body.cloneNode(true);
+            // Remove transient classes in the clone
+            clone.querySelectorAll('.b44-dragging, .b44-drop-before, .b44-drop-after').forEach(function(n){
+              n.classList.remove('b44-dragging');
+              n.classList.remove('b44-drop-before');
+              n.classList.remove('b44-drop-after');
+            });
+            // NEW: strip any persisted drag-bound attributes so saved HTML stays clean
+            clone.querySelectorAll('[data-b44-drag-bound]').forEach(function(n){
+              try { n.removeAttribute('data-b44-drag-bound'); } catch(_) {}
+            });
+            // Strip selection outlines only
+            clone.querySelectorAll('[data-b44-id],[data-b44-type]').forEach(function(n){
+              try { if (n.hasAttribute('style')) {
+                n.style.outline = '';
+                if (!n.getAttribute('style') || n.getAttribute('style').trim() === '') {
+                  n.removeAttribute('style');
+                }
+              } } catch(_) {}
+            });
+            return clone.innerHTML;
+          } catch(_) {
+            // Fallback to raw innerHTML to avoid blocking saves
+            return document.body.innerHTML;
+          }
         }
 
         function deleteElementById(id) {
@@ -456,14 +664,14 @@ export default function LiveHtmlPreview({
         }
 
         function dumpHtml(immediate) {
-          if (immediate) {
-            window.parent.postMessage({ type: 'html-dump', html: document.body.innerHTML }, '*');
-            return;
-          }
+          const post = function(){
+            try {
+              window.parent.postMessage({ type: 'html-dump', html: getCleanHtml() }, '*');
+            } catch(_) {}
+          };
+          if (immediate) { post(); return; }
           clearTimeout(dumpTimer);
-          dumpTimer = setTimeout(function(){
-            window.parent.postMessage({ type: 'html-dump', html: document.body.innerHTML }, '*');
-          }, 120);
+          dumpTimer = setTimeout(post, 120);
         }
 
         function saveLastRange() {
@@ -595,7 +803,7 @@ export default function LiveHtmlPreview({
           pushHistory('insert');
         }
 
-        // insert content after current selection (do NOT replace selection)
+        // insert content after current selection (no replacement)
         // FIX: Insert infographic RIGHT AFTER the selected text's parent block, not at bottom
         function insertHtmlAfterSelection(html) {
           const sel = document.getSelection();
@@ -755,8 +963,12 @@ export default function LiveHtmlPreview({
           const scroller = document.scrollingElement || document.documentElement || document.body;
           const prevTop = scroller.scrollTop;
 
-          // Replace HTML without forcing caret to end (prevents scroll & focus jump)
+          // Replace HTML
           document.body.innerHTML = newHtml || '';
+
+          // NEW: If any transient classes/styles were accidentally persisted in saved HTML, remove them now
+          removeTransientClassesLive(document);
+
           assignIds();
           executePendingScripts();
           styleTikTokEmbedsDefault();
@@ -966,6 +1178,53 @@ export default function LiveHtmlPreview({
         document.addEventListener('mouseup', function(){ reportSelection(); saveLastRange(); });
         document.addEventListener('selectionchange', function(){ reportSelection(); });
 
+        // GLOBAL fallback so you can drop "anywhere" between blocks, not only on specific elements
+        document.addEventListener('dragover', function(ev){
+          try {
+            if (!__dragState.id) return;
+            ev.preventDefault();
+            var target = ev.target && (ev.target.closest && ev.target.closest(__dropSelector));
+            if (!target) return;
+            if (target.dataset && target.dataset.b44Id === __dragState.id) return;
+            if (document.querySelector('[data-b44-id=\"' + __dragState.id + '\"]')?.contains(target)) return;
+
+            var rect = target.getBoundingClientRect();
+            var pos = ((ev.clientY - rect.top) < rect.height / 2) ? 'before' : 'after';
+            clearDropClasses();
+            target.classList.add(pos === 'before' ? 'b44-drop-before' : 'b44-drop-after');
+            __dragState.overEl = target; 
+            __dragState.pos = pos;
+          } catch(_) {}
+        }, true);
+
+        document.addEventListener('drop', function(ev){
+          try {
+            if (!__dragState.id) return;
+            ev.preventDefault();
+            var src = document.querySelector('[data-b44-id=\"' + __dragState.id + '\"]');
+            var target = __dragState.overEl || (ev.target && ev.target.closest && ev.target.closest(__dropSelector));
+            if (!src || !target || src === target || src.contains(target)) {
+              clearDropClasses();
+              __dragState.id = null; __dragState.overEl = null;
+              return;
+            }
+            if (__dragState.pos === 'before') {
+              target.parentNode.insertBefore(src, target);
+            } else {
+              target.parentNode.insertBefore(src, target.nextSibling);
+            }
+            clearDropClasses();
+            try { selectGeneric(src, src.dataset && src.dataset.b44Type ? src.dataset.b44Type : 'block'); } catch(_) {}
+            pushHistory('drag-drop');
+            dumpHtml(true);
+            __dragState.id = null; __dragState.overEl = null;
+          } catch(_) {}
+        }, true);
+
+        document.addEventListener('dragend', function(){
+          try { clearDropClasses(); __dragState.id = null; __dragState.overEl = null; } catch(_) {}
+        }, true);
+
         // Ensure we only bind one 'message' handler and process insert once
         if (!window.__b44_msg_bound) {
           window.__b44_msg_bound = true;
@@ -1089,6 +1348,9 @@ export default function LiveHtmlPreview({
         }
 
         assignIds();
+        // NEW: Just in case initial HTML had transient classes (e.g., user saved mid-drag), clean them
+        removeTransientClassesLive(document);
+
         document.body.setAttribute('contenteditable', 'true');
         document.body.style.outline = 'none';
         try { window.parent.postMessage({ type: 'b44-ready' }, '*'); } catch(e) {}
@@ -1295,6 +1557,10 @@ export default function LiveHtmlPreview({
               max-width: 100%;
               height: auto;
             }
+            /* --- Drag & Drop visuals for feature blocks --- */
+            .b44-dragging { opacity: 0.6; }
+            .b44-drop-before { outline: 2px dashed #8b5cf6 !important; outline-offset: 2px; }
+            .b44-drop-after { outline: 2px solid #10b981 !important; outline-offset: 2px; }
           </style>
         </head>
         <body>${initialHtmlRef.current || ''}</body>

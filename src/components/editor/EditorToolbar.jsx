@@ -17,12 +17,9 @@ import {
   Palette,
   Sparkles,
   Shield,
-  Search,
-  Link,
   ShoppingCart,
   Store,
   Bot,
-  // NEW: Imports for Save/Publish functionality from outline
   Loader2,
   Send,
   ChevronDown,
@@ -30,6 +27,7 @@ import {
   FileText,
   Globe,
   Settings,
+  HelpCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +40,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
 export default function EditorToolbar({
@@ -50,22 +49,18 @@ export default function EditorToolbar({
   onInsertContent,
   setShowAIDetection,
   setShowEmailCaptureSelector,
-  // Existing props for additional features
   setShowAISuggestions,
   setShowSeoAssistant,
   setShowSitemapLinking,
   setShowAmazonImport,
   setShowProductPreview,
-  // Existing: Optional workflow runner trigger from parent editor
   setShowWorkflowRunner,
-  // NEW PROPS from the outline for Save/Publish functionality
   onSave,
-  onPublish, // Not directly used in the outline's dropdown, but part of signature
+  onPublish,
   onDownloadTxt,
-  onDownloadHtml, // Not used in the outline's dropdown, but part of signature
+  onDownloadHtml,
   onPublishToGoogleDocs,
   onPublishToShopify,
-  // Other props from the outline's signature (included for completeness, even if not used in the provided snippets)
   onOpenImageLibrary,
   onOpenYouTubeSelector,
   onOpenTikTokSelector,
@@ -74,7 +69,7 @@ export default function EditorToolbar({
   onOpenCleanup,
   onOpenCta,
   onOpenEmailForm,
-  onOpenTldrGenerator,
+  onOpenTldrGenerator, // This is now used for generating references
   onOpenMediaLibrary,
   onOpenAudioModal,
   isSaving,
@@ -88,19 +83,18 @@ export default function EditorToolbar({
   showPublishOptions = false,
   onOpenPublishModal,
   isFreeTrial = false,
+  onFlashWorkflow,
+  // setShowLinksAndReferences, // This prop is no longer needed after the change
 }) {
   const insertBlock = (html) => onInsertContent(html);
 
-  // State for 'Insert' dropdown
   const [openInsert, setOpenInsert] = React.useState(false);
-  // State for 'AI & Tools' dropdown
   const [openTools, setOpenTools] = React.useState(false);
 
-  // Listen for global close event dispatched by Editor
   React.useEffect(() => {
     const handler = () => {
       setOpenInsert(false);
-      setOpenTools(false); // Close new dropdown too
+      setOpenTools(false);
     };
     window.addEventListener('b44-close-dropdowns', handler);
     return () => window.removeEventListener('b44-close-dropdowns', handler);
@@ -155,8 +149,7 @@ function exampleFunction() {
   };
 
   return (
-    // NEW: Outer wrapper div from the outline, replacing the original one.
-    <div className="border-b border-slate-200 bg-white px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+    <div className="topbar bg-slate-800 border-b border-slate-700 px-4 py-2 flex items-center justify-between sticky top-0 z-50">
       {/* Group for existing left-aligned toolbar items */}
       <div className="flex flex-wrap gap-2 items-center">
         {/* Undo / Redo */}
@@ -175,14 +168,13 @@ function exampleFunction() {
             <Button
               size="sm"
               variant="outline"
-              // CHANGED: light, high-contrast trigger
               className="bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 gap-2"
             >
               <PlusCircle className="w-4 h-4 text-slate-700" />
               Insert
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-white border border-slate-200 text-slate-900 shadow-xl w-[320px]"> {/* UPDATED: light menu */}
+          <DropdownMenuContent className="bg-white border border-slate-200 text-slate-900 shadow-xl w-[320px]">
             {/* Content Blocks only - now direct items */}
             <DropdownMenuItem onClick={() => insertBlock(blocks.quote)} className="gap-2">
               <Quote className="w-4 h-4" /> Quote
@@ -226,29 +218,48 @@ function exampleFunction() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* New 'AI & Tools' menu for grouped AI, SEO, and other tools */}
+        {/* AI & Tools menu */}
         <DropdownMenu open={openTools} onOpenChange={setOpenTools}>
           <DropdownMenuTrigger asChild>
             <Button
               size="sm"
               variant="outline"
-              // CHANGED: light, high-contrast trigger
               className="bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 gap-2"
             >
               <Sparkles className="w-4 h-4 text-slate-700" />
               AI & Tools
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-white border border-slate-200 text-slate-900 shadow-xl w-[320px]"> {/* UPDATED: light menu */}
+          <DropdownMenuContent className="bg-white border border-slate-200 text-slate-900 shadow-xl w-[320px]">
             <DropdownMenuItem onClick={setShowAISuggestions ? () => setShowAISuggestions(true) : undefined} className="gap-2">
               <Sparkles className="w-4 h-4" /> AI Suggestions
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={setShowSeoAssistant ? () => setShowSeoAssistant(true) : undefined} className="gap-2">
-              <Search className="w-4 h-4" /> SEO Assistant
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={setShowSitemapLinking ? () => setShowSitemapLinking(true) : undefined} className="gap-2">
-              <Link className="w-4 h-4" /> Sitemap Linking
-            </DropdownMenuItem>
+
+            {onOpenTldrGenerator && (
+              <DropdownMenuItem onClick={onOpenTldrGenerator} className="gap-2">
+                <FileText className="w-4 h-4" /> References
+              </DropdownMenuItem>
+            )}
+
+            {/* SEO item moved here */}
+            {setShowSeoAssistant && (
+              <DropdownMenuItem onClick={() => setShowSeoAssistant(true)} className="gap-2">
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2">
+                        <HelpCircle className="w-4 h-4" /> SEO Assistant
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <div className="text-sm font-medium">SEO</div>
+                      <div className="text-xs text-slate-600">Optimize title, meta, slug, tags, excerpt, and schema.</div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </DropdownMenuItem>
+            )}
+
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={setShowAmazonImport ? () => setShowAmazonImport(true) : undefined} className="gap-2">
               <ShoppingCart className="w-4 h-4" /> Amazon Import
@@ -273,9 +284,23 @@ function exampleFunction() {
         )}
       </div>
 
-      {/* NEW: Right-aligned Save Draft and Publish buttons from outline */}
+      {/* Right-aligned buttons */}
       <div className="flex items-center gap-2 ml-auto">
-        {/* Save Draft button (inferred from outline placeholder) */}
+        {/* Flash Workflow button */}
+        {onFlashWorkflow && (
+          <Button
+            onClick={onFlashWorkflow}
+            variant="outline"
+            size="sm"
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white border-none"
+            title="Run Flash Workflow"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Flash
+          </Button>
+        )}
+
+        {/* Save Draft button */}
         <Button
           size="sm"
           variant="outline"

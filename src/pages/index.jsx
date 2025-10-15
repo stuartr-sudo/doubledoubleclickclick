@@ -144,6 +144,8 @@ import WordPressPublishLogs from "./WordPressPublishLogs";
 
 import InfographicExamplesAdmin from "./InfographicExamplesAdmin";
 
+import GettingStarted from "./GettingStarted";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -291,6 +293,8 @@ const PAGES = {
     WordPressPublishLogs: WordPressPublishLogs,
     
     InfographicExamplesAdmin: InfographicExamplesAdmin,
+    
+    GettingStarted: GettingStarted,
     
 }
 
@@ -462,6 +466,8 @@ function PagesContent() {
                 <Route path="/WordPressPublishLogs" element={<WordPressPublishLogs />} />
                 
                 <Route path="/InfographicExamplesAdmin" element={<InfographicExamplesAdmin />} />
+                
+                <Route path="/GettingStarted" element={<GettingStarted />} />
                 
             </Routes>
         </Layout>

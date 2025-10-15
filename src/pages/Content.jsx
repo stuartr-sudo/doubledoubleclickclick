@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { BlogPost } from "@/api/entities";
 import { WebhookReceived } from "@/api/entities";
 import { Username } from "@/api/entities";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, Filter, FileText, Link as LinkIcon, ChevronRight, ClipboardPaste, Trash2, Clock, Calendar as CalendarIcon, SortAsc } from "lucide-react";
+import { Loader2, Search, Filter, FileText, Link as LinkIcon, ClipboardPaste, Trash2, Clock, Calendar as CalendarIcon, SortAsc } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import PasteContentModal from "@/components/content/PasteContentModal";
@@ -21,10 +21,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from "@/components/ui/alert-dialog";
+} from
+  "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
+import FlashButton from "../components/content/FlashButton";
 
 export default function Content() {
   const [loading, setLoading] = useState(true);
@@ -37,10 +39,16 @@ export default function Content() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [q, setQ] = useState("");
   const [items, setItems] = useState([]); // unified: posts + webhooks
+  // itemsRef is no longer needed as the new polling useEffect will capture the latest `items` state via its `runningItemKeys` dependency.
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null); // state for delete confirmation
   const [sortByCountdown, setSortByCountdown] = useState(true); // Changed default to true
   const [autoReadPaste, setAutoReadPaste] = useState(false); // New state for auto-paste
+
+  // NEW: Track polling backoff to respect rate limits
+  // NEW: Increase base polling interval to 5 seconds (was 3)
+  const [pollInterval, setPollInterval] = useState(5000); // Initial poll interval
+  const pollBackoffRef = useRef(1); // Multiplier for backoff
 
   // NEW: Workspace context
   const { selectedUsername: globalUsername } = useWorkspace();
@@ -88,8 +96,19 @@ export default function Content() {
     setShowPasteModal(true);
   };
 
-  // Improved rate limit handling with batch fetching
-  const loadScopedContentFast = async (usernames) => {
+  // CRITICAL: Handler to immediately update item status in UI
+  const handleFlashStatusChange = (itemId, itemType, newStatus) => {
+    console.log("⚡ UI UPDATE: Immediately setting flash status to", newStatus, "for", itemType, itemId);
+    setItems((prev) => prev.map((item) => {
+      if (item.id === itemId && item.type === itemType) {
+        return { ...item, flash_status: newStatus };
+      }
+      return item;
+    }));
+  };
+
+  // IMPROVED: Load content with retry on rate limit
+  const loadScopedContentFast = async (usernames, attempt = 0) => {
     if (!Array.isArray(usernames) || usernames.length === 0) {
       setItems([]);
       setLoading(false);
@@ -122,49 +141,91 @@ export default function Content() {
       return out;
     };
 
-    const normalizePost = (p) => ({
-      id: p.id,
-      title: p.title || "(Untitled)",
-      status: p.status || "draft",
-      type: "post",
-      user_name: p.user_name || "",
-      updated_at: p.updated_date || p.created_date,
-      created_at: p.created_date,
-      processing_id: p.processing_id || null
-    });
+    const normalizePost = (p) => {
+      // Debug log to see if content is present
+      if (!p.content) {
+        console.warn("BlogPost missing content field:", p.id, p.title);
+      }
 
-    const normalizeWebhook = (w) => ({
-      id: w.id,
-      title: w.title || "(Untitled)",
-      status: w.status || "received",
-      type: "webhook",
-      user_name: w.user_name || "",
-      updated_at: w.updated_date || w.created_date,
-      created_at: w.created_date,
-      processing_id: w.processing_id || w.id
-    });
+      return {
+        id: p.id,
+        title: p.title || "(Untitled)",
+        content: p.content || "", // Must include full HTML content
+        status: p.status || "draft",
+        type: "post",
+        user_name: p.user_name || "",
+        updated_at: p.updated_date || p.created_date,
+        created_at: p.created_date,
+        processing_id: p.processing_id || null,
+        flash_status: p.flash_status || null,
+        flashed_at: p.flashed_at || null
+      };
+    };
+
+    const normalizeWebhook = (w) => {
+      // Debug log to see if content is present
+      if (!w.content) {
+        console.warn("WebhookReceived missing content field:", w.id, w.title);
+      }
+
+      return {
+        id: w.id,
+        title: w.title || "(Untitled)",
+        content: w.content || "", // Must include full HTML content
+        status: w.status || "received",
+        type: "webhook",
+        user_name: w.user_name || "",
+        updated_at: w.updated_date || w.created_date,
+        created_at: w.created_date,
+        processing_id: w.processing_id || w.id,
+        flash_status: w.flash_status || null,
+        flashed_at: w.flashed_at || null
+      };
+    };
 
     try {
-      // Fetch all posts and webhooks for the given usernames in parallel
-      const [posts, hooks] = await Promise.all([
-        BlogPost.filter({ user_name: usernames }, "-updated_date"),
-        WebhookReceived.filter({ user_name: usernames }, "-updated_date"),
-      ]);
+      // IMPORTANT: Make sure we're fetching ALL fields including content
+      // NEW: Stagger the two requests to avoid burst rate limits
+      const posts = await BlogPost.filter({ user_name: usernames }, "-updated_date");
+
+      // Wait 200ms before second request
+      await new Promise(res => setTimeout(res, 200));
+
+      const hooks = await WebhookReceived.filter({ user_name: usernames }, "-updated_date");
+
+      console.log("Loaded posts:", posts?.length, "webhooks:", hooks?.length);
 
       const normalizedContent = [
         ...(posts || []).map(normalizePost),
-        ...(hooks || []).map(normalizeWebhook),
+        ...(hooks || []).map(normalizeWebhook)
       ];
-      
+
+
       const deduped = dedupeSmart(normalizedContent);
       deduped.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
 
+      console.log("Final items with content:", deduped.map((d) => ({
+        id: d.id,
+        title: d.title,
+        hasContent: !!d.content,
+        contentLength: d.content?.length || 0
+      })));
+
       setItems(deduped);
+      setLoading(false);
     } catch (e) {
       console.error("Error fetching content:", e);
+
+      // NEW: Retry on rate limit with exponential backoff
+      if (e?.response?.status === 429 && attempt < 3) {
+        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        console.log(`Rate limited loading content, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
+        setTimeout(() => loadScopedContentFast(usernames, attempt + 1), delay);
+        return; // Don't set loading false yet
+      }
+
       toast.error("Failed to load content.");
       setItems([]);
-    } finally {
       setLoading(false);
     }
   };
@@ -201,6 +262,149 @@ export default function Content() {
       }
     })();
   }, [useWorkspaceScoping]); // Added useWorkspaceScoping to dependencies to react to its changes.
+
+  // Track which items are currently running flash workflows
+  const runningItemKeys = useMemo(() => {
+    const runningItems = items.filter((it) => it.flash_status === "running");
+    return runningItems.map((it) => `${it.type}-${it.id}`).sort().join(',');
+  }, [items]);
+
+  // IMPROVED: Polling with much more aggressive backoff
+  useEffect(() => {
+    if (!runningItemKeys) {
+      setPollInterval(5000); // Reset interval when no running items, to 5s base
+      pollBackoffRef.current = 1;
+      return;
+    }
+
+    console.log("📊 POLLING: Starting poll for running items:", runningItemKeys, "at interval:", pollInterval);
+
+    const interval = setInterval(async () => {
+      const currentRunningItems = items.filter((it) => it.flash_status === "running");
+
+      if (currentRunningItems.length === 0) {
+        console.log("📊 POLLING: No more running items, stopping this interval execution");
+        setPollInterval(5000); // Reset interval to 5s base
+        pollBackoffRef.current = 1;
+        return; // Stop this specific interval iteration if no items are running.
+      }
+
+      console.log("📊 POLLING: Checking status for", currentRunningItems.length, "items");
+
+      try {
+        // Batch check with delay between requests to avoid rate limits
+        const updates = [];
+        let hitRateLimit = false;
+
+        for (let i = 0; i < currentRunningItems.length; i++) {
+          const item = currentRunningItems[i];
+
+          // NEW: Longer stagger between requests (300ms instead of 100ms)
+          if (i > 0) {
+            await new Promise(res => setTimeout(res, 300));
+          }
+
+          try {
+            let updatedItem = null;
+            if (item.type === "post") {
+              const result = await BlogPost.filter({ id: item.id }, "-updated_date", 1);
+              updatedItem = result && result[0];
+            } else if (item.type === "webhook") {
+              const result = await WebhookReceived.filter({ id: item.id }, "-updated_date", 1);
+              updatedItem = result && result[0];
+            }
+
+            console.log("📊 POLLING: Item", item.id, "status:", item.flash_status, "→", updatedItem?.flash_status);
+
+            // Return full normalized item if status changed
+            if (updatedItem && updatedItem.flash_status !== item.flash_status) {
+              if (item.type === "post") {
+                updates.push({
+                  id: updatedItem.id,
+                  title: updatedItem.title || "(Untitled)",
+                  content: updatedItem.content || "",
+                  status: updatedItem.status || "draft",
+                  type: "post",
+                  user_name: updatedItem.user_name || "",
+                  updated_at: updatedItem.updated_date || updatedItem.created_date,
+                  created_at: updatedItem.created_date,
+                  processing_id: updatedItem.processing_id || null,
+                  flash_status: updatedItem.flash_status || null,
+                  flashed_at: updatedItem.flashed_at || null
+                });
+              } else { // It must be a webhook
+                updates.push({
+                  id: updatedItem.id,
+                  title: updatedItem.title || "(Untitled)",
+                  content: updatedItem.content || "",
+                  status: updatedItem.status || "received",
+                  type: "webhook",
+                  user_name: updatedItem.user_name || "",
+                  updated_at: updatedItem.updated_date || updatedItem.created_date,
+                  created_at: updatedItem.created_date,
+                  processing_id: updatedItem.processing_id || updatedItem.id,
+                  flash_status: updatedItem.flash_status || null,
+                  flashed_at: updatedItem.flashed_at || null
+                });
+              }
+            }
+          } catch (err) {
+            // Handle rate limit errors gracefully
+            if (err?.response?.status === 429) {
+              console.warn(`📊 POLLING: Rate limited on ${item.type} ${item.id}, backing off aggressively`);
+              // Increase backoff multiplier
+              pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 8); // More aggressive backoff
+              setPollInterval(prev => Math.min(prev * pollBackoffRef.current, 30000)); // Max 30 seconds
+              hitRateLimit = true;
+              break; // Stop polling this batch
+            } else {
+              console.error(`📊 POLLING: Failed to fetch update for ${item.type} ${item.id}:`, err);
+            }
+          }
+        }
+
+        // Update items state with new flash statuses
+        if (updates.length > 0 && !hitRateLimit) {
+          // Reset backoff on successful updates (if no rate limit was hit)
+          pollBackoffRef.current = 1;
+          setPollInterval(5000); // Reset to base interval
+
+          setItems((prev) => prev.map((item) => {
+            const update = updates.find((u) => u && u.id === item.id && u.type === item.type);
+            if (update) {
+              console.log("📊 POLLING: Updating item", item.id, "with new status:", update.flash_status);
+
+              // Show toast when flash completes
+              if (update.flash_status === "completed" && item.flash_status === "running") {
+                toast.success(`Flash completed for "${item.title}"`);
+              } else if (update.flash_status === "failed" && item.flash_status === "running") {
+                toast.error(`Flash failed for "${item.title}"`);
+              }
+              return update;
+            }
+            return item;
+          }));
+        } else if (!hitRateLimit) {
+          // If no updates and no rate limit, reset backoff to base interval
+          pollBackoffRef.current = 1;
+          setPollInterval(5000);
+        }
+      } catch (error) {
+        console.error("📊 POLLING: Failed to poll flash status:", error);
+        // Back off on general errors as well if it's a rate limit error
+        if (error?.response?.status === 429) {
+          pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 8);
+          setPollInterval(prev => Math.min(prev * pollBackoffRef.current, 30000));
+        }
+      }
+    }, pollInterval); // Use dynamic interval
+
+    return () => {
+      console.log("📊 POLLING: Cleanup interval");
+      clearInterval(interval);
+    };
+
+  }, [runningItemKeys, items, pollInterval]); // Added pollInterval to dependencies
 
   // Add countdown calculation helper
   const calculateDaysFromPublish = (item) => {
@@ -282,9 +486,10 @@ export default function Content() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    // Updated styling for main div
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
       <div className="max-w-6xl mx-auto px-6 py-8">
-        
+
         {/* Combined filters and actions row */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
 
@@ -365,7 +570,8 @@ export default function Content() {
           </div>
         </div>
 
-        <div className="mt-6 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        {/* Updated styling for inner container */}
+        <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="px-4 py-3 border-b border-slate-200">
             <div className="flex items-center justify-between">
               <div className="text-slate-600">{loading ? "Loading…" : `${filtered.length} item${filtered.length === 1 ? "" : "s"}`}</div>
@@ -391,7 +597,7 @@ export default function Content() {
                   return (
                     <div
                       key={`${row.type}-${row.id}`}
-                      className="px-4 py-3 hover:bg-slate-50 grid items-center gap-3 grid-cols-[16px_1fr_120px_100px_auto_auto_20px]">
+                      className="px-4 py-3 hover:bg-slate-50 grid items-center gap-3 grid-cols-[16px_1fr_120px_100px_auto_auto_auto]">
                       {/* Left dot */}
                       <div className={`h-3 w-3 rounded-full ${dotClass}`} />
 
@@ -437,36 +643,39 @@ export default function Content() {
                           </div> :
 
                           <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-slate-400 bg-slate-50 border border-slate-200">
-                            <Clock className="w-3 h-3" />
+                            <CalendarIcon className="w-3 h-3" />
                             <span>--</span>
                           </div>
                         }
                       </div>
 
-                      {/* Open */}
-                      <div className="justify-self-end">
+                      {/* Action Buttons: Open, Delete, Flash - Grouped and styled as per outline */}
+                      <div className="col-span-3 justify-self-end flex items-center gap-2">
                         <Button
-                          variant="ghost" className="bg-blue-900 text-slate-50 px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:text-slate-900 hover:bg-blue-100"
-                          onClick={() => onOpenItem(row)}
-                          title="Open in Editor">
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenItem(row);
+                          }}
+                          className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600 text-white px-3 text-sm font-medium rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9">
                           Open
                         </Button>
-                      </div>
 
-                      {/* Delete Button */}
-                      <div className="justify-self-end">
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => setItemToDelete(row)} className="bg-pink-500 text-white px-4 py-2 text-sm font-bold inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-pink-400 hover:shadow-[0_0_30px_rgba(236,72,153,0.7)] shadow-[0_0_15px_rgba(236,72,153,0.4)] border border-pink-400"
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setItemToDelete(row);
+                          }}
+                          className="bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-600 hover:to-pink-600 text-white rounded-md h-10 w-10 inline-flex items-center justify-center transition-all"
                           title={`Delete "${row.title}"`}>
                           <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                        </button>
 
-                      {/* Chevron */}
-                      <div className="justify-self-end text-slate-400">
-                        <ChevronRight className="w-4 h-4" />
+                        {/* CRITICAL: Pass handleFlashStatusChange to FlashButton */}
+                        <FlashButton
+                          item={row}
+                          onStatusChange={handleFlashStatusChange} />
+
                       </div>
                     </div>);
 
@@ -505,7 +714,7 @@ export default function Content() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setItemToDelete(null)} className="bg-white border-slate-300 hover:bg-slate-100 text-slate-900">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteItem} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteItem} className="bg-red-500 hover:bg-red-600">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

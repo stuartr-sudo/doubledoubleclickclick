@@ -227,3 +227,11 @@ export const notifyFirecrawlWebsite = base44.functions.notifyFirecrawlWebsite;
 
 export const stylePreviewProxy = base44.functions.stylePreviewProxy;
 
+export const generateTldr = base44.functions.generateTldr;
+
+export const executeTldr = base44.functions.executeTldr;
+
+export const scrapeWithFirecrawl = base44.functions.scrapeWithFirecrawl;
+
+export const getSitemapPages = base44.functions.getSitemapPages;
+

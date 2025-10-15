@@ -50,6 +50,13 @@ const MateriaOrb = ({ type, size = 16 }) => {
         secondary: '#ff0044',
         glow: '#ff44aa',
         inner: '#ff88cc'
+      },
+      // Flash - Unique pulsating glow, perhaps a mix of core and advanced
+      flash: {
+        primary: '#FFD700', // Gold-ish yellow
+        secondary: '#FFA500', // Orange
+        glow: '#FFEA00', // Brighter yellow glow
+        inner: '#FFEF99'
       }
     };
 
@@ -60,7 +67,7 @@ const MateriaOrb = ({ type, size = 16 }) => {
       'tldr': 'core',
       'fact': 'core',
       'ai-faq': 'core',
-      'voice': 'core', // Added voice
+      'voice': 'core',
       'generate-image': 'media',
       'imagineer': 'media',
       'generate-video': 'media',
@@ -80,6 +87,8 @@ const MateriaOrb = ({ type, size = 16 }) => {
       'ai-detection': 'advanced',
       'ai-agent': 'advanced',
       'affilify': 'utilities',
+      'flash': 'flash',
+      'autoscan': 'utilities'
     };
 
     const scheme = colorSchemes[typeMapping[actionType] || 'core'];
@@ -170,21 +179,31 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
   const menuRef = useRef(null);
   const [positionStyle, setPositionStyle] = useState({ top: y + 10, left: x, opacity: 0 });
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null); // State to store current user
   const [modalState, setModalState] = useState({ isOpen: false, url: null, title: null });
   const { consumeTokensForFeature } = useTokenConsumption();
 
   useEffect(() => {
-      const checkAdmin = async () => {
+      const checkUserAndAdmin = async () => {
           try {
               const user = await User.me();
+              setCurrentUser(user); // Store current user
               const adminStatus = user?.role === 'admin' || !!user?.is_superadmin;
               setIsAdmin(adminStatus);
-          } catch {
+          } catch (error) {
+              console.error("Failed to fetch user:", error);
               setIsAdmin(false);
+              setCurrentUser(null);
           }
       };
-      checkAdmin();
+      checkUserAndAdmin();
   }, []);
+
+  // NEW: feature flag check for flash
+  const { enabled: flashEnabled } = useFeatureFlag("flash", {
+    currentUser: currentUser,
+    defaultEnabled: false
+  });
 
   // Hide "coming soon" items entirely
   const HIDE_COMING_SOON = true;
@@ -243,6 +262,12 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
   // NEW: normalize voice-ai feature (supports 'voice-ai' or 'voice_ai')
   const voiceFeature = features['voice-ai'] || features.voice_ai;
 
+  // NEW: explicit feature flag mapping for these tools
+  const autoLinkFeature = features['auto-link'];
+  const referencesFeature = features.ai_rnl;
+  const autoScanFeature = features.ai_autoscan;
+  const seoFeature = features.ai_seo;
+
   const handlePick = (actionId) => {
     // Open immediately, token checking will happen inside each feature when user clicks execute
     if (typeof onPick === 'function') onPick(actionId);
@@ -264,6 +289,14 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
     {
       title: 'CORE AI ACTIONS',
       actions: [
+        // REMOVED: 'Flash' from the Ask AI menu as requested, without affecting the Flash pill elsewhere
+        // flashEnabled && {
+        //   id: 'flash',
+        //   label: 'Flash',
+        //   actionType: 'flash',
+        //   isComingSoon: false,
+        //   tokenCost: 0
+        // },
         features.ai_rewrite && {
           id: 'ai-rewrite',
           label: 'Rewrite',
@@ -431,6 +464,26 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           loom_tutorial_url: features.ai_cta.loom_tutorial_url,
           tokenCost: features.ai_cta.token_cost
         },
+        // ADD AutoLink here, now bound to feature flag
+        autoLinkFeature && {
+          id: 'autolink',
+          label: 'AutoLink',
+          actionType: 'manual-link', // Using 'manual-link' actionType for orb style
+          isComingSoon: autoLinkFeature.isComingSoon,
+          youtube_tutorial_url: autoLinkFeature.youtube_tutorial_url,
+          loom_tutorial_url: autoLinkFeature.loom_tutorial_url,
+          tokenCost: autoLinkFeature.token_cost
+        },
+        // ADD References here, now bound to feature flag
+        referencesFeature && {
+          id: 'references',
+          label: 'References',
+          actionType: 'manual-link', // Using 'manual-link' actionType for orb style
+          isComingSoon: referencesFeature.isComingSoon,
+          youtube_tutorial_url: referencesFeature.youtube_tutorial_url,
+          loom_tutorial_url: referencesFeature.loom_tutorial_url,
+          tokenCost: referencesFeature.token_cost
+        },
       ].filter(a => a && (!HIDE_COMING_SOON || !a.isComingSoon)),
     },
     {
@@ -489,6 +542,26 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
           youtube_tutorial_url: features.ai_affilify.youtube_tutorial_url,
           loom_tutorial_url: features.ai_affilify.loom_tutorial_url,
           tokenCost: features.ai_affilify.token_cost
+        },
+        // ADD AutoScan here, now bound to feature flag
+        autoScanFeature && {
+          id: 'autoscan',
+          label: 'AutoScan',
+          actionType: 'autoscan', // Using 'autoscan' actionType
+          isComingSoon: autoScanFeature.isComingSoon,
+          youtube_tutorial_url: autoScanFeature.youtube_tutorial_url,
+          loom_tutorial_url: autoScanFeature.loom_tutorial_url,
+          tokenCost: autoScanFeature.token_cost
+        },
+        // ADD SEO here, now bound to feature flag
+        seoFeature && {
+          id: 'seo',
+          label: 'SEO',
+          actionType: 'utilities',
+          isComingSoon: seoFeature.isComingSoon,
+          youtube_tutorial_url: seoFeature.youtube_tutorial_url,
+          loom_tutorial_url: seoFeature.loom_tutorial_url,
+          tokenCost: seoFeature.token_cost
         },
       ].filter(a => a && (!HIDE_COMING_SOON || !a.isComingSoon)),
     },

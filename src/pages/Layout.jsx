@@ -6,7 +6,7 @@ import { createPageUrl } from "@/utils";
 import {
   LayoutDashboard, FileText, Edit3, Database, Calendar as CalendarIcon, User as UserIcon, ListChecks, Settings, ShoppingBag,
   Share2, Mail, Package, Palette, BookOpen, Video, Clapperboard, Film, Link as LinkIcon, ShoppingCart, Home as HomeIcon,
-  LogOut, ChevronUp, ChevronDown, Layers3, Menu, X, Shield, Sparkles, Loader2, Coins, Quote, ImageIcon, Users
+  LogOut, ChevronUp, ChevronDown, Layers3, Menu, X, Shield, Sparkles, Loader2, Coins, Quote, ImageIcon, Users, Bot
 } from
 "lucide-react";
 import { User } from "@/api/entities";
@@ -71,7 +71,10 @@ const navStructure = [
   { name: "Brand Guidelines", href: "BrandGuidelinesManager", icon: Settings, featureFlag: "show_brand_guidelines_link" },
   { name: "Sitemap", href: "SitemapManager", icon: LinkIcon, featureFlag: "show_sitemaps_link" },
   { type: "separator" },
-  { name: "Products", href: "ProductManager", icon: ShoppingBag, featureFlag: "show_products_link" }]
+  { name: "Products", href: "ProductManager", icon: ShoppingBag, featureFlag: "show_products_link" },
+  { type: "separator" },
+  // NEW: Flash Workflow Builder - available to all users
+  { name: "Flash Workflows", href: "EditorWorkflowManager", icon: Bot, featureFlag: "show_flash_workflows_link" }]
   // Removed "Amazon Import" as it's now integrated into ProductManager
   // Removed "Amazon Testimonials" as it's now integrated into TestimonialLibrary
 },
@@ -327,6 +330,21 @@ const WorkspaceSelector = () => {
 
 };
 
+// NEW: Retry helper function for handling transient network errors
+const retry = async (fn, retries = 3, delay = 500) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === retries - 1) {
+        console.error(`Failed to execute function after ${retries} attempts:`, err);
+        throw err;
+      }
+      // Wait with exponential backoff before trying again
+      await new Promise(res => setTimeout(res, delay * Math.pow(2, i)));
+    }
+  }
+};
 
 function LayoutContent({ children, currentPageName }) {
   const location = useLocation();
@@ -432,6 +450,16 @@ function LayoutContent({ children, currentPageName }) {
   useEffect(() => {
     if (currentPageName !== 'Editor') return;
 
+    // NEW: safe logger for environments without console.debug
+    const safeDebug = (...args) => {
+      try {
+        if (typeof console !== 'undefined') {
+          if (typeof console.debug === 'function') return console.debug(...args);
+          if (typeof console.log === 'function') return console.log(...args);
+        }
+      } catch (_) {}
+    };
+
     const originalPush = history.pushState;
     const originalReplace = history.replaceState;
 
@@ -439,9 +467,33 @@ function LayoutContent({ children, currentPageName }) {
       try {
         const prevent = sessionStorage.getItem('dcPublishing') === '1';
         const nextUrl = typeof url === 'string' ? url : (url ? String(url) : '');
+        // Block any Editor navigation during publishing
         if (prevent && nextUrl && /Editor/i.test(nextUrl)) {
-          console.debug('Blocked Editor navigation during publish to avoid full reload.');
-          return; // swallow navigation to keep editor mounted
+          safeDebug('Blocked Editor navigation during publish to avoid full reload.');
+          return;
+        }
+        // NEW: Block redundant Editor navigations that cause an unnecessary remount
+        if (nextUrl && /Editor/i.test(nextUrl)) {
+          const cur = new URL(window.location.href);
+          const nxt = new URL(nextUrl, window.location.origin);
+          const samePath = cur.pathname === nxt.pathname;
+          
+          if (samePath) { // Only proceed if paths are identical
+            const curPost = new URLSearchParams(cur.search).get('post');
+            const nxtPost = new URLSearchParams(nxt.search).get('post');
+            const curWebhook = new URLSearchParams(cur.search).get('webhook');
+            const nxtWebhook = new URLSearchParams(nxt.search).get('webhook');
+
+            // If we're already on the Editor for the same content, skip navigation
+            if (curPost && nxtPost && curPost === nxtPost) {
+              safeDebug('Blocked duplicate Editor navigation (same post id).');
+              return;
+            }
+            if (curWebhook && nxtWebhook && curWebhook === nxtWebhook) {
+              safeDebug('Blocked duplicate Editor navigation (same webhook id).');
+              return;
+            }
+          }
         }
       } catch (e) {
         console.error("Error in history guard:", e);
@@ -452,9 +504,35 @@ function LayoutContent({ children, currentPageName }) {
     history.pushState = guard(originalPush);
     history.replaceState = guard(originalReplace);
 
+    // NEW: Intercept hard navigations (assign/replace) to Editor and convert to SPA replaceState
+    const origAssign = window.location.assign.bind(window.location);
+    const origLocReplace = window.location.replace.bind(window.location);
+
+    const interceptLocation = (origFn) => function (url) {
+      try {
+        const nextUrl = typeof url === 'string' ? url : (url ? String(url) : '');
+        if (nextUrl && /Editor/i.test(nextUrl)) {
+          // If trying to go to Editor via hard navigation, replace the URL without reload
+          history.replaceState({}, '', nextUrl);
+          // Do not dispatch any synthetic events to avoid remount; Router will keep current instance
+          safeDebug('Intercepted hard navigation to Editor; replaced URL without reload.');
+          return;
+        }
+      } catch (e) {
+        console.error("Error intercepting window.location:", e);
+        // fall through to original
+      }
+      return origFn.apply(window.location, arguments);
+    };
+
+    window.location.assign = interceptLocation(origAssign);
+    window.location.replace = interceptLocation(origLocReplace);
+
     return () => {
       history.pushState = originalPush;
       history.replaceState = originalReplace;
+      window.location.assign = origAssign;
+      window.location.replace = origLocReplace;
     };
   }, [currentPageName]);
 
@@ -488,36 +566,48 @@ function LayoutContent({ children, currentPageName }) {
       setIsRedirecting(false);
       setNavReady(false); // Reset nav ready state
       try {
-        const fetchedUser = await User.me();
+        // MODIFIED: Use the new retry helper to make the user fetch more robust
+        const fetchedUser = await retry(() => User.me());
         setUser(fetchedUser);
         setIsSuperadmin(!!fetchedUser?.is_superadmin);
 
         // --- UPDATED ONBOARDING REDIRECTION LOGIC ---
         const hasCompletedWelcome = fetchedUser.completed_tutorial_ids?.includes("welcome_onboarding");
+        const hasCompletedGettingStarted = fetchedUser.completed_tutorial_ids?.includes("getting_started_scrape");
 
         // Define pages that are exceptions to the redirection rules
         const redirectExceptions = ['post-payment', 'AccountSettings', 'Contact', 'Affiliate'];
 
         if (!redirectExceptions.includes(currentPageName)) {
-          // NEW SCENARIO: First-time user (hasn't completed welcome) → Welcome page
+          // NEW SCENARIO: User hasn't completed welcome → Welcome page
           if (!hasCompletedWelcome && currentPageName !== 'Welcome') {
             setIsRedirecting(true);
             navigate(createPageUrl('Welcome'));
             return;
           }
+          
+          // NEW SCENARIO: User completed welcome but not getting started → GettingStarted page
+          if (hasCompletedWelcome && !hasCompletedGettingStarted && currentPageName !== 'GettingStarted') {
+            setIsRedirecting(true);
+            navigate(createPageUrl('GettingStarted'));
+            return;
+          }
         }
         
-        // Scenario: Onboarded user tries to access Welcome page → redirect to Dashboard
-        if (hasCompletedWelcome && currentPageName === 'Welcome') {
-          setIsRedirecting(true);
-          navigate(createPageUrl('Dashboard'));
-          return;
+        // Scenario: Fully onboarded user tries to access Welcome or GettingStarted → redirect to Dashboard
+        if (hasCompletedWelcome && hasCompletedGettingStarted) {
+          if (currentPageName === 'Welcome' || currentPageName === 'GettingStarted') {
+            setIsRedirecting(true);
+            navigate(createPageUrl('Dashboard'));
+            return;
+          }
         }
 
         // If we reach here, no redirect is needed, so navigation can be shown
         setNavReady(true);
 
-      } catch {
+      } catch (err) { // This will now catch the error only after all retries have failed
+        console.error("Failed to fetch user information after multiple attempts:", err);
         setUser(null);
         setIsSuperadmin(false);
         setNavReady(true); // Show navigation even for logged-out state
@@ -528,7 +618,7 @@ function LayoutContent({ children, currentPageName }) {
       }
     };
     fetchUserAndRedirect();
-  }, [location.pathname, navigate, currentPageName]); // Re-run on every path change to ensure logic is always applied
+  }, [location.pathname, navigate, currentPageName]);
 
   // NEW: Self-heal effect right after user is fetched – fixes race where username/tokens not set yet
   React.useEffect(() => {
@@ -613,7 +703,7 @@ function LayoutContent({ children, currentPageName }) {
   const visibleNav = navStructure;
 
   // Hide layout for pages that should be standalone
-  if (currentPageName === 'Welcome') {
+  if (currentPageName === 'Welcome' || currentPageName === 'GettingStarted') {
     return <>{children}</>;
   }
 

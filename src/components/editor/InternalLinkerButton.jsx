@@ -1,12 +1,13 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Link2, Loader2 } from "lucide-react";
+import { HelpCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { agentSDK } from "@/agents";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
+import { useTokenConsumption } from "@/components/hooks/useTokenConsumption"; // NEW
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
-import FeatureHelpIcon from "./FeatureHelpIcon";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Safe utilities to apply link operations without overlapping or touching existing anchors/headings
 function insertLinkOnce(html, anchorText, url) {
@@ -98,30 +99,34 @@ function enforceMaxPerUrl(html, maxPerUrl = 2) {
   });
 }
 
-export default function InternalLinkerButton({ html, userName, onApply, disabled }) {
-  // Always call hooks in the same order
+const InternalLinkerButton = React.forwardRef(({ html, userName, onApply, disabled }, ref) => {
+  // Call all hooks at the top level BEFORE any conditional returns
   const { enabled } = useFeatureFlag("auto-link", { defaultEnabled: false });
+  const { consumeTokensForFeature } = useTokenConsumption(); // NEW
   const [loading, setLoading] = React.useState(false);
-  const [processing, setProcessing] = React.useState(false); // NEW state for MagicOrbLoader
-  const runIdRef = React.useRef(0); // race guard
-  const [estimatedDuration, setEstimatedDuration] = React.useState(73); // NEW state for MagicOrbLoader duration
-
-  // ADDED: feature flag gate
-  if (!enabled) return null;
+  const [processing, setProcessing] = React.useState(false);
+  const runIdRef = React.useRef(0);
+  const [estimatedDuration, setEstimatedDuration] = React.useState(73);
 
   const handleRun = async () => {
-    if (loading) return; // Prevent multiple clicks initiating multiple runs
+    if (loading) return;
     if (!html || String(html).trim().length === 0) {
       toast.message("Add some content first, then try AutoLink.");
       return;
     }
 
+    // NEW: deduct tokens in real time
+    const tokenRes = await consumeTokensForFeature("auto-link");
+    if (!tokenRes?.success) {
+        // useTokenConsumption hook typically handles showing toast for failure
+        return; // Stop if tokens can't be consumed
+    }
+
     setLoading(true);
-    setProcessing(true); // Show MagicOrbLoader
-    // Set timer to 73 seconds
+    setProcessing(true);
     setEstimatedDuration(73);
 
-    const myRun = ++runIdRef.current; // race guard
+    const myRun = ++runIdRef.current;
 
     try {
       // 1) Create a fresh conversation with the agent
@@ -135,7 +140,7 @@ export default function InternalLinkerButton({ html, userName, onApply, disabled
 
       // 2) Send message with article + user context; agent will read Sitemap via tool
       // INCREASED: Send more content to ensure the entire article is analyzed
-      const maxChars = 100000; // Increased from 60000
+      const maxChars = 100000;
       const trimmedHtml = String(html).slice(0, maxChars);
 
       const prompt = JSON.stringify({
@@ -249,10 +254,18 @@ export default function InternalLinkerButton({ html, userName, onApply, disabled
       // Only the initiator run should clear loading
       if (myRun === runIdRef.current) {
         setLoading(false);
-        setProcessing(false); // Hide MagicOrbLoader
+        setProcessing(false);
       }
     }
   };
+
+  // Expose handleRun via ref - MUST be before any conditional returns
+  React.useImperativeHandle(ref, () => ({
+    run: handleRun
+  }));
+
+  // NOW we can do conditional returns AFTER all hooks are called
+  if (!enabled) return null;
 
   return (
     <>
@@ -262,17 +275,30 @@ export default function InternalLinkerButton({ html, userName, onApply, disabled
           className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2"
           onClick={handleRun}
           disabled={disabled || loading}
-          title="Scan the entire article and auto-insert up to 10 internal links distributed throughout"
+          title="Automatically add internal links"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+          {/* Icon becomes a HELP icon with hover-only tooltip */}
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <HelpCircle className="w-4 h-4" />
+                  )}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <div className="text-sm font-medium">AutoLink</div>
+                <div className="text-xs text-slate-600">
+                  Inserts up to 10 internal links, max 2 per URL, distributed across your article.
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           AutoLink
         </Button>
-
-        <FeatureHelpIcon
-          featureFlagName="auto-link"
-          label="AutoLink"
-          description="Automatically inserts up to 10 relevant internal links across your article (max 2 per URL). Click to watch a short tutorial."
-        />
       </div>
 
       <MagicOrbLoader
@@ -282,4 +308,8 @@ export default function InternalLinkerButton({ html, userName, onApply, disabled
       />
     </>
   );
-}
+});
+
+InternalLinkerButton.displayName = "InternalLinkerButton";
+
+export default InternalLinkerButton;

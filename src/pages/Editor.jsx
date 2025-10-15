@@ -5,11 +5,16 @@ import { WebhookReceived } from "@/api/entities";
 import { Username } from "@/api/entities";
 import { IntegrationCredential } from "@/api/entities";
 import { User } from "@/api/entities";
+import { ImageLibraryItem } from "@/api/entities";
+import { GeneratedVideo } from "@/api/entities";
+import { ImagineerJob } from "@/api/entities"; // Ensure ImagineerJob is imported as it's used
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Edit3, Send, ArrowLeft, FileText, Globe, Loader2, Smartphone, Tablet as TabletIcon, Laptop, Monitor, Calendar as CalendarIcon, Trash2, Info, X, Wand2, Palette, Settings, FileText as FileTextIcon, Clipboard as ClipboardIcon, ChevronDown, Download } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Save, Edit3, Send, ArrowLeft, FileText, Globe, Loader2, Smartphone, Tablet as TabletIcon, Laptop, Monitor, Calendar as CalendarIcon, Trash2, Info, X, Wand2, Palette, Settings, FileText as FileTextIcon, Clipboard as ClipboardIcon, ChevronDown, Download, Eye, EyeOff } from "lucide-react"; // Added Eye, EyeOff
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom"; // Added useSearchParams
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import { publishToAirtable } from "@/api/functions";
@@ -22,8 +27,6 @@ import { getSunoStatus } from "@/api/functions";
 import { generateElevenlabsTts } from "@/api/functions";
 import { getMidjourneyStatus } from "@/api/functions";
 import { getVideoStatus } from "@/api/functions";
-import { ImageLibraryItem } from "@/api/entities";
-import { GeneratedVideo } from "@/api/entities";
 import { checkAndConsumeTokens } from "@/api/functions";
 import { callFeatureEndpoint } from "@/api/functions";
 import { Slider } from "@/components/ui/slider";
@@ -73,6 +76,8 @@ import MediaLibraryModal from "../components/editor/MediaLibraryModal";
 import InternalLinkerButton from "../components/editor/InternalLinkerButton";
 import LinksAndReferencesButton from "../components/editor/LinksAndReferencesButton";
 import AutoScanButton from "../components/editor/AutoScanButton";
+import MagicOrbLoader from "@/components/common/MagicOrbLoader";
+import FloatingPublishButton from "../components/editor/FloatingPublishButton";
 
 import { generateNapkinInfographic } from "@/api/functions";
 import InfographicsModal from "../components/editor/InfographicsModal";
@@ -83,7 +88,6 @@ import { findSourceAndCite } from "@/api/functions";
 import { agentSDK } from "@/agents";
 
 import ImagineerModal from "../components/editor/ImagineerModal";
-import { ImagineerJob } from "@/api/entities";
 import { initiateImagineerGeneration } from "@/api/functions";
 import VoiceDictationModal from '../components/editor/VoiceDictationModal';
 
@@ -136,13 +140,14 @@ export default function Editor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
-  const [currentPost, setCurrentPost] = useState(null);
-  const [currentWebhook, setCurrentWebhook] = useState(null);
+  const [currentPost, setCurrentPost] = useState(null); // This holds the BlogPost entity
+  const [currentWebhook, setCurrentWebhook] = useState(null); // This holds the WebhookReceived entity
   const [isSyncing, setIsSyncing] = useState(false);
-  const [showLivePreview, setShowLivePreview] = useState(false);
+  const [showLivePreview, setShowLivePreview] = useState(true); // Changed default to true
   const [selectedFont, setSelectedFont] = useState('Inter');
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams(); // Added useSearchParams
   const [previewDevice, setPreviewDevice] = useState("laptop");
   const [priority, setPriority] = useState('medium');
 
@@ -197,8 +202,22 @@ export default function Editor() {
 
   const [showVoiceModal, setShowVoiceModal] = useState(false);
 
+  // NEW: State for InternalLinker Modal (this is for the modal, not the headless trigger)
+  const [showInternalLinker, setShowInternalLinker] = useState(false);
+  const [isAutoLinking, setIsAutoLinking] = useState(false); // State for MagicOrbLoader during autolinking
+  const internalLinkerRef = React.useRef(null); // Ref for hidden InternalLinkerButton
+
+  // NEW: State for AutoScan and its loader
+  const [isAutoScanning, setIsAutoScanning] = useState(false); // State for MagicOrbLoader during auto-scanning
+  const autoScanButtonRef = React.useRef(null); // Ref for hidden AutoScanButton
+
+  // NEW: Ref for hidden LinksAndReferencesButton (for programmatic triggering)
+  const referencesButtonRef = React.useRef(null);
 
   const [showWorkflowRunner, setShowWorkflowRunner] = React.useState(false);
+  // NEW: state for Flash workflow modal
+  const [showFlashModal, setShowFlashModal] = React.useState(false);
+
 
   const skipNextPreviewPushRef = useRef(false);
 
@@ -208,7 +227,7 @@ export default function Editor() {
   const [showGoogleCreds, setShowGoogleCreds] = useState(false);
 
   const [currentUser, setCurrentUser] = useState(null);
-  const [publishCredentials, setPublishCredentials] = useState([]);
+  const [publishCredentials, setPublishCredentials] = useState(false); // Changed to false to trigger initial load from useEffect
   const [loadingCredentials, setLoadingCredentials] = useState(false);
   const [pendingAudioJobs, setPendingAudioJobs] = useState([]);
 
@@ -239,6 +258,14 @@ export default function Editor() {
 
   const [showTextEditor, setShowTextEditor] = useState(false);
 
+  // Auto-save states
+  const autoSaveTimerRef = useRef(null);
+  const autoSaveRef = useRef(null);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [isSavingAuto, setIsSavingAuto] = useState(false);
+
+  // NEW: Track retry attempts for rate-limited requests
+  const retryAttemptsRef = useRef({ credentials: 0, post: 0, save: 0 });
 
   const makeRandomSessionKey = () => `sess-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -1238,7 +1265,7 @@ export default function Editor() {
 
                   const elId = `el-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
                   const html = `<img data-b44-id="${elId}" data-b44-type="image" src="${resultUrl}" alt="${job.altText || job.prompt}" style="max-width:100%; height:auto; border-radius: 8px;" />`;
-                  insertContentAtPoint({ html, mode: job.insertMode });
+                  insertContentAtPoint({ html: html, mode: job.insertMode });
                   toast.success('Image generated and inserted!');
                 } else if (job.type === 'video') {
                   const uname = currentPost?.user_name || currentWebhook?.user_name || "default";
@@ -1551,7 +1578,7 @@ export default function Editor() {
       placeholderDiv.setAttribute('data-imagineer-job', jobId);
       placeholderDiv.setAttribute('data-b44-id', jobId);
       placeholderDiv.setAttribute('data-b44-type', 'imagineer-placeholder'); // Ensure type is set for selection
-      placeholderDiv.style.cssText = 'margin: 20px 0; padding: 20px; border: 2px dashed #9333ea; border-radius: 8px; text-align: center; background: #faf5ff;';
+      placeholderDiv.style.cssText = 'margin: 20px 0; padding: 20px; border: 2px dashed #9333ea; border-radius: 88px; text-align: center; background: #faf5ff;';
       placeholderDiv.innerHTML = `
         <div style="display: inline-flex; align-items: center; gap: 8px; color: #9333ea; font-weight: 500;">
           <svg class="animate-spin" style="width: 20px; height: 20px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1679,7 +1706,7 @@ Current Title: ${title}`;
   };
 
   const handleCiteSources = async () => {
-    const result = await consumeTokensForFeature("ai_cite_sources");
+    const result = consumeTokensForFeature("ai_cite_sources");
     if (!result.success) {
       return;
     }
@@ -1781,6 +1808,215 @@ Current Title: ${title}`;
     toast.success('Transcription inserted');
   };
 
+  const resolveExistingPostId = useCallback(async () => {
+    if (currentPost && currentPost.id) return currentPost.id;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const idFromUrl = urlParams.get('post');
+    if (idFromUrl) return idFromUrl;
+
+    const procId =
+      currentPost && currentPost.processing_id ||
+      currentWebhook && currentWebhook.processing_id ||
+      null;
+
+    if (procId) {
+      const matches = await BlogPost.filter({ processing_id: procId }, "-updated_date");
+      if (Array.isArray(matches) && matches.length > 0) {
+        return matches[0].id;
+      }
+    }
+
+    // Also try to find by session key
+    if (sessionKeyRef.current) {
+      const matches = await BlogPost.filter({ client_session_key: sessionKeyRef.current });
+      return matches.length > 0 ? matches[0].id : null;
+    }
+
+    return null;
+  }, [currentPost, currentWebhook, sessionKeyRef]);
+
+  // Definition for autoSave function and store in ref
+  useEffect(() => {
+    autoSaveRef.current = async () => {
+      // Don't auto-save if a manual save/publish is in progress or another auto-save is running
+      if (isSaving || isPublishing || savingGuardRef.current) return;
+      
+      // Don't auto-save if no user is logged in
+      if (!currentUser) return;
+
+      savingGuardRef.current = true; // Set guard early to prevent re-entry
+      setIsSavingAuto(true);
+
+      const performAutoSaveWithRetry = async (attempt = 0) => {
+        try {
+          let targetBlogPostId = await resolveExistingPostId();
+          let postToUpdate = null;
+
+          if (targetBlogPostId) {
+            const existingPosts = await BlogPost.filter({ id: targetBlogPostId });
+            if (existingPosts.length > 0) {
+              postToUpdate = existingPosts[0];
+            }
+          }
+
+          // Prepare data for saving
+          let postData = {
+            title: title || "Untitled Draft",
+            content: content || "",
+            status: "draft",
+            reading_time: Math.ceil((content || "").replace(/<[^>]*>/g, '').split(' ').length / 200),
+            priority: priority || 'medium',
+            client_session_key: sessionKeyRef.current || null,
+            // Carry over SEO metadata from currentPost state (which is updated by handleSEOSave)
+            meta_title: currentPost?.meta_title || postToUpdate?.meta_title || null,
+            meta_description: currentPost?.meta_description || postToUpdate?.meta_description || null,
+            slug: currentPost?.slug || postToUpdate?.slug || null,
+            tags: currentPost?.tags || postToUpdate?.tags || null,
+            focus_keyword: currentPost?.focus_keyword || postToUpdate?.focus_keyword || null,
+            featured_image: currentPost?.featured_image || postToUpdate?.featured_image || null,
+            generated_llm_schema: currentPost?.generated_llm_schema || postToUpdate?.generated_llm_schema || null,
+          };
+
+          // If we are currently editing a webhook, ensure the BlogPost is linked to it
+          if (currentWebhook) {
+            postData.user_id = currentWebhook.user_id || currentUser?.id;
+            postData.user_name = currentWebhook.user_name || currentUser?.user_name;
+            postData.assigned_to_email = currentWebhook.assigned_to_email;
+            postData.processing_id = currentWebhook.processing_id || currentWebhook.id;
+
+            // Always update the webhook itself with the latest content/title as well
+            await WebhookReceived.update(currentWebhook.id, {
+              title: postData.title,
+              content: postData.content,
+              status: "editing" // Keep status as editing during auto-save
+            });
+          } else if (currentUser) {
+            // For new posts not from a webhook, assign to current user
+            postData.user_id = currentUser.id;
+            postData.user_name = currentUser.user_name;
+          }
+
+          let savedPostEntity;
+          if (targetBlogPostId) {
+            // Update existing BlogPost
+            await BlogPost.update(targetBlogPostId, postData);
+            savedPostEntity = { ...postToUpdate, ...postData, id: targetBlogPostId };
+          } else {
+            // No existing BlogPost found, create a new one
+            savedPostEntity = await BlogPost.create(postData);
+            if (savedPostEntity?.id) {
+              // If a new post was created, update URL and session key
+              const newUrl = createPageUrl(`Editor?post=${savedPostEntity.id}`);
+              window.history.replaceState({}, '', newUrl);
+              const newSearchParams = new URLSearchParams(window.location.search);
+              newSearchParams.set("post", savedPostEntity.id);
+              setSearchParams(newSearchParams);
+              initSessionKey({ postId: savedPostEntity.id }); // Update session key
+            }
+          }
+          setCurrentPost(savedPostEntity); // Ensure currentPost state is updated with the saved entity
+
+          setLastSaved(new Date());
+          retryAttemptsRef.current.save = 0; // Reset on success
+          return true; // Indicate success
+        } catch (error) {
+          console.error("Auto-save attempt failed:", error);
+          if (error?.response?.status === 429 && attempt < 2) { // Max 2 retries (total 3 attempts)
+            const delay = Math.pow(2, attempt + 1) * 1000 + (Math.random() * 500); // 2s, 4s + jitter
+            console.log(`Rate limited on auto-save, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
+            await new Promise(resolve => setTimeout(resolve, delay)); // Wait before retrying
+            return performAutoSaveWithRetry(attempt + 1); // Recurse for retry
+          } else {
+            // If it's not a rate limit error or we've exhausted retries, log and potentially toast
+            if (error?.response?.status !== 429) {
+              toast.error("Auto-save failed. Check console for details.");
+            }
+            throw error; // Propagate the error so the outer catch can handle final cleanup
+          }
+        }
+      }; // End of performAutoSaveWithRetry
+
+      try {
+        await performAutoSaveWithRetry();
+      } catch (error) {
+        // Final catch after all retries are exhausted or non-retryable error occurred
+        console.error("Final auto-save failure after retries:", error);
+      } finally {
+        setIsSavingAuto(false);
+        savingGuardRef.current = false; // Release guard
+      }
+    };
+  }, [
+    title, content, priority, sessionKeyRef,
+    currentPost, currentWebhook, currentUser,
+    isSaving, isPublishing, setSearchParams, initSessionKey,
+    resolveExistingPostId, retryAttemptsRef
+  ]);
+
+  // Debounced auto-save on content/title change
+  useEffect(() => {
+    // Only auto-save if there's actual data to save (content or title is not empty)
+    // AND a user is logged in
+    if ((!content && !title) || !currentUser) return;
+
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    
+    // Set new timer for 5 seconds after user stops typing
+    autoSaveTimerRef.current = setTimeout(() => {
+      if (autoSaveRef.current) {
+        autoSaveRef.current();
+      }
+    }, 5000); // Changed from 3000 to 5000
+    
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [content, title, currentUser]);
+
+  // Helper to trigger auto-save
+  const triggerAutoSave = useCallback(() => {
+    setTimeout(() => {
+      if (autoSaveRef.current) {
+        autoSaveRef.current();
+      }
+    }, 1000);
+  }, [autoSaveRef]);
+
+  // NEW: Handler for the hidden InternalLinkerButton's onApply
+  const handleApplyInternalLinks = useCallback((updatedHtml) => {
+    skipNextPreviewPushRef.current = true;
+    setContent(updatedHtml);
+    sendToPreview({ type: "set-html", html: updatedHtml });
+    setIsAutoLinking(false); // Hide the loader after auto-linking is complete
+    toast.success("Internal links auto-generated!");
+    triggerAutoSave();
+  }, [sendToPreview, triggerAutoSave]);
+
+  // NEW: Handler for the hidden AutoScanButton's onApply
+  const handleApplyAutoScan = useCallback((updatedHtml) => {
+    skipNextPreviewPushRef.current = true;
+    setContent(updatedHtml);
+    sendToPreview({ type: "set-html", html: updatedHtml });
+    setIsAutoScanning(false); // Hide the loader after auto-scanning is complete
+    toast.success("AutoScan completed!");
+    triggerAutoSave();
+  }, [sendToPreview, triggerAutoSave]);
+
+  // NEW: Handler for the hidden LinksAndReferencesButton's onApply
+  const handleApplyLinksAndReferences = useCallback((updatedHtml) => {
+    skipNextPreviewPushRef.current = true;
+    setContent(updatedHtml);
+    sendToPreview({ type: "set-html", html: updatedHtml });
+    toast.success("References generated!");
+    triggerAutoSave();
+  }, [sendToPreview, triggerAutoSave]);
+
   const handleQuickPick = (actionId) => {
     setQuickMenu({ visible: false, x: null, y: null });
 
@@ -1838,6 +2074,23 @@ Current Title: ${title}`;
         handleCiteSources();
         return;
 
+      case "references": // NEW: Trigger LinksAndReferencesButton for generating references
+        if (!content || String(content).trim().length === 0) {
+          toast.message("Add some content first, then try generating references.");
+          return;
+        }
+        if (referencesButtonRef.current) {
+          referencesButtonRef.current.run();
+        } else {
+          console.error("ReferencesButton ref not available.");
+          toast.error("References feature is not ready. Please try again.");
+        }
+        return;
+
+      case "seo": // NEW: SEO handling moved to Quick Pick
+        setIsSEOSettingsOpen(true);
+        return;
+
       case "faq":
         setShowFaqGenerator(true);
         return;
@@ -1892,6 +2145,41 @@ Current Title: ${title}`;
 
       case "ai-agent":
         setShowWorkflowRunner(true);
+        return;
+
+      case "flash": // NEW: Wire up Flash button in Ask AI modal
+        setShowFlashModal(true);
+        return;
+
+      case "autolink":
+        if (!content || String(content).trim().length === 0) {
+          toast.message("Add some content first, then try AutoLink.");
+          return;
+        }
+        setIsAutoLinking(true); // Show MagicOrbLoader
+        // Trigger the InternalLinkerButton programmatically
+        if (internalLinkerRef.current) {
+          internalLinkerRef.current.run();
+        } else {
+          console.error("InternalLinkerButton ref not available for autolink.");
+          setIsAutoLinking(false); // Hide loader if unable to run
+          toast.error("AutoLink feature is not ready. Please try again.");
+        }
+        return;
+
+      case "autoscan": // NEW: AutoScan button from Ask AI Quick Menu
+        if (!content || String(content).trim().length === 0) {
+          toast.message("Add some content first, then try AutoScan.");
+          return;
+        }
+        setIsAutoScanning(true); // Show MagicOrbLoader
+        if (autoScanButtonRef.current) {
+          autoScanButtonRef.current.run();
+        } else {
+          console.error("AutoScanButton ref not available for autoscan.");
+          setIsAutoScanning(false); // Hide loader if unable to run
+          toast.error("AutoScan feature is not ready. Please try again.");
+        }
         return;
 
       case "media-library":
@@ -2006,116 +2294,136 @@ Current Title: ${title}`;
   );
 
   const loadPostContent = useCallback(async (postId) => {
-    try {
-      const found = await BlogPost.filter({ id: postId });
-      if (!found || found.length === 0) {
-        toast.error("Post not found");
-        setTitle("");
-        setContent("");
-        setCurrentPost(null);
-        setCurrentWebhook(null);
-        setPriority('medium');
-        sendToPreview({ type: "set-html", html: "" });
-        return;
-      }
-      const post = found[0];
-      setCurrentPost(post);
-      setTitle(post.title || "");
-      setContent(post.content || "");
-      setPriority(post.priority || 'medium');
-      sendToPreview({ type: "set-html", html: post.content || "" });
-      initSessionKey({ postId: post.id });
+    const fetchPostWithRetry = async (currentPostId, attempt = 0) => {
+      try {
+        const found = await BlogPost.filter({ id: currentPostId });
+        if (!found || found.length === 0) {
+          toast.error("Post not found");
+          setTitle("");
+          setContent("");
+          setCurrentPost(null);
+          setCurrentWebhook(null);
+          setPriority('medium');
+          sendToPreview({ type: "set-html", html: "" });
+          return;
+        }
+        const post = found[0];
+        setCurrentPost(post);
+        setTitle(post.title || "");
+        setContent(post.content || "");
+        setPriority(post.priority || 'medium');
+        sendToPreview({ type: "set-html", html: post.content || "" });
+        initSessionKey({ postId: post.id });
 
-      if (post.processing_id) {
-        const relatedWebhooks = await WebhookReceived.filter({ processing_id: post.processing_id });
-        if (relatedWebhooks && relatedWebhooks.length > 0) {
-          const latestWebhook = relatedWebhooks.sort((a, b) => new Date(b.updated_date || b.created_date) - new Date(a.updated_date || a.created_date))[0];
-          setCurrentWebhook(latestWebhook);
+        if (post.processing_id) {
+          const relatedWebhooks = await WebhookReceived.filter({ processing_id: post.processing_id });
+          if (relatedWebhooks && relatedWebhooks.length > 0) {
+            const latestWebhook = relatedWebhooks.sort((a, b) => new Date(b.updated_date || b.created_date) - new Date(a.updated_date || a.created_date))[0];
+            setCurrentWebhook(latestWebhook);
+          } else {
+            setCurrentWebhook(null);
+          }
         } else {
           setCurrentWebhook(null);
         }
-      } else {
-        setCurrentWebhook(null);
+        retryAttemptsRef.current.post = 0; // Reset on success
+      } catch (error) {
+        console.error("Error loading post content:", error);
+        if (error?.response?.status === 429 && attempt < 3) {
+          const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500); // 1s, 2s, 4s + jitter
+          console.log(`Rate limited loading post, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
+          setTimeout(() => fetchPostWithRetry(currentPostId, attempt + 1), delay);
+        } else {
+          toast.error("Failed to load post content.");
+          setTitle("");
+          setContent("");
+          setCurrentPost(null);
+          setCurrentWebhook(null);
+          setPriority('medium');
+          sendToPreview({ type: "set-html", html: "" });
+        }
       }
-    } catch (error) {
-      console.error("Error loading post content:", error);
-      toast.error("Failed to load post content.");
-      setTitle("");
-      setContent("");
-      setCurrentPost(null);
-      setCurrentWebhook(null);
-      setPriority('medium');
-      sendToPreview({ type: "set-html", html: "" });
-    }
-  }, [initSessionKey, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setPriority, setTitle]);
+    };
+    fetchPostWithRetry(postId); // Initial call without attempt parameter, it defaults to 0
+  }, [initSessionKey, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setPriority, setTitle, retryAttemptsRef]);
 
   const loadWebhookContent = useCallback(async (webhookId) => {
-    try {
-      const fetchedWebhooks = await WebhookReceived.filter({ id: webhookId });
-      if (!fetchedWebhooks || fetchedWebhooks.length === 0) {
-        toast.error("Webhook not found");
-        setTitle("");
-        setContent("");
-        setCurrentPost(null);
-        setCurrentWebhook(null);
-        setPriority('medium');
-        sendToPreview({ type: "set-html", html: "" });
-        return;
-      }
-      const webhook = fetchedWebhooks[0];
+    const fetchWebhookWithRetry = async (currentWebhookId, attempt = 0) => {
+      try {
+        const fetchedWebhooks = await WebhookReceived.filter({ id: currentWebhookId });
+        if (!fetchedWebhooks || fetchedWebhooks.length === 0) {
+          toast.error("Webhook not found");
+          setTitle("");
+          setContent("");
+          setCurrentPost(null);
+          setCurrentWebhook(null);
+          setPriority('medium');
+          sendToPreview({ type: "set-html", html: "" });
+          return;
+        }
+        const webhook = fetchedWebhooks[0];
 
-      if (!webhook.processing_id) {
-        await WebhookReceived.update(webhook.id, { processing_id: webhook.id });
-        webhook.processing_id = webhook.id;
-      }
+        if (!webhook.processing_id) {
+          await WebhookReceived.update(webhook.id, { processing_id: webhook.id });
+          webhook.processing_id = webhook.id;
+        }
 
-      setCurrentWebhook(webhook);
-      setTitle(webhook.title || "");
-      setContent(webhook.content || "");
-      sendToPreview({ type: "set-html", html: webhook.content || "" });
-      initSessionKey({ processingId: webhook.processing_id });
+        setCurrentWebhook(webhook);
+        setTitle(webhook.title || "");
+        setContent(webhook.content || "");
+        sendToPreview({ type: "set-html", html: webhook.content || "" });
+        initSessionKey({ processingId: webhook.processing_id });
 
-      if (!webhook.processing_id) {
-        await WebhookReceived.update(webhook.id, { status: "editing" });
-        setCurrentPost(null);
-        return;
-      }
+        if (!webhook.processing_id) {
+          await WebhookReceived.update(webhook.id, { status: "editing" });
+          setCurrentPost(null);
+          return;
+        }
 
-      const candidates = await BlogPost.filter({ processing_id: webhook.processing_id });
-      if (candidates && candidates.length > 0) {
-        const latestPost = candidates.
-          slice().
-          sort((a, b) => {
-            const aTime = Date.parse(a.updated_date || a.created_date || 0) || 0;
-            const bTime = Date.parse(b.updated_date || b.created_date || 0) || 0;
-            return bTime - aTime;
-          })[0];
+        const candidates = await BlogPost.filter({ processing_id: webhook.processing_id });
+        if (candidates && candidates.length > 0) {
+          const latestPost = candidates.
+            slice().
+            sort((a, b) => {
+              const aTime = Date.parse(a.updated_date || a.created_date || 0) || 0;
+              const bTime = Date.parse(b.updated_date || b.created_date || 0) || 0;
+              return bTime - aTime;
+            })[0];
 
-        if (latestPost) {
-          setCurrentPost(latestPost);
-          setTitle(latestPost.title || "");
-          setContent(latestPost.content || "");
-          setPriority(latestPost.priority || 'medium');
-          sendToPreview({ type: "set-html", html: latestPost.content || "" });
+          if (latestPost) {
+            setCurrentPost(latestPost);
+            setTitle(latestPost.title || "");
+            setContent(latestPost.content || "");
+            setPriority(latestPost.priority || 'medium');
+            sendToPreview({ type: "set-html", html: latestPost.content || "" });
+          } else {
+            setCurrentPost(null);
+          }
         } else {
           setCurrentPost(null);
         }
-      } else {
-        setCurrentPost(null);
-      }
 
-      await WebhookReceived.update(webhook.id, { status: "editing" });
-    } catch (error) {
-      console.error("Error loading webhook:", error);
-      toast.error("Failed to load webhook content");
-      setTitle("");
-      setContent("");
-      setCurrentPost(null);
-      setCurrentWebhook(null);
-      setPriority('medium');
-      sendToPreview({ type: "set-html", html: "" });
-    }
-  }, [initSessionKey, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setPriority, setTitle]);
+        await WebhookReceived.update(webhook.id, { status: "editing" });
+        retryAttemptsRef.current.post = 0; // Reset on success
+      } catch (error) {
+        console.error("Error loading webhook:", error);
+        if (error?.response?.status === 429 && attempt < 3) {
+          const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500); // 1s, 2s, 4s + jitter
+          console.log(`Rate limited loading webhook, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
+          setTimeout(() => fetchWebhookWithRetry(currentWebhookId, attempt + 1), delay);
+        } else {
+          toast.error("Failed to load webhook content");
+          setTitle("");
+          setContent("");
+          setCurrentPost(null);
+          setCurrentWebhook(null);
+          setPriority('medium');
+          sendToPreview({ type: "set-html", html: "" });
+        }
+      }
+    };
+    fetchWebhookWithRetry(webhookId); // Initial call
+  }, [initSessionKey, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setPriority, setTitle, retryAttemptsRef]);
 
   const initializeEditor = useCallback(async () => {
     setIsLoading(true);
@@ -2266,14 +2574,22 @@ Current Title: ${title}`;
       }
 
       setPublishCredentials(filtered || []);
+      retryAttemptsRef.current.credentials = 0; // Reset on success
     } catch (error) {
       console.error("Failed to load credentials:", error);
-      toast.error("Failed to load publishing credentials.");
-      setPublishCredentials([]);
+      if (error?.response?.status === 429 && retryAttemptsRef.current.credentials < 3) {
+        const delay = Math.pow(2, retryAttemptsRef.current.credentials) * 1000 + (Math.random() * 500); // 1s, 2s, 4s + jitter
+        console.log(`Rate limited loading credentials, retrying in ${delay}ms (attempt ${retryAttemptsRef.current.credentials + 1}/3)`);
+        retryAttemptsRef.current.credentials++;
+        setTimeout(() => loadPublishCredentials(), delay);
+      } else {
+        toast.error("Failed to load publishing credentials.");
+        setPublishCredentials([]);
+      }
     } finally {
       setLoadingCredentials(false);
     }
-  }, [currentUser, currentPost, currentWebhook]);
+  }, [currentUser, currentPost, currentWebhook, retryAttemptsRef]);
 
   useEffect(() => {
     if (currentUser) {
@@ -2546,7 +2862,7 @@ Current Title: ${title}`;
       if (controlId) {
         const content = document.getElementById(controlId);
         if (content) {
-          content.setAttribute('aria-hidden', cb.checked ? 'false' : 'true');
+          content.setAttribute('aria-hidden', controlId === content.id ? (cb.checked ? 'false' : 'true') : 'true');
         }
       }
     });
@@ -2759,129 +3075,148 @@ ${truncatedHtml}`;
     if (!isPublishFlow) setIsSaving(true);
     else setIsPublishing(true);
 
-    let finalContent = options.overrideHtml !== undefined ? options.overrideHtml : content;
-    let postData = {
-      title: title || "Untitled Post",
-      content: finalContent,
-      status,
-      reading_time: Math.ceil(content.replace(/<[^>]*>/g, '').split(' ').length / 200),
-      scheduled_publish_date: options.scheduledPublishDate || null,
-      priority,
-      client_session_key: sessionKeyRef.current || null,
-      generated_llm_schema: currentPost?.generated_llm_schema || null
-    };
+    const performSaveWithRetry = async (attempt = 0) => {
+      let finalContent = options.overrideHtml !== undefined ? options.overrideHtml : content;
+      let postData = {
+        title: title || "Untitled Post",
+        content: finalContent,
+        status,
+        reading_time: Math.ceil(content.replace(/<[^>]*>/g, '').split(' ').length / 200),
+        scheduled_publish_date: options.scheduledPublishDate || null,
+        priority,
+        client_session_key: sessionKeyRef.current || null,
+        generated_llm_schema: currentPost?.generated_llm_schema || null
+      };
 
-    const enableSchemaGeneration = false;
-
-    if (isPublishFlow) {
-      let schemaJsonString = currentPost?.generated_llm_schema || null;
-
-      if (enableSchemaGeneration && !schemaJsonString) {
-        toast.info("Generating hyper-detailed AI schema for your content. This may take up to a minute...", { duration: 60000 });
-        try {
-          const generatedSchema = await generateSchemaForPost(title, content);
-          if (generatedSchema) {
-            schemaJsonString = generatedSchema;
-            postData.generated_llm_schema = schemaJsonString;
-            toast.success("AI Schema generated successfully.");
-          }
-        } catch (error) {
-          toast.error(error.message || "Failed to generate AI schema. Publishing without schema.");
-        }
-      }
-
-      if (schemaJsonString && String(schemaJsonString).trim().startsWith("{")) {
-        const schemaScript = `<script type="application/ld+json">${schemaJsonString}</script>`;
-        if (!finalContent.includes(schemaScript.substring(0, 50))) {
-          finalContent = `${schemaScript}\n${finalContent}`;
-          postData.content = finalContent;
-        }
-      }
-    }
-
-    try {
-      if (currentPost) {
-        postData = { ...currentPost, ...postData };
-      }
-      if (currentWebhook) {
-        postData.user_id = currentWebhook.user_id;
-        postData.user_name = currentWebhook.user_name;
-        postData.assigned_to_email = currentWebhook.assigned_to_email;
-        postData.processing_id = currentWebhook.processing_id || currentWebhook.id;
-      }
-
-      let savedPost;
-      const existingId = (await resolveExistingPostId()) || (await findBySessionKey()) || (await findExistingPostByHeuristics());
-
-      if (existingId) {
-        await BlogPost.update(existingId, postData);
-        savedPost = { ...postData, id: existingId };
-        initSessionKey({ postId: existingId });
-      } else {
-        savedPost = await BlogPost.create(postData);
-        const urlParams = new URLSearchParams(window.location.search);
-        if (!urlParams.get('post') && savedPost?.id) {
-          const newUrl = createPageUrl(`Editor?post=${savedPost.id}`);
-          window.history.replaceState({}, '', newUrl);
-        }
-        if (savedPost?.id) initSessionKey({ postId: savedPost.id });
-      }
-      setCurrentPost(savedPost);
+      const enableSchemaGeneration = false;
 
       if (isPublishFlow) {
-        if (options.useGoogleDocs) {
-          const safeTitle = (savedPost.title || "Untitled Post").replace(/</g, "&lt;").replace(/>/g, ">");
-          const fullHtmlForGDocs = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${safeTitle}</title></head><body>${savedPost.content}</body></html>`;
+        let schemaJsonString = currentPost?.generated_llm_schema || null;
+
+        if (enableSchemaGeneration && !schemaJsonString) {
+          toast.info("Generating hyper-detailed AI schema for your content. This may take up to a minute...", { duration: 60000 });
           try {
-            if (navigator.clipboard && window.ClipboardItem) {
-              const htmlBlob = new Blob([fullHtmlForGDocs], { type: "text/html" });
-              const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
-              await navigator.clipboard.write([clipboardItem]);
-            } else if (navigator.clipboard && navigator.clipboard.writeText) {
-              await navigator.clipboard.writeText(fullHtmlForGDocs);
-            } else {
-              const blob = new Blob([fullHtmlForGDocs], { type: "text/html" });
-              const url = URL.createObjectURL(blob);
-              const win = window.open(url, "_blank");
-              toast.message("Clipboard not available. A new tab opened with the HTML; Select All and Copy, then paste into Google Docs.");
-              if (win) return;
+            const generatedSchema = await generateSchemaForPost(title, content);
+            if (generatedSchema) {
+              schemaJsonString = generatedSchema;
+              postData.generated_llm_schema = schemaJsonString;
+              toast.success("AI Schema generated successfully.");
             }
-            toast.success("Content with schema copied. A new Google Doc will open — paste (Cmd/Ctrl + V) to insert your content.");
-          } catch (e) {
-            toast.message("Could not copy HTML automatically. We'll still open Google Docs; please return here, copy, then paste.");
-            console.error("Copy to clipboard failed:", e);
+          } catch (error) {
+            toast.error(error.message || "Failed to generate AI schema. Publishing without schema.");
           }
-          window.open("https://docs.google.com/document/create", "_blank");
-        } else if (options.useDefaultProvider) {
-          await publishToDefaultNow(savedPost);
-        } else if (options.publishTo) {
-          await publishToDefaultNow({
-            ...savedPost,
-            _overrideProvider: options.publishTo.provider,
-            _overrideCredentialId: options.publishTo.credentialId,
-            _overrideLabel: options.publishTo.labelOverride,
-            overrideHtml: options.overrideHtml
-          });
         }
 
+        if (schemaJsonString && String(schemaJsonString).trim().startsWith("{")) {
+          const schemaScript = `<script type="application/ld+json">${schemaJsonString}</script>`;
+          if (!finalContent.includes(schemaScript.substring(0, 50))) {
+            finalContent = `${schemaScript}\n${finalContent}`;
+            postData.content = finalContent;
+          }
+        }
+      }
+
+      try {
+        if (currentPost) {
+          postData = { ...currentPost, ...postData };
+        }
         if (currentWebhook) {
-          await sendToAirtable({
-            title: savedPost.title,
-            content: savedPost.content,
-            webhookData: currentWebhook.webhook_data,
-            recordId: currentWebhook.processing_id
-          });
-          await WebhookReceived.update(currentWebhook.id, { status: "published", published_at: new Date().toISOString() });
+          postData.user_id = currentWebhook.user_id;
+          postData.user_name = currentWebhook.user_name;
+          postData.assigned_to_email = currentWebhook.assigned_to_email;
+          postData.processing_id = currentWebhook.processing_id || currentWebhook.id;
         }
-      } else if (currentWebhook) {
-        await WebhookReceived.update(currentWebhook.id, { status: "editing" });
-      }
 
-      if (!isPublishFlow) {
-        toast.success("Post saved successfully as draft!");
+        let savedPost;
+        const existingId = (await resolveExistingPostId()) || (await findBySessionKey()) || (await findExistingPostByHeuristics());
+
+        if (existingId) {
+          await BlogPost.update(existingId, postData);
+          savedPost = { ...postData, id: existingId };
+          initSessionKey({ postId: existingId });
+        } else {
+          savedPost = await BlogPost.create(postData);
+          const urlParams = new URLSearchParams(window.location.search);
+          if (!urlParams.get('post') && savedPost?.id) {
+            const newUrl = createPageUrl(`Editor?post=${savedPost.id}`);
+            window.history.replaceState({}, '', newUrl);
+          }
+          if (savedPost?.id) initSessionKey({ postId: savedPost.id });
+        }
+        setCurrentPost(savedPost);
+
+        if (isPublishFlow) {
+          if (options.useGoogleDocs) {
+            const safeTitle = (savedPost.title || "Untitled Post").replace(/</g, "&lt;").replace(/>/g, ">");
+            const fullHtmlForGDocs = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${safeTitle}</title></head><body>${savedPost.content}</body></html>`;
+            try {
+              if (navigator.clipboard && window.ClipboardItem) {
+                const htmlBlob = new Blob([fullHtmlForGDocs], { type: "text/html" });
+                const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
+                await navigator.clipboard.write([clipboardItem]);
+              } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(fullHtmlForGDocs);
+              } else {
+                const blob = new Blob([fullHtmlForGDocs], { type: "text/html" });
+                const url = URL.createObjectURL(blob);
+                const win = window.open(url, "_blank");
+                toast.message("Clipboard not available. A new tab opened with the HTML; Select All and Copy, then paste into Google Docs.");
+                if (win) return;
+              }
+              toast.success("Content with schema copied. A new Google Doc will open — paste (Cmd/Ctrl + V) to insert your content.");
+            } catch (e) {
+              toast.message("Could not copy HTML automatically. We'll still open Google Docs; please return here, copy, then paste.");
+              console.error("Copy to clipboard failed:", e);
+            }
+            window.open("https://docs.google.com/document/create", "_blank");
+          } else if (options.useDefaultProvider) {
+            await publishToDefaultNow(savedPost);
+          } else if (options.publishTo) {
+            await publishToDefaultNow({
+              ...savedPost,
+              _overrideProvider: options.publishTo.provider,
+              _overrideCredentialId: options.publishTo.credentialId,
+              _overrideLabel: options.publishTo.labelOverride,
+              overrideHtml: options.overrideHtml
+            });
+          }
+
+          if (currentWebhook) {
+            await sendToAirtable({
+              title: savedPost.title,
+              content: savedPost.content,
+              webhookData: currentWebhook.webhook_data,
+              recordId: currentWebhook.processing_id
+            });
+            await WebhookReceived.update(currentWebhook.id, { status: "published", published_at: new Date().toISOString() });
+          }
+        } else if (currentWebhook) {
+          await WebhookReceived.update(currentWebhook.id, { status: "editing" });
+        }
+
+        if (!isPublishFlow) {
+          toast.success("Post saved successfully as draft!");
+        }
+        retryAttemptsRef.current.save = 0; // Reset on success
+        return true; // Indicate success
+      } catch (error) {
+        console.error(`Attempt ${attempt} to ${isPublishFlow ? 'publish' : 'save'} post failed:`, error);
+        if (error?.response?.status === 429 && attempt < 2) { // Max 2 retries (total 3 attempts)
+          const delay = Math.pow(2, attempt + 1) * 1000 + (Math.random() * 500); // 2s, 4s + jitter
+          toast.message(`Rate limited, retrying ${isPublishFlow ? 'publish' : 'save'} in ${delay / 1000}s...`);
+          await new Promise(resolve => setTimeout(resolve, delay)); // Wait before retrying
+          return performSaveWithRetry(attempt + 1); // Recurse for retry
+        } else {
+          // If not a rate limit or retries exhausted
+          throw error; // Propagate the error for final handling in the outer catch
+        }
       }
+    }; // End of performSaveWithRetry
+
+    try {
+      await performSaveWithRetry();
     } catch (error) {
-      toast.error(`Failed to ${status === 'published' ? 'publish' : 'save'} post. ${error.message}`);
+      toast.error(`Failed to ${status === 'published' ? 'publish' : 'save'} post. ${error.message || 'Unknown error'}`);
     } finally {
       if (isPublishFlow) setIsPublishing(false);
       else setIsSaving(false);
@@ -2986,12 +3321,33 @@ ${truncatedHtml}`;
       ...(newMetadata.meta_description && { meta_description: newMetadata.meta_description }),
       ...(newMetadata.featured_image && { featured_image: newMetadata.featured_image }),
       ...(newMetadata.focus_keyword && { focus_keyword: newMetadata.focus_keyword }),
+      ...(newMetadata.is_indexed === true || newMetadata.is_indexed === false ? { is_indexed: newMetadata.is_indexed } : {}), // Handle boolean
       ...(newMetadata.tags && { tags: newMetadata.tags }),
       ...(newMetadata.excerpt && { excerpt: newMetadata.excerpt }),
       ...(newMetadata.generated_llm_schema && { generated_llm_schema: newMetadata.generated_llm_schema }),
     }));
+    triggerAutoSave(); // Trigger auto-save when SEO settings are changed
   };
 
+  // NEW: Handler to apply Flash workflow results
+  const handleApplyFlashResult = useCallback((html, seoData, schemaData) => {
+    if (html) {
+      skipNextPreviewPushRef.current = true;
+      setContent(html);
+      sendToPreview({ type: "set-html", html: html });
+    }
+    if (seoData || schemaData) {
+      // Apply SEO metadata and schema to the post using handleSEOSave
+      handleSEOSave({
+        ...seoData,
+        ...(schemaData && { generated_llm_schema: schemaData }) // Merge schemaData if present
+      });
+      if (seoData) toast.success("SEO metadata updated!");
+      if (schemaData) toast.success("Schema saved to SEO settings!");
+    }
+    setShowFlashModal(false);
+    triggerAutoSave();
+  }, [sendToPreview, setContent, handleSEOSave, triggerAutoSave]);
 
   const handleOpenActionsModal = () => {
     if (isTextSelected) {
@@ -3024,27 +3380,11 @@ ${truncatedHtml}`;
     }
   };
 
-  const handleInsertPromotedProduct = (htmlBlockOrDoc) => {
-    insertContentAtPoint(String(htmlBlockOrDoc));
-  };
-
-  const handleAIRewrite = (newText) => {
-    const isHtml = /<[a-z][\s\S]*>/i.test(newText);
-
-    if (isTextSelected) {
-      insertContentAtPoint({ html: newText, mode: "after-selection" });
-    } else {
-      insertContentAtPoint({ html: newText, mode: "at-caret" });
-    }
-    setShowAIModal(false);
-    setShowHumanizeModal(false);
-    setTextForAction("");
-    setIsTextSelected(false);
-  };
-
-  const handleContentUpdate = (newContent) => {
+  const handleContentUpdate = useCallback((newContent) => {
     setContent(newContent);
-  };
+    // Trigger auto-save after feature completes
+    triggerAutoSave();
+  }, [triggerAutoSave]);
 
   const handleUndo = () => {
     const iframe = document.querySelector('iframe[title="Live HTML Preview"]');
@@ -3069,11 +3409,13 @@ ${truncatedHtml}`;
     skipNextPreviewPushRef.current = true;
     setContent(cleaned);
     sendToPreview({ type: "set-html", html: cleaned });
+    triggerAutoSave();
   };
 
   const handleApplyTextEdit = (html) => {
     insertContentAtPoint(html);
     setShowTextEditor(false);
+    triggerAutoSave();
   };
 
   const handleTitleChange = (e) => {
@@ -3187,7 +3529,7 @@ ${truncatedHtml}`;
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*[^\s>'"]+/gi, '');
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 
-    cleaned = cleaned.replace(/\s+data-[\w-]+(?=[\s>])/gi, '');
+    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*(?=[\s>])/gi, '');
 
     cleaned = cleaned.replace(/\s{2,}/g, ' ');
 
@@ -3200,68 +3542,22 @@ ${truncatedHtml}`;
 
   const handleDownloadTxt = () => {
     let exportContent = "";
-
     if (title) {
       const cleanTitle = cleanHtmlForExport(title);
       exportContent += `<title>${cleanTitle}</title>\n\n`;
     }
-
-    if (currentPost?.meta_title || currentPost?.meta_description || currentPost?.focus_keyword || currentPost?.tags?.length > 0 || currentPost?.slug || currentPost?.excerpt) {
+    if (currentPost?.meta_title || currentPost?.meta_description) {
       exportContent += "<!-- SEO METADATA -->\n";
-
       if (currentPost.meta_title) {
-        const cleanMetaTitle = cleanHtmlForExport(currentPost.meta_title);
-        exportContent += `<meta name="title" content="${cleanMetaTitle}" />\n`;
+        exportContent += `<meta name="title" content="${cleanHtmlForExport(currentPost.meta_title)}" />\n`;
       }
-
       if (currentPost.meta_description) {
-        const cleanMetaDesc = cleanHtmlForExport(currentPost.meta_description);
-        exportContent += `<meta name="description" content="${cleanMetaDesc}" />\n`;
+        exportContent += `<meta name="description" content="${cleanHtmlForExport(currentPost.meta_description)}" />\n`;
       }
-
-      if (currentPost.focus_keyword) {
-        const cleanKeyword = cleanHtmlForExport(currentPost.focus_keyword);
-        exportContent += `<!-- Focus Keyword: ${cleanKeyword} -->\n`;
-      }
-
-      if (currentPost.slug) {
-        const cleanSlug = cleanHtmlForExport(currentPost.slug);
-        exportContent += `<!-- URL Slug: ${cleanSlug} -->\n`;
-      }
-
-      if (currentPost.tags && Array.isArray(currentPost.tags) && currentPost.tags.length > 0) {
-        const cleanTags = currentPost.tags.map(t => cleanHtmlForExport(String(t))).join(', ');
-        exportContent += `<meta name="keywords" content="${cleanTags}" />\n`;
-      }
-
-      if (currentPost.excerpt) {
-        const cleanExcerpt = cleanHtmlForExport(currentPost.excerpt);
-        exportContent += `<!-- Excerpt: ${cleanExcerpt} -->\n`;
-      }
-
       exportContent += "\n";
     }
-
-    if (currentPost?.generated_llm_schema) {
-      try {
-        const schema = typeof currentPost.generated_llm_schema === 'string'
-          ? JSON.parse(currentPost.generated_llm_schema)
-          : currentPost.generated_llm_schema;
-
-        exportContent += '<!-- JSON-LD SCHEMA -->\n';
-        exportContent += '<script type="application/ld+json">\n';
-        exportContent += JSON.stringify(schema, null, 2);
-        exportContent += '\n</script>\n\n';
-      } catch (e) {
-        console.error("Failed to parse JSON-LD schema for export:", e);
-      }
-    }
-
     const cleanedContent = cleanHtmlForExport(content);
     exportContent += cleanedContent;
-
-    exportContent = cleanHtmlForExport(exportContent);
-
     const blob = new Blob([exportContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -3271,7 +3567,6 @@ ${truncatedHtml}`;
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
     toast.success("Content downloaded as TXT");
   };
 
@@ -3285,27 +3580,17 @@ ${truncatedHtml}`;
     return matches.length > 0 ? matches[0].id : null;
   };
 
-
-  const resolveExistingPostId = async () => {
-    if (currentPost && currentPost.id) return currentPost.id;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const idFromUrl = urlParams.get('post');
-    if (idFromUrl) return idFromUrl;
-
-    const procId =
-      currentPost && currentPost.processing_id ||
-      currentWebhook && currentWebhook.processing_id ||
-      null;
-
-    if (procId) {
-      const matches = await BlogPost.filter({ processing_id: procId }, "-updated_date");
-      if (Array.isArray(matches) && matches.length > 0) {
-        return matches[0].id;
-      }
+  const handlePublishToShopify = useCallback(async () => {
+    const cred = publishCredentials.find(c => c.provider === 'shopify');
+    if (cred) {
+      await handlePublishToCredential(cred);
+    } else {
+      toast.error("Shopify credential not found. Please configure it in publishing settings.");
+      setShowCMSModal(true);
     }
-    return null;
-  };
+  }, [publishCredentials, handlePublishToCredential]);
+
+  const showPublishOptions = useMemo(() => publishCredentials.length > 0, [publishCredentials]);
 
   if (isLoading) {
     return (
@@ -3368,6 +3653,25 @@ ${truncatedHtml}`;
           box-sizing: border-box !important;
           display: block !important;
         }
+
+        .neon-underline {
+            position: relative;
+          }
+          .neon-underline::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -2px;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+            border-radius: 2px;
+            animation: neon-glow 2s ease-in-out infinite;
+          }
+          @keyframes neon-glow {
+            0%, 100% { opacity: 0.8; box-shadow: 0 0 5px #3b82f6; }
+            50% { opacity: 1; box-shadow: 0 0 15px #8b5cf6, 0 0 25px #ec4899; }
+          }
       `}</style>
 
         <style>{`
@@ -3399,207 +3703,19 @@ ${truncatedHtml}`;
         </div>
 
         <div className="min-h-screen flex flex-col relative z-10">
-          <div className="sticky top-0 topbar shadow-2xl z-[200]">
-            <div className="bg-white px-6 py-4 relative">
-              <div
-                className="mx-auto max-w-5xl">
 
-                <div className="overflow-x-auto -mx-2 px-2 hide-scrollbar">
-                  <div className="flex items-center gap-2 justify-start min-w-max flex-wrap">
-                    <Button
-                      onClick={goBack}
-                      variant="ghost"
-                      size="icon"
-                      className="text-slate-600 hover:bg-slate-100 hover:text-slate-900 mr-2"
-                      title="Back to Content Feed">
-
-                      <ArrowLeft className="w-5 h-5" />
-                    </Button>
-
-                    <div className="hidden">
-                      <div className="hidden sm:flex items-center gap-1 mr-1">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => setPreviewDevice("mobile")}
-                          className={
-                            previewDevice === "mobile" ?
-                              "bg-slate-900 text-white border border-slate-900 hover:bg-slate-800" :
-                              "bg-white text-slate-900 border border-slate-300 hover:bg-slate-50"
-                          }
-                          title="Mobile">
-
-                          <Smartphone className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => setPreviewDevice("tablet")}
-                          className={
-                            previewDevice === "tablet" ?
-                              "bg-slate-900 text-white border border-slate-900 hover:bg-slate-800" :
-                              "bg-white text-slate-900 border border-slate-300 hover:bg-slate-50"
-                          }
-                          title="Tablet">
-
-                          <TabletIcon className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => setPreviewDevice("laptop")}
-                          className={
-                            previewDevice === "laptop" ?
-                              "bg-slate-900 text-white border border-slate-900 hover:bg-slate-800" :
-                              "bg-white text-slate-900 border border-slate-300 hover:bg-slate-50"
-                          }
-                          title="Laptop">
-
-                          <Laptop className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="hidden">
-                      <FontSelector selectedFont={selectedFont} onFontChange={setSelectedFont} />
-                    </div>
-
-                    <Button
-                      onClick={() => setIsSEOSettingsOpen(true)}
-                      variant="outline"
-                      className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2">
-
-                      <Globe className="w-4 h-4" />
-                      SEO
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2"
-                      onClick={handlePasteTopbar}
-                      title="Paste content from your clipboard">
-
-                      <ClipboardIcon className="w-4 h-4" />
-                      Paste
-                    </Button>
-
-                    <InternalLinkerButton
-                      html={content}
-                      userName={currentUsername}
-                      onApply={(updatedHtml) => {
-                        skipNextPreviewPushRef.current = true;
-                        setContent(updatedHtml);
-                        sendToPreview({ type: "set-html", html: updatedHtml });
-                      }}
-                      disabled={isSaving || isPublishing}
-                    />
-
-                    <LinksAndReferencesButton
-                      html={content}
-                      userName={currentUsername}
-                      onApply={(updatedHtml) => {
-                        skipNextPreviewPushRef.current = true;
-                        setContent(updatedHtml);
-                        sendToPreview({ type: "set-html", html: updatedHtml });
-                      }}
-                      disabled={isSaving || isPublishing}
-                    />
-
-                    <AutoScanButton
-                      html={content}
-                      onApply={(updatedHtml) => {
-                        skipNextPreviewPushRef.current = true;
-                        setContent(updatedHtml);
-                        sendToPreview({ type: "set-html", html: updatedHtml });
-                      }}
-                      disabled={isSaving || isPublishing}
-                    />
-
-                    <div className="hidden">
-                      <EditorToolbar
-                        onUndo={handleUndo}
-                        onRedo={handleRedo}
-                        quillRef={quillRef}
-                        showImageLibrary={() => setShowImageLibrary(true)}
-                        showLinkSelector={openLinkSelectorModal}
-                        showPromotedProductSelector={() => setShowProductSelector(true)}
-                        showCtaSelector={() => setShowCtaSelector(true)}
-                        showEmailCaptureSelector={() => setShowEmailCaptureSelector(true)}
-                        showTestimonialSelector={() => setShowTestimonialLibrary(true)}
-                        showAskAIOptions={openAskAIOptions}
-                        setShowWorkflowRunner={() => setShowWorkflowRunner(true)} />
-                    </div>
-
-                    <div className="flex-1" />
-
-                    {isSuperadmin &&
-                      <Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2" onClick={() => window.open(createPageUrl('InvoiceBuilder'), '_blank')}>
-                        <FileTextIcon className="w-4 h-4" /> Invoices
-                      </Button>
-                    }
-                    <Button variant="outline" className="bg-white text-slate-700 border-slate-300 hover:bg-slate-50 gap-2" onClick={handleSave} disabled={isSaving}>
-                      {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4" />} Save
-                    </Button>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          disabled={isPublishing || isSaving || isGeneratingSchema || !title || !content}
-                          className="bg-blue-900 text-white hover:bg-cyan-700"
-                        >
-                          {isPublishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-                          Publish
-                          <ChevronDown className="w-4 h-4 ml-2" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuItem onSelect={handleDownloadTxt}>
-                          <Download className="w-4 h-4 mr-2" />
-                          Download TXT
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem onSelect={handlePublishGoogleDocs}>
-                          <Download className="w-4 h-4 mr-2" />
-                          Publish to Google Docs
-                        </DropdownMenuItem>
-
-                        {publishCredentials.length > 0 && (
-                          <>
-                            <DropdownMenuSeparator />
-                            {publishCredentials.map((cred) => (
-                              <DropdownMenuItem
-                                key={cred.id}
-                                onSelect={() => {
-                                  if (isFreeTrial) {
-                                    toast.info("Free Trial users can only publish via Download TXT or Google Docs. Upgrade to unlock all publishing options.");
-                                  } else {
-                                    handlePublishToCredential(cred);
-                                  }
-                                }}
-                                disabled={isPublishing || loadingCredentials || isFreeTrial}
-                              >
-                                {isPublishing && (!isFreeTrial) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-                                Publish to {cred.name}
-                              </DropdownMenuItem>
-                            ))}
-                          </>
-                        )}
-
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onSelect={() => setShowCMSModal(true)}
-                        >
-                          <Settings className="w-4 h-4 mr-2" />
-                          Configure Publishing...
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Always-visible floating publish button */}
+          <FloatingPublishButton
+            isPublishing={isPublishing}
+            isFreeTrial={isFreeTrial}
+            showPublishOptions={showPublishOptions}
+            onDownloadTxt={handleDownloadTxt}
+            onPublishToGoogleDocs={handlePublishGoogleDocs}
+            onPublishToShopify={handlePublishToShopify}
+            onOpenPublishOptions={() => setShowCMSModal(true)}
+            isSavingAuto={isSavingAuto}
+            lastSaved={lastSaved}
+          />
 
           <div className="flex-1 flex flex-col overflow-auto" key={`${currentWebhook?.id || 'nw'}-${currentPost?.id || 'np'}`}>
             <div className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -3694,6 +3810,10 @@ ${truncatedHtml}`;
                 y={askAIBar.y}
                 onAskAI={() => openAskAIOptions(askAIBar.x, askAIBar.y)}
                 onEdit={openInlineEditor}
+                onFlash={() => { // NEW PROP for Flash button
+                  setShowFlashModal(true);
+                  setAskAIBar((s) => ({ ...s, visible: false })); // Close floating bar after click
+                }}
                 onClose={() => setAskAIBar((s) => ({ ...s, visible: false }))} />
             }
 
@@ -3721,6 +3841,48 @@ ${truncatedHtml}`;
               onActionSelect={handleActionSelect} />
 
 
+            {/* InternalLinker as a modal controlled by state - remains for manual opening */}
+            {showInternalLinker && (
+              <InternalLinkerButton
+                isOpen={showInternalLinker}
+                onClose={() => setShowInternalLinker(false)}
+                html={content}
+                userName={currentUsername}
+                onApply={(updatedHtml) => {
+                  skipNextPreviewPushRef.current = true;
+                  setContent(updatedHtml);
+                  sendToPreview({ type: "set-html", html: updatedHtml });
+                  setShowInternalLinker(false); // Close modal after apply
+                  triggerAutoSave();
+                }}
+                disabled={isSaving || isPublishing}
+              />
+            )}
+
+            {/* Hidden buttons that can be triggered programmatically */}
+            <div style={{ display: 'none' }}>
+              <InternalLinkerButton
+                ref={internalLinkerRef}
+                html={content}
+                userName={currentUsername}
+                onApply={handleApplyInternalLinks} // This handler also sets isAutoLinking(false)
+              />
+              <AutoScanButton
+                ref={autoScanButtonRef}
+                html={content}
+                userName={currentUsername}
+                onApply={handleApplyAutoScan} // This handler also sets isAutoScanning(false)
+                disabled={isSaving || isPublishing}
+              />
+              <LinksAndReferencesButton
+                ref={referencesButtonRef}
+                html={content}
+                userName={currentUsername}
+                onApply={handleApplyLinksAndReferences}
+                disabled={isSaving || isPublishing}
+              />
+            </div>
+
             <SEOSettingsModal
               isOpen={isSEOSettingsOpen}
               onClose={() => setIsSEOSettingsOpen(false)}
@@ -3732,7 +3894,7 @@ ${truncatedHtml}`;
               isOpen={showAIModal}
               onClose={() => setShowAIModal(false)}
               selectedText={textForAction}
-              onRewrite={handleAIRewrite} />
+              onRewrite={handleContentUpdate} />
 
             <HTMLCleanupModal
               isOpen={showHTMLCleanup}
@@ -3743,9 +3905,7 @@ ${truncatedHtml}`;
             <LinkSelector
               isOpen={showLinkSelector}
               onClose={() => setShowLinkSelector(false)}
-              onInsert={handleLinkInsert}
-              username={currentUsername}
-              onOpenSitemap={() => setShowSitemapLinker(true)} />
+              onInsert={handleLinkInsert} />
 
 
             {showImageLibrary &&
@@ -3764,12 +3924,12 @@ ${truncatedHtml}`;
             <PromotedProductSelector
               isOpen={showProductSelector}
               onClose={() => setShowProductSelector(false)}
-              onInsert={handleInsertPromotedProduct} />
+              onInsert={insertContentAtPoint} />
 
             <ProductFromUrlModal
               isOpen={showProductFromUrl}
               onClose={() => setShowProductFromUrl(false)}
-              onInsert={handleInsertPromotedProduct} />
+              onInsert={insertContentAtPoint} />
 
             <AIContentDetectionModal
               isOpen={showAIDetection}
@@ -3780,7 +3940,7 @@ ${truncatedHtml}`;
               isOpen={showHumanizeModal}
               onClose={() => setShowHumanizeModal(false)}
               selectedText={textForAction}
-              onRewrite={handleAIRewrite} />
+              onRewrite={handleContentUpdate} />
 
             <CalloutGeneratorModal
               isOpen={showCalloutGenerator}
@@ -3916,6 +4076,7 @@ ${truncatedHtml}`;
                 setContent(cleaned);
                 sendToPreview({ type: "set-html", html: cleaned });
                 setShowLocalize(false);
+                triggerAutoSave();
               }} />
 
 
@@ -3932,7 +4093,13 @@ ${truncatedHtml}`;
               onClose={() => setShowAffilify(false)}
               originalHtml={content}
               selectedText={isTextSelected ? textForAction : ""}
-              onApply={handleApplyAffilify}
+              onApply={(affiliatedHtml) => {
+                const cleaned = sanitizeLocalizedHtml ? sanitizeLocalizedHtml(affiliatedHtml) : String(affiliatedHtml || "");
+                skipNextPreviewPushRef.current = true;
+                setContent(cleaned);
+                sendToPreview({ type: "set-html", html: cleaned });
+                triggerAutoSave();
+              }}
               onInsert={insertContentAtPoint} />
 
 
@@ -3940,12 +4107,24 @@ ${truncatedHtml}`;
               isOpen={showWorkflowRunner}
               onClose={() => setShowWorkflowRunner(false)}
               currentHtml={content}
+              userName={currentUsername} // Added for AutoLink logic
               onApply={(newHtml) => {
                 const cleaned = typeof sanitizeLocalizedHtml === "function" ? sanitizeLocalizedHtml(newHtml) : String(newHtml || "");
                 skipNextPreviewPushRef.current = true;
                 setContent(cleaned);
                 sendToPreview({ type: "set-html", html: cleaned });
+                triggerAutoSave();
               }} />
+            
+            {/* NEW: Flash Workflow Modal */}
+            <RunWorkflowModal
+              isOpen={showFlashModal}
+              onClose={() => setShowFlashModal(false)}
+              currentHtml={content}
+              userName={currentUsername} // Replicate working AutoLink logic for the internal_linker agent step
+              onApply={handleApplyFlashResult}
+              isFlashWorkflow={true} // Optional prop to distinguish this invocation
+            />
 
             <PasteContentModal
               isOpen={showPasteModal}
@@ -3988,9 +4167,11 @@ ${truncatedHtml}`;
               onClose={() => setShowVoiceModal(false)}
               onInsert={handleVoiceInsert}
             />
-
           </div>
         </div>
+
+        {/* NEW: Magic Orb Loader for AutoLink/AutoScan */}
+        {(isAutoLinking || isAutoScanning) && <MagicOrbLoader />}
       </div>
     </EditorErrorBoundary>
   );
