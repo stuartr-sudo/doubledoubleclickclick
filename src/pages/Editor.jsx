@@ -33,6 +33,7 @@ import { Slider } from "@/components/ui/slider";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import { useEditorContent } from "@/components/hooks/editor/useEditorContent";
+import { useEditorModals } from "@/components/hooks/editor/useEditorModals";
 
 import EditorToolbar from "../components/editor/EditorToolbar";
 import AIRewriterModal from "../components/editor/AIRewriterModal";
@@ -176,7 +177,107 @@ export default function Editor() {
     sessionKeyRef, // Exposed for external access if needed
   } = useEditorContent(postId, webhookId, setSearchParams); // Pass setSearchParams for URL updates
 
-  // ==================== OTHER STATE (Non-content related) ====================
+  // ==================== EDITOR MODALS HOOK ====================
+  // This hook manages all modal states and operations
+  const {
+    showAIModal,
+    showImageLibrary,
+    showProductSelector,
+    showProductFromUrl, // Added
+    showVideoGenerator,
+    showLinkSelector,
+    showHTMLCleanup,
+    showAIDetection,
+    showHumanizeModal,
+    showCalloutGenerator,
+    showFactGenerator,
+    showTldrGenerator,
+    showSitemapLinker,
+    isSEOSettingsOpen,
+    showCtaSelector,
+    showEmailCaptureSelector,
+    showVideoLibrary,
+    showMediaLibrary,
+    showScheduler,
+    showTestimonialLibrary,
+    showVariantLibrary,
+    showCMSModal,
+    showAudioModal,
+    showAmazonImport,
+    showLocalize,
+    showBrandIt,
+    showAffilify,
+    showFaqGenerator,
+    showInfographics,
+    showImagineer,
+    showVoiceModal,
+    isActionsModalOpen,
+    isRewritingTitle,
+    calloutType,
+    mediaLibraryInitialTab,
+    textForAction,
+    isTextSelected,
+    setShowAIModal,
+    setShowImageLibrary,
+    setShowProductSelector,
+    setShowProductFromUrl, // Added
+    setShowVideoGenerator,
+    setShowLinkSelector,
+    setShowHTMLCleanup,
+    setShowAIDetection,
+    setShowHumanizeModal,
+    setShowCalloutGenerator,
+    setShowFactGenerator,
+    setShowTldrGenerator,
+    setShowSitemapLinker,
+    setIsSEOSettingsOpen,
+    setShowCtaSelector,
+    setShowEmailCaptureSelector,
+    setShowVideoLibrary,
+    setShowMediaLibrary,
+    setShowScheduler,
+    setShowTestimonialLibrary,
+    setShowVariantLibrary,
+    setShowCMSModal,
+    setShowAudioModal,
+    setShowAmazonImport,
+    setShowLocalize,
+    setShowBrandIt,
+    setShowAffilify,
+    setShowFaqGenerator,
+    setShowInfographics,
+    setShowImagineer,
+    setShowVoiceModal,
+    setIsActionsModalOpen,
+    setIsRewritingTitle,
+    setCalloutType,
+    setMediaLibraryInitialTab,
+    setTextForAction,
+    setIsTextSelected,
+    // openModal, // Removed as per thought process, Editor.jsx uses direct setters
+    // closeModal, // Removed as per thought process, Editor.jsx uses direct setters
+    closeAllModals,
+    showInternalLinker,
+    setShowInternalLinker,
+    showWorkflowRunner,
+    setShowWorkflowRunner,
+    showFlashModal,
+    setShowFlashModal,
+    showPasteModal,
+    setShowPasteModal,
+    autoReadPaste,
+    setAutoReadPaste,
+    showTextEditor,
+    setShowTextEditor,
+    showShopifyModal,
+    setShowShopifyModal,
+    imageLibraryGenerateOnly, // Added
+    setImageLibraryGenerateOnly, // Added for ImageLibrary config
+    imageLibraryDefaultProvider, // Added
+    setImageLibraryDefaultProvider, // Added for ImageLibrary config
+  } = useEditorModals();
+
+  // ==================== OTHER STATE (Non-content, Non-modal related) ====================
   const [currentUser, setCurrentUser] = useState(null);
   const [userPlan, setUserPlan] = useState(null);
 
@@ -188,59 +289,18 @@ export default function Editor() {
   const [previewDevice, setPreviewDevice] = useState("laptop");
   const [priority, setPriority] = useState('medium');
 
-  const [isActionsModalOpen, setIsActionsModal] = useState(false);
-  const [textForAction, setTextForAction] = useState("");
-  const [isTextSelected, setIsTextSelected] = useState(false);
-
   const [htmlMode, setHtmlMode] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState(null);
 
-  const [showAIModal, setShowAIModal] = useState(false);
-  const [showLinkSelector, setShowLinkSelector] = useState(false);
-  const [showImageLibrary, setShowImageLibrary] = useState(false);
-  const [imageLibraryGenerateOnly, setImageLibraryGenerateOnly] = useState(false);
-  const [imageLibraryDefaultProvider, setImageLibraryDefaultProvider] = useState(undefined);
-  const [showProductSelector, setShowProductSelector] = useState(false);
-  const [showProductFromUrl, setShowProductFromUrl] = useState(false);
-  const [showHTMLCleanup, setShowHTMLCleanup] = useState(false);
-  const [showAIDetection, setShowAIDetection] = useState(false);
-  const [showHumanizeModal, setShowHumanizeModal] = useState(false);
-  const [showCalloutGenerator, setShowCalloutGenerator] = useState(false);
-  const [showFactGenerator, setShowFactGenerator] = useState(false);
-  const [showTldrGenerator, setShowTldrGenerator] = useState(false);
-  const [showSitemapLinker, setShowSitemapLinker] = useState(false);
-  const [isSEOSettingsOpen, setIsSEOSettingsOpen] = useState(false);
-  const [calloutType, setCalloutType] = useState("callout");
-  const [showCtaSelector, setShowCtaSelector] = useState(false);
-  const [showEmailCaptureSelector, setShowEmailCaptureSelector] = useState(false);
-  const [showVideoGenerator, setShowVideoGenerator] = useState(false);
-  const [showVideoLibrary, setShowVideoLibrary] = useState(false);
-  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
-  const [mediaLibraryInitialTab, setMediaLibraryInitialTab] = useState(undefined);
-  const [showScheduler, setShowScheduler] = useState(false);
-  const [showTestimonialLibrary, setShowTestimonialLibrary] = useState(false);
-  const [showVariantLibrary, setShowVariantLibrary] = useState(false);
-  const [showCMSModal, setShowCMSModal] = useState(false);
-  const [showAudioModal, setShowAudioModal] = useState(false);
-  const [showAmazonImport, setShowAmazonImport] = useState(false);
-  const [showLocalize, setShowLocalize] = useState(false);
-  const [showBrandIt, setShowBrandIt] = useState(false);
-  const [showAffilify, setShowAffilify] = useState(false);
-  const [showFaqGenerator, setShowFaqGenerator] = useState(false);
-  const [isRewritingTitle, setIsRewritingTitle] = useState(false);
-  const [showInfographics, setShowInfographics] = useState(false);
   const [pendingInfographicJobs, setPendingInfographicJobs] = useState([]);
   const insertedInfographicIdsRef = useRef(new Set());
   const infographicGeneratingRef = useRef(false);
 
-  const [showImagineer, setShowImagineer] = useState(false);
-  const [pendingImagineerJobs, setPendingImagineerJobs] = useState([]);
-  const imagineerJobsRef = useRef(new Set());
+  const pendingImagineerJobsRef = useRef(new Set()); // Renamed from imagineerJobsRef to avoid confusion with pendingImagineerJobs state
+  const [currentPendingImagineerJobs, setCurrentPendingImagineerJobs] = useState([]); // Use a state for actual pending jobs to trigger re-renders for polling
 
-  const [showVoiceModal, setShowVoiceModal] = useState(false);
-
-  // NEW: State for InternalLinker Modal (this is for the modal, not the headless trigger)
-  const [showInternalLinker, setShowInternalLinker] = useState(false);
+  // NEW: State for InternalLinker Modal (this is for the modal, not the headless trigger) - now managed by useEditorModals
+  // const [showInternalLinker, setShowInternalLinker] = useState(false);
   const [isAutoLinking, setIsAutoLinking] = useState(false); // State for MagicOrbLoader during autolinking
   const internalLinkerRef = React.useRef(null); // Ref for hidden InternalLinkerButton
 
@@ -251,9 +311,9 @@ export default function Editor() {
   // NEW: Ref for hidden LinksAndReferencesButton (for programmatic triggering)
   const referencesButtonRef = React.useRef(null);
 
-  const [showWorkflowRunner, setShowWorkflowRunner] = React.useState(false);
-  // NEW: state for Flash workflow modal
-  const [showFlashModal, setShowFlashModal] = React.useState(false);
+  // const [showWorkflowRunner, setShowWorkflowRunner] = React.useState(false); // Now managed by useEditorModals
+  // NEW: state for Flash workflow modal - now managed by useEditorModals
+  // const [showFlashModal, setShowFlashModal] = React.useState(false);
 
 
   const skipNextPreviewPushRef = useRef(false);
@@ -267,7 +327,7 @@ export default function Editor() {
   const [loadingCredentials, setLoadingCredentials] = useState(false);
   const [pendingAudioJobs, setPendingAudioJobs] = useState([]);
 
-  const [showShopifyModal, setShowShopifyModal] = React.useState(false);
+  // const [showShopifyModal, setShowShopifyModal] = React.useState(false); // Now managed by useEditorModals
   const shopifyPreset = React.useRef({ credentialId: null });
 
   const insertLockRef = useRef(false);
@@ -281,13 +341,13 @@ export default function Editor() {
 
   const generatingSchemaRef = useRef(false);
 
-  const [showPasteModal, setShowPasteModal] = React.useState(false);
-  const [autoReadPaste, setAutoReadPaste] = React.useState(false);
+  // const [showPasteModal, setShowPasteModal] = React.useState(false); // Now managed by useEditorModals
+  // const [autoReadPaste, setAutoReadPaste] = React.useState(false); // Now managed by useEditorModals
 
   const insertedAudioUrlsRef = React.useRef(new Set());
   const insertedAudioJobKeysRef = React.useRef(new Set());
 
-  const [showTextEditor, setShowTextEditor] = useState(false);
+  // const [showTextEditor, setShowTextEditor] = useState(false); // Now managed by useEditorModals
 
   // NEW: Track retry attempts for rate-limited requests
   const retryAttemptsRef = useRef({ credentials: 0, post: 0, save: 0 }); // `post` and `save` retries are mostly handled by useEditorContent now
@@ -335,7 +395,7 @@ export default function Editor() {
   const openLinkSelectorModal = React.useCallback(() => {
     sendToPreview({ type: "editor-command", command: "saveSelection" });
     setShowLinkSelector(true);
-  }, [sendToPreview]);
+  }, [sendToPreview, setShowLinkSelector]);
 
   const applyPreviewWidth = React.useCallback((widthPercent) => {
     if (!selectedMedia || !selectedMedia.id) return;
@@ -361,7 +421,7 @@ export default function Editor() {
     const selectedText = selectionData?.text || "";
     setTextForAction(selectedText);
     setIsTextSelected(!!selectedText);
-  }, []);
+  }, [setTextForAction, setIsTextSelected]);
 
   const handleLinkInsert = React.useCallback((linkData) => {
     if (!linkData || !linkData.url) return;
@@ -384,7 +444,7 @@ export default function Editor() {
     }, 50);
 
     setShowLinkSelector(false);
-  }, [sendToPreview]);
+  }, [sendToPreview, setShowLinkSelector]);
 
 
   const handleDeleteSelected = useCallback(() => {
@@ -1444,18 +1504,18 @@ export default function Editor() {
 
   // Poll for completed Imagineer jobs and replace placeholders
   useEffect(() => {
-    if (pendingImagineerJobs.length === 0) return;
+    if (currentPendingImagineerJobs.length === 0) return;
 
     const pollInterval = setInterval(async () => {
       try {
-        const jobIds = pendingImagineerJobs.map(j => j.job_id);
+        const jobIds = currentPendingImagineerJobs.map(j => j.job_id);
         
         // Fetch up to 100 most recent jobs to find relevant ones.
         const allJobs = await ImagineerJob.list('-created_date', 100); 
         const relevantJobs = allJobs.filter(j => jobIds.includes(j.job_id));
 
         // Create a temporary array for jobs that are still pending after this poll cycle
-        const nextPendingJobs = [...pendingImagineerJobs];
+        const nextPendingJobs = [...currentPendingImagineerJobs];
 
         for (const job of relevantJobs) {
           const pendingJobIndex = nextPendingJobs.findIndex(pj => pj.job_id === job.job_id);
@@ -1522,14 +1582,14 @@ export default function Editor() {
           }
         }
         // Update the component's state with the modified list of pending jobs
-        setPendingImagineerJobs(nextPendingJobs);
+        setCurrentPendingImagineerJobs(nextPendingJobs);
       } catch (error) {
         console.error('Error polling Imagineer jobs:', error);
       }
     }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(pollInterval);
-  }, [pendingImagineerJobs, handleContentChange, skipNextPreviewPushRef]);
+  }, [currentPendingImagineerJobs, handleContentChange, skipNextPreviewPushRef]);
 
 
   const handleImagineerGenerate = async ({ prompt, style, influence, dimensions }) => {
@@ -1630,7 +1690,7 @@ export default function Editor() {
 
       toast.success("Image generation started! The image will appear here once ready.");
       
-      setPendingImagineerJobs(prev => [...prev, {
+      setCurrentPendingImagineerJobs(prev => [...prev, {
         job_id: jobId,
         placeholder_id: jobId,
         prompt,
@@ -2122,6 +2182,7 @@ Current Title: ${title}`;
     setAskAIBar((s) => ({ ...s, visible: false }));
     setQuickMenu((s) => ({ ...s, visible: false }));
     setInlineToolbar((s) => ({ ...s, visible: false, x: null, y: null }));
+    closeAllModals(); // Close all modals managed by the hook
   };
 
   const deviceWidth = (() => {
@@ -2260,7 +2321,7 @@ Current Title: ${title}`;
   const handleCMSModalClose = useCallback(() => {
     setShowCMSModal(false);
     loadPublishCredentials();
-  }, [loadPublishCredentials]);
+  }, [loadPublishCredentials, setShowCMSModal]);
 
 
   const extractFirstImageUrl = (html) => {
@@ -2958,11 +3019,11 @@ ${truncatedHtml}`;
     }
     setShowFlashModal(false);
     saveContent(); // Trigger an immediate save
-  }, [sendToPreview, handleContentChange, setPostState, saveContent]);
+  }, [sendToPreview, handleContentChange, setPostState, saveContent, setShowFlashModal]);
 
   const handleOpenActionsModal = () => {
     if (isTextSelected) {
-      setIsActionsModal(true);
+      setIsActionsModalOpen(true);
     } else {
       toast.info("Please select text in the editor first.");
     }
@@ -3191,7 +3252,7 @@ ${truncatedHtml}`;
       toast.error("Shopify credential not found. Please configure it in publishing settings.");
       setShowCMSModal(true);
     }
-  }, [publishCredentials, handlePublishToCredential]);
+  }, [publishCredentials, handlePublishToCredential, setShowCMSModal]);
 
   const showPublishOptions = useMemo(() => publishCredentials.length > 0, [publishCredentials]);
 
@@ -3435,7 +3496,7 @@ ${truncatedHtml}`;
 
               <TextActionsModal
                 isOpen={isActionsModalOpen}
-                onClose={() => setIsActionsModal(false)}
+                onClose={() => setIsActionsModalOpen(false)}
                 selectedText={textForAction}
                 onActionSelect={handleActionSelect} />
 
