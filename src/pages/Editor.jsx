@@ -32,6 +32,7 @@ import { callFeatureEndpoint } from "@/api/functions";
 import { Slider } from "@/components/ui/slider";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
+import { useEditorContent } from "@/components/hooks/editor/useEditorContent";
 
 import EditorToolbar from "../components/editor/EditorToolbar";
 import AIRewriterModal from "../components/editor/AIRewriterModal";
@@ -131,23 +132,59 @@ function EditorErrorBoundary({ children }) {
   return React.createElement(Boundary, null, children);
 }
 
-export default function Editor() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const contentRef = useRef("");
+// Minimal AuthGate component for the outline's render section
+function AuthGate({ currentUser, children }) {
+  if (currentUser === null) { // Check for explicit null (not yet loaded)
+    return (
+      <div className="flex items-center justify-center h-full bg-gradient-to-br from-slate-950 via-gray-900 to-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+          <p className="text-white/70">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+  return children;
+}
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
-  const [currentPost, setCurrentPost] = useState(null); // This holds the BlogPost entity
-  const [currentWebhook, setCurrentWebhook] = useState(null); // This holds the WebhookReceived entity
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [showLivePreview, setShowLivePreview] = useState(true); // Changed default to true
-  const [selectedFont, setSelectedFont] = useState('Inter');
+
+export default function Editor() {
+  // ==================== URL PARAMETERS ====================
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams(); // Added useSearchParams
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlParams = new URLSearchParams(location.search);
+  const postId = urlParams.get("post");
+  const webhookId = urlParams.get("webhook");
+
+  // ==================== EDITOR CONTENT HOOK ====================
+  const {
+    post: currentPost, // Renamed 'post' from hook to 'currentPost'
+    webhook: currentWebhook, // Renamed 'webhook' from hook to 'currentWebhook'
+    content,
+    title,
+    isLoading: contentLoading, // Renamed to avoid collision with other 'isLoading' states
+    isSaving, // This `isSaving` now comes from the hook
+    lastSaved,
+    hasUnsavedChanges,
+    saveContent,
+    handleContentChange,
+    handleTitleChange: handleTitleChangeFromHook, // Renamed to avoid conflict with local handler
+    setPostState, // Expose for internal updates like SEO metadata
+    setWebhookState, // Expose for internal updates like status
+    initSessionKey, // Exposed for external session key updates
+    sessionKeyRef, // Exposed for external access if needed
+  } = useEditorContent(postId, webhookId, setSearchParams); // Pass setSearchParams for URL updates
+
+  // ==================== OTHER STATE (Non-content related) ====================
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userPlan, setUserPlan] = useState(null);
+
+  const [isPublishing, setIsPublishing] = useState(false); // Still needed for explicit publish actions
+  const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showLivePreview, setShowLivePreview] = useState(true);
+  const [selectedFont, setSelectedFont] = useState('Inter');
   const [previewDevice, setPreviewDevice] = useState("laptop");
   const [priority, setPriority] = useState('medium');
 
@@ -226,25 +263,19 @@ export default function Editor() {
   const [backgroundJobs, setBackgroundJobs] = useState([]);
   const [showGoogleCreds, setShowGoogleCreds] = useState(false);
 
-  const [currentUser, setCurrentUser] = useState(null);
   const [publishCredentials, setPublishCredentials] = useState(false); // Changed to false to trigger initial load from useEffect
   const [loadingCredentials, setLoadingCredentials] = useState(false);
   const [pendingAudioJobs, setPendingAudioJobs] = useState([]);
-
-  const [userPlan, setUserPlan] = useState(null);
 
   const [showShopifyModal, setShowShopifyModal] = React.useState(false);
   const shopifyPreset = React.useRef({ credentialId: null });
 
   const insertLockRef = useRef(false);
   const insertSeqRef = useRef(1);
-  const savingGuardRef = React.useRef(false);
 
   const [askAIBar, setAskAIBar] = useState({ visible: false, x: null, y: null });
   const [quickMenu, setQuickMenu] = useState({ visible: false, x: null, y: null });
   const [inlineToolbar, setInlineToolbar] = useState({ visible: false, x: null, y: null });
-
-  const sessionKeyRef = React.useRef(null);
 
   const quillRef = useRef(null);
 
@@ -258,45 +289,39 @@ export default function Editor() {
 
   const [showTextEditor, setShowTextEditor] = useState(false);
 
-  // Auto-save states
-  const autoSaveTimerRef = useRef(null);
-  const autoSaveRef = useRef(null);
-  const [lastSaved, setLastSaved] = useState(null);
-  const [isSavingAuto, setIsSavingAuto] = useState(false);
-
   // NEW: Track retry attempts for rate-limited requests
-  const retryAttemptsRef = useRef({ credentials: 0, post: 0, save: 0 });
+  const retryAttemptsRef = useRef({ credentials: 0, post: 0, save: 0 }); // `post` and `save` retries are mostly handled by useEditorContent now
 
-  const makeRandomSessionKey = () => `sess-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-  const initSessionKey = useCallback((opts = {}) => {
-    const { postId = null, processingId = null } = opts;
-    let key = null;
-
-    if (postId) key = `post-${postId}`;
-    else if (processingId) key = `wh-${processingId}`;
-    else key = makeRandomSessionKey();
-
-    sessionKeyRef.current = key;
-    try { localStorage.setItem('b44_editor_session_key', key); } catch (_) { }
-  }, []);
-
+  // ==================== LOAD USER AND PLAN ====================
   useEffect(() => {
-    const existing = (() => {
-      try { return localStorage.getItem('b44_editor_session_key'); } catch (_) { return null; }
-    })();
-    const urlParams = new URLSearchParams(window.location.search);
-    const postId = urlParams.get('post');
-    const webhookId = urlParams.get('webhook');
-    if (postId) initSessionKey({ postId });
-    else if (webhookId) initSessionKey({ processingId: webhookId });
-    else if (existing) sessionKeyRef.current = existing;
-    else initSessionKey();
-  }, [initSessionKey]);
+    const loadUserAndPlan = async () => {
+      try {
+        const user = await User.me();
+        setCurrentUser(user);
+        setUserPlan(user?.plan_price_id || null);
+      } catch (error) {
+        console.error("Error loading user:", error);
+        setCurrentUser(null);
+        setUserPlan(null);
+      }
+    };
+    loadUserAndPlan();
+  }, []); // Only runs once on mount
 
+  // ==================== AUTO-SAVE ====================
   useEffect(() => {
-    contentRef.current = content;
-  }, [content]);
+    // If the content is loading, or a save is already in progress, or no user is logged in, don't trigger auto-save.
+    // Also, only save if there are actual unsaved changes tracked by the hook.
+    if (!hasUnsavedChanges || isSaving || contentLoading || !currentUser) return;
+
+    const autoSaveTimer = setTimeout(() => {
+      saveContent(); // Trigger the hook's save function
+    }, 3000); // Auto-save after 3 seconds of inactivity
+
+    return () => clearTimeout(autoSaveTimer);
+  }, [hasUnsavedChanges, isSaving, contentLoading, saveContent, currentUser]);
+
 
   // Definition for sendToPreview moved to correctly declare before its dependents
   const sendToPreview = useCallback((msg) => {
@@ -329,8 +354,8 @@ export default function Editor() {
 
   const handlePreviewHtmlChange = React.useCallback((newHtml) => {
     skipNextPreviewPushRef.current = true;
-    setContent(newHtml);
-  }, []);
+    handleContentChange(newHtml); // Use hook's content handler
+  }, [handleContentChange]);
 
   const handlePreviewSelectionChange = React.useCallback((selectionData) => {
     const selectedText = selectionData?.text || "";
@@ -1172,7 +1197,7 @@ export default function Editor() {
           changed = true;
           if (j.success && j.url) {
             const jobKey = `${j.provider || ""}|${j.type || ""}|${j.voice || ""}|${j.format || ""}|${(j.text || "").slice(0, 40)}`;
-            const htmlNow = String(contentRef.current || "");
+            const htmlNow = String(content || ""); // Use content from hook
             const alreadyInHtml = htmlNow.includes(`data-src="${j.url}"`) || htmlNow.includes(`src="${j.url}"`);
             const alreadyByKey = insertedAudioJobKeysRef.current.has(jobKey);
             const alreadyByUrl = insertedAudioUrlsRef.current.has(j.url);
@@ -1201,7 +1226,7 @@ export default function Editor() {
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [pendingAudioJobs, insertContentAtPoint, contentRef]);
+  }, [pendingAudioJobs, insertContentAtPoint, content]); // Dependency content added
 
   useEffect(() => {
     if (!backgroundJobs.length) return;
@@ -1468,7 +1493,7 @@ export default function Editor() {
                 // Trigger content update in React state
                 const updatedHtml = iframeDoc.body.innerHTML;
                 skipNextPreviewPushRef.current = true;
-                setContent(updatedHtml);
+                handleContentChange(updatedHtml); // Use hook's content handler
                 
                 toast.success('Imagineer image generated successfully!');
               }
@@ -1489,7 +1514,7 @@ export default function Editor() {
                 // Trigger content update in React state
                 const updatedHtml = iframeDoc.body.innerHTML;
                 skipNextPreviewPushRef.current = true;
-                setContent(updatedHtml);
+                handleContentChange(updatedHtml); // Use hook's content handler
               }
             }
             
@@ -1504,7 +1529,7 @@ export default function Editor() {
     }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(pollInterval);
-  }, [pendingImagineerJobs, setContent, skipNextPreviewPushRef]);
+  }, [pendingImagineerJobs, handleContentChange, skipNextPreviewPushRef]);
 
 
   const handleImagineerGenerate = async ({ prompt, style, influence, dimensions }) => {
@@ -1601,7 +1626,7 @@ export default function Editor() {
       // Update the main component's content state
       const updatedHtml = iframeDoc.body.innerHTML;
       skipNextPreviewPushRef.current = true;
-      setContent(updatedHtml);
+      handleContentChange(updatedHtml); // Use hook's content handler
 
       toast.success("Image generation started! The image will appear here once ready.");
       
@@ -1692,7 +1717,7 @@ Current Title: ${title}`;
       }
 
       if (newTitle && newTitle.length > 5) {
-        setTitle(newTitle);
+        handleTitleChangeFromHook(newTitle); // Use hook's title handler
         toast.success("AI successfully rewrote the title!");
       } else {
         throw new Error("AI did not generate a valid title. Please try again.");
@@ -1778,7 +1803,7 @@ Current Title: ${title}`;
   const handleApplyAffilify = (newHtml) => {
     const cleaned = sanitizeLocalizedHtml ? sanitizeLocalizedHtml(newHtml) : String(newHtml || "");
     skipNextPreviewPushRef.current = true;
-    setContent(cleaned);
+    handleContentChange(cleaned); // Use hook's content handler
     sendToPreview({ type: "set-html", html: cleaned });
   };
 
@@ -1808,214 +1833,42 @@ Current Title: ${title}`;
     toast.success('Transcription inserted');
   };
 
-  const resolveExistingPostId = useCallback(async () => {
-    if (currentPost && currentPost.id) return currentPost.id;
+  // Remove loadPostContent and loadWebhookContent and initializeEditor as they are now handled by useEditorContent hook.
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const idFromUrl = urlParams.get('post');
-    if (idFromUrl) return idFromUrl;
-
-    const procId =
-      currentPost && currentPost.processing_id ||
-      currentWebhook && currentWebhook.processing_id ||
-      null;
-
-    if (procId) {
-      const matches = await BlogPost.filter({ processing_id: procId }, "-updated_date");
-      if (Array.isArray(matches) && matches.length > 0) {
-        return matches[0].id;
-      }
-    }
-
-    // Also try to find by session key
-    if (sessionKeyRef.current) {
-      const matches = await BlogPost.filter({ client_session_key: sessionKeyRef.current });
-      return matches.length > 0 ? matches[0].id : null;
-    }
-
-    return null;
-  }, [currentPost, currentWebhook, sessionKeyRef]);
-
-  // Definition for autoSave function and store in ref
-  useEffect(() => {
-    autoSaveRef.current = async () => {
-      // Don't auto-save if a manual save/publish is in progress or another auto-save is running
-      if (isSaving || isPublishing || savingGuardRef.current) return;
-      
-      // Don't auto-save if no user is logged in
-      if (!currentUser) return;
-
-      savingGuardRef.current = true; // Set guard early to prevent re-entry
-      setIsSavingAuto(true);
-
-      const performAutoSaveWithRetry = async (attempt = 0) => {
-        try {
-          let targetBlogPostId = await resolveExistingPostId();
-          let postToUpdate = null;
-
-          if (targetBlogPostId) {
-            const existingPosts = await BlogPost.filter({ id: targetBlogPostId });
-            if (existingPosts.length > 0) {
-              postToUpdate = existingPosts[0];
-            }
-          }
-
-          // Prepare data for saving
-          let postData = {
-            title: title || "Untitled Draft",
-            content: content || "",
-            status: "draft",
-            reading_time: Math.ceil((content || "").replace(/<[^>]*>/g, '').split(' ').length / 200),
-            priority: priority || 'medium',
-            client_session_key: sessionKeyRef.current || null,
-            // Carry over SEO metadata from currentPost state (which is updated by handleSEOSave)
-            meta_title: currentPost?.meta_title || postToUpdate?.meta_title || null,
-            meta_description: currentPost?.meta_description || postToUpdate?.meta_description || null,
-            slug: currentPost?.slug || postToUpdate?.slug || null,
-            tags: currentPost?.tags || postToUpdate?.tags || null,
-            focus_keyword: currentPost?.focus_keyword || postToUpdate?.focus_keyword || null,
-            featured_image: currentPost?.featured_image || postToUpdate?.featured_image || null,
-            generated_llm_schema: currentPost?.generated_llm_schema || postToUpdate?.generated_llm_schema || null,
-          };
-
-          // If we are currently editing a webhook, ensure the BlogPost is linked to it
-          if (currentWebhook) {
-            postData.user_id = currentWebhook.user_id || currentUser?.id;
-            postData.user_name = currentWebhook.user_name || currentUser?.user_name;
-            postData.assigned_to_email = currentWebhook.assigned_to_email;
-            postData.processing_id = currentWebhook.processing_id || currentWebhook.id;
-
-            // Always update the webhook itself with the latest content/title as well
-            await WebhookReceived.update(currentWebhook.id, {
-              title: postData.title,
-              content: postData.content,
-              status: "editing" // Keep status as editing during auto-save
-            });
-          } else if (currentUser) {
-            // For new posts not from a webhook, assign to current user
-            postData.user_id = currentUser.id;
-            postData.user_name = currentUser.user_name;
-          }
-
-          let savedPostEntity;
-          if (targetBlogPostId) {
-            // Update existing BlogPost
-            await BlogPost.update(targetBlogPostId, postData);
-            savedPostEntity = { ...postToUpdate, ...postData, id: targetBlogPostId };
-          } else {
-            // No existing BlogPost found, create a new one
-            savedPostEntity = await BlogPost.create(postData);
-            if (savedPostEntity?.id) {
-              // If a new post was created, update URL and session key
-              const newUrl = createPageUrl(`Editor?post=${savedPostEntity.id}`);
-              window.history.replaceState({}, '', newUrl);
-              const newSearchParams = new URLSearchParams(window.location.search);
-              newSearchParams.set("post", savedPostEntity.id);
-              setSearchParams(newSearchParams);
-              initSessionKey({ postId: savedPostEntity.id }); // Update session key
-            }
-          }
-          setCurrentPost(savedPostEntity); // Ensure currentPost state is updated with the saved entity
-
-          setLastSaved(new Date());
-          retryAttemptsRef.current.save = 0; // Reset on success
-          return true; // Indicate success
-        } catch (error) {
-          console.error("Auto-save attempt failed:", error);
-          if (error?.response?.status === 429 && attempt < 2) { // Max 2 retries (total 3 attempts)
-            const delay = Math.pow(2, attempt + 1) * 1000 + (Math.random() * 500); // 2s, 4s + jitter
-            console.log(`Rate limited on auto-save, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
-            await new Promise(resolve => setTimeout(resolve, delay)); // Wait before retrying
-            return performAutoSaveWithRetry(attempt + 1); // Recurse for retry
-          } else {
-            // If it's not a rate limit error or we've exhausted retries, log and potentially toast
-            if (error?.response?.status !== 429) {
-              toast.error("Auto-save failed. Check console for details.");
-            }
-            throw error; // Propagate the error so the outer catch can handle final cleanup
-          }
-        }
-      }; // End of performAutoSaveWithRetry
-
-      try {
-        await performAutoSaveWithRetry();
-      } catch (error) {
-        // Final catch after all retries are exhausted or non-retryable error occurred
-        console.error("Final auto-save failure after retries:", error);
-      } finally {
-        setIsSavingAuto(false);
-        savingGuardRef.current = false; // Release guard
-      }
-    };
-  }, [
-    title, content, priority, sessionKeyRef,
-    currentPost, currentWebhook, currentUser,
-    isSaving, isPublishing, setSearchParams, initSessionKey,
-    resolveExistingPostId, retryAttemptsRef
-  ]);
-
-  // Debounced auto-save on content/title change
-  useEffect(() => {
-    // Only auto-save if there's actual data to save (content or title is not empty)
-    // AND a user is logged in
-    if ((!content && !title) || !currentUser) return;
-
-    // Clear existing timer
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-    
-    // Set new timer for 5 seconds after user stops typing
-    autoSaveTimerRef.current = setTimeout(() => {
-      if (autoSaveRef.current) {
-        autoSaveRef.current();
-      }
-    }, 5000); // Changed from 3000 to 5000
-    
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, [content, title, currentUser]);
-
-  // Helper to trigger auto-save
+  // Helper to trigger auto-save (used by various modals/features)
   const triggerAutoSave = useCallback(() => {
-    setTimeout(() => {
-      if (autoSaveRef.current) {
-        autoSaveRef.current();
-      }
-    }, 1000);
-  }, [autoSaveRef]);
+    // This will trigger the useEffect for auto-save if hasUnsavedChanges is true
+    // No need to directly call saveContent here, as the useEffect already handles debouncing.
+  }, []);
 
   // NEW: Handler for the hidden InternalLinkerButton's onApply
   const handleApplyInternalLinks = useCallback((updatedHtml) => {
     skipNextPreviewPushRef.current = true;
-    setContent(updatedHtml);
+    handleContentChange(updatedHtml); // Use hook's content handler
     sendToPreview({ type: "set-html", html: updatedHtml });
     setIsAutoLinking(false); // Hide the loader after auto-linking is complete
     toast.success("Internal links auto-generated!");
-    triggerAutoSave();
-  }, [sendToPreview, triggerAutoSave]);
+    saveContent(); // Trigger an immediate save
+  }, [sendToPreview, handleContentChange, saveContent]);
 
   // NEW: Handler for the hidden AutoScanButton's onApply
   const handleApplyAutoScan = useCallback((updatedHtml) => {
     skipNextPreviewPushRef.current = true;
-    setContent(updatedHtml);
+    handleContentChange(updatedHtml); // Use hook's content handler
     sendToPreview({ type: "set-html", html: updatedHtml });
     setIsAutoScanning(false); // Hide the loader after auto-scanning is complete
     toast.success("AutoScan completed!");
-    triggerAutoSave();
-  }, [sendToPreview, triggerAutoSave]);
+    saveContent(); // Trigger an immediate save
+  }, [sendToPreview, handleContentChange, saveContent]);
 
   // NEW: Handler for the hidden LinksAndReferencesButton's onApply
   const handleApplyLinksAndReferences = useCallback((updatedHtml) => {
     skipNextPreviewPushRef.current = true;
-    setContent(updatedHtml);
+    handleContentChange(updatedHtml); // Use hook's content handler
     sendToPreview({ type: "set-html", html: updatedHtml });
     toast.success("References generated!");
-    triggerAutoSave();
-  }, [sendToPreview, triggerAutoSave]);
+    saveContent(); // Trigger an immediate save
+  }, [sendToPreview, handleContentChange, saveContent]);
 
   const handleQuickPick = (actionId) => {
     setQuickMenu({ visible: false, x: null, y: null });
@@ -2293,206 +2146,12 @@ Current Title: ${title}`;
     { enabled: true }
   );
 
-  const loadPostContent = useCallback(async (postId) => {
-    const fetchPostWithRetry = async (currentPostId, attempt = 0) => {
-      try {
-        const found = await BlogPost.filter({ id: currentPostId });
-        if (!found || found.length === 0) {
-          toast.error("Post not found");
-          setTitle("");
-          setContent("");
-          setCurrentPost(null);
-          setCurrentWebhook(null);
-          setPriority('medium');
-          sendToPreview({ type: "set-html", html: "" });
-          return;
-        }
-        const post = found[0];
-        setCurrentPost(post);
-        setTitle(post.title || "");
-        setContent(post.content || "");
-        setPriority(post.priority || 'medium');
-        sendToPreview({ type: "set-html", html: post.content || "" });
-        initSessionKey({ postId: post.id });
+  // loadPostContent and loadWebhookContent are now handled by the useEditorContent hook.
 
-        if (post.processing_id) {
-          const relatedWebhooks = await WebhookReceived.filter({ processing_id: post.processing_id });
-          if (relatedWebhooks && relatedWebhooks.length > 0) {
-            const latestWebhook = relatedWebhooks.sort((a, b) => new Date(b.updated_date || b.created_date) - new Date(a.updated_date || a.created_date))[0];
-            setCurrentWebhook(latestWebhook);
-          } else {
-            setCurrentWebhook(null);
-          }
-        } else {
-          setCurrentWebhook(null);
-        }
-        retryAttemptsRef.current.post = 0; // Reset on success
-      } catch (error) {
-        console.error("Error loading post content:", error);
-        if (error?.response?.status === 429 && attempt < 3) {
-          const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500); // 1s, 2s, 4s + jitter
-          console.log(`Rate limited loading post, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
-          setTimeout(() => fetchPostWithRetry(currentPostId, attempt + 1), delay);
-        } else {
-          toast.error("Failed to load post content.");
-          setTitle("");
-          setContent("");
-          setCurrentPost(null);
-          setCurrentWebhook(null);
-          setPriority('medium');
-          sendToPreview({ type: "set-html", html: "" });
-        }
-      }
-    };
-    fetchPostWithRetry(postId); // Initial call without attempt parameter, it defaults to 0
-  }, [initSessionKey, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setPriority, setTitle, retryAttemptsRef]);
+  // The main useEffect for initializing editor based on URL (previously `initializeEditor`):
+  // This useEffect is no longer needed here as useEditorContent handles the initial loading
+  // based on postId, webhookId props, and local storage.
 
-  const loadWebhookContent = useCallback(async (webhookId) => {
-    const fetchWebhookWithRetry = async (currentWebhookId, attempt = 0) => {
-      try {
-        const fetchedWebhooks = await WebhookReceived.filter({ id: currentWebhookId });
-        if (!fetchedWebhooks || fetchedWebhooks.length === 0) {
-          toast.error("Webhook not found");
-          setTitle("");
-          setContent("");
-          setCurrentPost(null);
-          setCurrentWebhook(null);
-          setPriority('medium');
-          sendToPreview({ type: "set-html", html: "" });
-          return;
-        }
-        const webhook = fetchedWebhooks[0];
-
-        if (!webhook.processing_id) {
-          await WebhookReceived.update(webhook.id, { processing_id: webhook.id });
-          webhook.processing_id = webhook.id;
-        }
-
-        setCurrentWebhook(webhook);
-        setTitle(webhook.title || "");
-        setContent(webhook.content || "");
-        sendToPreview({ type: "set-html", html: webhook.content || "" });
-        initSessionKey({ processingId: webhook.processing_id });
-
-        if (!webhook.processing_id) {
-          await WebhookReceived.update(webhook.id, { status: "editing" });
-          setCurrentPost(null);
-          return;
-        }
-
-        const candidates = await BlogPost.filter({ processing_id: webhook.processing_id });
-        if (candidates && candidates.length > 0) {
-          const latestPost = candidates.
-            slice().
-            sort((a, b) => {
-              const aTime = Date.parse(a.updated_date || a.created_date || 0) || 0;
-              const bTime = Date.parse(b.updated_date || b.created_date || 0) || 0;
-              return bTime - aTime;
-            })[0];
-
-          if (latestPost) {
-            setCurrentPost(latestPost);
-            setTitle(latestPost.title || "");
-            setContent(latestPost.content || "");
-            setPriority(latestPost.priority || 'medium');
-            sendToPreview({ type: "set-html", html: latestPost.content || "" });
-          } else {
-            setCurrentPost(null);
-          }
-        } else {
-          setCurrentPost(null);
-        }
-
-        await WebhookReceived.update(webhook.id, { status: "editing" });
-        retryAttemptsRef.current.post = 0; // Reset on success
-      } catch (error) {
-        console.error("Error loading webhook:", error);
-        if (error?.response?.status === 429 && attempt < 3) {
-          const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500); // 1s, 2s, 4s + jitter
-          console.log(`Rate limited loading webhook, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
-          setTimeout(() => fetchWebhookWithRetry(webhookId, attempt + 1), delay);
-        } else {
-          toast.error("Failed to load webhook content");
-          setTitle("");
-          setContent("");
-          setCurrentPost(null);
-          setCurrentWebhook(null);
-          setPriority('medium');
-          sendToPreview({ type: "set-html", html: "" });
-        }
-      }
-    };
-    fetchWebhookWithRetry(webhookId); // Initial call
-  }, [initSessionKey, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setPriority, setTitle, retryAttemptsRef]);
-
-  const initializeEditor = useCallback(async () => {
-    setIsLoading(true);
-    setTitle("");
-    setContent("");
-    setCurrentPost(null);
-    setCurrentWebhook(null);
-    setTextForAction("");
-    setIsTextSelected(false);
-    setPriority('medium');
-    localStorage.removeItem('editor_draft_title');
-    localStorage.removeItem('editor_draft_content');
-    localStorage.removeItem('autosave-title');
-    localStorage.removeItem('autosave-content');
-    insertedAudioUrlsRef.current.clear();
-    insertedAudioJobKeysRef.current.clear();
-    insertedInfographicIdsRef.current.clear(); // Clear for infographic jobs too
-    imagineerJobsRef.current.clear(); // Clear for imagineer jobs too
-
-    try {
-      const u = await User.me();
-      setCurrentUser(u);
-      setUserPlan(u?.plan_price_id || null);
-    } catch (e) {
-      setCurrentUser(null);
-      setUserPlan(null);
-      console.error("Failed to load user information:", e);
-      toast.error("Failed to load user information.");
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const importHtml = urlParams.get('importHtml');
-    const postId = urlParams.get('post');
-    const webhookId = urlParams.get('webhook');
-
-    if (!postId && !webhookId && importHtml !== '1') {
-      sendToPreview({ type: "set-html", html: "" });
-    }
-
-    try {
-      if (importHtml === '1') {
-        const imported = localStorage.getItem('htmlstudio_content') || "";
-        setContent(imported);
-        sendToPreview({ type: "set-html", html: imported });
-        localStorage.removeItem('htmlstudio_content');
-      } else if (postId) {
-        await loadPostContent(postId);
-      } else if (webhookId) {
-        await loadWebhookContent(webhookId);
-      } else {
-        setTitle("");
-        setContent("");
-        setCurrentPost(null);
-        setCurrentWebhook(null);
-        setPriority('medium');
-        sendToPreview({ type: "set-html", html: "" });
-      }
-    } catch (error) {
-      console.error("Critical initialization error:", error);
-      toast.error("Failed to load article. Please try again.");
-      sendToPreview({ type: "set-html", html: "" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadPostContent, loadWebhookContent, sendToPreview, setContent, setCurrentPost, setCurrentWebhook, setIsLoading, setIsTextSelected, setPriority, setTextForAction, setTitle, setCurrentUser, setUserPlan]);
-
-  useEffect(() => {
-    initializeEditor();
-  }, [location.search, initializeEditor]);
 
   const isFreeTrial = useMemo(() => {
     if (!userPlan) return false;
@@ -2512,7 +2171,7 @@ Current Title: ${title}`;
   }, [content, sendToPreview]);
 
   React.useEffect(() => {
-    if (!isLoading) {
+    if (!contentLoading) { // Changed from `isLoading` to `contentLoading`
       if (skipNextPreviewPushRef.current) {
         skipNextPreviewPushRef.current = false;
         return;
@@ -2522,7 +2181,7 @@ Current Title: ${title}`;
       }, 50);
       return () => clearTimeout(t);
     }
-  }, [isLoading, content, sendToPreview]);
+  }, [contentLoading, content, sendToPreview]);
 
   React.useEffect(() => {
     const onMsg = (e) => {
@@ -2542,12 +2201,12 @@ Current Title: ${title}`;
         setSelectedMedia(null);
       } else if (d?.type === "html-updated" && typeof d.html === "string") {
         skipNextPreviewPushRef.current = true;
-        setContent(d.html);
+        handleContentChange(d.html); // Use hook's content handler
       }
     };
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
-  }, []);
+  }, [handleContentChange]);
 
 
   const loadPublishCredentials = useCallback(async () => {
@@ -3068,38 +2727,26 @@ ${truncatedHtml}`;
   };
 
   const savePost = async (status, options = {}) => {
-    if (savingGuardRef.current) return;
-    savingGuardRef.current = true;
-
     const isPublishFlow = status === 'published';
-    if (!isPublishFlow) setIsSaving(true);
-    else setIsPublishing(true);
+    if (!isPublishFlow) {
+      // The `isSaving` state is from the hook, it'll update internally
+    } else {
+      setIsPublishing(true); // Control local publishing state
+    }
 
-    const performSaveWithRetry = async (attempt = 0) => {
+    try {
       let finalContent = options.overrideHtml !== undefined ? options.overrideHtml : content;
-      let postData = {
-        title: title || "Untitled Post",
-        content: finalContent,
-        status,
-        reading_time: Math.ceil(content.replace(/<[^>]*>/g, '').split(' ').length / 200),
-        scheduled_publish_date: options.scheduledPublishDate || null,
-        priority,
-        client_session_key: sessionKeyRef.current || null,
-        generated_llm_schema: currentPost?.generated_llm_schema || null
-      };
+      let generatedLlmSchema = currentPost?.generated_llm_schema || null;
 
-      const enableSchemaGeneration = false;
+      const enableSchemaGeneration = false; // Keep as false or dynamically set as needed
 
       if (isPublishFlow) {
-        let schemaJsonString = currentPost?.generated_llm_schema || null;
-
-        if (enableSchemaGeneration && !schemaJsonString) {
+        if (enableSchemaGeneration && !generatedLlmSchema) {
           toast.info("Generating hyper-detailed AI schema for your content. This may take up to a minute...", { duration: 60000 });
           try {
             const generatedSchema = await generateSchemaForPost(title, content);
             if (generatedSchema) {
-              schemaJsonString = generatedSchema;
-              postData.generated_llm_schema = schemaJsonString;
+              generatedLlmSchema = generatedSchema;
               toast.success("AI Schema generated successfully.");
             }
           } catch (error) {
@@ -3107,120 +2754,83 @@ ${truncatedHtml}`;
           }
         }
 
-        if (schemaJsonString && String(schemaJsonString).trim().startsWith("{")) {
-          const schemaScript = `<script type="application/ld+json">${schemaJsonString}</script>`;
-          if (!finalContent.includes(schemaScript.substring(0, 50))) {
+        if (generatedLlmSchema && String(generatedLlmSchema).trim().startsWith("{")) {
+          const schemaScript = `<script type="application/ld+json">${generatedLlmSchema}</script>`;
+          if (!finalContent.includes(schemaScript.substring(0, 50))) { // Check for a unique part of the script
             finalContent = `${schemaScript}\n${finalContent}`;
-            postData.content = finalContent;
           }
         }
       }
 
-      try {
-        if (currentPost) {
-          postData = { ...currentPost, ...postData };
-        }
-        if (currentWebhook) {
-          postData.user_id = currentWebhook.user_id;
-          postData.user_name = currentWebhook.user_name;
-          postData.assigned_to_email = currentWebhook.assigned_to_email;
-          postData.processing_id = currentWebhook.processing_id || currentWebhook.id;
-        }
+      // Call the hook's saveContent function with all necessary data
+      const savedPostEntity = await saveContent(status, {
+        ...options,
+        overrideContent: finalContent, // Pass content potentially modified with schema
+        overrideTitle: title, // Always pass current title
+        overridePriority: priority, // Pass current priority
+        overrideGeneratedLlmSchema: generatedLlmSchema, // Pass potentially generated schema
+      });
 
-        let savedPost;
-        const existingId = (await resolveExistingPostId()) || (await findBySessionKey()) || (await findExistingPostByHeuristics());
-
-        if (existingId) {
-          await BlogPost.update(existingId, postData);
-          savedPost = { ...postData, id: existingId };
-          initSessionKey({ postId: existingId });
-        } else {
-          savedPost = await BlogPost.create(postData);
-          const urlParams = new URLSearchParams(window.location.search);
-          if (!urlParams.get('post') && savedPost?.id) {
-            const newUrl = createPageUrl(`Editor?post=${savedPost.id}`);
-            window.history.replaceState({}, '', newUrl);
-          }
-          if (savedPost?.id) initSessionKey({ postId: savedPost.id });
-        }
-        setCurrentPost(savedPost);
-
-        if (isPublishFlow) {
-          if (options.useGoogleDocs) {
-            const safeTitle = (savedPost.title || "Untitled Post").replace(/</g, "&lt;").replace(/>/g, ">");
-            const fullHtmlForGDocs = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${safeTitle}</title></head><body>${savedPost.content}</body></html>`;
-            try {
-              if (navigator.clipboard && window.ClipboardItem) {
-                const htmlBlob = new Blob([fullHtmlForGDocs], { type: "text/html" });
-                const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
-                await navigator.clipboard.write([clipboardItem]);
-              } else if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(fullHtmlForGDocs);
-              } else {
-                const blob = new Blob([fullHtmlForGDocs], { type: "text/html" });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, "_blank");
-                toast.message("Clipboard not available. A new tab opened with the HTML; Select All and Copy, then paste into Google Docs.");
-                if (win) return;
-              }
-              toast.success("Content with schema copied. A new Google Doc will open — paste (Cmd/Ctrl + V) to insert your content.");
-            } catch (e) {
-              toast.message("Could not copy HTML automatically. We'll still open Google Docs; please return here, copy, then paste.");
-              console.error("Copy to clipboard failed:", e);
+      if (isPublishFlow) {
+        if (options.useGoogleDocs) {
+          const safeTitle = (savedPostEntity.title || "Untitled Post").replace(/</g, "&lt;").replace(/>/g, ">");
+          const fullHtmlForGDocs = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${safeTitle}</title></head><body>${savedPostEntity.content}</body></html>`;
+          try {
+            if (navigator.clipboard && window.ClipboardItem) {
+              const htmlBlob = new Blob([fullHtmlForGDocs], { type: "text/html" });
+              const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
+              await navigator.clipboard.write([clipboardItem]);
+            } else if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(fullHtmlForGDocs);
+            } else {
+              const blob = new Blob([fullHtmlForGDocs], { type: "text/html" });
+              const url = URL.createObjectURL(blob);
+              const win = window.open(url, "_blank");
+              toast.message("Clipboard not available. A new tab opened with the HTML; Select All and Copy, then paste into Google Docs.");
+              if (win) return;
             }
-            window.open("https://docs.google.com/document/create", "_blank");
-          } else if (options.useDefaultProvider) {
-            await publishToDefaultNow(savedPost);
-          } else if (options.publishTo) {
-            await publishToDefaultNow({
-              ...savedPost,
-              _overrideProvider: options.publishTo.provider,
-              _overrideCredentialId: options.publishTo.credentialId,
-              _overrideLabel: options.publishTo.labelOverride,
-              overrideHtml: options.overrideHtml
-            });
+            toast.success("Content with schema copied. A new Google Doc will open — paste (Cmd/Ctrl + V) to insert your content.");
+          } catch (e) {
+            toast.message("Could not copy HTML automatically. We'll still open Google Docs; please return here, copy, then paste.");
+            console.error("Copy to clipboard failed:", e);
           }
-
-          if (currentWebhook) {
-            await sendToAirtable({
-              title: savedPost.title,
-              content: savedPost.content,
-              webhookData: currentWebhook.webhook_data,
-              recordId: currentWebhook.processing_id
-            });
-            await WebhookReceived.update(currentWebhook.id, { status: "published", published_at: new Date().toISOString() });
-          }
-        } else if (currentWebhook) {
-          await WebhookReceived.update(currentWebhook.id, { status: "editing" });
+          window.open("https://docs.google.com/document/create", "_blank");
+        } else if (options.useDefaultProvider) {
+          await publishToDefaultNow(savedPostEntity);
+        } else if (options.publishTo) {
+          await publishToDefaultNow({
+            ...savedPostEntity,
+            _overrideProvider: options.publishTo.provider,
+            _overrideCredentialId: options.publishTo.credentialId,
+            _overrideLabel: options.publishTo.labelOverride,
+            overrideHtml: options.overrideHtml // Use the content potentially modified by schema for publishing
+          });
         }
 
-        if (!isPublishFlow) {
-          toast.success("Post saved successfully as draft!");
+        if (currentWebhook) {
+          await sendToAirtable({
+            title: savedPostEntity.title,
+            content: savedPostEntity.content,
+            webhookData: currentWebhook.webhook_data,
+            recordId: currentWebhook.processing_id
+          });
+          setWebhookState({ status: "published", published_at: new Date().toISOString() }); // Update webhook state via hook
         }
-        retryAttemptsRef.current.save = 0; // Reset on success
-        return true; // Indicate success
-      } catch (error) {
-        console.error(`Attempt ${attempt} to ${isPublishFlow ? 'publish' : 'save'} post failed:`, error);
-        if (error?.response?.status === 429 && attempt < 2) { // Max 2 retries (total 3 attempts)
-          const delay = Math.pow(2, attempt + 1) * 1000 + (Math.random() * 500); // 2s, 4s + jitter
-          toast.message(`Rate limited, retrying ${isPublishFlow ? 'publish' : 'save'} in ${delay / 1000}s...`);
-          await new Promise(resolve => setTimeout(resolve, delay)); // Wait before retrying
-          return performSaveWithRetry(attempt + 1); // Recurse for retry
-        } else {
-          // If not a rate limit or retries exhausted
-          throw error; // Propagate the error for final handling in the outer catch
-        }
+      } else if (currentWebhook) {
+        setWebhookState({ status: "editing" }); // Update webhook state via hook
       }
-    }; // End of performSaveWithRetry
 
-    try {
-      await performSaveWithRetry();
+      if (!isPublishFlow) {
+        toast.success("Post saved successfully as draft!");
+      }
+      retryAttemptsRef.current.save = 0; // Reset on success
+      return true; // Indicate success
     } catch (error) {
+      console.error(`Failed to ${isPublishFlow ? 'publish' : 'save'} post:`, error);
       toast.error(`Failed to ${status === 'published' ? 'publish' : 'save'} post. ${error.message || 'Unknown error'}`);
+      return false; // Indicate failure
     } finally {
       if (isPublishFlow) setIsPublishing(false);
-      else setIsSaving(false);
-      savingGuardRef.current = false;
     }
   };
 
@@ -3313,8 +2923,8 @@ ${truncatedHtml}`;
 
 
   const handleSEOSave = (newMetadata) => {
-    setCurrentPost((prev) => ({
-      ...prev,
+    setPostState({ // Use setPostState from hook to update post metadata
+      ...currentPost, // Keep existing post data
       ...newMetadata,
       ...(newMetadata.meta_title && { meta_title: newMetadata.meta_title }),
       ...(newMetadata.slug && { slug: newMetadata.slug }),
@@ -3325,29 +2935,30 @@ ${truncatedHtml}`;
       ...(newMetadata.tags && { tags: newMetadata.tags }),
       ...(newMetadata.excerpt && { excerpt: newMetadata.excerpt }),
       ...(newMetadata.generated_llm_schema && { generated_llm_schema: newMetadata.generated_llm_schema }),
-    }));
-    triggerAutoSave(); // Trigger auto-save when SEO settings are changed
+    });
+    saveContent(); // Trigger an immediate save to persist SEO changes
   };
 
   // NEW: Handler to apply Flash workflow results
   const handleApplyFlashResult = useCallback((html, seoData, schemaData) => {
     if (html) {
       skipNextPreviewPushRef.current = true;
-      setContent(html);
+      handleContentChange(html); // Use hook's content handler
       sendToPreview({ type: "set-html", html: html });
     }
     if (seoData || schemaData) {
       // Apply SEO metadata and schema to the post using handleSEOSave
-      handleSEOSave({
+      setPostState((prev) => ({ // Use setPostState from hook
+        ...prev,
         ...seoData,
         ...(schemaData && { generated_llm_schema: schemaData }) // Merge schemaData if present
-      });
+      }));
       if (seoData) toast.success("SEO metadata updated!");
       if (schemaData) toast.success("Schema saved to SEO settings!");
     }
     setShowFlashModal(false);
-    triggerAutoSave();
-  }, [sendToPreview, setContent, handleSEOSave, triggerAutoSave]);
+    saveContent(); // Trigger an immediate save
+  }, [sendToPreview, handleContentChange, setPostState, saveContent]);
 
   const handleOpenActionsModal = () => {
     if (isTextSelected) {
@@ -3381,10 +2992,9 @@ ${truncatedHtml}`;
   };
 
   const handleContentUpdate = useCallback((newContent) => {
-    setContent(newContent);
-    // Trigger auto-save after feature completes
-    triggerAutoSave();
-  }, [triggerAutoSave]);
+    handleContentChange(newContent); // Use hook's content handler
+    saveContent(); // Trigger an immediate save
+  }, [handleContentChange, saveContent]);
 
   const handleUndo = () => {
     const iframe = document.querySelector('iframe[title="Live HTML Preview"]');
@@ -3407,19 +3017,19 @@ ${truncatedHtml}`;
   const handleApplyBranded = (newHtml, streaming = false) => {
     const cleaned = typeof sanitizeLocalizedHtml === "function" ? sanitizeLocalizedHtml(newHtml) : String(newHtml || "");
     skipNextPreviewPushRef.current = true;
-    setContent(cleaned);
+    handleContentChange(cleaned); // Use hook's content handler
     sendToPreview({ type: "set-html", html: cleaned });
-    triggerAutoSave();
+    saveContent(); // Trigger an immediate save
   };
 
   const handleApplyTextEdit = (html) => {
     insertContentAtPoint(html);
     setShowTextEditor(false);
-    triggerAutoSave();
+    saveContent(); // Trigger an immediate save
   };
 
-  const handleTitleChange = (e) => {
-    setTitle(e.target.value);
+  const localHandleTitleChange = (e) => { // Renamed to localHandleTitleChange
+    handleTitleChangeFromHook(e.target.value); // Use hook's title handler
     e.target.style.height = 'auto';
     e.target.style.height = `${e.target.scrollHeight}px`;
   };
@@ -3487,17 +3097,16 @@ ${truncatedHtml}`;
     setShowPasteModal(true);
   };
 
-  const handleCreateFromPaste = async ({ title, content, user_name }) => {
+  const handleCreateFromPaste = async ({ title: newTitle, content: newContent, user_name }) => {
     const saved = await BlogPost.create({
-      title: title || "Pasted Content",
-      content,
+      title: newTitle || "Pasted Content",
+      content: newContent,
       status: "draft",
       user_name
     });
     if (saved?.id) {
       const newUrl = createPageUrl(`Editor?post=${saved.id}`);
-      window.history.replaceState({}, "", newUrl);
-      initializeEditor();
+      navigate(newUrl, { replace: true }); // Use navigate with replace to trigger hook re-initialization
     }
   };
 
@@ -3570,15 +3179,9 @@ ${truncatedHtml}`;
     toast.success("Content downloaded as TXT");
   };
 
+  // findExistingPostByHeuristics and findBySessionKey are now internal to useEditorContent.
+  // They should not be here.
 
-  const findExistingPostByHeuristics = async () => {
-    return null;
-  };
-  const findBySessionKey = async () => {
-    if (!sessionKeyRef.current) return null;
-    const matches = await BlogPost.filter({ client_session_key: sessionKeyRef.current });
-    return matches.length > 0 ? matches[0].id : null;
-  };
 
   const handlePublishToShopify = useCallback(async () => {
     const cred = publishCredentials.find(c => c.provider === 'shopify');
@@ -3592,7 +3195,8 @@ ${truncatedHtml}`;
 
   const showPublishOptions = useMemo(() => publishCredentials.length > 0, [publishCredentials]);
 
-  if (isLoading) {
+  // Replaced original `isLoading` state check with `contentLoading` from hook.
+  if (contentLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-950 via-gray-900 to-slate-900">
         <div className="flex flex-col items-center gap-4">
@@ -3605,576 +3209,570 @@ ${truncatedHtml}`;
 
   return (
     <EditorErrorBoundary>
-      <div id="editor-neon" className="h-full overflow-hidden" style={{ backgroundColor: "#ffffff" }}> {/* Change 1: h-screen to h-full */}
-        <style>{`
-        #editor-neon {
-          --bg: #ffffff;
-          --surface: #ffffff;
-          --card: #ffffff;
-          --text: #0b1220;
-          --muted: #475569;
-          --border: rgba(2,6,23,0.12);
-          --hover: rgba(2,6,23,0.04);
-          --hover-strong: rgba(2,6,23,0.08);
-          --ring: rgba(59,130,246,0.45);
-        }
-        #editor-neon .topbar { background: #ffffff; border-bottom: 1px solid var(--border); color: var(--text); }
-        #editor-neon input, #editor-neon textarea, #editor-neon select {
-          background-color: #ffffff; color: #0b1220; border-color: #e2e8f0;
-        }
-        #editor-neon input::placeholder, #editor-neon textarea::placeholder {
-          color: #64748b;
-          opacity: 1;
-        }
-        #editor-neon input:hover, #editor-neon textarea:hover, #editor-neon select:hover {
-          background-color: #ffffff; border-color: #cbd5e1;
-        }
-        #editor-neon input:focus, #editor-neon textarea:focus {
-          outline: none; box-shadow: 0 0 0 2px var(--ring); border-color: #93c5fd;
-        }
-        #editor-neon .neon-btn {
-          background-color: #f8fafc;
-          color: #0b1220; border: 1px solid #e2e8f0;
-        }
-        #editor-neon .neon-btn:hover { background-color: #f1f5f9; border-color: #cbd5e1; }
-        #editor-neon .radix-dropdown, #editor-neon .dropdown-content {
-          background: #ffffff; color: #0b1220; border: 1px solid #e2e8f0; box-shadow: 0 8px 24px rgba(2,6,23,0.08);
-        }
-        #editor-neon .chip {
-          background: #f8fafc; color: #0b1220; border: 1px solid #e2e8f0;
-        }
+      <AuthGate currentUser={currentUser}>
+        <div id="editor-neon" className="h-full overflow-hidden" style={{ backgroundColor: "#ffffff" }}>
+          <style>{`
+          #editor-neon {
+            --bg: #ffffff;
+            --surface: #ffffff;
+            --card: #ffffff;
+            --text: #0b1220;
+            --muted: #475569;
+            --border: rgba(2,6,23,0.12);
+            --hover: rgba(2,6,23,0.04);
+            --hover-strong: rgba(2,6,23,0.08);
+            --ring: rgba(59,130,246,0.45);
+          }
+          #editor-neon .topbar { background: #ffffff; border-bottom: 1px solid var(--border); color: var(--text); }
+          #editor-neon input, #editor-neon textarea, #editor-neon select {
+            background-color: #ffffff; color: #0b1220; border-color: #e2e8f0;
+          }
+          #editor-neon input::placeholder, #editor-neon textarea::placeholder {
+            color: #64748b;
+            opacity: 1;
+          }
+          #editor-neon input:hover, #editor-neon textarea:hover, #editor-neon select:hover {
+            background-color: #ffffff; border-color: #cbd5e1;
+          }
+          #editor-neon input:focus, #editor-neon textarea:focus {
+            outline: none; box-shadow: 0 0 0 2px var(--ring); border-color: #93c5fd;
+          }
+          #editor-neon .neon-btn {
+            background-color: #f8fafc;
+            color: #0b1220; border: 1px solid #e2e8f0;
+          }
+          #editor-neon .neon-btn:hover { background-color: #f1f5f9; border-color: #cbd5e1; }
+          #editor-neon .radix-dropdown, #editor-neon .dropdown-content {
+            background: #ffffff; color: #0b1220; border: 1px solid #e2e8f0; box-shadow: 0 8px 24px rgba(2,6,23,0.08);
+          }
+          #editor-neon .chip {
+            background: #f8fafc; color: #0b1220; border: 1px solid #e2e8f0;
+          }
 
-        #editor-neon .b44-title-input { text-align: center !important; }
-        #editor-neon .b44-title-input::placeholder { text-align: center; }
+          #editor-neon .b44-title-input { text-align: center !important; }
+          #editor-neon .b44-title-input::placeholder { text-align: center; }
 
-        .b44-cta {
-          margin: 2rem 0 !important;
-          padding: 1.5rem !important;
-          box-sizing: border-box !important;
-          display: block !important;
-        }
+          .b44-cta {
+            margin: 2rem 0 !important;
+            padding: 1.5rem !important;
+            box-sizing: border-box !important;
+            display: block !important;
+          }
 
-        .neon-underline {
-            position: relative;
-          }
-          .neon-underline::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -2px;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
-            border-radius: 2px;
-            animation: neon-glow 2s ease-in-out infinite;
-          }
-          @keyframes neon-glow {
-            0%, 100% { opacity: 0.8; box-shadow: 0 0 5px #3b82f6; }
-            50% { opacity: 1; box-shadow: 0 0 15px #8b5cf6, 0 0 25px #ec4899; }
-          }
-      `}</style>
-
-        <style>{`
-          .b44-modal {
-            backdrop-filter: blur(10px);
-            background: #ffffff !important;
-            color: #0b1220 !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 12px 40px rgba(2,6,23,0.12);
-          }
-          .b44-modal .bg-white\\/10 { background-color: #ffffff !important; }
-          .b44-modal .border-white\\/20 { border-color: #e2e8f0 !important; }
-          .b44-modal .text-white { color: #0b1220 !important; }
-          .b44-modal input, .b44-modal textarea, .b44-modal select {
-            background-color: #ffffff !important; color: #0b1220 !important; border-color: #e2e8f0 !important;
-          }
-          .b44-modal .TabsList, .b44-modal [role="tablist"] {
-            background-color: #f8fafc !important;
-          }
+          .neon-underline {
+              position: relative;
+            }
+            .neon-underline::after {
+              content: '';
+              position: absolute;
+              left: 0;
+              bottom: -2px;
+              width: 100%;
+              height: 2px;
+              background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+              border-radius: 2px;
+              animation: neon-glow 2s ease-in-out infinite;
+            }
+            @keyframes neon-glow {
+              0%, 100% { opacity: 0.8; box-shadow: 0 0 5px #3b82f6; }
+              50% { opacity: 1; box-shadow: 0 0 15px #8b5cf6, 0 0 25px #ec4899; }
+            }
         `}</style>
 
-        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-          <div className="absolute -top-24 -right-20 w-[680px] h-[680px] rounded-full blur-3xl opacity=15"
-            style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.18), rgba(255,255,255,0) 70%)" }} />
-          <div className="absolute bottom-[-180px] left-[-120px] w-[560px] h-[560px] rounded-full blur-3xl opacity=10"
-            style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.16), rgba(255,255,255,0) 72%)" }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full blur-3xl opacity=10"
-            style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.12), rgba(255,255,255,0) 70%)" }} />
-        </div>
+          <style>{`
+            .b44-modal {
+              backdrop-filter: blur(10px);
+              background: #ffffff !important;
+              color: #0b1220 !important;
+              border: 1px solid #e2e8f0 !important;
+              box-shadow: 0 12px 40px rgba(2,6,23,0.12);
+            }
+            .b44-modal .bg-white\\/10 { background-color: #ffffff !important; }
+            .b44-modal .border-white\\/20 { border-color: #e2e8f0 !important; }
+            .b44-modal .text-white { color: #0b1220 !important; }
+            .b44-modal input, .b44-modal textarea, .b44-modal select {
+              background-color: #ffffff !important; color: #0b1220 !important; border-color: #e2e8f0 !important;
+            }
+            .b44-modal .TabsList, .b44-modal [role="tablist"] {
+              background-color: #f8fafc !important;
+            }
+          `}</style>
 
-        <div className="flex flex-col relative z-10 h-full">
+          <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+            <div className="absolute -top-24 -right-20 w-[680px] h-[680px] rounded-full blur-3xl opacity=15"
+              style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.18), rgba(255,255,255,0) 70%)" }} />
+            <div className="absolute bottom-[-180px] left-[-120px] w-[560px] h-[560px] rounded-full blur-3xl opacity=10"
+              style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.16), rgba(255,255,255,0) 72%)" }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full blur-3xl opacity=10"
+              style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.12), rgba(255,255,255,0) 70%)" }} />
+          </div>
 
-          {/* Always-visible floating publish button */}
-          <FloatingPublishButton
-            isPublishing={isPublishing}
-            isFreeTrial={isFreeTrial}
-            showPublishOptions={showPublishOptions}
-            onDownloadTxt={handleDownloadTxt}
-            onPublishToGoogleDocs={handlePublishGoogleDocs}
-            onPublishToShopify={handlePublishToShopify}
-            onOpenPublishOptions={() => setShowCMSModal(true)}
-            isSavingAuto={isSavingAuto}
-            lastSaved={lastSaved}
-          />
+          <div className="flex flex-col relative z-10 h-full">
 
-          {/* EditorToolbar removed from here */}
+            {/* Always-visible floating publish button */}
+            <FloatingPublishButton
+              isPublishing={isPublishing}
+              isFreeTrial={isFreeTrial}
+              showPublishOptions={showPublishOptions}
+              onDownloadTxt={handleDownloadTxt}
+              onPublishToGoogleDocs={handlePublishGoogleDocs}
+              onPublishToShopify={handlePublishToShopify}
+              onOpenPublishOptions={() => setShowCMSModal(true)}
+              isSavingAuto={isSaving && hasUnsavedChanges} // isSaving from hook combined with hasUnsavedChanges
+              lastSaved={lastSaved}
+            />
 
-          <div className="flex-1 flex flex-col overflow-auto" key={`${currentWebhook?.id || 'nw'}-${currentPost?.id || 'np'}`}>
-            <div className="border-b flex flex-col" style={{ borderColor: "var(--border)" }}> {/* Change 2: Removed flex-1 */}
-              <div className="bg-slate-50 pt-3 pb-0 flex flex-col"> {/* Change 3: Removed flex-1 */}
-                <div className="mt-3 w-full px-6"> {/* CSS CHANGE: Full width title container instead of centered max-w-5xl */}
-                  <div className="relative">
-                    <textarea
-                      placeholder="Enter your blog post title..."
-                      value={title}
-                      onChange={handleTitleChange}
-                      onInput={(e) => {
-                        e.target.style.height = 'auto';
-                        e.target.style.height = e.target.scrollHeight + 'px';
-                      }}
-                      className="b44-title-input w-full text-[1.6rem] md:text-[1.95rem] font-bold py-2 leading-tight bg-white text-slate-900 placeholder:text-slate-600 border border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-300 pr-12 resize-none overflow-hidden"
-                      rows={1}
-                      style={{ minHeight: '56px', height: 'auto' }}
-                    />
-                    {isAiTitleRewriteEnabled && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:bg-slate-100 hover:text-indigo-600"
-                        onClick={handleRewriteTitle}
-                        disabled={isRewritingTitle || !title}
-                        title="Rewrite title with AI"
-                      >
-                        {isRewritingTitle ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Wand2 className="w-5 h-5" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="relative mt-3 h-[70vh] w-full max-w-5xl mx-auto rounded-xl overflow-hidden" style={{ backgroundColor: "var(--hover)", border: "1px solid var(--border)" }}>
-                  <div className="h-full bg-white text-slate-900 flex flex-col">
-                    {selectedMedia && (
-                      <div className="bg-slate-50 text-slate-950 p-2 text-xs flex-shrink-0 flex items-center gap-3">
-                        {selectedMedia.type === 'image' || selectedMedia.type === 'infographic' || selectedMedia.type === 'imagineer-placeholder' ? (
-                          <>
-                            <span className="opacity-70 whitespace-nowrap">Image width</span>
-                            <div className="bg-slate-50 flex items-center gap-3 flex-1">
-                              <Slider
-                                value={[selectedMedia.width ?? 100]}
-                                min={10}
-                                max={100}
-                                step={1}
-                                onValueChange={(val) => applyPreviewWidth(val[0])}
-                                className="bg-slate-50 text-base capitalize relative flex w-full touch-none select-none items-center flex-1"
-                              />
-                              <span className="w-12 text-right tabular-nums">{selectedMedia.width ?? 100}%</span>
-                            </div>
-                            <div className="h-4 w-px" style={{ backgroundColor: "var(--border)" }} />
-                          </>
-                        ) : (
-                          <div className="flex-1" />
-                        )}
-
-                        <button
-                          onClick={handleDeleteSelected}
-                          className="bg-violet-950 text-white p-1.5 rounded hover:bg-red-700"
-                          title="Delete selected block"
+            <div className="flex-1 flex flex-col overflow-auto" key={`${currentWebhook?.id || 'nw'}-${currentPost?.id || 'np'}`}>
+              <div className="border-b flex flex-col" style={{ borderColor: "var(--border)" }}>
+                <div className="bg-slate-50 pt-3 pb-0 flex flex-col">
+                  <div className="mt-3 w-full px-6">
+                    <div className="relative">
+                      <Input
+                        placeholder="Enter your blog post title..."
+                        value={title}
+                        onChange={(e) => handleTitleChangeFromHook(e.target.value)} // Use hook's title handler
+                        className="b44-title-input w-full text-[1.6rem] md:text-[1.95rem] font-bold py-2 leading-tight bg-white text-slate-900 placeholder:text-slate-600 border border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-300 pr-12 resize-none overflow-hidden"
+                      />
+                      {isAiTitleRewriteEnabled && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:bg-slate-100 hover:text-indigo-600"
+                          onClick={handleRewriteTitle}
+                          disabled={isRewritingTitle || !title}
+                          title="Rewrite title with AI"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                    <div className="h-full w-full p-4">
-                      <LiveHtmlPreview
-                        html={content}
-                        onImageSelect={setSelectedMedia}
-                        onHtmlChange={handlePreviewHtmlChange}
-                        onSelectionChange={handlePreviewSelectionChange}
-                        onPreviewClick={closeAllDropdowns}
-                        onDoubleClickSelected={handleIframeDoubleClick}
-                        onContextMenuSelected={handleIframeContextMenu}
-                        userCssUsername={getUsernameForContent()} />
-
+                          {isRewritingTitle ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Wand2 className="w-5 h-5" />
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
+
+                  <div className="relative mt-3 h-[70vh] w-full max-w-5xl mx-auto rounded-xl overflow-hidden" style={{ backgroundColor: "var(--hover)", border: "1px solid var(--border)" }}>
+                    <div className="h-full bg-white text-slate-900 flex flex-col">
+                      {selectedMedia && (
+                        <div className="bg-slate-50 text-slate-950 p-2 text-xs flex-shrink-0 flex items-center gap-3">
+                          {selectedMedia.type === 'image' || selectedMedia.type === 'infographic' || selectedMedia.type === 'imagineer-placeholder' ? (
+                            <>
+                              <span className="opacity-70 whitespace-nowrap">Image width</span>
+                              <div className="bg-slate-50 flex items-center gap-3 flex-1">
+                                <Slider
+                                  value={[selectedMedia.width ?? 100]}
+                                  min={10}
+                                  max={100}
+                                  step={1}
+                                  onValueChange={(val) => applyPreviewWidth(val[0])}
+                                  className="bg-slate-50 text-base capitalize relative flex w-full touch-none select-none items-center flex-1"
+                                />
+                                <span className="w-12 text-right tabular-nums">{selectedMedia.width ?? 100}%</span>
+                              </div>
+                              <div className="h-4 w-px" style={{ backgroundColor: "var(--border)" }} />
+                            </>
+                          ) : (
+                            <div className="flex-1" />
+                          )}
+
+                          <button
+                            onClick={handleDeleteSelected}
+                            className="bg-violet-950 text-white p-1.5 rounded hover:bg-red-700"
+                            title="Delete selected block"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                      <div className="h-full w-full p-4">
+                        <LiveHtmlPreview
+                          html={content}
+                          onImageSelect={setSelectedMedia}
+                          onHtmlChange={handlePreviewHtmlChange}
+                          onSelectionChange={handlePreviewSelectionChange}
+                          onPreviewClick={closeAllDropdowns}
+                          onDoubleClickSelected={handleIframeDoubleClick}
+                          onContextMenuSelected={handleIframeContextMenu}
+                          userCssUsername={getUsernameForContent()} />
+
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
-
               </div>
-            </div>
 
-            {askAIBar.visible &&
-              <AskAIFloatingBar
-                x={askAIBar.x}
-                y={askAIBar.y}
-                onAskAI={() => openAskAIOptions(askAIBar.x, askAIBar.y)}
-                onEdit={openInlineEditor}
-                onFlash={() => { // NEW PROP for Flash button
-                  setShowFlashModal(true);
-                  setAskAIBar((s) => ({ ...s, visible: false })); // Close floating bar after click
-                }}
-                onClose={() => setAskAIBar((s) => ({ ...s, visible: false }))} />
-            }
+              {askAIBar.visible &&
+                <AskAIFloatingBar
+                  x={askAIBar.x}
+                  y={askAIBar.y}
+                  onAskAI={() => openAskAIOptions(askAIBar.x, askAIBar.y)}
+                  onEdit={openInlineEditor}
+                  onFlash={() => { // NEW PROP for Flash button
+                    setShowFlashModal(true);
+                    setAskAIBar((s) => ({ ...s, visible: false })); // Close floating bar after click
+                  }}
+                  onClose={() => setAskAIBar((s) => ({ ...s, visible: false }))} />
+              }
 
-            {inlineToolbar.visible &&
-              <InlineFormatToolbar
-                x={inlineToolbar.x}
-                y={inlineToolbar.y}
-                onClose={() => setInlineToolbar({ visible: false, x: null, y: null })} />
+              {inlineToolbar.visible &&
+                <InlineFormatToolbar
+                  x={inlineToolbar.x}
+                  y={inlineToolbar.y}
+                  onClose={() => setInlineToolbar({ visible: false, x: null, y: null })} />
 
-            }
+              }
 
-            {quickMenu.visible &&
-              <AskAIQuickMenu
-                x={quickMenu.x}
-                y={quickMenu.y}
-                onPick={handleQuickPick}
-                onClose={() => setQuickMenu({ visible: false, x: null, y: null })} />
+              {quickMenu.visible &&
+                <AskAIQuickMenu
+                  x={quickMenu.x}
+                  y={quickMenu.y}
+                  onPick={handleQuickPick}
+                  onClose={() => setQuickMenu({ visible: false, x: null, y: null })} />
 
-            }
+              }
 
-            <TextActionsModal
-              isOpen={isActionsModalOpen}
-              onClose={() => setIsActionsModal(false)}
-              selectedText={textForAction}
-              onActionSelect={handleActionSelect} />
-
-
-            {/* InternalLinker as a modal controlled by state - remains for manual opening */}
-            {showInternalLinker && (
-              <InternalLinkerButton
-                isOpen={showInternalLinker}
-                onClose={() => setShowInternalLinker(false)}
-                html={content}
-                userName={currentUsername}
-                onApply={(updatedHtml) => {
-                  skipNextPreviewPushRef.current = true;
-                  setContent(updatedHtml);
-                  sendToPreview({ type: "set-html", html: updatedHtml });
-                  setShowInternalLinker(false); // Close modal after apply
-                  triggerAutoSave();
-                }}
-                disabled={isSaving || isPublishing}
-              />
-            )}
-
-            {/* Hidden buttons that can be triggered programmatically */}
-            <div style={{ display: 'none' }}>
-              <InternalLinkerButton
-                ref={internalLinkerRef}
-                html={content}
-                userName={currentUsername}
-                onApply={handleApplyInternalLinks} // This handler also sets isAutoLinking(false)
-              />
-              <AutoScanButton
-                ref={autoScanButtonRef}
-                html={content}
-                userName={currentUsername}
-                onApply={handleApplyAutoScan} // This handler also sets isAutoScanning(false)
-                disabled={isSaving || isPublishing}
-              />
-              <LinksAndReferencesButton
-                ref={referencesButtonRef}
-                html={content}
-                userName={currentUsername}
-                onApply={handleApplyLinksAndReferences}
-                disabled={isSaving || isPublishing}
-              />
-            </div>
-
-            <SEOSettingsModal
-              isOpen={isSEOSettingsOpen}
-              onClose={() => setIsSEOSettingsOpen(false)}
-              postData={currentPost}
-              onSave={handleSEOSave} />
+              <TextActionsModal
+                isOpen={isActionsModalOpen}
+                onClose={() => setIsActionsModal(false)}
+                selectedText={textForAction}
+                onActionSelect={handleActionSelect} />
 
 
-            <AIRewriterModal
-              isOpen={showAIModal}
-              onClose={() => setShowAIModal(false)}
-              selectedText={textForAction}
-              onRewrite={handleContentUpdate} />
+              {/* InternalLinker as a modal controlled by state - remains for manual opening */}
+              {showInternalLinker && (
+                <InternalLinkerButton
+                  isOpen={showInternalLinker}
+                  onClose={() => setShowInternalLinker(false)}
+                  html={content}
+                  userName={currentUsername}
+                  onApply={(updatedHtml) => {
+                    skipNextPreviewPushRef.current = true;
+                    handleContentChange(updatedHtml); // Use hook's content handler
+                    sendToPreview({ type: "set-html", html: updatedHtml });
+                    setShowInternalLinker(false); // Close modal after apply
+                    saveContent(); // Trigger an immediate save
+                  }}
+                  disabled={isSaving || isPublishing}
+                />
+              )}
 
-            <HTMLCleanupModal
-              isOpen={showHTMLCleanup}
-              onClose={() => setShowHTMLCleanup(false)}
-              currentContent={content}
-              onContentUpdate={handleContentUpdate} />
+              {/* Hidden buttons that can be triggered programmatically */}
+              <div style={{ display: 'none' }}>
+                <InternalLinkerButton
+                  ref={internalLinkerRef}
+                  html={content}
+                  userName={currentUsername}
+                  onApply={handleApplyInternalLinks} // This handler also sets isAutoLinking(false)
+                />
+                <AutoScanButton
+                  ref={autoScanButtonRef}
+                  html={content}
+                  userName={currentUsername}
+                  onApply={handleApplyAutoScan} // This handler also sets isAutoScanning(false)
+                  disabled={isSaving || isPublishing}
+                />
+                <LinksAndReferencesButton
+                  ref={referencesButtonRef}
+                  html={content}
+                  userName={currentUsername}
+                  onApply={handleApplyLinksAndReferences}
+                  disabled={isSaving || isPublishing}
+                />
+              </div>
 
-            <LinkSelector
-              isOpen={showLinkSelector}
-              onClose={() => setShowLinkSelector(false)}
-              onInsert={handleLinkInsert} />
+              <SEOSettingsModal
+                isOpen={isSEOSettingsOpen}
+                onClose={() => setIsSEOSettingsOpen(false)}
+                postData={currentPost}
+                onSave={handleSEOSave} />
 
 
-            {showImageLibrary &&
-              <ImageLibraryModal
-                isOpen={showImageLibrary}
-                onClose={() => setShowImageLibrary(false)}
-                onInsert={handleImageInsertFromLibrary}
-                usernameFilter={imageLibraryGenerateOnly ? (currentPost?.user_name || currentWebhook?.user_name) : undefined}
-                generateOnly={imageLibraryGenerateOnly}
-                defaultProvider={imageLibraryDefaultProvider}
+              <AIRewriterModal
+                isOpen={showAIModal}
+                onClose={() => setShowAIModal(false)}
+                selectedText={textForAction}
+                onRewrite={handleContentUpdate} />
+
+              <HTMLCleanupModal
+                isOpen={showHTMLCleanup}
+                onClose={() => setShowHTMLCleanup(false)}
+                currentContent={content}
+                onContentUpdate={handleContentUpdate} />
+
+              <LinkSelector
+                isOpen={showLinkSelector}
+                onClose={() => setShowLinkSelector(false)}
+                onInsert={handleLinkInsert} />
+
+
+              {showImageLibrary &&
+                <ImageLibraryModal
+                  isOpen={showImageLibrary}
+                  onClose={() => setShowImageLibrary(false)}
+                  onInsert={handleImageInsertFromLibrary}
+                  usernameFilter={imageLibraryGenerateOnly ? (currentPost?.user_name || currentWebhook?.user_name) : undefined}
+                  generateOnly={imageLibraryGenerateOnly}
+                  defaultProvider={imageLibraryDefaultProvider}
+                  onQueueJob={handleQueueJob} />
+
+              }
+
+
+              <PromotedProductSelector
+                isOpen={showProductSelector}
+                onClose={() => setShowProductSelector(false)}
+                onInsert={insertContentAtPoint} />
+
+              <ProductFromUrlModal
+                isOpen={showProductFromUrl}
+                onClose={() => setShowProductFromUrl(false)}
+                onInsert={insertContentAtPoint} />
+
+              <AIContentDetectionModal
+                isOpen={showAIDetection}
+                onClose={() => setShowAIDetection(false)}
+                currentContent={textForAction || content} />
+
+              <HumanizeTextModal
+                isOpen={showHumanizeModal}
+                onClose={() => setShowHumanizeModal(false)}
+                selectedText={textForAction}
+                onRewrite={handleContentUpdate} />
+
+              <CalloutGeneratorModal
+                isOpen={showCalloutGenerator}
+                onClose={() => setShowCalloutGenerator(false)}
+                selectedText={textForAction}
+                onInsert={insertContentAtPoint}
+                type="callout" />
+
+              <CalloutGeneratorModal
+                isOpen={showFactGenerator}
+                onClose={() => setShowFactGenerator(false)}
+                selectedText={textForAction}
+                onInsert={insertContentAtPoint}
+                type="fact" />
+
+              <SitemapLinkerModal
+                isOpen={showSitemapLinker}
+                onClose={() => setShowSitemapLinker(false)}
+                onLinkInsert={handleLinkInsert} />
+
+              <TldrGeneratorModal
+                isOpen={showTldrGenerator}
+                onClose={() => setShowTldrGenerator(false)}
+                selectedText={isTextSelected ? textForAction : content}
+                onInsert={insertContentAtPoint} />
+
+              <CtaSelector
+                isOpen={showCtaSelector}
+                onClose={() => setShowCtaSelector(false)}
+                onInsert={insertContentAtPoint}
+                pageHtml={content}
+                pageTitle={title}
+                preferredUsername={currentUsername} />
+
+
+              <EmailCaptureSelector
+                isOpen={showEmailCaptureSelector}
+                onClose={() => setShowEmailCaptureSelector(false)}
+                onInsert={insertContentAtPoint} />
+
+              <VideoGeneratorModal
+                isOpen={showVideoGenerator}
+                onClose={() => setShowVideoGenerator(false)}
+                onInsert={insertContentAtPoint}
+                seedPrompt={textForAction}
                 onQueueJob={handleQueueJob} />
 
-            }
+
+              <VideoLibraryModal
+                isOpen={showVideoLibrary}
+                onClose={() => setShowVideoLibrary(false)}
+                onInsert={insertContentAtPoint} />
+
+              <MediaLibraryModal
+                  isOpen={showMediaLibrary}
+                  onClose={() => {
+                    setShowMediaLibrary(false);
+                    setMediaLibraryInitialTab(undefined);
+                  }}
+                  onInsert={handleMediaInsert}
+                  initialTab={mediaLibraryInitialTab}
+              />
 
 
-            <PromotedProductSelector
-              isOpen={showProductSelector}
-              onClose={() => setShowProductSelector(false)}
-              onInsert={insertContentAtPoint} />
-
-            <ProductFromUrlModal
-              isOpen={showProductFromUrl}
-              onClose={() => setShowProductFromUrl(false)}
-              onInsert={insertContentAtPoint} />
-
-            <AIContentDetectionModal
-              isOpen={showAIDetection}
-              onClose={() => setShowAIDetection(false)}
-              currentContent={textForAction || content} />
-
-            <HumanizeTextModal
-              isOpen={showHumanizeModal}
-              onClose={() => setShowHumanizeModal(false)}
-              selectedText={textForAction}
-              onRewrite={handleContentUpdate} />
-
-            <CalloutGeneratorModal
-              isOpen={showCalloutGenerator}
-              onClose={() => setShowCalloutGenerator(false)}
-              selectedText={textForAction}
-              onInsert={insertContentAtPoint}
-              type="callout" />
-
-            <CalloutGeneratorModal
-              isOpen={showFactGenerator}
-              onClose={() => setShowFactGenerator(false)}
-              selectedText={textForAction}
-              onInsert={insertContentAtPoint}
-              type="fact" />
-
-            <SitemapLinkerModal
-              isOpen={showSitemapLinker}
-              onClose={() => setShowSitemapLinker(false)}
-              onLinkInsert={handleLinkInsert} />
-
-            <TldrGeneratorModal
-              isOpen={showTldrGenerator}
-              onClose={() => setShowTldrGenerator(false)}
-              selectedText={isTextSelected ? textForAction : content}
-              onInsert={insertContentAtPoint} />
-
-            <CtaSelector
-              isOpen={showCtaSelector}
-              onClose={() => setShowCtaSelector(false)}
-              onInsert={insertContentAtPoint}
-              pageHtml={content}
-              pageTitle={title}
-              preferredUsername={currentUsername} />
+              <ContentScheduler
+                post={currentPost}
+                open={showScheduler}
+                onClose={() => setShowScheduler(false)} />
 
 
-            <EmailCaptureSelector
-              isOpen={showEmailCaptureSelector}
-              onClose={() => setShowEmailCaptureSelector(false)}
-              onInsert={insertContentAtPoint} />
-
-            <VideoGeneratorModal
-              isOpen={showVideoGenerator}
-              onClose={() => setShowVideoGenerator(false)}
-              onInsert={insertContentAtPoint}
-              seedPrompt={textForAction}
-              onQueueJob={handleQueueJob} />
+              <KeyboardShortcuts
+                isOpen={showCheatsheet}
+                onClose={() => setShowCheatsheet(false)}
+                shortcuts={shortcuts}
+                onUpdateShortcut={updateShortcut}
+                onReset={resetShortcuts} />
 
 
-            <VideoLibraryModal
-              isOpen={showVideoLibrary}
-              onClose={() => setShowVideoLibrary(false)}
-              onInsert={insertContentAtPoint} />
+              <TestimonialLibraryModal
+                isOpen={showTestimonialLibrary}
+                onClose={() => setShowTestimonialLibrary(false)}
+                onInsert={insertContentAtPoint} />
 
-            <MediaLibraryModal
-                isOpen={showMediaLibrary}
-                onClose={() => {
-                  setShowMediaLibrary(false);
-                  setMediaLibraryInitialTab(undefined);
+
+              <VariantLibraryModal
+                isOpen={showVariantLibrary}
+                onClose={() => setShowVariantLibrary(false)}
+                onInsert={insertContentAtPoint} />
+
+
+              <PublishToCMSModal
+                isOpen={showCMSModal}
+                onClose={handleCMSModalClose}
+                title={title}
+                html={content} />
+              <ShopifyPublishModal
+                isOpen={showShopifyModal}
+                onClose={() => setShowShopifyModal(false)}
+                username={currentPost?.user_name || currentWebhook?.user_name || null}
+                processingId={currentPost?.processing_id || currentWebhook?.processing_id || null}
+                title={title}
+                html={content}
+                defaultCredentialId={shopifyPreset.current.credentialId}
+                excerpt={excerptForShopify}
+                slug={derivedSlug}
+                tags={derivedTags}
+                metaDescription={derivedMetaDescription}
+                featuredImageUrl={currentPost?.featured_image || extractFirstImageUrl(content)} />
+
+
+
+              <AudioFromTextModal
+                isOpen={showAudioModal}
+                onClose={() => setShowAudioModal(false)}
+                selectedText={textForAction}
+                onInsert={insertContentAtPoint}
+                onQueueJob={handleQueueAudioJob} />
+
+
+              <EditorAmazonImportModal
+                isOpen={showAmazonImport}
+                onClose={() => setShowAmazonImport(false)}
+                onInsert={insertContentAtPoint}
+                currentUsername={currentPost && currentPost.user_name || currentWebhook && currentWebhook.user_name || ""} />
+
+
+              <LocalizeModal
+                isOpen={showLocalize}
+                onClose={() => setShowLocalize(false)}
+                originalHtml={content}
+                onApplyLocalized={(newHtml) => {
+                  const cleaned = sanitizeLocalizedHtml(newHtml);
+                  handleContentChange(cleaned); // Use hook's content handler
+                  sendToPreview({ type: "set-html", html: cleaned });
+                  setShowLocalize(false);
+                  saveContent(); // Trigger an immediate save
+                }} />
+
+
+              <BrandItModal
+                isOpen={showBrandIt}
+                onClose={() => setShowBrandIt(false)}
+                htmlContent={content}
+                userName={currentUsername || ""}
+                onApply={handleApplyBranded} />
+
+
+              <AffilifyModal
+                isOpen={showAffilify}
+                onClose={() => setShowAffilify(false)}
+                originalHtml={content}
+                selectedText={isTextSelected ? textForAction : ""}
+                onApply={(affiliatedHtml) => {
+                  const cleaned = sanitizeLocalizedHtml ? sanitizeLocalizedHtml(affiliatedHtml) : String(affiliatedHtml || "");
+                  skipNextPreviewPushRef.current = true;
+                  handleContentChange(cleaned); // Use hook's content handler
+                  sendToPreview({ type: "set-html", html: cleaned });
+                  saveContent(); // Trigger an immediate save
                 }}
-                onInsert={handleMediaInsert}
-                initialTab={mediaLibraryInitialTab}
-            />
+                onInsert={insertContentAtPoint} />
 
 
-            <ContentScheduler
-              post={currentPost}
-              open={showScheduler}
-              onClose={() => setShowScheduler(false)} />
+              <RunWorkflowModal
+                isOpen={showWorkflowRunner}
+                onClose={() => setShowWorkflowRunner(false)}
+                currentHtml={content}
+                userName={currentUsername} // Added for AutoLink logic
+                onApply={(newHtml) => {
+                  const cleaned = typeof sanitizeLocalizedHtml === "function" ? sanitizeLocalizedHtml(newHtml) : String(newHtml || "");
+                  skipNextPreviewPushRef.current = true;
+                  handleContentChange(cleaned); // Use hook's content handler
+                  sendToPreview({ type: "set-html", html: cleaned });
+                  saveContent(); // Trigger an immediate save
+                }} />
+              
+              {/* NEW: Flash Workflow Modal */}
+              <RunWorkflowModal
+                isOpen={showFlashModal}
+                onClose={() => setShowFlashModal(false)}
+                currentHtml={content}
+                userName={currentUsername} // Replicate working AutoLink logic for the internal_linker agent step
+                onApply={handleApplyFlashResult}
+                isFlashWorkflow={true} // Optional prop to distinguish this invocation
+              />
 
+              <PasteContentModal
+                isOpen={showPasteModal}
+                onClose={() => { setShowPasteModal(false); setAutoReadPaste(false); }}
+                allowedUsernames={allowedUsernames}
+                defaultUsername={defaultBrand}
+                onSubmit={handleCreateFromPaste}
+                autoReadClipboard={autoReadPaste}
+                initialRaw="" />
 
-            <KeyboardShortcuts
-              isOpen={showCheatsheet}
-              onClose={() => setShowCheatsheet(false)}
-              shortcuts={shortcuts}
-              onUpdateShortcut={updateShortcut}
-              onReset={resetShortcuts} />
+              <TextEditorModal
+                isOpen={showTextEditor}
+                onClose={() => setShowTextEditor(false)}
+                initialText={textForAction || ""}
+                onApply={handleApplyTextEdit} />
 
+              <FaqGeneratorModal
+                isOpen={showFaqGenerator}
+                onClose={() => setShowFaqGenerator(false)}
+                selectedText={isTextSelected ? textForAction : content}
+                onInsert={insertContentAtPoint} />
 
-            <TestimonialLibraryModal
-              isOpen={showTestimonialLibrary}
-              onClose={() => setShowTestimonialLibrary(false)}
-              onInsert={insertContentAtPoint} />
+              <InfographicsModal
+                isOpen={showInfographics}
+                onClose={() => setShowInfographics(false)}
+                selectedText={textForAction}
+                articleTitle={title}
+                onGenerate={handleGenerateInfographic}
+              />
 
+              <ImagineerModal
+                isOpen={showImagineer}
+                onClose={() => setShowImagineer(false)}
+                initialPrompt={textForAction}
+                onGenerate={handleImagineerGenerate}
+              />
 
-            <VariantLibraryModal
-              isOpen={showVariantLibrary}
-              onClose={() => setShowVariantLibrary(false)}
-              onInsert={insertContentAtPoint} />
-
-
-            <PublishToCMSModal
-              isOpen={showCMSModal}
-              onClose={handleCMSModalClose}
-              title={title}
-              html={content} />
-            <ShopifyPublishModal
-              isOpen={showShopifyModal}
-              onClose={() => setShowShopifyModal(false)}
-              username={currentPost?.user_name || currentWebhook?.user_name || null}
-              processingId={currentPost?.processing_id || currentWebhook?.processing_id || null}
-              title={title}
-              html={content}
-              defaultCredentialId={shopifyPreset.current.credentialId}
-              excerpt={excerptForShopify}
-              slug={derivedSlug}
-              tags={derivedTags}
-              metaDescription={derivedMetaDescription}
-              featuredImageUrl={currentPost?.featured_image || extractFirstImageUrl(content)} />
-
-
-
-            <AudioFromTextModal
-              isOpen={showAudioModal}
-              onClose={() => setShowAudioModal(false)}
-              selectedText={textForAction}
-              onInsert={insertContentAtPoint}
-              onQueueJob={handleQueueAudioJob} />
-
-
-            <EditorAmazonImportModal
-              isOpen={showAmazonImport}
-              onClose={() => setShowAmazonImport(false)}
-              onInsert={insertContentAtPoint}
-              currentUsername={currentPost && currentPost.user_name || currentWebhook && currentWebhook.user_name || ""} />
-
-
-            <LocalizeModal
-              isOpen={showLocalize}
-              onClose={() => setShowLocalize(false)}
-              originalHtml={content}
-              onApplyLocalized={(newHtml) => {
-                const cleaned = sanitizeLocalizedHtml(newHtml);
-                setContent(cleaned);
-                sendToPreview({ type: "set-html", html: cleaned });
-                setShowLocalize(false);
-                triggerAutoSave();
-              }} />
-
-
-            <BrandItModal
-              isOpen={showBrandIt}
-              onClose={() => setShowBrandIt(false)}
-              htmlContent={content}
-              userName={currentUsername || ""}
-              onApply={handleApplyBranded} />
-
-
-            <AffilifyModal
-              isOpen={showAffilify}
-              onClose={() => setShowAffilify(false)}
-              originalHtml={content}
-              selectedText={isTextSelected ? textForAction : ""}
-              onApply={(affiliatedHtml) => {
-                const cleaned = sanitizeLocalizedHtml ? sanitizeLocalizedHtml(affiliatedHtml) : String(affiliatedHtml || "");
-                skipNextPreviewPushRef.current = true;
-                setContent(cleaned);
-                sendToPreview({ type: "set-html", html: cleaned });
-                triggerAutoSave();
-              }}
-              onInsert={insertContentAtPoint} />
-
-
-            <RunWorkflowModal
-              isOpen={showWorkflowRunner}
-              onClose={() => setShowWorkflowRunner(false)}
-              currentHtml={content}
-              userName={currentUsername} // Added for AutoLink logic
-              onApply={(newHtml) => {
-                const cleaned = typeof sanitizeLocalizedHtml === "function" ? sanitizeLocalizedHtml(newHtml) : String(newHtml || "");
-                skipNextPreviewPushRef.current = true;
-                setContent(cleaned);
-                sendToPreview({ type: "set-html", html: cleaned });
-                triggerAutoSave();
-              }} />
-            
-            {/* NEW: Flash Workflow Modal */}
-            <RunWorkflowModal
-              isOpen={showFlashModal}
-              onClose={() => setShowFlashModal(false)}
-              currentHtml={content}
-              userName={currentUsername} // Replicate working AutoLink logic for the internal_linker agent step
-              onApply={handleApplyFlashResult}
-              isFlashWorkflow={true} // Optional prop to distinguish this invocation
-            />
-
-            <PasteContentModal
-              isOpen={showPasteModal}
-              onClose={() => { setShowPasteModal(false); setAutoReadPaste(false); }}
-              allowedUsernames={allowedUsernames}
-              defaultUsername={defaultBrand}
-              onSubmit={handleCreateFromPaste}
-              autoReadClipboard={autoReadPaste}
-              initialRaw="" />
-
-            <TextEditorModal
-              isOpen={showTextEditor}
-              onClose={() => setShowTextEditor(false)}
-              initialText={textForAction || ""}
-              onApply={handleApplyTextEdit} />
-
-            <FaqGeneratorModal
-              isOpen={showFaqGenerator}
-              onClose={() => setShowFaqGenerator(false)}
-              selectedText={isTextSelected ? textForAction : content}
-              onInsert={insertContentAtPoint} />
-
-            <InfographicsModal
-              isOpen={showInfographics}
-              onClose={() => setShowInfographics(false)}
-              selectedText={textForAction}
-              articleTitle={title}
-              onGenerate={handleGenerateInfographic}
-            />
-
-            <ImagineerModal
-              isOpen={showImagineer}
-              onClose={() => setShowImagineer(false)}
-              initialPrompt={textForAction}
-              onGenerate={handleImagineerGenerate}
-            />
-
-            <VoiceDictationModal
-              isOpen={showVoiceModal}
-              onClose={() => setShowVoiceModal(false)}
-              onInsert={handleVoiceInsert}
-            />
+              <VoiceDictationModal
+                isOpen={showVoiceModal}
+                onClose={() => setShowVoiceModal(false)}
+                onInsert={handleVoiceInsert}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* NEW: Magic Orb Loader for AutoLink/AutoScan */}
-        {(isAutoLinking || isAutoScanning) && <MagicOrbLoader />}
-      </div>
+          {/* NEW: Magic Orb Loader for AutoLink/AutoScan */}
+          {(isAutoLinking || isAutoScanning) && <MagicOrbLoader />}
+        </div>
+      </AuthGate>
     </EditorErrorBoundary>
   );
 }
