@@ -159,6 +159,10 @@ export default function Editor() {
   const postId = urlParams.get("post");
   const webhookId = urlParams.get("webhook");
 
+  // ==================== USER STATE (Must be declared before hooks that use it) ====================
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userPlan, setUserPlan] = useState(null);
+
   // ==================== EDITOR CONTENT HOOK ====================
   const {
     post: currentPost, // Renamed 'post' from hook to 'currentPost'
@@ -296,9 +300,7 @@ export default function Editor() {
   });
 
   // ==================== OTHER STATE (Non-content, Non-modal, Non-autosave related) ====================
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userPlan, setUserPlan] = useState(null);
-
+  // currentUser and userPlan moved above
   const [isPublishing, setIsPublishing] = useState(false); // Still needed for explicit publish actions
   const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -1900,7 +1902,11 @@ Current Title: ${title}`;
 
   // Remove loadPostContent and loadWebhookContent and initializeEditor as they are now handled by useEditorContent hook.
 
-  // NEW: Handler for the hidden InternalLinkerButton's onApply
+  // The main useEffect for initializing editor based on URL (previously `initializeEditor`):
+  // This useEffect is no longer needed here as useEditorContent handles the initial loading
+  // based on postId, webhookId props, and local storage.
+
+
   const handleApplyInternalLinks = useCallback((updatedHtml) => {
     skipNextPreviewPushRef.current = true;
     handleContentChange(updatedHtml); // Use hook's content handler
@@ -3836,4 +3842,3 @@ ${truncatedHtml}`;
     </EditorErrorBoundary>
   );
 }
-
