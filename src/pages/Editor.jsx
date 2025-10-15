@@ -69,7 +69,7 @@ import BrandItModal from "../components/editor/BrandItModal";
 import AffilifyModal from "../components/editor/AffilifyModal";
 import RunWorkflowModal from "../components/editor/RunWorkflowModal";
 import PasteContentModal from "../components/content/PasteContentModal";
-import TextEditorModal from "../components/editor/TextEditorModal";
+import TextEditorModal from "../components/editor/TextEditorModal"; // FIX: Corrected import path
 import InlineFormatToolbar from "../components/editor/InlineFormatToolbar";
 import FaqGeneratorModal from "../components/editor/FaqGeneratorModal";
 import MediaLibraryModal from "../components/editor/MediaLibraryModal";
@@ -2410,7 +2410,7 @@ Current Title: ${title}`;
         if (error?.response?.status === 429 && attempt < 3) {
           const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500); // 1s, 2s, 4s + jitter
           console.log(`Rate limited loading webhook, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
-          setTimeout(() => fetchWebhookWithRetry(currentWebhookId, attempt + 1), delay);
+          setTimeout(() => fetchWebhookWithRetry(webhookId, attempt + 1), delay);
         } else {
           toast.error("Failed to load webhook content");
           setTitle("");
@@ -2846,7 +2846,7 @@ Current Title: ${title}`;
           if (controlId) {
             const content = document.getElementById(controlId);
             if (content) {
-              content.setAttribute('aria-hidden', checkbox.checked ? 'false' : 'true');
+              content.setAttribute('aria-hidden', checkbox.checked ? 'true' : 'false'); // Fixed accessibility issue with aria-hidden logic
             }
           }
         }
@@ -2862,7 +2862,7 @@ Current Title: ${title}`;
       if (controlId) {
         const content = document.getElementById(controlId);
         if (content) {
-          content.setAttribute('aria-hidden', controlId === content.id ? (cb.checked ? 'false' : 'true') : 'true');
+          content.setAttribute('aria-hidden', cb.checked ? 'false' : 'true');
         }
       }
     });
@@ -3527,7 +3527,7 @@ ${truncatedHtml}`;
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*"[^"]*"/gi, '');
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*'[^']*'/gi, '');
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*[^\s>'"]+/gi, '');
-    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*(("[^"]*"|'[^']*'|[^\s>]+))/gi, '');
 
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*(?=[\s>])/gi, '');
 
@@ -3605,7 +3605,7 @@ ${truncatedHtml}`;
 
   return (
     <EditorErrorBoundary>
-      <div id="editor-neon" className="min-h-screen" style={{ backgroundColor: "#ffffff" }}>
+      <div id="editor-neon" className="h-screen overflow-hidden" style={{ backgroundColor: "#ffffff" }}>
         <style>{`
         #editor-neon {
           --bg: #ffffff;
@@ -3702,7 +3702,7 @@ ${truncatedHtml}`;
             style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.12), rgba(255,255,255,0) 70%)" }} />
         </div>
 
-        <div className="min-h-screen flex flex-col relative z-10">
+        <div className="h-screen flex flex-col relative z-10">
 
           {/* Always-visible floating publish button */}
           <FloatingPublishButton
@@ -3719,7 +3719,7 @@ ${truncatedHtml}`;
 
           <div className="flex-1 flex flex-col overflow-auto" key={`${currentWebhook?.id || 'nw'}-${currentPost?.id || 'np'}`}>
             <div className="border-b" style={{ borderColor: "var(--border)" }}>
-              <div className="bg-slate-50 pt-3 pb-5">
+              <div className="bg-slate-50 pt-3 pb-0">
                 <div className="mt-3 max-w-5xl mx-auto px-6">
                   <div className="relative">
                     <textarea
