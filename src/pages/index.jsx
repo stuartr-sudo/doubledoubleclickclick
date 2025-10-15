@@ -146,6 +146,8 @@ import InfographicExamplesAdmin from "./InfographicExamplesAdmin";
 
 import GettingStarted from "./GettingStarted";
 
+import HookTest from "./HookTest";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -295,6 +297,8 @@ const PAGES = {
     InfographicExamplesAdmin: InfographicExamplesAdmin,
     
     GettingStarted: GettingStarted,
+    
+    HookTest: HookTest,
     
 }
 
@@ -468,6 +472,8 @@ function PagesContent() {
                 <Route path="/InfographicExamplesAdmin" element={<InfographicExamplesAdmin />} />
                 
                 <Route path="/GettingStarted" element={<GettingStarted />} />
+                
+                <Route path="/HookTest" element={<HookTest />} />
                 
             </Routes>
         </Layout>

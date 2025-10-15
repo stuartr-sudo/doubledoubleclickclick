@@ -126,8 +126,12 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
   useEffect(() => {
     if (isOpen) {
-      loadCredentialsAndUser();
+      // Add 500ms delay before loading to avoid immediate rate limit on modal open
+      const timer = setTimeout(() => {
+        loadCredentialsAndUser();
+      }, 500);
       loadHelpVideo();
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -139,19 +143,19 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         setHelpVideoUrl(videoSetting.value);
       }
     } catch (error) {
-      console.error("Failed to load help video:", error);
+      // Silent fail - video is optional
     }
   };
 
   const loadCredentialsAndUser = async (attempt = 0) => {
     setLoading(true);
+    
     try {
       const user = await User.me();
       setCurrentUser(user);
       
       const assignedUsernames = Array.isArray(user.assigned_usernames) ? user.assigned_usernames : [];
       
-      // Empty credentials is a valid state for new users
       if (assignedUsernames.length === 0) {
         setCredentials([]);
         setForm(prev => ({ ...prev, user_name: "" }));
@@ -159,34 +163,27 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         return;
       }
 
-      // Try to load credentials - with staggered requests to avoid burst rate limits
-      try {
-        const allCreds = [];
-        for (let i = 0; i < assignedUsernames.length; i++) {
-          // Stagger requests by 300ms to avoid burst rate limits
-          if (i > 0) {
-            await new Promise(res => setTimeout(res, 300));
-          }
-          
-          try {
-            const creds = await IntegrationCredential.filter({ user_name: assignedUsernames[i] }, "-updated_date");
-            if (creds && creds.length > 0) {
-              allCreds.push(...creds);
-            }
-          } catch (credErr) {
-            // Silently skip this username if rate limited or error
-            console.log(`Could not load credentials for ${assignedUsernames[i]}:`, credErr);
-          }
+      // Load credentials with aggressive rate limit protection
+      const allCreds = [];
+      for (let i = 0; i < assignedUsernames.length; i++) {
+        if (i > 0) {
+          await new Promise(res => setTimeout(res, 500)); // 500ms between requests
         }
         
-        setCredentials(allCreds);
-      } catch (credError) {
-        // Silently handle - user just has no credentials yet
-        console.log("No credentials found or error loading them:", credError);
-        setCredentials([]);
+        try {
+          const creds = await IntegrationCredential.filter({ user_name: assignedUsernames[i] }, "-updated_date");
+          if (creds && creds.length > 0) {
+            allCreds.push(...creds);
+          }
+        } catch (credErr) {
+          // Silently skip - absolutely no error handling
+          continue;
+        }
       }
       
-      // Determine target username from URL context
+      setCredentials(allCreds);
+      
+      // Get context for default username
       const urlParams = new URLSearchParams(window.location.search);
       const postId = urlParams.get('post');
       const webhookId = urlParams.get('webhook');
@@ -201,7 +198,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
             targetUsername = posts[0].user_name;
           }
         } catch (e) {
-          console.log("Could not load post context:", e);
+          // Silent
         }
       } else if (webhookId) {
         try {
@@ -211,7 +208,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
             targetUsername = webhooks[0].user_name;
           }
         } catch (e) {
-          console.log("Could not load webhook context:", e);
+          // Silent
         }
       }
       
@@ -219,17 +216,13 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       setLoading(false);
       
     } catch (error) {
-      console.log("Error loading user or credentials:", error);
-      
-      // Only retry on rate limit with longer delays
-      if (error?.response?.status === 429 && attempt < 3) {
-        const delay = Math.pow(2, attempt + 1) * 1000; // 2s, 4s, 8s
-        console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
-        setTimeout(() => loadCredentialsAndUser(attempt + 1), delay);
+      // Only retry once on rate limit with 5 second delay
+      if (error?.response?.status === 429 && attempt === 0) {
+        setTimeout(() => loadCredentialsAndUser(1), 5000);
         return;
       }
       
-      // Silently degrade to empty state - NO error toast
+      // Silently set empty state - NO TOAST, NO CONSOLE LOG
       setCredentials([]);
       setCurrentUser(null);
       setLoading(false);
@@ -298,10 +291,14 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       });
       setShowAddForm(false);
       
+      // Wait 1 second before reloading to avoid rate limit
+      await new Promise(res => setTimeout(res, 1000));
       await loadCredentialsAndUser();
     } catch (error) {
-      console.error("Failed to add credential:", error);
-      toast.error("Failed to add credential");
+      // Only show error for credential creation failures, not rate limits
+      if (error?.response?.status !== 429) {
+        toast.error("Failed to add credential");
+      }
     } finally {
       setLoading(false);
     }
@@ -314,10 +311,12 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     try {
       await IntegrationCredential.delete(id);
       toast.success("Credential deleted");
+      await new Promise(res => setTimeout(res, 1000));
       await loadCredentialsAndUser();
     } catch (error) {
-      console.error("Failed to delete credential:", error);
-      toast.error("Failed to delete credential");
+      if (error?.response?.status !== 429) {
+        toast.error("Failed to delete credential");
+      }
     } finally {
       setLoading(false);
     }
