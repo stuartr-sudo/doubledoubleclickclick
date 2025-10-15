@@ -720,7 +720,7 @@ function LayoutContent({ children, currentPageName }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+    <div className="h-screen flex flex-col overflow-hidden bg-slate-50 text-slate-900">
       <header className="bg-white backdrop-blur-lg border-b border-slate-200 sticky top-0 z-50">
         <AnimatePresence>
           {isUserLoading && 
@@ -919,7 +919,7 @@ function LayoutContent({ children, currentPageName }) {
       {/* Token top-up banner (auto-hides if user has tokens) */}
       <TokenTopUpBanner />
 
-      <main className="relative z-10 flex-1">
+      <main className="relative z-10 flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           {!user && !isUserLoading ?
           <motion.div

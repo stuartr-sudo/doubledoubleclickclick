@@ -3605,7 +3605,7 @@ ${truncatedHtml}`;
 
   return (
     <EditorErrorBoundary>
-      <div id="editor-neon" className="h-screen overflow-hidden" style={{ backgroundColor: "#ffffff" }}>
+      <div id="editor-neon" className="h-full overflow-hidden" style={{ backgroundColor: "#ffffff" }}>
         <style>{`
         #editor-neon {
           --bg: #ffffff;
@@ -3702,7 +3702,7 @@ ${truncatedHtml}`;
             style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.12), rgba(255,255,255,0) 70%)" }} />
         </div>
 
-        <div className="h-screen flex flex-col relative z-10">
+        <div className="h-full flex flex-col relative z-10">
 
           {/* Always-visible floating publish button */}
           <FloatingPublishButton
