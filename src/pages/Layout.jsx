@@ -919,7 +919,8 @@ function LayoutContent({ children, currentPageName }) {
       {/* Token top-up banner (auto-hides if user has tokens) */}
       <TokenTopUpBanner />
 
-      <main className="relative z-10 flex-1">
+      {/* FIXED: Removed `relative z-10` to break the stacking context trapping the AI menu */}
+      <main className="flex-1">
         <AnimatePresence mode="wait">
           {!user && !isUserLoading ?
           <motion.div

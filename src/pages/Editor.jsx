@@ -3605,7 +3605,7 @@ ${truncatedHtml}`;
 
   return (
     <EditorErrorBoundary>
-      <div id="editor-neon" className="h-full overflow-hidden" style={{ backgroundColor: "#ffffff" }}> {/* Change 1: h-screen to h-full */}
+      <div id="editor-neon" className="h-full overflow-hidden" style={{ backgroundColor: "#ffffff" }}>
         <style>{`
         #editor-neon {
           --bg: #ffffff;
@@ -3702,7 +3702,7 @@ ${truncatedHtml}`;
             style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,0.12), rgba(255,255,255,0) 70%)" }} />
         </div>
 
-        <div className="flex flex-col relative z-10 h-full">
+        <div className="flex flex-col h-full">
 
           {/* Always-visible floating publish button */}
           <FloatingPublishButton
@@ -3720,8 +3720,7 @@ ${truncatedHtml}`;
           {/* EditorToolbar removed from here */}
 
           <div className="flex-1 flex flex-col overflow-auto" key={`${currentWebhook?.id || 'nw'}-${currentPost?.id || 'np'}`}>
-            <div className="border-b flex flex-col" style={{ borderColor: "var(--border)" }}> {/* Change 2: Removed flex-1 */}
-              <div className="bg-slate-50 pt-3 pb-0 flex flex-col"> {/* Change 3: Removed flex-1 */}
+            <div className="bg-slate-50 pt-3 pb-0 flex flex-col"> {/* Change 3: Removed flex-1 */}
                 <div className="mt-3 w-full px-6"> {/* CSS CHANGE: Full width title container instead of centered max-w-5xl */}
                   <div className="relative">
                     <textarea
@@ -3754,55 +3753,55 @@ ${truncatedHtml}`;
                     )}
                   </div>
                 </div>
+            </div>
 
-                <div className="relative mt-3 h-[70vh] w-full max-w-5xl mx-auto rounded-xl overflow-hidden" style={{ backgroundColor: "var(--hover)", border: "1px solid var(--border)" }}>
-                  <div className="h-full bg-white text-slate-900 flex flex-col">
-                    {selectedMedia && (
-                      <div className="bg-slate-50 text-slate-950 p-2 text-xs flex-shrink-0 flex items-center gap-3">
-                        {selectedMedia.type === 'image' || selectedMedia.type === 'infographic' || selectedMedia.type === 'imagineer-placeholder' ? (
-                          <>
-                            <span className="opacity-70 whitespace-nowrap">Image width</span>
-                            <div className="bg-slate-50 flex items-center gap-3 flex-1">
-                              <Slider
-                                value={[selectedMedia.width ?? 100]}
-                                min={10}
-                                max={100}
-                                step={1}
-                                onValueChange={(val) => applyPreviewWidth(val[0])}
-                                className="bg-slate-50 text-base capitalize relative flex w-full touch-none select-none items-center flex-1"
-                              />
-                              <span className="w-12 text-right tabular-nums">{selectedMedia.width ?? 100}%</span>
-                            </div>
-                            <div className="h-4 w-px" style={{ backgroundColor: "var(--border)" }} />
-                          </>
-                        ) : (
-                          <div className="flex-1" />
-                        )}
+            <div className="flex-1 mt-4 overflow-hidden flex">
+              <div className="relative h-[70vh] w-full max-w-5xl mx-auto rounded-xl overflow-hidden" style={{ backgroundColor: "var(--hover)", border: "1px solid var(--border)" }}>
+                <div className="h-full bg-white text-slate-900 flex flex-col">
+                  {selectedMedia && (
+                    <div className="bg-slate-50 text-slate-950 p-2 text-xs flex-shrink-0 flex items-center gap-3">
+                      {selectedMedia.type === 'image' || selectedMedia.type === 'infographic' || selectedMedia.type === 'imagineer-placeholder' ? (
+                        <>
+                          <span className="opacity-70 whitespace-nowrap">Image width</span>
+                          <div className="bg-slate-50 flex items-center gap-3 flex-1">
+                            <Slider
+                              value={[selectedMedia.width ?? 100]}
+                              min={10}
+                              max={100}
+                              step={1}
+                              onValueChange={(val) => applyPreviewWidth(val[0])}
+                              className="bg-slate-50 text-base capitalize relative flex w-full touch-none select-none items-center flex-1"
+                            />
+                            <span className="w-12 text-right tabular-nums">{selectedMedia.width ?? 100}%</span>
+                          </div>
+                          <div className="h-4 w-px" style={{ backgroundColor: "var(--border)" }} />
+                        </>
+                      ) : (
+                        <div className="flex-1" />
+                      )}
 
-                        <button
-                          onClick={handleDeleteSelected}
-                          className="bg-violet-950 text-white p-1.5 rounded hover:bg-red-700"
-                          title="Delete selected block"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                    <div className="h-full w-full p-4">
-                      <LiveHtmlPreview
-                        html={content}
-                        onImageSelect={setSelectedMedia}
-                        onHtmlChange={handlePreviewHtmlChange}
-                        onSelectionChange={handlePreviewSelectionChange}
-                        onPreviewClick={closeAllDropdowns}
-                        onDoubleClickSelected={handleIframeDoubleClick}
-                        onContextMenuSelected={handleIframeContextMenu}
-                        userCssUsername={getUsernameForContent()} />
-
+                      <button
+                        onClick={handleDeleteSelected}
+                        className="bg-violet-950 text-white p-1.5 rounded hover:bg-red-700"
+                        title="Delete selected block"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
+                  )}
+                  <div className="h-full w-full p-4">
+                    <LiveHtmlPreview
+                      html={content}
+                      onImageSelect={setSelectedMedia}
+                      onHtmlChange={handlePreviewHtmlChange}
+                      onSelectionChange={handlePreviewSelectionChange}
+                      onPreviewClick={closeAllDropdowns}
+                      onDoubleClickSelected={handleIframeDoubleClick}
+                      onContextMenuSelected={handleIframeContextMenu}
+                      userCssUsername={getUsernameForContent()} />
+
                   </div>
                 </div>
-
               </div>
             </div>
 

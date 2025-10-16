@@ -1,10 +1,23 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Edit3 } from "lucide-react";
 import { captureEmail } from "@/api/functions";
-import { getTikTokOembed } from "@/api/functions"; // NEW IMPORT
+import { getTikTokOembed } from "@/api/functions";
+import { useWorkspace } from "@/components/hooks/useWorkspace";
+import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
-export default function LivePreview({ title, content, selectedFont = 'Inter', previewDevice = 'laptop' }) {
+export default function LivePreview({ content, title, theme, username }) {
+  const { selectedUsername: globalUsername } = useWorkspace();
+  const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
+  const usernameForPreview = useWorkspaceScoping ? globalUsername : username;
+
+  const themeClasses = {
+    light: "bg-white text-slate-800",
+    dark: "bg-slate-900 text-slate-200",
+    "4knines": "bg-white text-slate-800", // Assuming 4knines also has a light theme base
+  };
+
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     const container = document.getElementById('live-preview-content');
@@ -299,65 +312,46 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
     };
   }, [content]); // Rerun when the raw content changes
 
-  // Compute viewport width for device modes
-  const deviceWidth = (() => {
-    if (previewDevice === 'mobile') return 390; // iPhone-ish
-    if (previewDevice === 'tablet') return 768; // iPad portrait
-    if (previewDevice === 'laptop') return 1024; // Laptop content width
-    return 1024;
-  })();
-
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-gradient-to-b from-slate-900/20 to-gray-900/30 backdrop-blur-sm">
+    <div className={`p-4 rounded-lg border border-slate-200 ${themeClasses[theme]}`}>
       <style dangerouslySetInnerHTML={{
         __html: `
-          .preview-viewport {
-            width: ${deviceWidth}px !important;
-            max-width: 100% !important;
-            margin: 0 auto !important;
-          }
-
-          .preview-container *, .preview-container *:before, .preview-container *:after {
+          /* Ensure child elements respect box-sizing */
+          .live-preview-content *, .live-preview-content *:before, .live-preview-content *:after {
              box-sizing: border-box !important;
           }
-          .preview-container {
-            font-family: '${selectedFont}', sans-serif !important;
-            color: rgba(255, 255, 255, 0.92) !important;
+          
+          /* Base content styles, prose handles many of these but explicit !important overrides are kept */
+          .live-preview-content {
             line-height: 1.8 !important;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.2) 0%, rgba(30, 41, 59, 0.1) 100%) !important;
-            border-radius: 16px !important;
-            margin: 20px auto !important;
-            padding: 40px 32px !important;
-            min-height: calc(100vh - 240px) !important;
             overflow-wrap: break-word !important;
-            max-width: 100% !important; /* allow outer viewport to control width */
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1) !important;
+            max-width: 100% !important;
             overflow-x: hidden !important;
           }
           
           @media (max-width: 768px) {
-            .preview-container {
+            .live-preview-content {
               padding: 24px 16px !important;
               margin: 15px auto !important;
             }
           }
           
           /* Normalize typography spacing to mirror editor */
-          .preview-container h1, .preview-container h2, .preview-container h3, .preview-container h4, .preview-container h5, .preview-container h6 {
+          .live-preview-content h1, .live-preview-content h2, .live-preview-content h3, .live-preview-content h4, .live-preview-content h5, .live-preview-content h6 {
             color: white !important; 
             margin: 3rem 0 1.5rem 0 !important; 
             font-weight: 600 !important; 
             line-height: 1.3 !important;
             overflow-wrap: break-word !important;
           }
-          .preview-container h1 { font-size: 2.5rem !important; font-weight: 700 !important; margin-top: 0 !important; }
-          .preview-container h2 { font-size: 2rem !important; }
-          .preview-container h3 { font-size: 1.75rem !important; }
-          .preview-container h4 { font-size: 1.5rem !important; }
-          .preview-container h5 { font-size: 1.25rem !important; }
-          .preview-container h6 { font-size: 1.125rem !important; }
+          .live-preview-content h1 { font-size: 2.5rem !important; font-weight: 700 !important; margin-top: 0 !important; }
+          .live-preview-content h2 { font-size: 2rem !important; }
+          .live-preview-content h3 { font-size: 1.75rem !important; }
+          .live-preview-content h4 { font-size: 1.5rem !important; }
+          .live-preview-content h5 { font-size: 1.25rem !important; }
+          .live-preview-content h6 { font-size: 1.125rem !important; }
           
-          .preview-container p, .preview-container div:not([class*="b44-"]) { 
+          .live-preview-content p, .live-preview-content div:not([class*="b44-"]) { 
             color: rgba(255, 255, 255, 0.9) !important; 
             line-height: 1.8 !important; 
             margin: 2rem 0 !important; /* match editor */
@@ -365,10 +359,10 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             overflow-wrap: break-word !important;
             word-wrap: break-word !important;
           }
-          .preview-container div[style] { display: block !important; }
+          .live-preview-content div[style] { display: block !important; }
           
           /* Constrain and center all images to 85% width */
-          .preview-container img { 
+          .live-preview-content img { 
             display: block !important;
             max-width: 85% !important;
             width: auto !important;
@@ -378,32 +372,32 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
           }
           
           /* Fix list display */
-          .preview-container ul, .preview-container ol { 
+          .live-preview-content ul, .live-preview-content ol { 
             padding-left: 2em !important; 
             margin: 2rem 0 !important; 
             color: rgba(255, 255, 255, 0.9) !important;
           }
-          .preview-container ul li { 
+          .live-preview-content ul li { 
             list-style-type: disc !important;
             margin: 1rem 0 !important; 
             color: rgba(255, 255, 255, 0.9) !important;
             line-height: 1.6 !important;
           }
-          .preview-container ol li { 
+          .live-preview-content ol li { 
             list-style-type: decimal !important;
             margin: 1rem 0 !important; 
             color: rgba(255, 255, 255, 0.9) !important;
             line-height: 1.6 !important;
           }
           
-          .preview-container a { 
+          .live-preview-content a { 
             color: #93c5fd !important; 
             text-decoration: underline !important;
             word-break: break-all !important;
           }
 
           /* YouTube Container - 85% width, centered */
-          .preview-container .youtube-video-container {
+          .live-preview-content .youtube-video-container {
             position: relative;
             width: 100%;
             max-width: 85%;
@@ -413,7 +407,7 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             margin: 2rem auto !important;
             border-radius: 12px;
           }
-          .preview-container .youtube-video-container iframe {
+          .live-preview-content .youtube-video-container iframe {
             position: absolute;
             top: 0;
             left: 0;
@@ -424,8 +418,8 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
           }
 
           /* Fallback: make any YouTube iframe responsive even without wrapper (modern browsers) */
-          .preview-container iframe[src*="youtube.com"],
-          .preview-container iframe[src*="youtu.be"] {
+          .live-preview-content iframe[src*="youtube.com"],
+          .live-preview-content iframe[src*="youtu.be"] {
             display: block;
             width: 85% !important;
             max-width: 100%; /* Important for intrinsic sizing */
@@ -437,12 +431,12 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
           }
           
           @media (max-width: 768px) {
-            .preview-container .youtube-video-container { max-width: 100%; }
-            .preview-container iframe[src*="youtube.com"], .preview-container iframe[src*="youtu.be"] { width: 100% !important; }
+            .live-preview-content .youtube-video-container { max-width: 100%; }
+            .live-preview-content iframe[src*="youtube.com"], .live-preview-content iframe[src*="youtu.be"] { width: 100% !important; }
           }
 
           /* NEW: Make raw <video> elements responsive and centered */
-          .preview-container video {
+          .live-preview-content video {
             display: block !important;
             width: 85% !important;
             max-width: 100% !important;
@@ -452,20 +446,20 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             background: #000 !important; /* Dark background for video */
           }
           @media (max-width: 768px) {
-            .preview-container video { width: 100% !important; }
+            .live-preview-content video { width: 100% !important; }
           }
 
           /* Fallback: make any video-file iframe responsive, mirroring YouTube style */
-          .preview-container iframe[src$=".mp4"],
-          .preview-container iframe[src*=".mp4?"],
-          .preview-container iframe[src$=".webm"],
-          .preview-container iframe[src*=".webm?"],
-          .preview-container iframe[src$=".mov"],
-          .preview-container iframe[src*=".mov?"],
-          .preview-container iframe[src$=".m4v"],
-          .preview-container iframe[src*=".m4v?"],
-          .preview-container iframe[src$=".mkv"],
-          .preview-container iframe[src*=".mkv?"] {
+          .live-preview-content iframe[src$=".mp4"],
+          .live-preview-content iframe[src*=".mp4?"],
+          .live-preview-content iframe[src$=".webm"],
+          .live-preview-content iframe[src*=".webm?"],
+          .live-preview-content iframe[src$=".mov"],
+          .live-preview-content iframe[src*=".mov?"],
+          .live-preview-content iframe[src$=".m4v"],
+          .live-preview-content iframe[src*=".m4v?"],
+          .live-preview-content iframe[src$=".mkv"],
+          .live-preview-content iframe[src*=".mkv?"] {
             display: block;
             width: 85% !important;
             max-width: 100%;
@@ -477,22 +471,22 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             background: #000;
           }
           @media (max-width: 768px) {
-            .preview-container iframe[src$=".mp4"],
-            .preview-container iframe[src*=".mp4?"],
-            .preview-container iframe[src$=".webm"],
-            .preview-container iframe[src*=".webm?"],
-            .preview-container iframe[src$=".mov"],
-            .preview-container iframe[src*=".mov?"],
-            .preview-container iframe[src$=".m4v"],
-            .preview-container iframe[src*=".m4v?"],
-            .preview-container iframe[src$=".mkv"],
-            .preview-container iframe[src*=".mkv?"] {
+            .live-preview-content iframe[src$=".mp4"],
+            .live-preview-content iframe[src*=".mp4?"],
+            .live-preview-content iframe[src$=".webm"],
+            .live-preview-content iframe[src*=".webm?"],
+            .live-preview-content iframe[src$=".mov"],
+            .live-preview-content iframe[src*=".mov?"],
+            .live-preview-content iframe[src$=".m4v"],
+            .live-preview-content iframe[src*=".m4v?"],
+            .live-preview-content iframe[src$=".mkv"],
+            .live-preview-content iframe[src*=".mkv?"] {
               width: 100% !important;
             }
           }
 
           /* DEFINITIVE STYLES FOR ALL CUSTOM BLOCKS */
-          .preview-container .b44-callout, .preview-container .b44-fact {
+          .live-preview-content .b44-callout, .live-preview-content .b44-fact {
             margin: 3rem 0 !important; 
             padding: 2rem !important; 
             border-radius: 12px !important; 
@@ -501,34 +495,34 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             align-items: flex-start !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
           }
-          .preview-container .b44-callout-icon, .preview-container .b44-fact-icon { 
+          .live-preview-content .b44-callout-icon, .live-preview-content .b44-fact-icon { 
             margin-top: 2px !important; 
             font-size: 1.2em !important; 
           }
-          .preview-container .b44-callout-content p, .preview-container .b44-fact-content p { 
+          .live-preview-content .b44-callout-content p, .live-preview-content .b44-fact-content p { 
             margin: 0 !important; 
             line-height: 1.6 !important; 
           }
-          .preview-container .b44-callout-content h4, .preview-container .b44-fact-content h4 { 
+          .live-preview-content .b44-callout-content h4, .live-preview-content .b44-fact-content h4 { 
             margin: 0 0 1rem 0 !important; 
             font-size: 1.1em !important; 
             font-weight: 600 !important; 
           }
           
           /* Blue Callout */
-          .preview-container .b44-callout { 
+          .live-preview-content .b44-callout { 
             background-color: rgba(59, 130, 246, 0.1) !important; 
             border: 1px solid rgba(59, 130, 246, 0.2) !important; 
           }
           
           /* Orange/Yellow Fact */
-          .preview-container .b44-fact { 
+          .live-preview-content .b44-fact { 
             background-color: rgba(245, 158, 11, 0.1) !important; 
             border: 1px solid rgba(245, 158, 11, 0.2) !important; 
           }
           
           /* Quote */
-          .preview-container .b44-quote { 
+          .live-preview-content .b44-quote { 
             border-left: 4px solid #64748b !important; 
             padding-left: 2rem !important; 
             margin: 3rem 0 !important; 
@@ -538,11 +532,11 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             border-radius: 0 8px 8px 0 !important;
             padding: 2rem !important;
           }
-          .preview-container .b44-quote p { 
+          .live-preview-content .b44-quote p { 
             margin-bottom: 1rem !important; 
             font-size: 1.2rem !important;
           }
-          .preview-container .b44-quote cite { 
+          .live-preview-content .b44-quote cite { 
             font-style: normal !important; 
             color: #94a3b8 !important; 
             font-size: 1rem !important; 
@@ -550,7 +544,7 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
           }
 
           /* CTA */
-          .preview-container .b44-cta {
+          .live-preview-content .b44-cta {
             margin: 3rem 0 !important;
             padding: 2.5rem !important;
             border-radius: 1rem !important;
@@ -559,13 +553,14 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             text-align: center;
             box-shadow: 0 8px 32px rgba(0,0,0,0.2);
           }
-          .preview-container .b44-cta h3 {
+          .live-preview-content .b44-cta h3 {
             font-size: 1.75rem !important;
             font-weight: 700 !important;
             margin: 0 0 1rem 0 !important;
+            line-height: 1.3 !important;
             color: #fff !important;
           }
-          .preview-container .b44-cta p {
+          .live-preview-content .b44-cta p {
             margin: 0 0 1.5rem 0 !important;
             color: rgba(255, 255, 255, 0.8) !important;
             font-size: 1.1rem !important;
@@ -573,7 +568,7 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             margin-left: auto;
             margin-right: auto;
           }
-          .preview-container .b44-cta a {
+          .live-preview-content .b44-cta a {
             display: inline-block;
             background: linear-gradient(90deg, #3b82f6, #6366f1);
             color: #fff !important;
@@ -584,14 +579,14 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             transition: all 0.2s ease-in-out;
             box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
           }
-          .preview-container .b44-cta a:hover {
+          .live-preview-content .b44-cta a:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
           }
 
 
           /* Divider */
-          .preview-container .b44-divider { 
+          .live-preview-content .b44-divider { 
             border: 0 !important; 
             height: 2px !important; 
             background: linear-gradient(90deg, transparent, #475569, transparent) !important; 
@@ -599,29 +594,29 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
           }
 
           /* Alert Boxes */
-          .preview-container .b44-alert { 
+          .live-preview-content .b44-alert { 
             padding: 2rem !important; 
             border-radius: 12px !important; 
             border-left-width: 4px !important; 
             margin: 3rem 0 !important; 
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
           }
-          .preview-container .b44-alert p { margin: 0 !important; }
-          .preview-container .b44-alert-success { 
+          .live-preview-content .b44-alert p { margin: 0 !important; }
+          .live-preview-content .b44-alert-success { 
             background-color: rgba(34, 197, 94, 0.1) !important; 
             border-left-color: #22c55e !important; 
             color: #a7f3d0 !important; 
           }
-          .preview-container .b44-alert-success p { color: #a7f3d0 !important; }
-          .preview-container .b44-alert-warning { 
+          .live-preview-content .b44-alert-success p { color: #a7f3d0 !important; }
+          .live-preview-content .b44-alert-warning { 
             background-color: rgba(245, 158, 11, 0.1) !important; 
             border-left-color: #f59e0b !important; 
             color: #fde68a !important; 
           }
-          .preview-container .b44-alert-warning p { color: #fde68a !important; }
+          .live-preview-content .b44-alert-warning p { color: #fde68a !important; }
           
           /* TLDR Block */
-          .preview-container .b44-tldr {
+          .live-preview-content .b44-tldr {
             margin: 3rem 0 !important;
             padding: 2rem !important;
             border-radius: 12px !important;
@@ -629,7 +624,7 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             border: 1px solid rgba(234, 179, 8, 0.2) !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
           }
-          .preview-container .b44-tldr h4 {
+          .live-preview-content .b44-tldr h4 {
             margin: 0 0 1rem 0 !important;
             font-size: 1.1em !important;
             font-weight: 700 !important;
@@ -637,14 +632,14 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             text-transform: uppercase;
             letter-spacing: 0.05em;
           }
-          .preview-container .b44-tldr p {
+          .live-preview-content .b44-tldr p {
             margin: 0 !important;
             line-height: 1.6 !important;
             color: #fde68a !important;
           }
 
           /* Promoted Product - REFRESHED STYLE */
-          .preview-container .b44-promoted-product {
+          .live-preview-content .b44-promoted-product {
             position: relative;
             overflow: hidden;
             margin: 3rem 0 !important;
@@ -655,18 +650,18 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             transition: all 0.3s ease-in-out;
           }
 
-          .preview-container .b44-promoted-product:hover {
+          .live-preview-content .b44-promoted-product:hover {
               transform: translateY(-4px) scale(1.01);
               box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4), 0 0 60px rgba(139, 92, 246, 0.4) !important;
           }
 
-          .preview-container .b44-promoted-product-inner-wrapper { /* New wrapper for content inside border */
+          .live-preview-content .b44-promoted-product-inner-wrapper { /* New wrapper for content inside border */
               background: linear-gradient(145deg, #1e293b, #0f172a) !important;
               border-radius: 1.15rem !important;
               padding: 3rem !important;
           }
 
-          .preview-container .b44-promoted-product-badge {
+          .live-preview-content .b44-promoted-product-badge {
             position: absolute;
             top: -1px;
             right: 20px;
@@ -683,14 +678,14 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             z-index: 10;
           }
 
-          .preview-container .b44-promoted-product-inner {
+          .live-preview-content .b44-promoted-product-inner {
             display: flex !important;
             gap: 2rem !important;
             align-items: center !important;
             flex-wrap: wrap !important;
           }
 
-          .preview-container .b44-promoted-product-image img {
+          .live-preview-content .b44-promoted-product-image img {
             width: 150px !important; /* Slightly larger */
             height: 150px !important;
             object-fit: cover !important;
@@ -700,12 +695,12 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             margin: 0 !important; /* Override default img margin */
           }
 
-          .preview-container .b44-promoted-product-content {
+          .live-preview-content .b44-promoted-product-content {
             flex: 1;
             min-width: 250px;
           }
 
-          .preview-container .b44-promoted-product-content h3 {
+          .live-preview-content .b44-promoted-product-content h3 {
             font-size: 1.75rem !important; /* Larger title */
             font-weight: 700 !important;
             margin: 0 0 1rem 0 !important;
@@ -713,20 +708,20 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             color: #fff !important;
           }
 
-          .preview-container .b44-promoted-product-content p {
+          .live-preview-content .b44-promoted-product-content p {
             margin: 0 0 1.5rem 0 !important;
             line-height: 1.7 !important; /* More spacing */
             color: rgba(255, 255, 255, 0.8) !important;
           }
 
-          .preview-container .b44-promoted-product-actions {
+          .live-preview-content .b44-promoted-product-actions {
             display: flex !important;
             align-items: center !important;
             gap: 1.5rem !important;
             flex-wrap: wrap !important;
           }
 
-          .preview-container .b44-promoted-product-price {
+          .live-preview-content .b44-promoted-product-price {
             background: rgba(255, 255, 255, 0.05) !important;
             color: #a78bfa !important; /* Lighter purple */
             padding: 0.75rem 1.5rem !important;
@@ -736,7 +731,7 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             border: 1px solid rgba(167, 139, 250, 0.3) !important;
           }
 
-          .preview-container .b44-promoted-product-button {
+          .live-preview-content .b44-promoted-product-button {
             background: linear-gradient(90deg, #8b5cf6, #d946ef) !important;
             color: white !important;
             padding: 1rem 2rem !important;
@@ -747,13 +742,13 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3) !important;
           }
 
-          .preview-container .b44-promoted-product-button:hover {
+          .live-preview-content .b44-promoted-product-button:hover {
             transform: translateY(-2px) !important;
             box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4) !important;
           }
           
           /* Email Capture */
-          .preview-container .b44-email-capture {
+          .live-preview-content .b44-email-capture {
             margin: 3rem 0 !important;
             padding: 2.5rem !important;
             border-radius: 1rem !important;
@@ -761,21 +756,21 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             border: 1px solid rgba(255, 255, 255, 0.1);
             text-align: center;
           }
-          .preview-container .b44-email-capture h3 {
+          .live-preview-content .b44-email-capture h3 {
              margin: 0 0 1rem 0 !important;
              color: #fff !important;
           }
-          .preview-container .b44-email-capture p {
+          .live-preview-content .b44-email-capture p {
              margin: 0 0 1.5rem 0 !important;
              color: rgba(255, 255, 255, 0.7) !important;
           }
-          .preview-container .b44-email-capture-form {
+          .live-preview-content .b44-email-capture-form {
             display: flex;
             gap: 0.5rem;
             max-width: 450px;
             margin: 0 auto;
           }
-          .preview-container .b44-email-capture-form input {
+          .live-preview-content .b44-email-capture-form input {
             flex-grow: 1;
             padding: 0.75rem 1rem;
             border-radius: 0.5rem;
@@ -783,7 +778,7 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             background: #1f2937;
             color: #fff;
           }
-          .preview-container .b44-email-capture-form button {
+          .live-preview-content .b44-email-capture-form button {
             padding: 0.75rem 1.5rem;
             border-radius: 0.5rem;
             border: none;
@@ -792,13 +787,13 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             font-weight: 600;
             cursor: pointer;
           }
-          .preview-container .b44-email-capture-success {
+          .live-preview-content .b44-email-capture-success {
             color: #34d399;
             font-weight: 600;
           }
 
           /* TikTok Embed - remove outer whitespace and force full width of text column */
-          .preview-container .tiktok-embed {
+          .live-preview-content .tiktok-embed {
             width: 100% !important;
             max-width: 100% !important;
             min-width: 0 !important;
@@ -807,7 +802,7 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
             box-shadow: none !important; /* Remove any shadows */
             background: transparent !important; /* Ensure transparent background */
           }
-          .preview-container .tiktok-embed > section {
+          .live-preview-content .tiktok-embed > section {
             margin: 0 !important;
             padding: 0 !important;
             box-shadow: none !important;
@@ -816,38 +811,18 @@ export default function LivePreview({ title, content, selectedFont = 'Inter', pr
         `
       }} />
       
-      <div className="preview-viewport">
-        <div id="live-preview-container" className="preview-container">
-          {title && (
-            <div className="title-section mb-12">
-              <h1 style={{ 
-                color: 'white', 
-                fontSize: '2.5rem', 
-                fontWeight: '700', 
-                marginBottom: '2rem', 
-                paddingBottom: '1.5rem', 
-                borderBottom: '2px solid rgba(255, 255, 255, 0.1)',
-                textAlign: 'center'
-              }}>
-                {title}
-              </h1>
-            </div>
-          )}
-          <div 
-            id="live-preview-content"
-            dangerouslySetInnerHTML={{ __html: content }} 
-          />
-          {!content && (
-            <div className="text-center py-20">
-              <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-r from-slate-600/20 to-gray-600/20 flex items-center justify-center backdrop-blur-sm border border-white/10">
-                <Edit3 className="w-12 h-12 text-white/40" />
-              </div>
-              <p className="text-white/50 italic text-xl">
-                Start writing to see your content preview here...
-              </p>
-            </div>
-          )}
-        </div>
+      <div className="live-preview-content prose max-w-none">
+        {title && <h1>{title}</h1>}
+        <div 
+          id="live-preview-content"
+          dangerouslySetInnerHTML={{ __html: content }} 
+        />
+        
+        {/* FIXED: Reduced margin and padding for a more compact footer */}
+        <footer className="mt-6 pt-3 border-t border-slate-200/60 text-sm text-slate-500">
+          <p>&copy;{currentYear} {usernameForPreview || "Your Brand"}, all rights reserved.</p>
+          <p className="mt-2">All materials, features, and customer experiences remain the property of {usernameForPreview || "Your Brand"}.</p>
+        </footer>
       </div>
     </div>
   );
