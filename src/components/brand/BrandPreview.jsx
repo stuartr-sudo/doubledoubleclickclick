@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Eye, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export default function BrandPreview({
         --brand-secondary: ${colors.secondary || "#2c5282"};
         --brand-accent: ${colors.accent || "#3182ce"};
         --brand-text: ${colors.text || "#1a202c"};
+        --brand-heading: ${colors.heading || colors.text || "#1a202c"}; /* Added heading color control */
         --brand-bg: ${colors.background || "#ffffff"};
         --brand-muted: ${colors.muted || "#718096"};
       }
@@ -63,7 +65,7 @@ export default function BrandPreview({
       .brand-preview h1, .brand-preview h2, .brand-preview h3,
       .brand-preview h4, .brand-preview h5, .brand-preview h6 {
         font-family: ${typography.heading_font || typography.font_family || "Inter, system-ui, sans-serif"};
-        color: var(--brand-text);
+        color: var(--brand-heading); /* Used new heading color variable */
         margin: ${layout.element_spacing || "16px"} 0;
         font-weight: ${typography.heading_weight || "600"};
       }
@@ -225,6 +227,15 @@ export default function BrandPreview({
                   style={{ backgroundColor: brandSpecs.colors.primary }}
                 />
                 <span>Primary: {brandSpecs.colors.primary}</span>
+              </div>
+            )}
+            {brandSpecs.colors?.heading && (
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded border"
+                  style={{ backgroundColor: brandSpecs.colors.heading }}
+                />
+                <span>Heading: {brandSpecs.colors.heading}</span>
               </div>
             )}
             {brandSpecs.typography?.font_family && (

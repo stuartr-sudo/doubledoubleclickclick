@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Wand2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { BrandGuidelines } from "@/api/entities";
-import { BrandSpecifications } from "@/api/entities";
 import { InvokeLLM } from "@/api/integrations";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 
@@ -20,7 +19,6 @@ export default function BrandItModal({
   const [rewrittenHtml, setRewrittenHtml] = useState('');
   const [error, setError] = useState('');
   const [guidelines, setGuidelines] = useState(null);
-  const [brandSpecs, setBrandSpecs] = useState(null);
   const [hasStarted, setHasStarted] = React.useState(false);
   const { consumeTokensForFeature } = useTokenConsumption();
 
@@ -40,54 +38,18 @@ export default function BrandItModal({
   }, []);
 
   const buildBrandBrief = React.useCallback(() => {
-    // Prioritize brand specifications over legacy guidelines
-    const source = brandSpecs || guidelines;
-    
-    if (!source) {
+    if (!guidelines) {
       return "No explicit brand guideline record found. Use a consistent, confident, concise, friendly voice. Prefer active voice, short sentences, avoid hype. Do NOT add or alter <img> src or links.";
     }
-
     const lines = [];
-    
-    // Add brand specifications context if available
-    if (brandSpecs) {
-      lines.push("=== BRAND SPECIFICATIONS ===");
-      if (brandSpecs.name) lines.push(`Brand Name: ${brandSpecs.name}`);
-      
-      // Visual identity context
-      if (brandSpecs.colors) {
-        const colors = brandSpecs.colors;
-        if (colors.primary) lines.push(`Primary Color: ${colors.primary}`);
-        if (colors.accent) lines.push(`Accent Color: ${colors.accent}`);
-      }
-      
-      // Typography context
-      if (brandSpecs.typography?.font_family) {
-        lines.push(`Typography: ${brandSpecs.typography.font_family.split(',')[0]}`);
-      }
-      
-      // Website context
-      if (brandSpecs.website_specs?.domain) {
-        lines.push(`Website Domain: ${brandSpecs.website_specs.domain}`);
-      }
-      
-      lines.push(""); // Empty line separator
-    }
-    
-    // Add voice and tone guidelines
-    lines.push("=== VOICE & TONE GUIDELINES ===");
-    if (source.voice_and_tone) lines.push(`Voice and tone: ${source.voice_and_tone}`);
-    if (source.content_style_rules) lines.push(`Style rules: ${source.content_style_rules}`);
-    if (source.preferred_elements) lines.push(`Preferred: ${source.preferred_elements}`);
-    if (source.prohibited_elements) lines.push(`Avoid: ${source.prohibited_elements}`);
-    if (source.target_market) lines.push(`Target market: ${source.target_market}`);
-    
-    lines.push(""); // Empty line separator
-    lines.push("=== IMPORTANT CONSTRAINTS ===");
+    if (guidelines.voice_and_tone) lines.push(`Voice and tone: ${guidelines.voice_and_tone}`);
+    if (guidelines.content_style_rules) lines.push(`Style rules: ${guidelines.content_style_rules}`);
+    if (guidelines.preferred_elements) lines.push(`Preferred: ${guidelines.preferred_elements}`);
+    if (guidelines.prohibited_elements) lines.push(`Avoid: ${guidelines.prohibited_elements}`);
+    if (guidelines.target_market) lines.push(`Target market: ${guidelines.target_market}`);
     lines.push("Important: Do NOT add or alter <img> src or links; preserve all attributes and embeds exactly.");
-    
     return lines.join("\n");
-  }, [guidelines, brandSpecs]);
+  }, [guidelines]);
 
   const buildPrompt = React.useCallback((html) => {
     return [
@@ -144,17 +106,10 @@ export default function BrandItModal({
     if (!isOpen || !userName) return;
     (async () => {
       try {
-        // Fetch both brand specifications and legacy guidelines
-        const [brandSpecsRows, guidelinesRows] = await Promise.all([
-          BrandSpecifications.filter({ user_name: userName }, "-updated_date", 1).catch(() => []),
-          BrandGuidelines.filter({ user_name: userName }, "-updated_date", 1).catch(() => [])
-        ]);
-        
-        setBrandSpecs(brandSpecsRows && brandSpecsRows[0] ? brandSpecsRows[0] : null);
-        setGuidelines(guidelinesRows && guidelinesRows[0] ? guidelinesRows[0] : null);
+        const rows = await BrandGuidelines.filter({ user_name: userName }, "-updated_date", 1).catch(() => []);
+        setGuidelines(rows && rows[0] ? rows[0] : null);
       } catch (e) {
-        console.error("Failed to fetch brand data:", e);
-        setBrandSpecs(null);
+        console.error("Failed to fetch brand guidelines:", e);
         setGuidelines(null);
       }
     })();
@@ -201,19 +156,9 @@ export default function BrandItModal({
             The AI can rewrite the article to match the brand voice for{" "}
             <span className="font-bold text-cyan-600">{userName}</span>.
           </DialogDescription>
-          {!brandSpecs && !guidelines &&
+          {!guidelines &&
           <div className="mt-2 text-xs text-amber-600">
-              No Brand Specifications or Guidelines found for this username. Using a default, consistent tone.
-            </div>
-          }
-          {brandSpecs &&
-          <div className="mt-2 text-xs text-green-600">
-              ✓ Using enhanced brand specifications for "{brandSpecs.name}"
-            </div>
-          }
-          {!brandSpecs && guidelines &&
-          <div className="mt-2 text-xs text-blue-600">
-              ✓ Using legacy brand guidelines
+              No Brand Guidelines found for this username. Using a default, consistent tone.
             </div>
           }
         </DialogHeader>

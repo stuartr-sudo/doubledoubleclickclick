@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { BrandGuidelines } from "@/api/entities";
 import { BrandSpecifications } from "@/api/entities";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Save, Trash2, Edit3, Loader2, Globe, FileCode, Settings, Palette, Type, Layout, Eye } from "lucide-react";
+import { Plus, Save, Trash2, Edit3, Loader2, Globe, FileCode, Palette, Type, Layout as LayoutIcon } from "lucide-react";
 import { toast } from "sonner";
 import { InvokeLLM } from "@/api/integrations";
 import { extractWebsiteContent } from "@/api/functions";
@@ -27,7 +28,6 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-// Import new brand components
 import BrandColorPicker from "@/components/brand/BrandColorPicker";
 import FontSelector from "@/components/brand/FontSelector";
 import LayoutConfigurator from "@/components/brand/LayoutConfigurator";
@@ -46,86 +46,39 @@ const initialGuidelineState = {
   target_market: ""
 };
 
-const initialBrandSpecState = {
-  id: null,
-  user_name: "",
-  name: "",
+const initialBrandSpecsState = {
   colors: {
     primary: "#1a365d",
     secondary: "#2c5282",
     accent: "#3182ce",
     text: "#1a202c",
+    heading: "#1a202c", // Added new heading color
     background: "#ffffff",
-    muted: "#718096",
-    success: "#38a169",
-    warning: "#d69e2e",
-    error: "#e53e3e"
+    muted: "#718096"
   },
   typography: {
     font_family: "Inter, system-ui, sans-serif",
-    heading_font: "Inter, system-ui, sans-serif",
     font_size_base: "16px",
-    line_height: "1.6",
-    heading_weight: "600",
-    heading_sizes: {
-      h1: "2.5rem",
-      h2: "2rem",
-      h3: "1.5rem",
-      h4: "1.25rem",
-      h5: "1.125rem",
-      h6: "1rem"
-    }
+    line_height: "1.6"
   },
   layout: {
-    layout_type: "centered",
     max_width: "1200px",
     content_padding: "20px",
     section_spacing: "40px",
     element_spacing: "16px",
     border_radius: "8px",
-    box_shadow: "0 2px 4px rgba(0,0,0,0.1)"
+    box_shadow: "0 2px 4px rgba(0,0,0,0.1)",
+    type: "centered"
   },
-  components: {
-    buttons: {
-      primary_bg: "#1a365d",
-      primary_text: "#ffffff",
-      secondary_bg: "#f7fafc",
-      secondary_text: "#1a202c",
-      border_radius: "6px",
-      padding: "12px 24px"
-    },
-    links: {
-      color: "#3182ce",
-      hover_color: "#2c5282",
-      text_decoration: "underline"
-    },
-    images: {
-      border_radius: "8px",
-      max_width: "100%",
-      margin: "20px 0"
-    }
-  },
-  custom_css: "",
-  voice_and_tone: "",
-  content_style_rules: "",
-  prohibited_elements: "",
-  preferred_elements: "",
-  target_market: "",
-  website_specs: {
-    domain: "",
-    cms_type: "",
-    theme_colors: [],
-    font_stack: "",
-    layout_type: ""
-  }
+  custom_css: ""
 };
 
 export default function BrandGuidelinesManager() {
   const [guidelines, setGuidelines] = useState([]);
-  const [brandSpecs, setBrandSpecs] = useState([]);
+  const [brandSpecsList, setBrandSpecsList] = useState([]);
   const [usernames, setUsernames] = useState([]);
   const [newGuideline, setNewGuideline] = useState(initialGuidelineState);
-  const [newBrandSpec, setNewBrandSpec] = useState(initialBrandSpecState);
+  const [brandSpecs, setBrandSpecs] = useState(initialBrandSpecsState);
   const [isLoading, setIsLoading] = useState(true);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -134,51 +87,43 @@ export default function BrandGuidelinesManager() {
   const [usernameDetails, setUsernameDetails] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Dialog states
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [guidelineToDelete, setGuidelineToDelete] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("identity");
+  const [editingBrandSpec, setEditingBrandSpec] = useState(null);
 
-  // Feature flags
   const { selectedUsername: globalUsername } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping', { currentUser });
   const { enabled: showCustomCssUpload } = useFeatureFlag('show_brand_guidelines_css_upload', { currentUser });
-  const { enabled: showEnhancedBrandSpecs } = useFeatureFlag('show_enhanced_brand_specs', { currentUser });
 
   const { consumeTokensForFeature } = useTokenConsumption();
 
   const loadGuidelinesAndUsernames = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch user first to determine permissions
       const user = await User.me().catch(() => null);
       setCurrentUser(user);
 
-      // Fetch all data (admin can see all, then filter)
-      const [allGuidelines, allBrandSpecs, allUsernames] = await Promise.all([
-        BrandGuidelines.list("-updated_date", 200).catch(() => []),
-        BrandSpecifications.list("-updated_date", 200).catch(() => []),
-        Username.list("-updated_date", 100).catch(() => [])
-      ]);
+      const allGuidelines = await BrandGuidelines.list("-updated_date", 200).catch(() => []);
+      const allBrandSpecs = await BrandSpecifications.list("-updated_date", 200).catch(() => []);
+      const allUsernames = await Username.list("-updated_date", 100).catch(() => []);
 
       let visibleUsernames = [];
       let visibleGuidelines = [];
       let visibleBrandSpecs = [];
 
-      // Admins and superadmins see everything
       if (user && (user.role === 'admin' || user.is_superadmin)) {
         visibleUsernames = allUsernames.filter((u) => u.is_active);
         visibleGuidelines = allGuidelines;
         visibleBrandSpecs = allBrandSpecs;
       } else if (user && Array.isArray(user.assigned_usernames) && user.assigned_usernames.length > 0) {
-        // Regular users only see content for their assigned usernames
         const assigned = new Set(user.assigned_usernames);
         visibleUsernames = allUsernames.filter((u) => u.is_active && assigned.has(u.user_name));
         visibleGuidelines = allGuidelines.filter((g) => assigned.has(g.user_name));
-        visibleBrandSpecs = allBrandSpecs.filter((b) => assigned.has(b.user_name));
+        visibleBrandSpecs = allBrandSpecs.filter((g) => assigned.has(g.user_name));
       } else {
-        // No user or no assigned usernames
         visibleUsernames = [];
         visibleGuidelines = [];
         visibleBrandSpecs = [];
@@ -186,698 +131,792 @@ export default function BrandGuidelinesManager() {
 
       setUsernames(visibleUsernames);
       setGuidelines(visibleGuidelines);
-      setBrandSpecs(visibleBrandSpecs);
+      setBrandSpecsList(visibleBrandSpecs);
 
-      // Populate usernameDetails for CSS URI
       const details = {};
       for (const uname of visibleUsernames) {
         details[uname.user_name] = uname;
       }
       setUsernameDetails(details);
 
-      // Set default username based on workspace or first available
-      const defaultUsername = useWorkspaceScoping && globalUsername 
-        ? globalUsername 
-        : (visibleUsernames.length > 0 ? visibleUsernames[0].user_name : "");
-      
-      if (defaultUsername && !newGuideline.user_name) {
-        setNewGuideline(prev => ({ ...prev, user_name: defaultUsername }));
-        setNewBrandSpec(prev => ({ ...prev, user_name: defaultUsername }));
-      }
+      setNewGuideline((prev) => {
+        let defaultUserName = prev.user_name;
+        if (useWorkspaceScoping && globalUsername) {
+          defaultUserName = globalUsername;
+        } else if (!defaultUserName && visibleUsernames.length > 0) {
+          defaultUserName = visibleUsernames[0].user_name;
+        } else if (defaultUserName && !visibleUsernames.some((u) => u.user_name === defaultUserName)) {
+          defaultUserName = visibleUsernames.length > 0 ? visibleUsernames[0].user_name : "";
+        }
+        return { ...prev, user_name: defaultUserName };
+      });
 
-    } catch (error) {
-      console.error("Error loading guidelines:", error);
-      toast.error("Failed to load brand guidelines");
+    } catch (err) {
+      toast.error("Failed to load brand guidelines and user data.");
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [useWorkspaceScoping, globalUsername, newGuideline.user_name]);
+  }, [useWorkspaceScoping, globalUsername]);
 
   useEffect(() => {
     loadGuidelinesAndUsernames();
   }, [loadGuidelinesAndUsernames]);
 
-  // Handle website analysis completion
-  const handleWebsiteAnalysisComplete = (analysisData) => {
-    const {
-      extracted_colors = {},
-      extracted_typography = {},
-      extracted_layout = {},
-      website_domain = ""
-    } = analysisData;
+  useEffect(() => {
+    if (useWorkspaceScoping) {
+      setNewGuideline((prev) => ({ ...prev, user_name: globalUsername || "" }));
+    }
+  }, [useWorkspaceScoping, globalUsername]);
 
-    setNewBrandSpec(prev => ({
-      ...prev,
-      colors: {
-        ...prev.colors,
-        ...extracted_colors
-      },
-      typography: {
-        ...prev.typography,
-        ...extracted_typography
-      },
-      layout: {
-        ...prev.layout,
-        ...extracted_layout
-      },
-      website_specs: {
-        ...prev.website_specs,
-        domain: website_domain,
-        theme_colors: extracted_colors ? Object.values(extracted_colors).slice(0, 6) : [],
-        font_stack: extracted_typography?.font_family || "",
-        layout_type: extracted_layout?.type || ""
+  const resetForm = () => {
+    setNewGuideline((prev) => {
+      let defaultUserName = usernames.length > 0 ? usernames[0].user_name : "";
+      if (useWorkspaceScoping && globalUsername) {
+        defaultUserName = globalUsername;
       }
-    }));
+      return {
+        ...initialGuidelineState,
+        user_name: defaultUserName
+      };
+    });
+    setBrandSpecs(initialBrandSpecsState);
+    setCssFile(null);
+    setIsEditing(false);
+    setEditingBrandSpec(null);
   };
 
-  // Save brand specifications
-  const handleSaveBrandSpec = async () => {
-    if (!newBrandSpec.name || !newBrandSpec.user_name) {
-      toast.error("Please provide a name and select a username");
+  const handleEdit = (item) => {
+    setNewGuideline({
+      id: item.id,
+      user_name: item.user_name || "",
+      name: item.name || "",
+      voice_and_tone: item.voice_and_tone || "",
+      content_style_rules: item.content_style_rules || "",
+      prohibited_elements: item.prohibited_elements || "",
+      preferred_elements: item.preferred_elements || "",
+      ai_instructions_override: item.ai_instructions_override || "",
+      target_market: item.target_market || ""
+    });
+    setIsEditing(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleEditBrandSpec = (spec) => {
+    setEditingBrandSpec(spec);
+    setNewGuideline((prev) => ({
+      ...prev,
+      user_name: spec.user_name,
+      name: spec.name,
+      voice_and_tone: spec.voice_and_tone || "",
+      content_style_rules: spec.content_style_rules || "",
+      prohibited_elements: spec.prohibited_elements || "",
+      preferred_elements: spec.preferred_elements || "",
+      target_market: spec.target_market || ""
+    }));
+    setBrandSpecs({
+      colors: { ...initialBrandSpecsState.colors, ...(spec.colors || {}) }, // Merge with defaults for new properties like 'heading'
+      typography: spec.typography || initialBrandSpecsState.typography,
+      layout: spec.layout || initialBrandSpecsState.layout,
+      custom_css: spec.custom_css || ""
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleDelete = (item) => {
+    setGuidelineToDelete(item);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!guidelineToDelete) return;
+    try {
+      if (guidelineToDelete.isBrandSpec) {
+        await BrandSpecifications.delete(guidelineToDelete.id);
+      } else {
+        await BrandGuidelines.delete(guidelineToDelete.id);
+      }
+      toast.success("Deleted");
+      loadGuidelinesAndUsernames();
+      setShowDeleteConfirm(false);
+      setGuidelineToDelete(null);
+    } catch (error) {
+      toast.error("Failed to delete guideline.");
+      console.error(error);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const activeUsername = useWorkspaceScoping ? globalUsername : newGuideline.user_name;
+
+    const userNameTrim = (activeUsername || "").trim();
+    const nameTrim = (newGuideline.name || "").trim();
+    const voiceTrim = (newGuideline.voice_and_tone || "").trim();
+
+    if (!userNameTrim || !nameTrim || !voiceTrim) {
+      toast.error("Username, Guideline Name, and Voice & Tone are required");
+      setIsSaving(false);
       return;
     }
 
-    setIsSaving(true);
+    const payload = {
+      ...newGuideline,
+      user_name: userNameTrim,
+      name: nameTrim,
+      voice_and_tone: voiceTrim
+    };
+
     try {
-      if (newBrandSpec.id) {
-        await BrandSpecifications.update(newBrandSpec.id, newBrandSpec);
-        toast.success("Brand specifications updated successfully");
+      if (payload.id) {
+        await BrandGuidelines.update(payload.id, payload);
+        toast.success("Updated");
       } else {
-        await BrandSpecifications.create(newBrandSpec);
-        toast.success("Brand specifications created successfully");
+        await BrandGuidelines.create(payload);
+        toast.success("Created");
       }
-      
-      await loadGuidelinesAndUsernames();
-      setNewBrandSpec(initialBrandSpecState);
+      resetForm();
+      loadGuidelinesAndUsernames();
     } catch (error) {
-      console.error("Error saving brand specs:", error);
-      toast.error("Failed to save brand specifications");
+      toast.error(`Failed to save guideline: ${error.message}`);
+      console.error(error);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Delete brand specifications
-  const handleDeleteBrandSpec = async (id) => {
+  const handleSaveBrandSpecs = async () => {
+    setIsSaving(true);
+    const activeUsername = useWorkspaceScoping ? globalUsername : newGuideline.user_name;
+
+    const userNameTrim = (activeUsername || "").trim();
+    const nameTrim = (newGuideline.name || "").trim();
+
+    if (!userNameTrim || !nameTrim) {
+      toast.error("Username and Name are required");
+      setIsSaving(false);
+      return;
+    }
+
+    const payload = {
+      user_name: userNameTrim,
+      name: nameTrim,
+      voice_and_tone: newGuideline.voice_and_tone || "",
+      content_style_rules: newGuideline.content_style_rules || "",
+      prohibited_elements: newGuideline.prohibited_elements || "",
+      preferred_elements: newGuideline.preferred_elements || "",
+      target_market: newGuideline.target_market || "",
+      colors: brandSpecs.colors,
+      typography: brandSpecs.typography,
+      layout: brandSpecs.layout,
+      custom_css: brandSpecs.custom_css
+    };
+
     try {
-      await BrandSpecifications.delete(id);
-      toast.success("Brand specifications deleted");
-      await loadGuidelinesAndUsernames();
+      if (editingBrandSpec) {
+        await BrandSpecifications.update(editingBrandSpec.id, payload);
+        toast.success("Brand Specifications Updated");
+      } else {
+        await BrandSpecifications.create(payload);
+        toast.success("Brand Specifications Created");
+      }
+      resetForm();
+      loadGuidelinesAndUsernames();
     } catch (error) {
-      console.error("Error deleting brand specs:", error);
-      toast.error("Failed to delete brand specifications");
+      toast.error(`Failed to save brand specifications: ${error.message}`);
+      console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // Edit brand specifications
-  const handleEditBrandSpec = (spec) => {
-    setNewBrandSpec(spec);
-    setIsEditing(true);
+  const handleAnalyzeWebsite = async () => {
+    if (!websiteUrl || !/^https?:\/\//i.test(websiteUrl)) {
+      toast.error("Please enter a valid URL (including http/https).");
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const { data: extracted } = await extractWebsiteContent({ url: websiteUrl });
+      if (!extracted?.success) {
+        toast.error(extracted?.error || "Failed to fetch website content");
+        setIsAnalyzing(false);
+        return;
+      }
+
+      const longText = extracted.text || "";
+      const prompt = [
+        "You are a brand analyst. Read the following website content and extract concise, actionable brand guidance.",
+        "",
+        "Language requirement:",
+        "- Detect the dominant language of the content and RESPOND ENTIRELY in that same language.",
+        "- Do NOT translate to any other language. If the site is English, respond in English; otherwise respond in the site's language.",
+        "",
+        "Return JSON with the following fields:",
+        "- voice_and_tone: 5-10 sentences describing voice and tone with examples of phrasing.",
+        "- target_market: 1-3 sentences describing the primary audience (demographics, roles, regions if evident).",
+        "- content_style_rules: 6-12 bullet-style rules as a single string (e.g., '• Use short sentences...').",
+        "- prohibited_elements: a short list of words/phrases/patterns to avoid.",
+        "- preferred_elements: a short list of words/phrases/patterns to encourage.",
+        "",
+        "Be specific and grounded in the content. If a field is unclear, make a best-effort reasonable inference.",
+        "",
+        "CONTENT START",
+        longText,
+        "CONTENT END"
+      ].join("\n");
+
+      const schema = {
+        type: "object",
+        properties: {
+          voice_and_tone: { type: "string" },
+          target_market: { type: "string" },
+          content_style_rules: { type: "string" },
+          prohibited_elements: { type: "array", items: { type: "string" } },
+          preferred_elements: { type: "array", items: { type: "string" } }
+        }
+      };
+
+      const ai = await InvokeLLM({
+        prompt,
+        response_json_schema: schema
+      });
+
+      const out = ai || {};
+      const prohibitedCsv = Array.isArray(out.prohibited_elements) ? out.prohibited_elements.join(", ") : out.prohibited_elements || "";
+      const preferredCsv = Array.isArray(out.preferred_elements) ? out.preferred_elements.join(", ") : out.preferred_elements || "";
+
+      let suggestedName = "";
+      try {
+        const host = new URL(websiteUrl).hostname.replace(/^www\./, "");
+        suggestedName = `${host} • Core Voice`;
+      } catch (_) { }
+
+      const defaultUserName = newGuideline.user_name?.trim() ? newGuideline.user_name : usernames[0]?.user_name || "";
+
+      setNewGuideline((f) => ({
+        ...f,
+        user_name: defaultUserName,
+        name: f.name?.trim() ? f.name : suggestedName,
+        voice_and_tone: out.voice_and_tone || f.voice_and_tone,
+        content_style_rules: out.content_style_rules || f.content_style_rules,
+        prohibited_elements: prohibitedCsv || f.prohibited_elements,
+        preferred_elements: preferredCsv || f.preferred_elements,
+        target_market: out.target_market || f.target_market
+      }));
+
+      toast.success("Analysis complete. Fields populated — review and adjust as needed.");
+    } catch (e) {
+      toast.error("Analysis failed. Try another URL or adjust later.");
+      console.error("Website analysis error:", e);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
-  // Filter displayed data based on workspace selection
+  const handleUploadCss = async () => {
+    const selectedUsername = newGuideline.user_name;
+
+    if (!cssFile) {
+      toast.error("Please choose a CSS file to upload.");
+      return;
+    }
+    if (!selectedUsername) {
+      toast.error("Please select a username to link the CSS file to.");
+      return;
+    }
+
+    const tokenResult = await consumeTokensForFeature('brand_guidelines_css_upload');
+    if (!tokenResult.success) {
+      return;
+    }
+
+    setIsUploadingCss(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", cssFile);
+      formData.append("user_name", selectedUsername);
+
+      const { data } = await uploadUserCss(formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (data.success) {
+        const fileUri = data.file_uri;
+
+        const usernameRecord = usernames.find((u) => u.user_name === selectedUsername);
+        if (usernameRecord) {
+          await Username.update(usernameRecord.id, { default_css_file_uri: fileUri });
+          toast.success("Custom CSS uploaded and linked to username.");
+          await loadGuidelinesAndUsernames();
+          setCssFile(null);
+        } else {
+          toast.error("Could not find the selected username to link the CSS file.");
+        }
+      } else {
+        toast.error(data.error || "Failed to upload CSS file.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(`CSS upload failed: ${error.data?.error || error.message}`);
+    } finally {
+      setIsUploadingCss(false);
+    }
+  };
+
+  const handleRemoveCss = async () => {
+    if (!newGuideline.user_name) return;
+    if (!confirm("Are you sure you want to remove the custom CSS for this username?")) return;
+
+    try {
+      const usernameRecord = usernames.find((u) => u.user_name === newGuideline.user_name);
+      if (usernameRecord) {
+        await Username.update(usernameRecord.id, { default_css_file_uri: null });
+        toast.success("Custom CSS removed.");
+        await loadGuidelinesAndUsernames();
+      }
+    } catch (error) {
+      toast.error("Failed to remove CSS.");
+      console.error(error);
+    }
+  };
+
+  const currentUsernameCssUri = usernameDetails[newGuideline.user_name]?.default_css_file_uri;
+
   const displayedGuidelines = useWorkspaceScoping && globalUsername
     ? guidelines.filter(g => g.user_name === globalUsername)
     : guidelines;
 
   const displayedBrandSpecs = useWorkspaceScoping && globalUsername
-    ? brandSpecs.filter(b => b.user_name === globalUsername)
-    : brandSpecs;
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-slate-600" />
-          <p className="text-slate-600">Loading brand guidelines...</p>
-        </div>
-      </div>
-    );
-  }
+    ? brandSpecsList.filter(g => g.user_name === globalUsername)
+    : brandSpecsList;
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 text-slate-900">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Brand Guidelines Manager</h1>
-          <p className="text-slate-600">
-            Configure brand specifications, voice guidelines, and visual identity for your content
-          </p>
-        </div>
+      <div className="max-w-5xl mx-auto space-y-8">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+          <h1 className="text-2xl font-bold mb-1 text-slate-900">Brand Guidelines & Specifications</h1>
+          <p className="text-slate-600 mb-6">Create voice, tone, and visual brand specifications per username.</p>
 
-        <Tabs defaultValue={showEnhancedBrandSpecs ? "enhanced" : "guidelines"} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="enhanced" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Enhanced Brand Specs
-            </TabsTrigger>
-            <TabsTrigger value="guidelines" className="flex items-center gap-2">
-              <FileCode className="w-4 h-4" />
-              Brand Guidelines
-            </TabsTrigger>
-          </TabsList>
+          {/* Only Guideline Name - Always Visible */}
+          <div className="mb-6 pb-6 border-b border-slate-200">
+            <label className="text-sm font-medium text-slate-700">Guideline Name</label>
+            <Input 
+              value={newGuideline.name} 
+              onChange={(e) => setNewGuideline((f) => ({ ...f, name: e.target.value }))} 
+              className="bg-white border-slate-300 text-slate-900 mt-1" 
+              placeholder="e.g., Core Voice or Main Brand" 
+            />
+          </div>
 
-          {/* Enhanced Brand Specifications Tab */}
-          <TabsContent value="enhanced" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Configuration Panel */}
-              <div className="lg:col-span-2 space-y-6">
-                <div className="bg-white rounded-xl border border-slate-200 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold text-slate-900">
-                      {isEditing ? "Edit" : "Create"} Brand Specifications
-                    </h2>
-                    {isEditing && (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setIsEditing(false);
-                          setNewBrandSpec(initialBrandSpecState);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsTrigger value="identity" className="flex items-center gap-2">
+                <FileCode className="w-4 h-4" />
+                Identity
+              </TabsTrigger>
+              <TabsTrigger value="colors" className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                Colors
+              </TabsTrigger>
+              <TabsTrigger value="typography" className="flex items-center gap-2">
+                <Type className="w-4 h-4" />
+                Typography
+              </TabsTrigger>
+              <TabsTrigger value="layout" className="flex items-center gap-2">
+                <LayoutIcon className="w-4 h-4" />
+                Layout
+              </TabsTrigger>
+            </TabsList>
 
-                  <div className="space-y-6">
-                    {/* Basic Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Specification Name *
-                        </label>
-                        <Input
-                          value={newBrandSpec.name}
-                          onChange={(e) => setNewBrandSpec(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="e.g., Main Brand, Secondary Brand"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Username *
-                        </label>
-                        <Select
-                          value={newBrandSpec.user_name}
-                          onValueChange={(value) => setNewBrandSpec(prev => ({ ...prev, user_name: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select username" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {usernames.map((username) => (
-                              <SelectItem key={username.user_name} value={username.user_name}>
-                                {username.user_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Website Analysis */}
-                    <WebsiteAnalyzer onAnalysisComplete={handleWebsiteAnalysisComplete} />
-
-                    {/* Visual Identity */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                        <Palette className="w-5 h-5" />
-                        Visual Identity
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <BrandColorPicker
-                          label="Primary Color"
-                          value={newBrandSpec.colors.primary}
-                          onChange={(color) => setNewBrandSpec(prev => ({
-                            ...prev,
-                            colors: { ...prev.colors, primary: color }
-                          }))}
-                        />
-                        <BrandColorPicker
-                          label="Secondary Color"
-                          value={newBrandSpec.colors.secondary}
-                          onChange={(color) => setNewBrandSpec(prev => ({
-                            ...prev,
-                            colors: { ...prev.colors, secondary: color }
-                          }))}
-                        />
-                        <BrandColorPicker
-                          label="Accent Color"
-                          value={newBrandSpec.colors.accent}
-                          onChange={(color) => setNewBrandSpec(prev => ({
-                            ...prev,
-                            colors: { ...prev.colors, accent: color }
-                          }))}
-                        />
-                        <BrandColorPicker
-                          label="Text Color"
-                          value={newBrandSpec.colors.text}
-                          onChange={(color) => setNewBrandSpec(prev => ({
-                            ...prev,
-                            colors: { ...prev.colors, text: color }
-                          }))}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Typography */}
-                    <FontSelector
-                      label="Typography"
-                      fontFamily={newBrandSpec.typography.font_family}
-                      fontSize={newBrandSpec.typography.font_size_base}
-                      fontWeight={newBrandSpec.typography.heading_weight}
-                      onFontFamilyChange={(fontFamily) => setNewBrandSpec(prev => ({
-                        ...prev,
-                        typography: { ...prev.typography, font_family: fontFamily }
-                      }))}
-                      onFontSizeChange={(fontSize) => setNewBrandSpec(prev => ({
-                        ...prev,
-                        typography: { ...prev.typography, font_size_base: fontSize }
-                      }))}
-                      onFontWeightChange={(fontWeight) => setNewBrandSpec(prev => ({
-                        ...prev,
-                        typography: { ...prev.typography, heading_weight: fontWeight }
-                      }))}
-                    />
-
-                    {/* Layout & Spacing */}
-                    <LayoutConfigurator
-                      layout={newBrandSpec.layout}
-                      onChange={(layout) => setNewBrandSpec(prev => ({ ...prev, layout }))}
-                    />
-
-                    {/* Brand Guidelines */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-800">Brand Guidelines</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Voice and Tone
-                          </label>
-                          <Textarea
-                            value={newBrandSpec.voice_and_tone}
-                            onChange={(e) => setNewBrandSpec(prev => ({ ...prev, voice_and_tone: e.target.value }))}
-                            placeholder="Describe the voice and tone for your brand..."
-                            rows={3}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Target Market
-                          </label>
-                          <Textarea
-                            value={newBrandSpec.target_market}
-                            onChange={(e) => setNewBrandSpec(prev => ({ ...prev, target_market: e.target.value }))}
-                            placeholder="Describe your target audience..."
-                            rows={3}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Content Style Rules
-                          </label>
-                          <Textarea
-                            value={newBrandSpec.content_style_rules}
-                            onChange={(e) => setNewBrandSpec(prev => ({ ...prev, content_style_rules: e.target.value }))}
-                            placeholder="e.g., Use active voice, keep sentences short..."
-                            rows={3}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Prohibited Elements
-                          </label>
-                          <Textarea
-                            value={newBrandSpec.prohibited_elements}
-                            onChange={(e) => setNewBrandSpec(prev => ({ ...prev, prohibited_elements: e.target.value }))}
-                            placeholder="Words, phrases, or elements to avoid..."
-                            rows={3}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Advanced CSS */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-800">Advanced Custom CSS</h3>
-                      <Textarea
-                        value={newBrandSpec.custom_css}
-                        onChange={(e) => setNewBrandSpec(prev => ({ ...prev, custom_css: e.target.value }))}
-                        placeholder="/* Additional custom CSS styles */"
-                        rows={6}
-                        className="font-mono text-sm"
-                      />
-                    </div>
-
-                    {/* Save Button */}
-                    <div className="flex justify-end">
-                      <Button
-                        onClick={handleSaveBrandSpec}
-                        disabled={isSaving || !newBrandSpec.name || !newBrandSpec.user_name}
-                        className="px-8"
-                      >
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="w-4 h-4 mr-2" />
-                            {isEditing ? "Update" : "Create"} Brand Spec
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Preview Panel */}
-              <div className="space-y-6">
-                <BrandPreview brandSpecs={newBrandSpec} />
-                
-                {/* Existing Brand Specifications */}
-                <div className="bg-white rounded-xl border border-slate-200 p-6">
-                  <h3 className="text-lg font-semibold text-slate-800 mb-4">Existing Specifications</h3>
-                  {displayedBrandSpecs.length === 0 ? (
-                    <p className="text-slate-500 text-sm">No brand specifications configured yet.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {displayedBrandSpecs.map((spec) => (
-                        <div key={spec.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div>
-                            <p className="font-medium">{spec.name}</p>
-                            <p className="text-sm text-slate-500">{spec.user_name}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEditBrandSpec(spec)}
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDeleteBrandSpec(spec.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Legacy Brand Guidelines Tab */}
-          <TabsContent value="guidelines" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Form Panel */}
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h2 className="text-xl font-semibold text-slate-900 mb-6">
-                  {isEditing ? "Edit" : "Create"} Brand Guidelines
-                </h2>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Guidelines Name *
-                      </label>
+            {/* Identity Tab */}
+            <TabsContent value="identity" className="space-y-4">
+              {/* Website analyzer */}
+              <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 mb-4">
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="flex-1">
+                    <label className="text-sm text-slate-700">Website URL</label>
+                    <div className="relative mt-1">
                       <Input
-                        value={newGuideline.name}
-                        onChange={(e) => setNewGuideline(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., Main Brand Guidelines"
+                        value={websiteUrl}
+                        onChange={(e) => setWebsiteUrl(e.target.value)}
+                        placeholder="https://example.com"
+                        className="bg-white border-slate-300 text-slate-900 pl-9"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Username *
-                      </label>
-                      <Select
-                        value={newGuideline.user_name}
-                        onValueChange={(value) => setNewGuideline(prev => ({ ...prev, user_name: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select username" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {usernames.map((username) => (
-                            <SelectItem key={username.user_name} value={username.user_name}>
-                              {username.user_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Globe className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                     </div>
                   </div>
-
-                  {/* Brand Guidelines Fields */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Voice and Tone
-                      </label>
-                      <Textarea
-                        value={newGuideline.voice_and_tone}
-                        onChange={(e) => setNewGuideline(prev => ({ ...prev, voice_and_tone: e.target.value }))}
-                        placeholder="Describe the voice and tone for your brand..."
-                        rows={3}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Content Style Rules
-                      </label>
-                      <Textarea
-                        value={newGuideline.content_style_rules}
-                        onChange={(e) => setNewGuideline(prev => ({ ...prev, content_style_rules: e.target.value }))}
-                        placeholder="e.g., Use active voice, keep sentences short..."
-                        rows={3}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Prohibited Elements
-                      </label>
-                      <Textarea
-                        value={newGuideline.prohibited_elements}
-                        onChange={(e) => setNewGuideline(prev => ({ ...prev, prohibited_elements: e.target.value }))}
-                        placeholder="Words, phrases, or elements to avoid..."
-                        rows={3}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Preferred Elements
-                      </label>
-                      <Textarea
-                        value={newGuideline.preferred_elements}
-                        onChange={(e) => setNewGuideline(prev => ({ ...prev, preferred_elements: e.target.value }))}
-                        placeholder="Words, phrases, or elements to encourage..."
-                        rows={3}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Target Market
-                      </label>
-                      <Textarea
-                        value={newGuideline.target_market}
-                        onChange={(e) => setNewGuideline(prev => ({ ...prev, target_market: e.target.value }))}
-                        placeholder="Describe your target audience..."
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Custom CSS Section */}
-                  {showCustomCssUpload && (
-                    <div className="bg-slate-100 border border-slate-200 rounded-xl p-5">
-                      <h3 className="text-lg font-semibold text-slate-800 mb-3">Custom Brand CSS</h3>
-                      <p className="text-sm text-slate-600 mb-4">
-                        Upload a CSS file to apply your website's exact styling to the editor preview.
-                      </p>
-                      <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-1">
-                          <Input
-                            type="file"
-                            accept=".css"
-                            onChange={(e) => setCssFile(e.target.files[0])}
-                            className="bg-white border-slate-300 text-slate-900"
-                          />
-                        </div>
-                        <Button
-                          onClick={async () => {
-                            if (!cssFile || !newGuideline.user_name) {
-                              toast.error("Please select a CSS file and username");
-                              return;
-                            }
-                            setIsUploadingCss(true);
-                            try {
-                              await uploadUserCss({
-                                file: cssFile,
-                                username: newGuideline.user_name
-                              });
-                              toast.success("CSS uploaded successfully");
-                              await loadGuidelinesAndUsernames();
-                            } catch (error) {
-                              toast.error("Failed to upload CSS");
-                            } finally {
-                              setIsUploadingCss(false);
-                            }
-                          }}
-                          disabled={isUploadingCss || !cssFile}
-                        >
-                          {isUploadingCss ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <FileCode className="w-4 h-4 mr-2" />
-                              Upload CSS
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Save Button */}
-                  <div className="flex justify-end">
+                  <div className="flex items-end">
                     <Button
-                      onClick={async () => {
-                        if (!newGuideline.name || !newGuideline.user_name) {
-                          toast.error("Please provide a name and select a username");
-                          return;
-                        }
-                        setIsSaving(true);
-                        try {
-                          if (newGuideline.id) {
-                            await BrandGuidelines.update(newGuideline.id, newGuideline);
-                            toast.success("Brand guidelines updated successfully");
-                          } else {
-                            await BrandGuidelines.create(newGuideline);
-                            toast.success("Brand guidelines created successfully");
-                          }
-                          await loadGuidelinesAndUsernames();
-                          setNewGuideline(initialGuidelineState);
-                        } catch (error) {
-                          toast.error("Failed to save brand guidelines");
-                        } finally {
-                          setIsSaving(false);
-                        }
-                      }}
-                      disabled={isSaving || !newGuideline.name || !newGuideline.user_name}
-                      className="px-8"
+                      onClick={handleAnalyzeWebsite}
+                      disabled={isAnalyzing || !websiteUrl}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white"
                     >
-                      {isSaving ? (
+                      {isAnalyzing ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
+                          Analyzing…
                         </>
                       ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          {isEditing ? "Update" : "Create"} Guidelines
-                        </>
+                        "Analyze"
                       )}
                     </Button>
                   </div>
                 </div>
+                <p className="text-xs text-slate-500 mt-2">We'll fetch the site, analyze its content with AI, and fill in Voice & Tone, Style Rules, and Target Market automatically.</p>
               </div>
 
-              {/* Guidelines List */}
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Existing Guidelines</h3>
-                {displayedGuidelines.length === 0 ? (
-                  <p className="text-slate-500 text-sm">No brand guidelines configured yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {displayedGuidelines.map((guideline) => (
-                      <div key={guideline.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{guideline.name}</p>
-                          <p className="text-sm text-slate-500">{guideline.user_name}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setNewGuideline(guideline);
-                              setIsEditing(true);
-                            }}
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => {
-                              setGuidelineToDelete(guideline);
-                              setShowDeleteConfirm(true);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+              {/* Custom CSS Section */}
+              {showCustomCssUpload && (
+                <div className="bg-slate-100 border border-slate-200 rounded-xl p-5 my-4">
+                  <h3 className="text-lg font-semibold text-slate-800 mb-3">Custom Brand CSS</h3>
+                  <p className="text-sm text-slate-600 mb-4">Upload a CSS file to apply your website's exact styling to the editor preview. This CSS will be linked to the selected username.</p>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                      <label htmlFor="css-upload" className="block text-sm font-medium mb-2 text-slate-700">Upload CSS File</label>
+                      <div className="relative">
+                        <Input
+                          id="css-upload"
+                          type="file"
+                          accept=".css"
+                          onChange={(e) => setCssFile(e.target.files[0])}
+                          className="bg-white border-slate-300 text-slate-900 pt-3 pb-5 px-4 h-14 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-end gap-3">
+                      <Button
+                        onClick={handleUploadCss}
+                        disabled={isUploadingCss || !cssFile || !newGuideline.user_name}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white h-14 px-6"
+                      >
+                        {isUploadingCss ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileCode className="w-4 h-4 mr-2" />}
+                        {isUploadingCss ? "Uploading..." : "Upload & Link CSS"}
+                      </Button>
+                      {currentUsernameCssUri && (
+                        <Button variant="destructive" onClick={handleRemoveCss} className="h-14 px-4">
+                          <Trash2 className="w-4 h-4 mr-2" /> Remove
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {currentUsernameCssUri && (
+                    <div className="mt-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-4 py-3">
+                      <span className="font-semibold">Current CSS:</span> {currentUsernameCssUri.split('/').pop()}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="text-sm text-slate-700">Target Market</label>
+                  <Input
+                    value={newGuideline.target_market || ""}
+                    onChange={(e) => setNewGuideline((f) => ({ ...f, target_market: e.target.value }))}
+                    className="bg-white border-slate-300 text-slate-900 mt-1"
+                    placeholder="e.g., SMB marketers in North America"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-sm text-slate-700">Voice & Tone</label>
+                  <Textarea value={newGuideline.voice_and_tone} onChange={(e) => setNewGuideline((f) => ({ ...f, voice_and_tone: e.target.value }))} className="bg-white border-slate-300 text-slate-900 mt-1 min-h-[80px]" placeholder="Describe the voice and tone in detail..." />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-slate-700">Content Style Rules</label>
+                  <Textarea value={newGuideline.content_style_rules} onChange={(e) => setNewGuideline((f) => ({ ...f, content_style_rules: e.target.value }))} className="bg-white border-slate-300 text-slate-900 mt-1 min-h-[80px]" placeholder="Active voice, sentence length, headings conventions..." />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-700">Prohibited (comma-separated)</label>
+                  <Input value={newGuideline.prohibited_elements} onChange={(e) => setNewGuideline((f) => ({ ...f, prohibited_elements: e.target.value }))} className="bg-white border-slate-300 text-slate-900 mt-1" placeholder="e.g., synergy, deep dive" />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-700">Preferred (comma-separated)</label>
+                  <Input value={newGuideline.preferred_elements} onChange={(e) => setNewGuideline((f) => ({ ...f, preferred_elements: e.target.value }))} className="bg-white border-slate-300 text-slate-900 mt-1" placeholder="e.g., practical, clear" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-slate-700">AI Instructions Override (optional)</label>
+                  <Textarea value={newGuideline.ai_instructions_override} onChange={(e) => setNewGuideline((f) => ({ ...f, ai_instructions_override: e.target.value }))} className="bg-white border-slate-300 text-slate-900 mt-1 min-h-[60px]" placeholder="Extra directives to the AI for this brand" />
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <Button onClick={handleSave} className="bg-blue-900 text-white hover:bg-indigo-700" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  {isSaving ? "Saving..." : newGuideline.id ? "Update" : "Create"}
+                </Button>
+                <Button onClick={resetForm} variant="outline" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50" disabled={isSaving}>
+                  <Edit3 className="w-4 h-4 mr-2" /> Reset
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* Colors Tab */}
+            <TabsContent value="colors" className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <BrandColorPicker
+                  label="Primary Color"
+                  value={brandSpecs.colors.primary}
+                  onChange={(color) => setBrandSpecs(prev => ({
+                    ...prev,
+                    colors: { ...prev.colors, primary: color }
+                  }))}
+                />
+                <BrandColorPicker
+                  label="Secondary Color"
+                  value={brandSpecs.colors.secondary}
+                  onChange={(color) => setBrandSpecs(prev => ({
+                    ...prev,
+                    colors: { ...prev.colors, secondary: color }
+                  }))}
+                />
+                <BrandColorPicker
+                  label="Accent Color"
+                  value={brandSpecs.colors.accent}
+                  onChange={(color) => setBrandSpecs(prev => ({
+                    ...prev,
+                    colors: { ...prev.colors, accent: color }
+                  }))}
+                />
+                <BrandColorPicker
+                  label="Text Color"
+                  value={brandSpecs.colors.text}
+                  onChange={(color) => setBrandSpecs(prev => ({
+                    ...prev,
+                    colors: { ...prev.colors, text: color }
+                  }))}
+                />
+                <BrandColorPicker
+                  label="Heading Color" // New Heading Color picker
+                  value={brandSpecs.colors.heading}
+                  onChange={(color) => setBrandSpecs(prev => ({
+                    ...prev,
+                    colors: { ...prev.colors, heading: color }
+                  }))}
+                />
+                <BrandColorPicker
+                  label="Background Color"
+                  value={brandSpecs.colors.background}
+                  onChange={(color) => setBrandSpecs(prev => ({
+                    ...prev,
+                    colors: { ...prev.colors, background: color }
+                  }))}
+                />
+                <BrandColorPicker
+                  label="Muted Color"
+                  value={brandSpecs.colors.muted}
+                  onChange={(color) => setBrandSpecs(prev => ({
+                    ...prev,
+                    colors: { ...prev.colors, muted: color }
+                  }))}
+                />
+              </div>
+
+              <BrandPreview brandSpecs={brandSpecs} />
+
+              <div className="flex gap-2 mt-4">
+                <Button onClick={handleSaveBrandSpecs} className="bg-blue-900 text-white hover:bg-indigo-700" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  {isSaving ? "Saving..." : editingBrandSpec ? "Update Specifications" : "Save Specifications"}
+                </Button>
+                <Button onClick={resetForm} variant="outline" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50" disabled={isSaving}>
+                  <Edit3 className="w-4 h-4 mr-2" /> Reset
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* Typography Tab */}
+            <TabsContent value="typography" className="space-y-4">
+              <FontSelector
+                label="Font Settings"
+                fontFamily={brandSpecs.typography.font_family}
+                fontSize={brandSpecs.typography.font_size_base}
+                fontWeight="400"
+                onFontFamilyChange={(font) => setBrandSpecs(prev => ({
+                  ...prev,
+                  typography: { ...prev.typography, font_family: font }
+                }))}
+                onFontSizeChange={(size) => setBrandSpecs(prev => ({
+                  ...prev,
+                  typography: { ...prev.typography, font_size_base: size }
+                }))}
+                onFontWeightChange={() => {}}
+              />
+
+              <div>
+                <label className="text-sm text-slate-700">Line Height</label>
+                <Input
+                  type="text"
+                  value={brandSpecs.typography.line_height}
+                  onChange={(e) => setBrandSpecs(prev => ({
+                    ...prev,
+                    typography: { ...prev.typography, line_height: e.target.value }
+                  }))}
+                  placeholder="1.6"
+                  className="bg-white border-slate-300 text-slate-900 mt-1"
+                />
+              </div>
+
+              <BrandPreview brandSpecs={brandSpecs} />
+
+              <div className="flex gap-2 mt-4">
+                <Button onClick={handleSaveBrandSpecs} className="bg-blue-900 text-white hover:bg-indigo-700" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  {isSaving ? "Saving..." : editingBrandSpec ? "Update Specifications" : "Save Specifications"}
+                </Button>
+                <Button onClick={resetForm} variant="outline" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50" disabled={isSaving}>
+                  <Edit3 className="w-4 h-4 mr-2" /> Reset
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* Layout Tab */}
+            <TabsContent value="layout" className="space-y-4">
+              <LayoutConfigurator
+                layout={brandSpecs.layout}
+                onChange={(newLayout) => setBrandSpecs(prev => ({
+                  ...prev,
+                  layout: { ...prev.layout, ...newLayout }
+                }))}
+              />
+
+              <div>
+                <label className="text-sm text-slate-700">Custom CSS</label>
+                <Textarea
+                  value={brandSpecs.custom_css}
+                  onChange={(e) => setBrandSpecs(prev => ({
+                    ...prev,
+                    custom_css: e.target.value
+                  }))}
+                  className="bg-white border-slate-300 text-slate-900 mt-1 font-mono text-sm min-h-[120px]"
+                  placeholder="/* Additional custom CSS */"
+                />
+              </div>
+
+              <BrandPreview brandSpecs={brandSpecs} />
+
+              <div className="flex gap-2 mt-4">
+                <Button onClick={handleSaveBrandSpecs} className="bg-blue-900 text-white hover:bg-indigo-700" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  {isSaving ? "Saving..." : editingBrandSpec ? "Update Specifications" : "Save Specifications"}
+                </Button>
+                <Button onClick={resetForm} variant="outline" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50" disabled={isSaving}>
+                  <Edit3 className="w-4 h-4 mr-2" /> Reset
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Existing Guidelines List */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+          <h2 className="text-2xl font-bold mb-4">Existing Guidelines</h2>
+          {isLoading ? (
+            <p>Loading...</p>
+          ) : (
+            <>
+              {displayedGuidelines.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3 text-slate-700">Basic Guidelines</h3>
+                  <div className="space-y-4">
+                    {displayedGuidelines.map((g) => (
+                      <div key={g.id} className="bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-sm">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-semibold text-slate-900">{g.name}</h3>
+                            <p className="text-sm text-slate-500">Username: {g.user_name}</p>
+                            <p className="text-sm text-slate-600 mt-2 line-clamp-3">
+                              <strong>Voice & Tone:</strong> {g.voice_and_tone}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0 ml-4">
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(g)} className="bg-blue-900 text-slate-50 hover:bg-accent hover:text-accent-foreground">
+                              <Edit3 className="w-4 h-4 mr-2" /> Edit
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDelete(g)} className="bg-emerald-300 text-blue-900 hover:bg-destructive/90">
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+                </div>
+              )}
 
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Brand Guidelines</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete "{guidelineToDelete?.name}"? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={async () => {
-                  if (guidelineToDelete) {
-                    try {
-                      await BrandGuidelines.delete(guidelineToDelete.id);
-                      toast.success("Brand guidelines deleted");
-                      await loadGuidelinesAndUsernames();
-                    } catch (error) {
-                      toast.error("Failed to delete brand guidelines");
-                    }
-                  }
-                  setShowDeleteConfirm(false);
-                  setGuidelineToDelete(null);
-                }}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              {displayedBrandSpecs.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-slate-700">Brand Specifications</h3>
+                  <div className="space-y-4">
+                    {displayedBrandSpecs.map((spec) => (
+                      <div key={spec.id} className="bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-sm">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-slate-900">{spec.name}</h3>
+                            <p className="text-sm text-slate-500">Username: {spec.user_name}</p>
+                            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded border-2 border-slate-300" style={{ backgroundColor: spec.colors?.primary }} />
+                                <span className="text-xs text-slate-600">Primary</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded border-2 border-slate-300" style={{ backgroundColor: spec.colors?.secondary }} />
+                                <span className="text-xs text-slate-600">Secondary</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded border-2 border-slate-300" style={{ backgroundColor: spec.colors?.accent }} />
+                                <span className="text-xs text-slate-600">Accent</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded border-2 border-slate-300" style={{ backgroundColor: spec.colors?.heading || initialBrandSpecsState.colors.heading }} />
+                                <span className="text-xs text-slate-600">Heading</span>
+                              </div>
+                              <div className="text-xs text-slate-600">
+                                <Type className="w-4 h-4 inline mr-1" />
+                                {spec.typography?.font_family?.split(',')[0] || 'Default'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0 ml-4">
+                            <Button variant="outline" size="sm" onClick={() => handleEditBrandSpec(spec)} className="bg-blue-900 text-slate-50 hover:bg-accent hover:text-accent-foreground">
+                              <Edit3 className="w-4 h-4 mr-2" /> Edit
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDelete({ ...spec, isBrandSpec: true })} className="bg-emerald-300 text-blue-900 hover:bg-destructive/90">
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {displayedGuidelines.length === 0 && displayedBrandSpecs.length === 0 && (
+                <p className="text-slate-500">No brand guidelines found for your assigned usernames.</p>
+              )}
+            </>
+          )}
+        </div>
       </div>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the "{guidelineToDelete?.name}" guideline for username "{guidelineToDelete?.user_name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

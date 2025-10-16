@@ -1,8 +1,9 @@
+
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Layout, Maximize2, Spacing, CornerUpRight } from "lucide-react";
+import { Layout, Maximize2, ArrowLeftRight, CornerUpRight } from "lucide-react";
 
 const LAYOUT_TYPES = [
   { value: "centered", label: "Centered (Max Width)" },
@@ -61,8 +62,8 @@ export default function LayoutConfigurator({
       {/* Layout Type */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-slate-700">Layout Type</Label>
-        <Select 
-          value={layout?.layout_type || "centered"} 
+        <Select
+          value={layout?.layout_type || "centered"}
           onValueChange={(value) => handleChange("layout_type", value)}
         >
           <SelectTrigger>
@@ -119,7 +120,7 @@ export default function LayoutConfigurator({
       {/* Content Padding */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-          <Spacing className="w-4 h-4" />
+          <ArrowLeftRight className="w-4 h-4" />
           Content Padding
         </Label>
         <div className="flex gap-2">

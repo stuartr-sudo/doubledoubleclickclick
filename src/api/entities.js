@@ -57,8 +57,6 @@ export const BlogCategory = base44.entities.BlogCategory;
 
 export const BrandGuidelines = base44.entities.BrandGuidelines;
 
-export const BrandSpecifications = base44.entities.BrandSpecifications;
-
 export const FeatureFlag = base44.entities.FeatureFlag;
 
 export const EditorWorkflow = base44.entities.EditorWorkflow;
@@ -114,6 +112,8 @@ export const WordPressPublishLog = base44.entities.WordPressPublishLog;
 export const ImagineerJob = base44.entities.ImagineerJob;
 
 export const InfographicVisualTypeExample = base44.entities.InfographicVisualTypeExample;
+
+export const BrandSpecifications = base44.entities.BrandSpecifications;
 
 
 

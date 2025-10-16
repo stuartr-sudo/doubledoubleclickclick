@@ -1882,7 +1882,7 @@ Current Title: ${title}`;
           if (currentWebhook) {
             postData.user_id = currentWebhook.user_id || currentUser?.id;
             postData.user_name = currentWebhook.user_name || currentUser?.user_name;
-            postData.assigned_to_email = currentWebhook.assigned_to_email;
+            postData.assigned_to_email = currentWebhook.assigned_to_email || currentUser?.email; // Added currentUser.email fallback from outline idea
             postData.processing_id = currentWebhook.processing_id || currentWebhook.id;
 
             // Always update the webhook itself with the latest content/title as well
@@ -1895,6 +1895,14 @@ Current Title: ${title}`;
             // For new posts not from a webhook, assign to current user
             postData.user_id = currentUser.id;
             postData.user_name = currentUser.user_name;
+            postData.assigned_to_email = currentUser.email; // Assign current user's email if no webhook, from outline idea
+          }
+
+          // CRITICAL FIX from outline: If it's a genuinely new post (no targetBlogPostId yet) and no slug is set,
+          // generate one from the title. `targetBlogPostId` will be null for a genuinely new post.
+          // This should only happen for the `create` path.
+          if (!targetBlogPostId && !postData.slug && postData.title) {
+            postData.slug = postData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
           }
 
           let savedPostEntity;
@@ -3135,13 +3143,17 @@ ${truncatedHtml}`;
           savedPost = { ...postData, id: existingId };
           initSessionKey({ postId: existingId });
         } else {
-          savedPost = await BlogPost.create(postData);
-          const urlParams = new URLSearchParams(window.location.search);
-          if (!urlParams.get('post') && savedPost?.id) {
-            const newUrl = createPageUrl(`Editor?post=${savedPost.id}`);
-            window.history.replaceState({}, '', newUrl);
+          await BlogPost.create(postData);
+          const newPost = await BlogPost.filter({ client_session_key: sessionKeyRef.current });
+          savedPost = newPost[0] || null;
+          if (savedPost?.id) {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.get('post') && savedPost?.id) {
+              const newUrl = createPageUrl(`Editor?post=${savedPost.id}`);
+              window.history.replaceState({}, '', newUrl);
+            }
+            if (savedPost?.id) initSessionKey({ postId: savedPost.id });
           }
-          if (savedPost?.id) initSessionKey({ postId: savedPost.id });
         }
         setCurrentPost(savedPost);
 
@@ -3798,8 +3810,7 @@ ${truncatedHtml}`;
                       onPreviewClick={closeAllDropdowns}
                       onDoubleClickSelected={handleIframeDoubleClick}
                       onContextMenuSelected={handleIframeContextMenu}
-                      userCssUsername={getUsernameForContent()}
-                      brandSpecsUsername={getUsernameForContent()} />
+                      userCssUsername={getUsernameForContent()} />
 
                   </div>
                 </div>

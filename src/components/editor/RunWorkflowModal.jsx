@@ -1,12 +1,8 @@
-
 import React, { useState, useEffect, useMemo } from "react";
-import { EditorWorkflow } from "@/api/entities";
-import { WorkflowRunStatus } from "@/api/entities";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckCircle2, Loader2, Play, AlertCircle, Crown, User as UserIcon, Sparkles, ChevronRight } from "lucide-react";
-import { base44 } from "@/api/base44Client";
-import { agentSDK } from "@/agents";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { AnimatePresence, motion } from "framer-motion";
@@ -126,8 +122,8 @@ export default function RunWorkflowModal({
     (async () => {
       try {
         const [userWorkflows, defaults] = await Promise.all([
-          EditorWorkflow.filter({ is_default: false }, "-updated_date", 200).catch(() => []),
-          EditorWorkflow.filter({ is_default: true }, "-updated_date", 200).catch(() => [])
+          base44.entities.EditorWorkflow.filter({ is_default: false }, "-updated_date", 200).catch(() => []),
+          base44.entities.EditorWorkflow.filter({ is_default: true }, "-updated_date", 200).catch(() => [])
         ]);
         
         if (active) {
@@ -146,7 +142,7 @@ export default function RunWorkflowModal({
     if (!runId) return;
     let cancelled = false;
     const interval = setInterval(async () => {
-      const arr = await WorkflowRunStatus.filter({ id: runId }).catch(() => []);
+      const arr = await base44.entities.WorkflowRunStatus.filter({ id: runId }).catch(() => []);
       if (cancelled) return;
       const row = arr && arr[0];
       if (row) {
@@ -181,6 +177,7 @@ export default function RunWorkflowModal({
 
   const callAgent = async (agentName, content) => {
     console.log(`🔥 FLASH: callAgent started for ${agentName}`);
+    const { agentSDK } = await import("@/agents");
     const conversation = await agentSDK.createConversation({
       agent_name: agentName,
       metadata: { source: "flash_workflow" },
@@ -200,6 +197,7 @@ export default function RunWorkflowModal({
 
   const waitForAgentResponse = async (conversationId, timeoutSec = 120) => {
     console.log(`🔥 FLASH: Waiting for agent response (${timeoutSec}s timeout)`);
+    const { agentSDK } = await import("@/agents");
     const deadline = Date.now() + timeoutSec * 1000;
     let attempts = 0;
     while (Date.now() < deadline) {
@@ -316,7 +314,7 @@ export default function RunWorkflowModal({
 
     const pushStatus = async (partial) => {
       try {
-        await WorkflowRunStatus.update(runId, partial);
+        await base44.entities.WorkflowRunStatus.update(runId, partial);
         console.log("🔥 FLASH: Status updated:", partial.progress_message || partial.status);
       } catch (e) {
         console.error("🔥 FLASH: Failed to update status:", e);
@@ -541,7 +539,7 @@ export default function RunWorkflowModal({
   const runFlashClientInBackground = async () => {
     console.log("🔥 FLASH: Starting background workflow for", itemType, itemId);
     try {
-      const newRun = await WorkflowRunStatus.create({
+      const newRun = await base44.entities.WorkflowRunStatus.create({
         workflow_id: selectedWorkflow.id,
         status: "pending",
         total_steps: selectedWorkflow?.workflow_steps?.length || 0,
@@ -672,7 +670,7 @@ export default function RunWorkflowModal({
 
     // Normal flow with progress modal
     try {
-      const newRun = await WorkflowRunStatus.create({
+      const newRun = await base44.entities.WorkflowRunStatus.create({
         workflow_id: selectedWorkflow.id,
         status: "pending",
         total_steps: selectedWorkflow?.workflow_steps?.length || 0,
@@ -985,8 +983,8 @@ export default function RunWorkflowModal({
           <DialogTitle className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
               <Sparkles className="w-6 h-6 text-white" />
-              Flash Workflow
             </div>
+            Flash Workflow
           </DialogTitle>
           <p className="text-slate-600 mt-2">
             Select a workflow to automatically optimize your content with AI-powered editing steps

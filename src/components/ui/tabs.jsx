@@ -1,44 +1,82 @@
-import * as React from "react"
-import * as TabsPrimitive from "@radix-ui/react-tabs"
+import React, { createContext, useContext, useState } from "react";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
+const TabsContext = createContext();
 
-const Tabs = TabsPrimitive.Root
+export function Tabs({ value, onValueChange, defaultValue, children, className }) {
+  const [activeTab, setActiveTab] = useState(value || defaultValue || "");
 
-const TabsList = React.forwardRef(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-slate-100 p-1 text-slate-500",
-      className
-    )}
-    {...props}
-  />
-))
-TabsList.displayName = TabsPrimitive.List.displayName
+  const handleTabChange = (newValue) => {
+    setActiveTab(newValue);
+    if (onValueChange) {
+      onValueChange(newValue);
+    }
+  };
 
-const TabsTrigger = React.forwardRef(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm",
-      className
-    )}
-    {...props}
-  />
-))
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
+  React.useEffect(() => {
+    if (value !== undefined) {
+      setActiveTab(value);
+    }
+  }, [value]);
 
-const TabsContent = React.forwardRef(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    className={cn(
-      "mt-2 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2",
-      className
-    )}
-    {...props}
-  />
-))
-TabsContent.displayName = TabsPrimitive.Content.displayName
+  return (
+    <TabsContext.Provider value={{ activeTab, setActiveTab: handleTabChange }}>
+      <div className={cn("w-full", className)}>
+        {children}
+      </div>
+    </TabsContext.Provider>
+  );
+}
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export function TabsList({ children, className }) {
+  return (
+    <div
+      className={cn(
+        "inline-flex h-10 items-center justify-center rounded-md bg-slate-100 p-1 text-slate-500",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function TabsTrigger({ value, children, className }) {
+  const { activeTab, setActiveTab } = useContext(TabsContext);
+  const isActive = activeTab === value;
+
+  return (
+    <button
+      type="button"
+      onClick={() => setActiveTab(value)}
+      className={cn(
+        "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        isActive
+          ? "bg-white text-slate-950 shadow-sm"
+          : "text-slate-600 hover:text-slate-900",
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function TabsContent({ value, children, className }) {
+  const { activeTab } = useContext(TabsContext);
+
+  if (activeTab !== value) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn(
+        "mt-2 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}

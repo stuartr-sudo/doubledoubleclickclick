@@ -73,8 +73,8 @@ const navStructure = [
   { type: "separator" },
   { name: "Products", href: "ProductManager", icon: ShoppingBag, featureFlag: "show_products_link" },
   { type: "separator" },
-  // NEW: Flash Workflow Builder - available to all users
-  { name: "Flash Workflows", href: "EditorWorkflowManager", icon: Bot, featureFlag: "show_flash_workflows_link" }]
+  // Flash Workflows - NOW ADMIN-ONLY
+  { name: "Flash Workflows", href: "EditorWorkflowManager", icon: Bot, featureFlag: "show_flash_workflows_link", requireSuperAdmin: true }]
   // Removed "Amazon Import" as it's now integrated into ProductManager
   // Removed "Amazon Testimonials" as it's now integrated into TestimonialLibrary
 },

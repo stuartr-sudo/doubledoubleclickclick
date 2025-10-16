@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Globe, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { analyzeWebsiteBrand } from "@/api/functions";
+import { base44 } from "@/api/base44Client";
 
 export default function WebsiteAnalyzer({
   onAnalysisComplete,
@@ -40,7 +40,7 @@ export default function WebsiteAnalyzer({
     setAnalysisResult(null);
 
     try {
-      const { data } = await analyzeWebsiteBrand({
+      const { data } = await base44.functions.invoke('analyzeWebsiteBrand', {
         url: websiteUrl,
         extract_colors: true,
         extract_fonts: true,

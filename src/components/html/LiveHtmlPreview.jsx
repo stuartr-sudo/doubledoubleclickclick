@@ -1,7 +1,6 @@
 
 import React, { useEffect, useRef, useCallback } from "react";
 import { Username } from "@/api/entities";
-import { BrandSpecifications } from "@/api/entities";
 import { CreateFileSignedUrl } from "@/api/integrations";
 import { toast } from "sonner";
 
@@ -13,229 +12,68 @@ export default function LiveHtmlPreview({
   onPreviewClick,
   onContextMenuSelected,
   onDoubleClickSelected,
-  userCssUsername,
-  brandSpecsUsername
+  userCssUsername
 }) {
   const iframeRef = useRef(null);
   const isReadyRef = useRef(false); // track when iframe script is ready
   const skipNextSetRef = useRef(false); // prevent echo that moves caret
   const initialHtmlRef = useRef(html); // snapshot of initial html used only at mount
 
-  // Effect to load and inject custom CSS and brand specifications
+  // Effect to load and inject custom CSS
   useEffect(() => {
     const iframe = iframeRef.current; // Capture iframe instance
-    if (!iframe) {
-      return;
-    }
-    
-    // If no usernames provided, clean up any existing styles
-    if (!userCssUsername && !brandSpecsUsername) {
+    if (!iframe || !userCssUsername) {
+      // If no iframe or no username, ensure any previously injected custom CSS is removed.
       const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
       const oldLink = doc?.head.querySelector('link[data-b44-custom-css]');
-      const oldStyle = doc?.head.querySelector('style[data-b44-brand-specs]');
       if (oldLink) oldLink.remove();
-      if (oldStyle) oldStyle.remove();
       return;
     }
 
-    const loadAndInjectStyles = async () => {
+    const loadAndInjectCss = async () => {
       try {
         const doc = iframe.contentDocument || iframe.contentWindow?.document;
         if (!doc) {
-          console.warn("Iframe document not available for style injection.");
+          console.warn("Iframe document not available for CSS injection.");
           return;
         }
 
-        // Clear any old styles first
-        const oldLink = doc.head.querySelector('link[data-b44-custom-css]');
-        const oldStyle = doc.head.querySelector('style[data-b44-brand-specs]');
-        if (oldLink) oldLink.remove();
-        if (oldStyle) oldStyle.remove();
-
-        // Load custom CSS if username provided
-        if (userCssUsername) {
-          try {
-            const usernameRecords = await Username.filter({ user_name: userCssUsername });
-            if (usernameRecords.length > 0) {
-              const username = usernameRecords[0];
-              const cssUri = username.default_css_file_uri;
-
-              if (cssUri) {
-                const { signed_url } = await CreateFileSignedUrl({ file_uri: cssUri });
-                if (signed_url) {
-                  const link = doc.createElement('link');
-                  link.rel = 'stylesheet';
-                  link.href = signed_url;
-                  link.setAttribute('data-b44-custom-css', 'true');
-                  doc.head.appendChild(link);
-                }
-              }
-            }
-          } catch (cssError) {
-            console.warn("Failed to load custom CSS:", cssError);
-          }
+        const usernameRecords = await Username.filter({ user_name: userCssUsername });
+        if (usernameRecords.length === 0) {
+          toast.error("Could not find user information for custom brand CSS.");
+          return;
         }
 
-        // Load brand specifications if username provided
-        if (brandSpecsUsername) {
-          try {
-            const brandSpecsRecords = await BrandSpecifications.filter({ user_name: brandSpecsUsername }, "-updated_date", 1);
-            if (brandSpecsRecords.length > 0) {
-              const brandSpec = brandSpecsRecords[0];
-              const generatedCSS = generateBrandCSS(brandSpec);
-              
-              if (generatedCSS) {
-                const style = doc.createElement('style');
-                style.setAttribute('data-b44-brand-specs', 'true');
-                style.textContent = generatedCSS;
-                doc.head.appendChild(style);
-              }
-            }
-          } catch (brandError) {
-            console.warn("Failed to load brand specifications:", brandError);
+        const username = usernameRecords[0];
+        const cssUri = username.default_css_file_uri;
+
+        // Clear any old custom CSS first
+        const oldLink = doc.head.querySelector('link[data-b44-custom-css]');
+        if (oldLink) oldLink.remove();
+
+        if (cssUri) {
+          const { signed_url } = await CreateFileSignedUrl({ file_uri: cssUri });
+          if (signed_url) {
+            const link = doc.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = signed_url;
+            link.setAttribute('data-b44-custom-css', 'true');
+            doc.head.appendChild(link);
+          } else {
+            toast.error("Failed to generate signed URL for custom brand CSS.");
           }
         }
       } catch (error) {
-        console.error("Failed to load styles:", error);
+        console.error("Failed to load custom CSS:", error);
+        toast.error("Could not load custom brand CSS.");
       }
     };
 
-    // Generate CSS from brand specifications
-    const generateBrandCSS = (brandSpec) => {
-      if (!brandSpec) return "";
-
-      const {
-        colors = {},
-        typography = {},
-        layout = {},
-        components = {},
-        custom_css = ""
-      } = brandSpec;
-
-      return `
-        :root {
-          --brand-primary: ${colors.primary || "#1a365d"};
-          --brand-secondary: ${colors.secondary || "#2c5282"};
-          --brand-accent: ${colors.accent || "#3182ce"};
-          --brand-text: ${colors.text || "#1a202c"};
-          --brand-bg: ${colors.background || "#ffffff"};
-          --brand-muted: ${colors.muted || "#718096"};
-          --brand-success: ${colors.success || "#38a169"};
-          --brand-warning: ${colors.warning || "#d69e2e"};
-          --brand-error: ${colors.error || "#e53e3e"};
-        }
-
-        body {
-          font-family: ${typography.font_family || "Inter, system-ui, sans-serif"};
-          font-size: ${typography.font_size_base || "16px"};
-          line-height: ${typography.line_height || "1.6"};
-          color: var(--brand-text);
-          background: var(--brand-bg);
-          max-width: ${layout.max_width || "1200px"};
-          padding: ${layout.content_padding || "20px"};
-          margin: 0 auto;
-          border-radius: ${layout.border_radius || "8px"};
-          box-shadow: ${layout.box_shadow || "0 2px 4px rgba(0,0,0,0.1)"};
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-          font-family: ${typography.heading_font || typography.font_family || "Inter, system-ui, sans-serif"};
-          color: var(--brand-text);
-          margin: ${layout.element_spacing || "16px"} 0;
-          font-weight: ${typography.heading_weight || "600"};
-        }
-
-        h1 {
-          font-size: ${typography.heading_sizes?.h1 || "2.5rem"};
-          margin-bottom: ${layout.section_spacing || "40px"};
-        }
-
-        h2 {
-          font-size: ${typography.heading_sizes?.h2 || "2rem"};
-          margin-top: ${layout.section_spacing || "40px"};
-        }
-
-        h3 {
-          font-size: ${typography.heading_sizes?.h3 || "1.5rem"};
-        }
-
-        p {
-          margin: ${layout.element_spacing || "16px"} 0;
-          color: var(--brand-text);
-        }
-
-        a {
-          color: ${components.links?.color || colors.accent || "#3182ce"};
-          text-decoration: ${components.links?.text_decoration || "underline"};
-        }
-
-        a:hover {
-          color: ${components.links?.hover_color || colors.primary || "#1a365d"};
-        }
-
-        ul, ol {
-          margin: ${layout.element_spacing || "16px"} 0;
-          padding-left: 24px;
-        }
-
-        li {
-          margin: 8px 0;
-          color: var(--brand-text);
-        }
-
-        blockquote {
-          border-left: 4px solid var(--brand-accent);
-          padding: 16px 20px;
-          margin: ${layout.section_spacing || "40px"} 0;
-          background: #f8fafc;
-          border-radius: ${layout.border_radius || "8px"};
-          color: var(--brand-muted);
-          font-style: italic;
-        }
-
-        button {
-          background: ${components.buttons?.primary_bg || colors.primary || "#1a365d"};
-          color: ${components.buttons?.primary_text || "#ffffff"};
-          border: none;
-          padding: ${components.buttons?.padding || "12px 24px"};
-          border-radius: ${components.buttons?.border_radius || "6px"};
-          font-weight: 500;
-          cursor: pointer;
-          margin: ${layout.element_spacing || "16px"} 0;
-        }
-
-        button:hover {
-          opacity: 0.9;
-        }
-
-        img {
-          max-width: 100%;
-          height: auto;
-          border-radius: ${components.images?.border_radius || "8px"};
-          margin: ${components.images?.margin || "20px 0"};
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-          body {
-            padding: ${layout.content_padding ? `calc(${layout.content_padding} / 2)` : "10px"};
-          }
-          
-          h1 {
-            font-size: ${typography.heading_sizes?.h1 ? `calc(${typography.heading_sizes.h1} * 0.8)` : "2rem"};
-          }
-        }
-
-        /* Custom CSS from brand specifications */
-        ${custom_css || ""}
-      `;
-    };
-
-    // We need to wait for the iframe to be ready before we can inject styles.
+    // We need to wait for the iframe to be ready before we can inject CSS.
     // The iframe posts a 'b44-ready' message when its internal script has run.
     const handleReadyMessage = (event) => {
         if (event.data?.type === 'b44-ready') {
-            loadAndInjectStyles();
+            loadAndInjectCss();
             // Remove listener after first successful load for this username
             window.removeEventListener('message', handleReadyMessage);
         }
@@ -245,20 +83,18 @@ export default function LiveHtmlPreview({
     
     // Also trigger if already ready (e.g., username changes after initial iframe load)
     if(isReadyRef.current) {
-        loadAndInjectStyles();
+        loadAndInjectCss();
     }
 
     return () => {
       window.removeEventListener('message', handleReadyMessage);
-      // Cleanup: remove styles when the username changes or component unmounts
+      // Cleanup: remove the link when the username changes or component unmounts
       // FIXED: Use the captured iframe variable instead of iframeRef.current
       const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
       const link = doc?.head.querySelector('link[data-b44-custom-css]');
-      const style = doc?.head.querySelector('style[data-b44-brand-specs]');
       if (link) link.remove();
-      if (style) style.remove();
     };
-  }, [userCssUsername, brandSpecsUsername]);
+  }, [userCssUsername]);
 
 
   // Inject default text color without overriding explicit inline styles
