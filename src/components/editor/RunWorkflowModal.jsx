@@ -99,6 +99,13 @@ export default function RunWorkflowModal({
   const estimatedCost = useMemo(() => {
     const wf = selectedWorkflow;
     if (!wf || !Array.isArray(wf.workflow_steps)) return 0;
+    
+    // CRITICAL: If manual token_cost is set, use that instead of calculating
+    if (typeof wf.token_cost === 'number' && wf.token_cost >= 0) {
+      return wf.token_cost;
+    }
+    
+    // Otherwise, calculate from individual steps
     let total = 0;
     for (const step of wf.workflow_steps) {
       if (step?.enabled === false) continue;
@@ -978,8 +985,8 @@ export default function RunWorkflowModal({
           <DialogTitle className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
               <Sparkles className="w-6 h-6 text-white" />
+              Flash Workflow
             </div>
-            Flash Workflow
           </DialogTitle>
           <p className="text-slate-600 mt-2">
             Select a workflow to automatically optimize your content with AI-powered editing steps

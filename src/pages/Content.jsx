@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, Filter, FileText, Link as LinkIcon, ClipboardPaste, Trash2, Clock, Calendar as CalendarIcon, SortAsc } from "lucide-react";
+import { Loader2, Search, Filter, FileText, Link as LinkIcon, ClipboardPaste, Trash2, Clock, Calendar as CalendarIcon, SortAsc, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import PasteContentModal from "@/components/content/PasteContentModal";
@@ -37,6 +37,7 @@ export default function Content() {
   const [localSelectedUsername, setLocalSelectedUsername] = useState("all");
 
   const [statusFilter, setStatusFilter] = useState("all");
+  const [flashStatusFilter, setFlashStatusFilter] = useState("all"); // NEW: State for flash status filter
   const [q, setQ] = useState("");
   const [items, setItems] = useState([]); // unified: posts + webhooks
   // itemsRef is no longer needed as the new polling useEffect will capture the latest `items` state via its `runningItemKeys` dependency.
@@ -426,6 +427,15 @@ export default function Content() {
       const byQuery = q.trim() ?
         (it.title || "").toLowerCase().includes(q.trim().toLowerCase()) :
         true;
+      
+      // NEW: Flash status filter
+      if (flashStatusFilter !== "all") {
+        const itemFlashStatus = it.flash_status || "idle";
+        if (flashStatusFilter !== itemFlashStatus) {
+          return false;
+        }
+      }
+
       return byUser && byStatus && byQuery;
     });
 
@@ -439,7 +449,7 @@ export default function Content() {
     }
 
     return result;
-  }, [items, q, statusFilter, selectedUsername, sortByCountdown]);
+  }, [items, q, statusFilter, selectedUsername, sortByCountdown, flashStatusFilter]); // NEW: Added flashStatusFilter to dependencies
 
   const onOpenItem = (row) => {
     if (row.type === "post") {
@@ -519,6 +529,43 @@ export default function Content() {
                       {s.label}
                     </SelectItem>
                   )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* NEW: Flash status filter */}
+            <div className="min-w-[180px]">
+              <Select value={flashStatusFilter} onValueChange={setFlashStatusFilter}>
+                <SelectTrigger className="w-full bg-white border border-slate-300 text-slate-900">
+                  <Zap className="w-4 h-4 mr-2 text-slate-500" />
+                  <SelectValue placeholder="All Flash" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border border-slate-200 text-slate-900 shadow-xl">
+                  <SelectItem
+                    value="all"
+                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                    All Flash
+                  </SelectItem>
+                  <SelectItem
+                    value="idle"
+                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                    Not Flashed
+                  </SelectItem>
+                  <SelectItem
+                    value="running"
+                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                    Running
+                  </SelectItem>
+                  <SelectItem
+                    value="completed"
+                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                    Completed
+                  </SelectItem>
+                  <SelectItem
+                    value="failed"
+                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                    Failed
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -657,7 +704,7 @@ export default function Content() {
                             e.stopPropagation();
                             onOpenItem(row);
                           }}
-                          className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600 text-white px-3 text-sm font-medium rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9">
+                          className="bg-gradient-to-r from-slate-800 to-indigo-900 hover:from-slate-700 hover:to-indigo-800 text-white px-3 text-sm font-medium rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9">
                           Open
                         </Button>
 
@@ -666,7 +713,7 @@ export default function Content() {
                             e.stopPropagation();
                             setItemToDelete(row);
                           }}
-                          className="bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-600 hover:to-pink-600 text-white rounded-md h-10 w-10 inline-flex items-center justify-center transition-all"
+                          className="bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-md h-10 w-10 inline-flex items-center justify-center transition-all"
                           title={`Delete "${row.title}"`}>
                           <Trash2 className="w-4 h-4" />
                         </button>

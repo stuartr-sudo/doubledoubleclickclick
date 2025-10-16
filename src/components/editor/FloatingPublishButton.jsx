@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,46 +17,28 @@ import {
   Globe,
   Settings,
 } from "lucide-react";
-
-function getHeaderBottom() {
-  try {
-    const candidates = [
-      document.querySelector("nav"),
-      document.querySelector(".topbar"),
-      document.querySelector("#app-header"),
-      document.querySelector("header"),
-    ].filter(Boolean);
-
-    const bottoms = candidates.map((el) => {
-      const r = el.getBoundingClientRect();
-      return r.bottom || 0;
-    });
-
-    const maxBottom = bottoms.length ? Math.max(...bottoms) : 0;
-    return Math.max(0, maxBottom) + 8;
-  } catch {
-    return 16;
-  }
-}
+import { base44 } from "@/api/base44Client";
 
 export default function FloatingPublishButton({
   isPublishing,
-  isFreeTrial,
-  showPublishOptions,
+  showPublishOptions = true,
   onDownloadTxt,
   onPublishToGoogleDocs,
   onPublishToShopify,
   onOpenPublishOptions,
+  onPublishToConfigured,
   isSavingAuto,
   lastSaved,
 }) {
-  // NEW: local visibility controller for the "Saved" pill
+  const [configuredCredentials, setConfiguredCredentials] = useState([]);
+  const [credentialsLoaded, setCredentialsLoaded] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   const [showSaved, setShowSaved] = React.useState(false);
   const savedTimeoutRef = React.useRef(null);
 
   React.useEffect(() => {
     if (!lastSaved) return;
-    // Show the saved pill for a short duration after any save completes
     setShowSaved(true);
     if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
     savedTimeoutRef.current = setTimeout(() => setShowSaved(false), 3000);
@@ -70,13 +53,73 @@ export default function FloatingPublishButton({
     }
   }, [lastSaved]);
 
+  // Load credentials ONLY when dropdown opens, and only once
+  const handleDropdownOpenChange = async (open) => {
+    setDropdownOpen(open);
+    
+    if (open && !credentialsLoaded) {
+      setCredentialsLoaded(true); // Mark as loaded immediately to prevent duplicate calls
+      
+      try {
+        // Add 1.5 second delay to avoid rate limit on initial load
+        await new Promise(res => setTimeout(res, 1500));
+        
+        const user = await base44.auth.me();
+        const assignedUsernames = Array.isArray(user?.assigned_usernames) ? user.assigned_usernames : [];
+        
+        if (assignedUsernames.length === 0) {
+          setConfiguredCredentials([]);
+          return;
+        }
+
+        const allCreds = [];
+        for (let i = 0; i < assignedUsernames.length; i++) {
+          if (i > 0) {
+            // 1 second delay between each username request
+            await new Promise(res => setTimeout(res, 1000));
+          }
+          
+          try {
+            const creds = await base44.entities.IntegrationCredential.filter(
+              { user_name: assignedUsernames[i] }, 
+              "-updated_date"
+            );
+            if (creds && creds.length > 0) {
+              allCreds.push(...creds);
+            }
+          } catch (err) {
+            // If rate limited, stop trying and silently fail
+            if (err?.response?.status === 429) {
+              console.warn("Rate limit hit, stopping credential load");
+              break;
+            }
+            // For other errors, continue with next username
+            continue;
+          }
+        }
+        
+        setConfiguredCredentials(allCreds);
+      } catch (error) {
+        // Silent fail - credentials section just won't show
+        if (error?.response?.status !== 429) {
+          console.warn("Failed to load credentials:", error?.message);
+        }
+        setConfiguredCredentials([]);
+      }
+    }
+  };
+
+  // Check if user has any Shopify credentials configured
+  const hasShopifyCredential = configuredCredentials.some(
+    cred => cred.provider === 'shopify'
+  );
+
   return (
     <div
       className="fixed right-6 z-[300] flex flex-col items-end gap-2 pointer-events-auto"
       style={{ top: '200px' }}
     >
-      {/* Publish dropdown button */}
-      <DropdownMenu>
+      <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button
             disabled={isPublishing}
@@ -106,34 +149,40 @@ export default function FloatingPublishButton({
             Publish to Google Docs
           </DropdownMenuItem>
 
-          {!isFreeTrial ? (
+          {configuredCredentials.length > 0 && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onPublishToShopify}>
-                <Globe className="w-4 h-4 mr-2" />
-                Publish to Shopify
-              </DropdownMenuItem>
-              {showPublishOptions && (
-                <DropdownMenuItem onClick={onOpenPublishOptions}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configure Publishing
+              {configuredCredentials.map((credential) => (
+                <DropdownMenuItem 
+                  key={credential.id}
+                  onClick={() => {
+                    onPublishToConfigured && onPublishToConfigured(credential);
+                  }}
+                >
+                  <Globe className="w-4 h-4 mr-2" />
+                  Publish to {credential.name}
                 </DropdownMenuItem>
-              )}
-            </>
-          ) : (
-            <>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1.5 text-xs text-slate-500">
-                <span className="font-medium">Upgrade to unlock:</span>
-                <br />• Shopify, WordPress, Notion, Webflow
-                <br />• Custom webhooks
-              </div>
+              ))}
             </>
           )}
+
+          <DropdownMenuSeparator />
+          
+          {/* Only show "Publish to Shopify" if user has a Shopify credential configured */}
+          {hasShopifyCredential && (
+            <DropdownMenuItem onClick={onPublishToShopify}>
+              <Globe className="w-4 h-4 mr-2" />
+              Publish to Shopify
+            </DropdownMenuItem>
+          )}
+          
+          <DropdownMenuItem onClick={onOpenPublishOptions}>
+            <Settings className="w-4 h-4 mr-2" />
+            Configure Publishing
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* NEW: status pills under the Publish button */}
       {isSavingAuto && (
         <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-lg border border-slate-200 text-sm">
           <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600" />
@@ -144,7 +193,6 @@ export default function FloatingPublishButton({
       {!isSavingAuto && showSaved && lastSaved && (
         <div
           className="bg-white px-3 py-1.5 rounded-lg shadow-lg border border-slate-200 text-xs text-slate-600 transition-opacity duration-500 opacity-100"
-          // We keep it simple; the fade is driven by the timeout-controlled visibility
         >
           Saved {savedTimeLabel}
         </div>

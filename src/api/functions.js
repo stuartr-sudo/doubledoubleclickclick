@@ -235,3 +235,5 @@ export const scrapeWithFirecrawl = base44.functions.scrapeWithFirecrawl;
 
 export const getSitemapPages = base44.functions.getSitemapPages;
 
+export const fetchShopifyBlogs = base44.functions.fetchShopifyBlogs;
+

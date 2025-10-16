@@ -1,21 +1,17 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle } from
-"@/components/ui/dialog";
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IntegrationCredential } from "@/api/entities";
-import { User } from "@/api/entities";
-import { AppSettings } from "@/api/entities";
-import { Loader2, Plus, Trash2, Settings, ExternalLink, Video } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { Loader2, Plus, Trash2, Settings, ExternalLink, Video, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { securePublish } from "@/api/functions";
 import VideoModal from "@/components/common/VideoModal";
 
 export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
@@ -26,6 +22,11 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [showHelpVideo, setShowHelpVideo] = useState(false);
   const [helpVideoUrl, setHelpVideoUrl] = useState("");
+  
+  // Shopify blog fetching states
+  const [fetchingBlogs, setFetchingBlogs] = useState(false);
+  const [availableBlogs, setAvailableBlogs] = useState([]);
+  const [selectedBlogId, setSelectedBlogId] = useState("");
 
   const [form, setForm] = useState({
     provider: "shopify",
@@ -42,14 +43,13 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     http_method: "POST",
     headers: {},
     signing_secret: "",
-    config: { page_builder: "none" }, // default page builder hint
+    config: { page_builder: "none" },
     user_name: ""
   });
 
   // Helper: build a scoped HTML island (safe, portable)
   const buildHtmlIsland = (rawHtml) => {
     if (!rawHtml) return rawHtml;
-    // Skip if already wrapped by our classes
     const alreadyHasIsland =
       /class=["'][^"']*(?:\bls-article\b|\bb44-article\b)[^"']*["']/.test(rawHtml) ||
       /<style[^>]*>[\s\S]*?(?:\.ls-article|\.b44-article)/i.test(rawHtml);
@@ -126,7 +126,6 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
   useEffect(() => {
     if (isOpen) {
-      // Add 500ms delay before loading to avoid immediate rate limit on modal open
       const timer = setTimeout(() => {
         loadCredentialsAndUser();
       }, 500);
@@ -137,13 +136,14 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
   const loadHelpVideo = async () => {
     try {
+      const { AppSettings } = await import("@/api/entities");
       const settings = await AppSettings.list();
       const videoSetting = settings.find(s => s.key === "shopify_setup_video");
       if (videoSetting?.value) {
         setHelpVideoUrl(videoSetting.value);
       }
     } catch (error) {
-      // Silent fail - video is optional
+      // Silent fail
     }
   };
 
@@ -151,6 +151,9 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     setLoading(true);
     
     try {
+      const { User } = await import("@/api/entities");
+      const { IntegrationCredential } = await import("@/api/entities");
+      
       const user = await User.me();
       setCurrentUser(user);
       
@@ -163,11 +166,10 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         return;
       }
 
-      // Load credentials with aggressive rate limit protection
       const allCreds = [];
       for (let i = 0; i < assignedUsernames.length; i++) {
         if (i > 0) {
-          await new Promise(res => setTimeout(res, 500)); // 500ms between requests
+          await new Promise(res => setTimeout(res, 500));
         }
         
         try {
@@ -176,14 +178,12 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
             allCreds.push(...creds);
           }
         } catch (credErr) {
-          // Silently skip - absolutely no error handling
           continue;
         }
       }
       
       setCredentials(allCreds);
       
-      // Get context for default username
       const urlParams = new URLSearchParams(window.location.search);
       const postId = urlParams.get('post');
       const webhookId = urlParams.get('webhook');
@@ -216,17 +216,58 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       setLoading(false);
       
     } catch (error) {
-      // Only retry once on rate limit with 5 second delay
       if (error?.response?.status === 429 && attempt === 0) {
         setTimeout(() => loadCredentialsAndUser(1), 5000);
         return;
       }
       
-      // Silently set empty state - NO TOAST, NO CONSOLE LOG
       setCredentials([]);
       setCurrentUser(null);
       setLoading(false);
     }
+  };
+
+  // NEW: Fetch Shopify blogs when access token and store domain are entered
+  const handleFetchBlogs = async () => {
+    if (!form.access_token || !form.site_domain) {
+      toast.error("Please enter Access Token and Store Domain first");
+      return;
+    }
+
+    setFetchingBlogs(true);
+    setAvailableBlogs([]);
+    setSelectedBlogId("");
+    
+    try {
+      const { data } = await base44.functions.invoke('fetchShopifyBlogs', {
+        access_token: form.access_token,
+        store_domain: form.site_domain
+      });
+
+      if (data.success && data.blogs && data.blogs.length > 0) {
+        setAvailableBlogs(data.blogs);
+        toast.success(`Found ${data.blogs.length} blog${data.blogs.length === 1 ? '' : 's'}`);
+        
+        // Auto-select first blog
+        if (data.blogs.length === 1) {
+          setSelectedBlogId(data.blogs[0].id);
+          setForm(prev => ({ ...prev, blog_id: data.blogs[0].id }));
+        }
+      } else {
+        toast.message("No blogs found for this Shopify store");
+      }
+    } catch (error) {
+      console.error("Error fetching blogs:", error);
+      toast.error("Failed to fetch blogs. Please check your credentials.");
+    } finally {
+      setFetchingBlogs(false);
+    }
+  };
+
+  // Update blog_id when selection changes
+  const handleBlogSelect = (blogId) => {
+    setSelectedBlogId(blogId);
+    setForm(prev => ({ ...prev, blog_id: blogId }));
   };
 
   const handleAddCredential = async () => {
@@ -235,13 +276,11 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       return;
     }
 
-    // Shopify validation
     if (form.provider === "shopify" && (!form.access_token || !form.site_domain || !form.blog_id)) {
-      toast.error("Shopify requires an access token, store domain, and blog ID");
+      toast.error("Shopify requires an access token, store domain, and blog selection");
       return;
     }
 
-    // WordPress.org validation
     if (form.provider === "wordpress_org" && (!form.site_domain || !form.username || !form.password)) {
       toast.error("WordPress.org requires a site domain, username, and application password");
       return;
@@ -249,6 +288,8 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
     setLoading(true);
     try {
+      const { IntegrationCredential } = await import("@/api/entities");
+      
       const credentialData = {
         provider: form.provider,
         name: form.name.trim(),
@@ -265,7 +306,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         ...(form.http_method && { http_method: form.http_method }),
         ...(form.signing_secret && { signing_secret: form.signing_secret.trim() }),
         ...(Object.keys(form.headers || {}).length > 0 && { headers: form.headers }),
-        ...(Object.keys(form.config || {}).length > 0 && { config: form.config }) // includes page_builder
+        ...(Object.keys(form.config || {}).length > 0 && { config: form.config })
       };
 
       await IntegrationCredential.create(credentialData);
@@ -286,16 +327,16 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         http_method: "POST",
         headers: {},
         signing_secret: "",
-        config: { page_builder: "none" }, // Reset with default page_builder
+        config: { page_builder: "none" },
         user_name: currentUser?.assigned_usernames?.[0] || ""
       });
+      setAvailableBlogs([]);
+      setSelectedBlogId("");
       setShowAddForm(false);
       
-      // Wait 1 second before reloading to avoid rate limit
       await new Promise(res => setTimeout(res, 1000));
       await loadCredentialsAndUser();
     } catch (error) {
-      // Only show error for credential creation failures, not rate limits
       if (error?.response?.status !== 429) {
         toast.error("Failed to add credential");
       }
@@ -309,6 +350,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     
     setLoading(true);
     try {
+      const { IntegrationCredential } = await import("@/api/entities");
       await IntegrationCredential.delete(id);
       toast.success("Credential deleted");
       await new Promise(res => setTimeout(res, 1000));
@@ -327,20 +369,17 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     try {
       const plainText = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
-      // Decide whether to wrap as an HTML island:
       const isWordPress = credential.provider === "wordpress_org";
       const pageBuilder = credential?.config?.page_builder || "none";
-      // Wrap in HTML island only for WordPress with Elementor
       const shouldWrapIsland = isWordPress && pageBuilder === "elementor"; 
       const finalHtml = shouldWrapIsland ? buildHtmlIsland(html || "") : (html || "");
 
-      const { data } = await securePublish({
+      const { data } = await base44.functions.invoke('securePublish', {
         provider: credential.provider,
         credentialId: credential.id,
         title: title || "Untitled",
         html: finalHtml,
         text: plainText,
-        // Optional hint passed through for observability/future logic
         page_builder: pageBuilder
       });
 
@@ -379,14 +418,60 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
               placeholder="your-store.myshopify.com"
             />
           </div>
+          
+          {/* NEW: Fetch Blogs Button */}
           <div>
-            <Label>Blog ID *</Label>
-            <Input
-              value={form.blog_id}
-              onChange={(e) => setForm({ ...form, blog_id: e.target.value })}
-              placeholder="12345678"
-            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleFetchBlogs}
+              disabled={!form.access_token || !form.site_domain || fetchingBlogs}
+              className="w-full"
+            >
+              {fetchingBlogs ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Fetching Blogs...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Fetch Available Blogs
+                </>
+              )}
+            </Button>
           </div>
+
+          {/* NEW: Blog Selection Dropdown */}
+          {availableBlogs.length > 0 && (
+            <div>
+              <Label>Select Blog *</Label>
+              <Select value={selectedBlogId} onValueChange={handleBlogSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a blog..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableBlogs.map((blog) => (
+                    <SelectItem key={blog.id} value={blog.id}>
+                      {blog.title} (ID: {blog.id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Fallback: Manual Blog ID input (hidden when blogs are fetched) */}
+          {availableBlogs.length === 0 && (
+            <div>
+              <Label>Blog ID * <span className="text-xs text-slate-500">(or fetch blogs above)</span></Label>
+              <Input
+                value={form.blog_id}
+                onChange={(e) => setForm({ ...form, blog_id: e.target.value })}
+                placeholder="12345678"
+              />
+            </div>
+          )}
         </>
       );
     }
@@ -426,7 +511,6 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
             </p>
           </div>
 
-          {/* NEW: Page Builder hint (optional) */}
           <div>
             <Label>Page Builder (optional)</Label>
             <Select
@@ -442,7 +526,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
               </SelectContent>
             </Select>
             <p className="text-xs text-slate-500 mt-1">
-              If Elementor, your content will be sent as a self‑contained HTML block (“HTML island”) for reliable rendering.
+              If Elementor, your content will be sent as a self‑contained HTML block ("HTML island") for reliable rendering.
             </p>
           </div>
         </>
@@ -464,7 +548,6 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Existing Credentials */}
             <div>
               <h3 className="font-semibold mb-3">Your Publishing Destinations</h3>
               {loading && credentials.length === 0 ? (
@@ -505,7 +588,6 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
               )}
             </div>
 
-            {/* Add New Credential */}
             {!showAddForm ? (
               <Button onClick={() => setShowAddForm(true)} variant="outline" className="w-full">
                 <Plus className="w-4 h-4 mr-2" />

@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { Zap, Loader2 } from "lucide-react";
+import { Zap, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import RunWorkflowModal from "../editor/RunWorkflowModal";
 import { BlogPost } from "@/api/entities";
 import { WebhookReceived } from "@/api/entities";
@@ -37,7 +36,6 @@ export default function FlashButton({ item, onStatusChange }) {
     setShowModal(false);
   };
 
-  // FIX: pass item context so parent can update the correct row immediately
   const handleWorkflowStart = () => {
     onStatusChange && onStatusChange(item.id, item.type, "running");
     setShowModal(false);
@@ -67,23 +65,34 @@ export default function FlashButton({ item, onStatusChange }) {
         await WebhookReceived.update(item.id, updateData);
       }
       
-      // FIX: notify parent with correct identifiers so UI shows "completed"
       onStatusChange && onStatusChange(item.id, item.type, "completed");
       setShowModal(false);
-      toast.success("Flash workflow completed and saved!"); // NEW: Success toast
+      toast.success("Flash workflow completed and saved!");
     } catch (err) {
       console.error("Failed to save flashed content:", err);
       
-      // NEW: More specific error messages for rate limiting
       if (err?.response?.status === 429) {
         toast.error("Rate limit exceeded. Please wait a moment and try again.");
       } else {
         toast.error("Flash completed but failed to save changes");
       }
       
-      // Make sure UI reflects failure state
       onStatusChange && onStatusChange(item.id, item.type, "failed");
     }
+  };
+
+  // Render different icons based on flash status
+  const renderIcon = () => {
+    if (isRunning) {
+      return <Loader2 className="w-4 h-4 animate-spin" />;
+    }
+    if (isCompleted) {
+      return <CheckCircle2 className="w-4 h-4" />;
+    }
+    if (isFailed) {
+      return <AlertCircle className="w-4 h-4" />;
+    }
+    return <Zap className="w-4 h-4" />;
   };
 
   return (
@@ -102,11 +111,7 @@ export default function FlashButton({ item, onStatusChange }) {
             : "Run flash workflow"
         }
       >
-        {item.flash_status === "running" ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Zap className="w-4 h-4" />
-        )}
+        {renderIcon()}
       </button>
 
       {showModal && (
