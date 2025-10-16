@@ -57,6 +57,8 @@ export const BlogCategory = base44.entities.BlogCategory;
 
 export const BrandGuidelines = base44.entities.BrandGuidelines;
 
+export const BrandSpecifications = base44.entities.BrandSpecifications;
+
 export const FeatureFlag = base44.entities.FeatureFlag;
 
 export const EditorWorkflow = base44.entities.EditorWorkflow;

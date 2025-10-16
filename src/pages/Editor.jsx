@@ -3798,7 +3798,8 @@ ${truncatedHtml}`;
                       onPreviewClick={closeAllDropdowns}
                       onDoubleClickSelected={handleIframeDoubleClick}
                       onContextMenuSelected={handleIframeContextMenu}
-                      userCssUsername={getUsernameForContent()} />
+                      userCssUsername={getUsernameForContent()}
+                      brandSpecsUsername={getUsernameForContent()} />
 
                   </div>
                 </div>

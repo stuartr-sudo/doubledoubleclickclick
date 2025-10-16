@@ -237,3 +237,11 @@ export const getSitemapPages = base44.functions.getSitemapPages;
 
 export const fetchShopifyBlogs = base44.functions.fetchShopifyBlogs;
 
+export const analyzeWebsiteBrand = base44.functions.analyzeWebsiteBrand;
+
+export const generateBrandCSS = base44.functions.generateBrandCSS;
+
+export const validateBrandSpecs = base44.functions.validateBrandSpecs;
+
+export const exportBrandAssets = base44.functions.exportBrandAssets;
+
