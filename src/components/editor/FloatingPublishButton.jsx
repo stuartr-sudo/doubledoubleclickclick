@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,8 +49,6 @@ export default function FloatingPublishButton({
   isSavingAuto,
   lastSaved,
 }) {
-  // REMOVED: const topOffset = getHeaderBottom();
-
   // NEW: local visibility controller for the "Saved" pill
   const [showSaved, setShowSaved] = React.useState(false);
   const savedTimeoutRef = React.useRef(null);
