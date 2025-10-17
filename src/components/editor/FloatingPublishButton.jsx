@@ -116,7 +116,7 @@ export default function FloatingPublishButton({
 
   return (
     <div
-      className="fixed right-6 z-[300] flex flex-col items-end gap-2 pointer-events-auto"
+      className="fixed right-6 z-10 flex flex-col items-end gap-2 pointer-events-auto"
       style={{ top: '200px' }}
     >
       <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownOpenChange}>

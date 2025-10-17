@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // Added DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CheckCircle2, Loader2, Play, AlertCircle, Crown, User as UserIcon, Sparkles, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -144,7 +144,7 @@ export default function RunWorkflowModal({
     })();
 
     return () => { active = false; };
-  }, [isOpen, selectedWorkflowId]);
+  }, [isOpen]); // FIXED: Only depend on isOpen, not selectedWorkflowId
 
   useEffect(() => {
     if (!runId) return;
