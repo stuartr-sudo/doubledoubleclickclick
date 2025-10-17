@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // Added DialogDescription
 import { CheckCircle2, Loader2, Play, AlertCircle, Crown, User as UserIcon, Sparkles, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -43,24 +44,24 @@ const FEATURE_FLAG_BY_STEP = {
   humanize: "ai_humanize"
 };
 
-export default function RunWorkflowModal({ 
-  isOpen, 
-  onClose, 
-  currentHtml, 
-  onApply, 
+export default function RunWorkflowModal({
+  isOpen,
+  onClose,
+  currentHtml,
+  onApply,
   onWorkflowStart,
   userName,
   itemId = null,
   itemType = null,
   backgroundMode = false
 }) {
-  const [workflows, setWorkflows] = useState([]);
-  const [defaultWorkflows, setDefaultWorkflows] = useState([]);
-  const [selectedId, setSelectedId] = useState("");
+  const [workflows, setWorkflows] = useState([]); // This will now hold only default workflows
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState(""); // Renamed from selectedId
   const [running, setRunning] = useState(false);
   const [runId, setRunId] = useState(null);
   const [status, setStatus] = useState(null);
   const [error, setError] = useState("");
+  const [loadingWorkflows, setLoadingWorkflows] = useState(true); // New state for loading workflows
 
   const { consumeTokensForFeature } = useTokenConsumption();
   const { flags } = useFeatureFlagData();
@@ -88,19 +89,19 @@ export default function RunWorkflowModal({
   }, [status?.status, TIPS.length]);
 
   const selectedWorkflow = useMemo(() => {
-    const all = [...defaultWorkflows, ...workflows];
-    return all.find(w => String(w.id) === String(selectedId)) || null;
-  }, [selectedId, workflows, defaultWorkflows]);
+    // Simplified: now workflows only contains the default ones
+    return workflows.find(w => String(w.id) === String(selectedWorkflowId)) || null;
+  }, [selectedWorkflowId, workflows]);
 
   const estimatedCost = useMemo(() => {
     const wf = selectedWorkflow;
     if (!wf || !Array.isArray(wf.workflow_steps)) return 0;
-    
+
     // CRITICAL: If manual token_cost is set, use that instead of calculating
     if (typeof wf.token_cost === 'number' && wf.token_cost >= 0) {
       return wf.token_cost;
     }
-    
+
     // Otherwise, calculate from individual steps
     let total = 0;
     for (const step of wf.workflow_steps) {
@@ -117,26 +118,33 @@ export default function RunWorkflowModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    
+
     let active = true;
     (async () => {
+      setLoadingWorkflows(true); // Start loading
       try {
-        const [userWorkflows, defaults] = await Promise.all([
-          base44.entities.EditorWorkflow.filter({ is_default: false }, "-updated_date", 200).catch(() => []),
-          base44.entities.EditorWorkflow.filter({ is_default: true }, "-updated_date", 200).catch(() => [])
-        ]);
-        
+        // Only fetch default workflows
+        const defaults = await base44.entities.EditorWorkflow.filter({ is_default: true }, "-updated_date", 200).catch(() => []);
+
         if (active) {
-          setWorkflows(userWorkflows || []);
-          setDefaultWorkflows(defaults || []);
+          setWorkflows(defaults || []); // Set to 'workflows' state
+          if (defaults.length > 0 && !selectedWorkflowId) {
+            // Automatically select the first default workflow if none is selected
+            setSelectedWorkflowId(String(defaults[0].id));
+          }
         }
       } catch (err) {
         console.error("Failed to load workflows:", err);
+        toast.error("Failed to load workflows");
+      } finally {
+        if (active) {
+          setLoadingWorkflows(false); // End loading
+        }
       }
     })();
-    
+
     return () => { active = false; };
-  }, [isOpen]);
+  }, [isOpen, selectedWorkflowId]);
 
   useEffect(() => {
     if (!runId) return;
@@ -221,7 +229,7 @@ export default function RunWorkflowModal({
   };
 
   const toPlain = (html = "") => String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  
+
   const stripCodeFences = (str) => {
     if (!str) return "";
     let out = String(str).trim();
@@ -233,7 +241,7 @@ export default function RunWorkflowModal({
     }
     return out.trim();
   };
-  
+
   const looksLikeHtml = (str) => {
     const s = (str || "").trim();
     return s.startsWith("<") && s.includes(">");
@@ -306,7 +314,7 @@ export default function RunWorkflowModal({
   const runFlashClient = async ({ runId, workflow, html }) => {
     console.log("🔥 FLASH: runFlashClient started with", workflow.workflow_steps.length, "steps");
     console.log("🔥 FLASH: HTML content length:", html?.length || 0);
-    
+
     let current = html;
     let seoData = null;
     let schemaData = null;
@@ -364,17 +372,17 @@ export default function RunWorkflowModal({
         }
 
         console.log(`🔥 FLASH: Preparing to call agent: ${agentName}`);
-        
+
         let contentToSend = current;
         if (type === "brand_it" || type === "brand it") {
           contentToSend = `USERNAME: ${userName}\n\nHTML CONTENT:\n${current}`;
           console.log(`🔥 FLASH: Brand It - adding username prefix`);
         }
-        
+
         console.log(`🔥 FLASH: Calling agent ${agentName} with content length:`, contentToSend?.length || 0);
         const out = await callAgent(agentName, contentToSend);
         console.log(`🔥 FLASH: Agent ${agentName} returned response length:`, out?.length || 0);
-        
+
         let rawOut = String(out || "").trim();
 
         if (!rawOut) {
@@ -399,7 +407,7 @@ export default function RunWorkflowModal({
         if (type === "tldr" || type === "key_takeaway" || type === "key takeaway (tldr)") {
           console.log(`🔥 FLASH: Processing TLDR response`);
           const cleanedSummary = rawOut.replace(/<[^>]*>?/gm, '').trim();
-          
+
           const elId = `el-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
           const tldrHtml = `
 <div class="b44-tldr" data-b44-id="${elId}" data-b44-type="tldr" style="border-left: 4px solid #4f46e5; padding: 1rem; background-color: #f5f3ff; margin: 1.5rem 0; border-radius: 4px;">
@@ -409,7 +417,7 @@ export default function RunWorkflowModal({
     <p style="margin-bottom: 0; color: #434343;">${cleanedSummary}</p>
   </div>
 </div>`;
-          
+
           current = tldrHtml + '\n' + current;
           console.log(`🔥 FLASH: TLDR added to content`);
           console.log(`🔥 FLASH: ========== Completed step ${i + 1}/${steps.length}: ${rawType} ==========`);
@@ -426,7 +434,7 @@ export default function RunWorkflowModal({
             console.error(`🔥 FLASH: AutoLink JSON parse error:`, parseErr);
             throw new Error(`AutoLink returned invalid JSON: ${parseErr.message}`);
           }
-          
+
           if (parsed?.updated_html && typeof parsed.updated_html === 'string') {
             current = parsed.updated_html;
             console.log(`🔥 FLASH: AutoLink applied via updated_html`);
@@ -452,7 +460,7 @@ export default function RunWorkflowModal({
             console.error(`🔥 FLASH: AutoScan JSON parse error:`, parseErr);
             throw new Error(`AutoScan returned invalid JSON: ${parseErr.message}`);
           }
-          
+
           if (parsed?.updated_html && typeof parsed.updated_html === 'string') {
             current = parsed.updated_html;
             console.log(`🔥 FLASH: AutoScan applied updated_html`);
@@ -473,7 +481,7 @@ export default function RunWorkflowModal({
             console.error(`🔥 FLASH: SEO JSON parse error:`, parseErr);
             throw new Error(`SEO returned invalid JSON: ${parseErr.message}`);
           }
-          
+
           seoData = {
             meta_title: parsed.meta_title || "",
             slug: parsed.slug || "",
@@ -522,7 +530,7 @@ export default function RunWorkflowModal({
     const resultData = {};
     if (seoData) resultData.seo_metadata = seoData;
     if (schemaData) resultData.schema = schemaData;
-    
+
     console.log("🔥 FLASH: Updating final status to completed");
     await pushStatus({
       status: "completed",
@@ -590,15 +598,15 @@ export default function RunWorkflowModal({
           if (result.schema) {
             updateData.generated_llm_schema = result.schema;
           }
-          
+
           console.log("🔥 FLASH: Updating database with", updateData.flash_status);
-          
+
           if (itemType === "post") {
             await base44.entities.BlogPost.update(itemId, updateData);
           } else if (itemType === "webhook") {
             await base44.entities.WebhookReceived.update(itemId, updateData);
           }
-          
+
           console.log("🔥 FLASH: Database updated successfully");
         }
       }
@@ -640,12 +648,12 @@ export default function RunWorkflowModal({
     if (itemId && itemType) {
       try {
         if (itemType === "post") {
-          await base44.entities.BlogPost.update(itemId, { 
+          await base44.entities.BlogPost.update(itemId, {
             flash_status: "running",
             flash_workflow_id: selectedWorkflow.id
           });
         } else if (itemType === "webhook") {
-          await base44.entities.WebhookReceived.update(itemId, { 
+          await base44.entities.WebhookReceived.update(itemId, {
             flash_status: "running",
             flash_workflow_id: selectedWorkflow.id
           });
@@ -659,10 +667,10 @@ export default function RunWorkflowModal({
     if (backgroundMode) {
       // Notify parent component that workflow is starting
       onWorkflowStart && onWorkflowStart();
-      
+
       toast.info("Flash workflow started in background", { duration: 3000 });
       handleClose();
-      
+
       // Start workflow in background
       runFlashClientInBackground();
       return;
@@ -700,7 +708,7 @@ export default function RunWorkflowModal({
               flash_status: "completed",
               flashed_at: new Date().toISOString()
             };
-            
+
             if (itemType === "post") {
               await base44.entities.BlogPost.update(itemId, updateData);
             } else if (itemType === "webhook") {
@@ -723,17 +731,17 @@ export default function RunWorkflowModal({
           </div>,
           { duration: 5000 }
         );
-        
+
         if (result.html) {
           onApply && onApply(result.html, result.seo || null, result.schema || null);
         }
-        
+
         if (result.seo) {
           toast.info("Open SEO Settings to review and apply the generated SEO metadata", {
             duration: 6000
           });
         }
-        
+
         handleClose();
       } else {
         throw new Error("Workflow did not return a success status");
@@ -741,7 +749,7 @@ export default function RunWorkflowModal({
     } catch (err) {
       const msg = err?.message || String(err);
       setError(msg);
-      
+
       if (itemId && itemType) {
         try {
           if (itemType === "post") {
@@ -753,7 +761,7 @@ export default function RunWorkflowModal({
           console.error("Failed to update flash failure status:", updateErr);
         }
       }
-      
+
       toast.error(`Workflow failed: ${msg}`);
     } finally {
       setRunning(false);
@@ -761,7 +769,7 @@ export default function RunWorkflowModal({
   };
 
   const resetAll = () => {
-    setSelectedId("");
+    setSelectedWorkflowId("");
     setRunId(null);
     setStatus(null);
     setRunning(false);
@@ -978,143 +986,72 @@ export default function RunWorkflowModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-6xl bg-white max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0 pb-4 border-b border-slate-200">
-          <DialogTitle className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            Flash Workflow
-          </DialogTitle>
-          <p className="text-slate-600 mt-2">
-            Select a workflow to automatically optimize your content with AI-powered editing steps
-          </p>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-white text-slate-900">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-slate-900">Flash Workflow</DialogTitle>
+          <DialogDescription className="text-slate-600">
+            Select a workflow to enhance your content with AI-powered tools
+          </DialogDescription>
         </DialogHeader>
 
-        {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto py-6 space-y-6 min-h-0">
-          {defaultWorkflows.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Crown className="w-5 h-5 text-amber-600" />
-                <h3 className="font-semibold text-lg text-slate-900">Default Workflows</h3>
-                <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">
-                  Recommended
-                </Badge>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {defaultWorkflows.map((wf) => (
-                  <button
-                    key={wf.id}
-                    onClick={() => setSelectedId(String(wf.id))}
-                    className={`text-left p-4 rounded-xl border-2 transition-all ${
-                      selectedId === String(wf.id)
-                        ? "border-indigo-500 bg-indigo-50 shadow-md"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+        {loadingWorkflows ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          </div>
+        ) : workflows.length === 0 ? (
+          <div className="text-center py-12 text-slate-500">
+            No workflows available
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {workflows.map((wf) => (
+              <button
+                key={wf.id}
+                onClick={() => setSelectedWorkflowId(String(wf.id))}
+                className={`text-left p-4 rounded-xl border-2 transition-all w-full ${
+                  selectedWorkflowId === String(wf.id)
+                    ? "border-indigo-500 bg-indigo-50 shadow-md"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
                             <Crown className="w-4 h-4 text-amber-600" />
-                          </div>
-                          <h4 className="font-semibold text-slate-900">{wf.name}</h4>
                         </div>
-                        {wf.description && (
-                          <p className="text-sm text-slate-600 mb-3">{wf.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-1.5">
-                          {(wf.workflow_steps || []).filter(s => s.enabled !== false).map((step, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs bg-slate-100 text-slate-700">
-                              {STEP_LABELS[step.type] || step.type}
+                        <h4 className="font-semibold text-slate-900">{wf.name}</h4>
+                        {wf.is_default && (
+                           <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">
+                                Recommended
                             </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      {selectedId === String(wf.id) && (
-                        <CheckCircle2 className="w-6 h-6 text-indigo-600 flex-shrink-0" />
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {workflows.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <UserIcon className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-semibold text-lg text-slate-900">Your Personal Workflows</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {workflows.map((wf) => (
-                  <button
-                    key={wf.id}
-                    onClick={() => setSelectedId(String(wf.id))}
-                    className={`text-left p-4 rounded-xl border-2 transition-all ${
-                      selectedId === String(wf.id)
-                        ? "border-indigo-500 bg-indigo-50 shadow-md"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <UserIcon className="w-4 h-4 text-indigo-600" />
-                          </div>
-                          <h4 className="font-semibold text-slate-900">{wf.name}</h4>
-                        </div>
-                        {wf.description && (
-                          <p className="text-sm text-slate-600 mb-3">{wf.description}</p>
                         )}
-                        <div className="flex flex-wrap gap-1.5">
-                          {(wf.workflow_steps || []).filter(s => s.enabled !== false).map((step, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs bg-slate-100 text-slate-700">
-                              {STEP_LABELS[step.type] || step.type}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      {selectedId === String(wf.id) && (
-                        <CheckCircle2 className="w-6 h-6 text-indigo-600 flex-shrink-0" />
-                      )}
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {defaultWorkflows.length === 0 && workflows.length === 0 && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-8 h-8 text-slate-400" />
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-2">No Workflows Available</h3>
-              <p className="text-slate-600 mb-4">Create your first workflow in the Flash Workflow Builder</p>
-              <Button onClick={handleClose} variant="outline">
-                Go to Workflow Builder
-              </Button>
-            </div>
-          )}
-
-          {selectedWorkflow && (
-            <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-              <div className="text-sm text-slate-700">
-                Estimated tokens for this run are calculated from the enabled steps.
-              </div>
-              <div className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-sm font-medium">
-                Estimated: {estimatedCost}
-              </div>
-            </div>
-          )}
-        </div>
+                    {wf.description && (
+                      <p className="text-sm text-slate-600 mb-3">{wf.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {(wf.workflow_steps || []).filter(s => s.enabled !== false).map((step, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs"
+                        >
+                          {STEP_LABELS[step.type] || step.type}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {selectedWorkflowId === String(wf.id) && (
+                    <CheckCircle2 className="w-6 h-6 text-indigo-600 flex-shrink-0" />
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Fixed footer with action buttons */}
-        {(defaultWorkflows.length > 0 || workflows.length > 0) && (
+        {(workflows.length > 0) && (
           <div className="flex-shrink-0 flex gap-3 pt-4 border-t border-slate-200">
             <Button
               onClick={startRun}
