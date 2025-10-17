@@ -69,7 +69,7 @@ import BrandItModal from "../components/editor/BrandItModal";
 import AffilifyModal from "../components/editor/AffilifyModal";
 import RunWorkflowModal from "../components/editor/RunWorkflowModal";
 import PasteContentModal from "../components/content/PasteContentModal";
-import TextEditorModal from "@/components/editor/TextEditorModal"; // FIX: Corrected import path
+import TextEditorModal from "../components/editor/TextEditorModal"; // FIX: Corrected import path
 import InlineFormatToolbar from "../components/editor/InlineFormatToolbar";
 import FaqGeneratorModal from "../components/editor/FaqGeneratorModal";
 import MediaLibraryModal from "../components/editor/MediaLibraryModal";
@@ -1459,7 +1459,7 @@ export default function Editor() {
                 // Create the wrapper div, similar to infographics
                 const wrapperDiv = iframeDoc.createElement('div');
                 wrapperDiv.setAttribute('data-b44-id', job.job_id); // Use job_id as the ID for selection
-                wrapperDiv.setAttribute('data-b44-type', 'imagineer-placeholder'); // Use 'imagineer-placeholder' type for full width display
+                wrapperDiv.setAttribute('data-b44-type', 'infographic'); // Use 'infographic' type for full width display
                 wrapperDiv.style.cssText = 'width: 100%; margin: 20px 0; padding: 0; display: block; clear: both; text-align: center;';
                 wrapperDiv.appendChild(imgElement);
 
@@ -2857,8 +2857,8 @@ Current Title: ${title}`;
               content.setAttribute('aria-hidden', checkbox.checked ? 'false' : 'true'); // Fixed accessibility issue with aria-hidden logic
             }
           }
-        }
-      });
+        });
+      }
     });
 
     document.querySelectorAll('input[type="checkbox"][id^="faq-"], input[type="checkbox"][id^="accordion-"]').forEach(function(cb) {
@@ -3523,19 +3523,20 @@ ${truncatedHtml}`;
   const cleanHtmlForExport = (htmlString) => {
     if (!htmlString) return "";
     
-    // Remove ALL data-* attributes completely
-    let cleaned = htmlString;
-    cleaned = cleaned.replace(/\s+data-[\w-]+="[^"]*"/gi, '');
-    cleaned = cleaned.replace(/\s+data-[\w-]+='[^']*'/gi, '');
-    cleaned = cleaned.replace(/\s+contenteditable="[^"]*"/gi, '');
-    cleaned = cleaned.replace(/\s+contenteditable='[^']*'/gi, '');
+    // Remove ALL data-* attributes using a precise regex
+    let cleaned = htmlString.replace(/\s+data-[a-zA-Z0-9_-]+="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+data-[a-zA-Z0-9_-]+='[^']*'/gi, '');
     
+    // Remove contenteditable
+    cleaned = cleaned.replace(/\s+contenteditable="(?:true|false)"/gi, '');
+    cleaned = cleaned.replace(/\s+contenteditable='(?:true|false)'/gi, '');
+
     return cleaned;
   };
 
   const handleDownloadTxt = () => {
-    // Build complete HTML
-    const fullHtml = `<!DOCTYPE html>
+    // Build the complete HTML document
+    const htmlDocument = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -3547,15 +3548,17 @@ ${content}
 </body>
 </html>`;
 
-    // Clean ALL data attributes from the entire HTML
-    const cleanedHtml = cleanHtmlForExport(fullHtml);
+    // Clean the entire document to remove data attributes
+    const cleanedHtml = cleanHtmlForExport(htmlDocument);
 
+    // Create and download the file
     const blob = new Blob([cleanedHtml], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `${(title || 'document').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
     document.body.appendChild(link);
+    link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     

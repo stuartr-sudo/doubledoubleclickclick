@@ -861,7 +861,7 @@ export default function LiveHtmlPreview({
 
         function insertLink(url) {
           const sel = document.getSelection();
-          var text = sel && !sel.isCollapsed ? sel.toString() : '';
+          var text = sel && !sel.isCollapsed ? String(sel) : '';
           const a = document.createElement('a');
           a.href = url;
           a.target = '_blank';
@@ -1247,20 +1247,21 @@ export default function LiveHtmlPreview({
                 return false;
               }
               window.__b44_last_insert_at = now;
-              return false; // Prevent insert on every message. This should be 'true'
+              return true; // Corrected from 'false' to 'true'
             }
 
             if (d.type === 'insert-html') {
-              // This logic had a bug. shouldProcessInsert was returning false.
-              // Re-evaluate how this debounce should work, or assume the parent debounces.
-              // For now, allow immediate processing of inserts.
-              insertHtmlAtSelection(d.html || '');
+              if (shouldProcessInsert()) {
+                insertHtmlAtSelection(d.html || '');
+              }
               return;
             }
 
             // handle insertion after selection (no replacement)
             if (d.type === 'insert-after-selection') {
-              insertHtmlAfterSelection(d.html || '');
+              if (shouldProcessInsert()) {
+                insertHtmlAfterSelection(d.html || '');
+              }
               return;
             }
 
@@ -1675,7 +1676,7 @@ export default function LiveHtmlPreview({
       ref={iframeRef}
       title="Live HTML Preview"
       className="w-full h-full rounded-lg border border-gray-200 bg-white"
-      sandbox="allow-scripts allow-same-origin"
+      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation allow-forms"
     />
   );
 }

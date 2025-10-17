@@ -139,7 +139,7 @@ export default function FloatingPublishButton({
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56 max-h-[400px] overflow-y-auto">
           <DropdownMenuItem onClick={onDownloadTxt}>
             <Download className="w-4 h-4 mr-2" />
             Download as TXT
