@@ -69,7 +69,7 @@ import BrandItModal from "../components/editor/BrandItModal";
 import AffilifyModal from "../components/editor/AffilifyModal";
 import RunWorkflowModal from "../components/editor/RunWorkflowModal";
 import PasteContentModal from "../components/content/PasteContentModal";
-import TextEditorModal from "../components/editor/TextEditorModal"; // FIX: Corrected import path
+import TextEditorModal from "@/components/editor/TextEditorModal"; // FIX: Corrected import path
 import InlineFormatToolbar from "../components/editor/InlineFormatToolbar";
 import FaqGeneratorModal from "../components/editor/FaqGeneratorModal";
 import MediaLibraryModal from "../components/editor/MediaLibraryModal";
@@ -1459,7 +1459,7 @@ export default function Editor() {
                 // Create the wrapper div, similar to infographics
                 const wrapperDiv = iframeDoc.createElement('div');
                 wrapperDiv.setAttribute('data-b44-id', job.job_id); // Use job_id as the ID for selection
-                wrapperDiv.setAttribute('data-b44-type', 'infographic'); // Use 'infographic' type for full width display
+                wrapperDiv.setAttribute('data-b44-type', 'imagineer-placeholder'); // Use 'imagineer-placeholder' type for full width display
                 wrapperDiv.style.cssText = 'width: 100%; margin: 20px 0; padding: 0; display: block; clear: both; text-align: center;';
                 wrapperDiv.appendChild(imgElement);
 
@@ -3522,62 +3522,44 @@ ${truncatedHtml}`;
 
   const cleanHtmlForExport = (htmlString) => {
     if (!htmlString) return "";
-
-    let cleaned = String(htmlString);
-
-    cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
-
-    cleaned = cleaned.replace(/<([a-z0-9:-]+)\b[^>]*class=["'][^"']*b44-select-handle\b[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, '');
-
-    cleaned = cleaned.replace(/\sdata-b44-[\w-]+=(["'])[\s\S]*?\1/gi, '');
-
-    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*"[^"]*"/gi, '');
-    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*'[^']*'/gi, '');
-    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*[^\s>'"]+/gi, '');
-    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*(("[^"]*"|'[^']*'|[^\s>]+))/gi, '');
-
-    cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*(?=[\s>])/gi, '');
-
-    cleaned = cleaned.replace(/style=(["'])([\s\S]*?)\1/gi, (m, q, styles) => {
-      const out = styles.replace(/\boutline(?:-offset)?\s*:\s*[^;"]*;?/gi, '').trim();
-      return out ? `style=${q}${out}${q}` : '';
-    });
-
-    cleaned = cleaned.replace(/\s{2,}/g, ' ');
-
-    cleaned = cleaned.replace(/\s+>/g, '>');
-
-    cleaned = cleaned.trim();
-
+    
+    // Remove ALL data-* attributes completely
+    let cleaned = htmlString;
+    cleaned = cleaned.replace(/\s+data-[\w-]+="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+data-[\w-]+='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s+contenteditable="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+contenteditable='[^']*'/gi, '');
+    
     return cleaned;
   };
 
   const handleDownloadTxt = () => {
-    const cleanTitle = title || "Untitled";
-    const cleanedContent = cleanHtmlForExport(content);
-
+    // Build complete HTML
     const fullHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${cleanTitle}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title || 'Document'}</title>
 </head>
 <body>
-${cleanedContent}
+${content}
 </body>
 </html>`;
 
-    const blob = new Blob([fullHtml], { type: "text/plain;charset=utf-8" });
+    // Clean ALL data attributes from the entire HTML
+    const cleanedHtml = cleanHtmlForExport(fullHtml);
+
+    const blob = new Blob([cleanedHtml], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${cleanTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${(title || 'document').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+    document.body.appendChild(link);
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success("Content downloaded as TXT");
+    
+    toast.success("TXT file downloaded successfully");
   };
 
 

@@ -647,8 +647,49 @@ function LayoutContent({ children, currentPageName }) {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  // Removed: Firecrawl webhook notifier effect (was causing duplicate sends)
-  // Webhook is now called ONLY from TopicsOnboardingModal.handleComplete
+  // Load custom CSS for the current username
+  const { selectedUsername } = useWorkspace(); // This hook must be called at the top level of the component
+  useEffect(() => {
+    const loadCustomCss = async () => {
+      try {
+        const user = await base44.auth.me().catch(() => null);
+        if (!user) {
+          // Silently skip if no user - DON'T SHOW TOAST
+          return;
+        }
+
+        const username = selectedUsername || user.assigned_usernames?.[0];
+        if (!username) {
+          // Silently skip if no username - DON'T SHOW TOAST
+          return;
+        }
+
+        // Try to find CSS file for this username
+        const usernames = await base44.entities.Username.filter({ user_name: username });
+        if (usernames?.[0]?.default_css_file_uri) {
+          const cssUri = usernames[0].default_css_file_uri;
+          
+          // Remove existing custom style if any
+          const existingStyle = document.getElementById('custom-brand-css');
+          if (existingStyle) {
+            existingStyle.remove();
+          }
+
+          // Create and append new style tag
+          const style = document.createElement('link');
+          style.id = 'custom-brand-css';
+          style.rel = 'stylesheet';
+          style.href = cssUri;
+          document.head.appendChild(style);
+        }
+      } catch (error) {
+        // Silently fail - DON'T SHOW ANY TOAST
+        console.debug('Custom CSS load skipped');
+      }
+    };
+
+    loadCustomCss();
+  }, [selectedUsername]);
 
   // Load token help video URL
   useEffect(() => {

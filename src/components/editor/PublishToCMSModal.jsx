@@ -23,7 +23,6 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
   const [showHelpVideo, setShowHelpVideo] = useState(false);
   const [helpVideoUrl, setHelpVideoUrl] = useState("");
   
-  // Shopify blog fetching states
   const [fetchingBlogs, setFetchingBlogs] = useState(false);
   const [availableBlogs, setAvailableBlogs] = useState([]);
   const [selectedBlogId, setSelectedBlogId] = useState("");
@@ -32,112 +31,29 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     provider: "shopify",
     name: "",
     access_token: "",
-    refresh_token: "",
     site_domain: "",
-    database_id: "",
-    collection_id: "",
     blog_id: "",
     username: "",
     password: "",
-    endpoint_url: "",
-    http_method: "POST",
-    headers: {},
-    signing_secret: "",
-    config: { page_builder: "none" },
     user_name: ""
   });
 
-  // Helper: build a scoped HTML island (safe, portable)
-  const buildHtmlIsland = (rawHtml) => {
-    if (!rawHtml) return rawHtml;
-    const alreadyHasIsland =
-      /class=["'][^"']*(?:\bls-article\b|\bb44-article\b)[^"']*["']/.test(rawHtml) ||
-      /<style[^>]*>[\s\S]*?(?:\.ls-article|\.b44-article)/i.test(rawHtml);
-
-    if (alreadyHasIsland) return rawHtml;
-
-    const css = `
-/* Base44 HTML‑Island (scoped) */
-.ls-article,.ls-article *{box-sizing:border-box}
-.ls-article{
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  color:#0f172a;font-size:20px;line-height:1.78;
-  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-  overflow-wrap:break-word;word-break:normal
-}
-.ls-article .ls-container{max-width:880px;width:100%;margin:0 auto;padding:40px 24px 72px}
-.ls-article a{color:#1d4ed8}
-.ls-article img,.ls-article video,.ls-article iframe{max-width:100%;height:auto;display:block}
-
-/* Headings & text */
-.ls-article h1,.ls-article h2,.ls-article h3{line-height:1.25;color:#0b1220;margin:0}
-.ls-article h1{font-size:2.6rem;margin:14px 0 10px}
-.ls-article h2{font-size:1.8rem;margin-top:36px}
-.ls-article h3{font-size:1.3rem;margin-top:26px}
-.ls-article p{margin:16px 0}
-.ls-article ul,.ls-article ol{padding-left:22px;margin:14px 0}
-.ls-article li{margin:8px 0}
-.ls-article .muted{color:#475569;font-size:.97em}
-
-/* Components */
-.ls-article .toc{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:18px;margin-top:8px}
-.ls-article .callout{background:#f1f5ff;border:1px solid #c7d2fe;padding:16px;border-radius:12px}
-
-/* Table */
-.ls-article .table-wrap{overflow-x:auto}
-.ls-article table{width:100%;border-collapse:collapse;margin:18px 0}
-.ls-article th,.ls-article td{border:1px solid #e2e8f0;padding:14px;vertical-align:top;text-align:left}
-.ls-article th{background:#f1f5f9}
-
-/* Cards and grid */
-.ls-article .card{background:#f8fafc;border:1px solid #e2e8f0;padding:18px;border-radius:12px}
-.ls-article .grid{display:grid;grid-template-columns:1fr;gap:18px}
-@media (min-width:820px){.ls-article .grid{grid-template-columns:1fr 1fr}}
-
-/* CTA */
-.ls-article .cta{background:#eef2ff;border:1px solid #c7d2fe;padding:22px;border-radius:14px;margin-top:34px}
-.ls-article .cta a{display:inline-flex;align-items:center;justify-content:center;background:#4f46e5;color:#fff;text-decoration:none;padding:14px 20px;border-radius:10px;font-weight:600;line-height:1;white-space:normal}
-
-/* Tablet */
-@media (max-width:1024px){
-  .ls-article{font-size:19px}
-  .ls-article .ls-container{padding:36px 20px 64px}
-  .ls-article h1{font-size:2.3rem}
-  .ls-article h2{font-size:1.7rem}
-  .ls-article h3{font-size:1.25rem}
-}
-/* Mobile */
-@media (max-width:640px){
-  .ls-article{font-size:18.5px}
-  .ls-article .ls-container{padding:28px 16px 56px}
-  .ls-article h1{font-size:2.1rem}
-  .ls-article h2{font-size:1.55rem}
-  .ls-article h3{font-size:1.22rem}
-  .ls-article ul,.ls-article ol{padding-left:18px}
-  .ls-article .toc{padding:16px}
-  .ls-article .cta{padding:20px}
-  .ls-article .cta a{width:100%;text-align:center;padding:14px}
-}
-@media (prefers-reduced-motion:reduce){.ls-article *{animation:none!important;transition:none!important}}
-`.trim();
-
-    return `<style>${css}</style>\n<div class="ls-article"><main class="ls-container">${rawHtml}</main></div>`;
-  };
-
+  // ONLY load when modal opens - NO OTHER TIME
   useEffect(() => {
     if (isOpen) {
-      const timer = setTimeout(() => {
-        loadCredentialsAndUser();
-      }, 500);
+      loadCredentials();
       loadHelpVideo();
-      return () => clearTimeout(timer);
+    } else {
+      // Reset when closed
+      setShowAddForm(false);
+      setAvailableBlogs([]);
+      setSelectedBlogId("");
     }
   }, [isOpen]);
 
   const loadHelpVideo = async () => {
     try {
-      const { AppSettings } = await import("@/api/entities");
-      const settings = await AppSettings.list();
+      const settings = await base44.entities.AppSettings.list();
       const videoSetting = settings.find(s => s.key === "shopify_setup_video");
       if (videoSetting?.value) {
         setHelpVideoUrl(videoSetting.value);
@@ -147,65 +63,38 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     }
   };
 
-  const loadCredentialsAndUser = async (attempt = 0) => {
+  const loadCredentials = async () => {
     setLoading(true);
-    
     try {
-      const { User } = await import("@/api/entities");
-      const { IntegrationCredential } = await import("@/api/entities");
-      
-      const user = await User.me();
+      const user = await base44.auth.me();
       setCurrentUser(user);
       
       const assignedUsernames = Array.isArray(user.assigned_usernames) ? user.assigned_usernames : [];
       
       if (assignedUsernames.length === 0) {
         setCredentials([]);
-        setForm(prev => ({ ...prev, user_name: "" }));
         setLoading(false);
         return;
       }
 
-      const allCreds = [];
-      for (let i = 0; i < assignedUsernames.length; i++) {
-        if (i > 0) {
-          await new Promise(res => setTimeout(res, 500));
-        }
-        
-        try {
-          const creds = await IntegrationCredential.filter({ user_name: assignedUsernames[i] }, "-updated_date");
-          if (creds && creds.length > 0) {
-            allCreds.push(...creds);
-          }
-        } catch (credErr) {
-          continue;
-        }
-      }
+      // Simple single call - filter client-side
+      const allCreds = await base44.entities.IntegrationCredential.list();
+      const userCreds = allCreds.filter(cred => 
+        cred.user_name && assignedUsernames.includes(cred.user_name)
+      );
       
-      setCredentials(allCreds);
+      setCredentials(userCreds);
       
+      // Set default username
       const urlParams = new URLSearchParams(window.location.search);
       const postId = urlParams.get('post');
-      const webhookId = urlParams.get('webhook');
-      
       let targetUsername = assignedUsernames[0] || "";
 
       if (postId) {
         try {
-          const { BlogPost } = await import("@/api/entities");
-          const posts = await BlogPost.filter({ id: postId });
-          if (posts && posts.length > 0 && posts[0].user_name) {
+          const posts = await base44.entities.BlogPost.filter({ id: postId });
+          if (posts?.[0]?.user_name) {
             targetUsername = posts[0].user_name;
-          }
-        } catch (e) {
-          // Silent
-        }
-      } else if (webhookId) {
-        try {
-          const { WebhookReceived } = await import("@/api/entities");
-          const webhooks = await WebhookReceived.filter({ id: webhookId });
-          if (webhooks && webhooks.length > 0 && webhooks[0].user_name) {
-            targetUsername = webhooks[0].user_name;
           }
         } catch (e) {
           // Silent
@@ -213,21 +102,16 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       }
       
       setForm(prev => ({ ...prev, user_name: targetUsername }));
-      setLoading(false);
       
     } catch (error) {
-      if (error?.response?.status === 429 && attempt === 0) {
-        setTimeout(() => loadCredentialsAndUser(1), 5000);
-        return;
-      }
-      
+      console.error("Error loading credentials:", error);
+      toast.error("Failed to load credentials");
       setCredentials([]);
-      setCurrentUser(null);
+    } finally {
       setLoading(false);
     }
   };
 
-  // NEW: Fetch Shopify blogs when access token and store domain are entered
   const handleFetchBlogs = async () => {
     if (!form.access_token || !form.site_domain) {
       toast.error("Please enter Access Token and Store Domain first");
@@ -244,11 +128,10 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         store_domain: form.site_domain
       });
 
-      if (data.success && data.blogs && data.blogs.length > 0) {
+      if (data.success && data.blogs?.length > 0) {
         setAvailableBlogs(data.blogs);
         toast.success(`Found ${data.blogs.length} blog${data.blogs.length === 1 ? '' : 's'}`);
         
-        // Auto-select first blog
         if (data.blogs.length === 1) {
           setSelectedBlogId(data.blogs[0].id);
           setForm(prev => ({ ...prev, blog_id: data.blogs[0].id }));
@@ -258,13 +141,12 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       }
     } catch (error) {
       console.error("Error fetching blogs:", error);
-      toast.error("Failed to fetch blogs. Please check your credentials.");
+      toast.error("Failed to fetch blogs");
     } finally {
       setFetchingBlogs(false);
     }
   };
 
-  // Update blog_id when selection changes
   const handleBlogSelect = (blogId) => {
     setSelectedBlogId(blogId);
     setForm(prev => ({ ...prev, blog_id: blogId }));
@@ -288,58 +170,38 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
     setLoading(true);
     try {
-      const { IntegrationCredential } = await import("@/api/entities");
-      
       const credentialData = {
         provider: form.provider,
         name: form.name.trim(),
         user_name: form.user_name || currentUser?.assigned_usernames?.[0] || "",
         ...(form.access_token && { access_token: form.access_token.trim() }),
-        ...(form.refresh_token && { refresh_token: form.refresh_token.trim() }),
         ...(form.site_domain && { site_domain: form.site_domain.trim() }),
-        ...(form.database_id && { database_id: form.database_id.trim() }),
-        ...(form.collection_id && { collection_id: form.collection_id.trim() }),
         ...(form.blog_id && { blog_id: form.blog_id.trim() }),
         ...(form.username && { username: form.username.trim() }),
-        ...(form.password && { password: form.password.trim() }),
-        ...(form.endpoint_url && { endpoint_url: form.endpoint_url.trim() }),
-        ...(form.http_method && { http_method: form.http_method }),
-        ...(form.signing_secret && { signing_secret: form.signing_secret.trim() }),
-        ...(Object.keys(form.headers || {}).length > 0 && { headers: form.headers }),
-        ...(Object.keys(form.config || {}).length > 0 && { config: form.config })
+        ...(form.password && { password: form.password.trim() })
       };
 
-      await IntegrationCredential.create(credentialData);
+      await base44.entities.IntegrationCredential.create(credentialData);
       toast.success("Credential added successfully");
       
       setForm({
         provider: "shopify",
         name: "",
         access_token: "",
-        refresh_token: "",
         site_domain: "",
-        database_id: "",
-        collection_id: "",
         blog_id: "",
         username: "",
         password: "",
-        endpoint_url: "",
-        http_method: "POST",
-        headers: {},
-        signing_secret: "",
-        config: { page_builder: "none" },
         user_name: currentUser?.assigned_usernames?.[0] || ""
       });
       setAvailableBlogs([]);
       setSelectedBlogId("");
       setShowAddForm(false);
       
-      await new Promise(res => setTimeout(res, 1000));
-      await loadCredentialsAndUser();
+      await loadCredentials();
     } catch (error) {
-      if (error?.response?.status !== 429) {
-        toast.error("Failed to add credential");
-      }
+      console.error("Error adding credential:", error);
+      toast.error("Failed to add credential");
     } finally {
       setLoading(false);
     }
@@ -350,15 +212,12 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     
     setLoading(true);
     try {
-      const { IntegrationCredential } = await import("@/api/entities");
-      await IntegrationCredential.delete(id);
+      await base44.entities.IntegrationCredential.delete(id);
       toast.success("Credential deleted");
-      await new Promise(res => setTimeout(res, 1000));
-      await loadCredentialsAndUser();
+      await loadCredentials();
     } catch (error) {
-      if (error?.response?.status !== 429) {
-        toast.error("Failed to delete credential");
-      }
+      console.error("Error deleting credential:", error);
+      toast.error("Failed to delete credential");
     } finally {
       setLoading(false);
     }
@@ -367,23 +226,15 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
   const handlePublish = async (credential) => {
     setPublishing(true);
     try {
-      const plainText = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-
-      const isWordPress = credential.provider === "wordpress_org";
-      const pageBuilder = credential?.config?.page_builder || "none";
-      const shouldWrapIsland = isWordPress && pageBuilder === "elementor"; 
-      const finalHtml = shouldWrapIsland ? buildHtmlIsland(html || "") : (html || "");
-
       const { data } = await base44.functions.invoke('securePublish', {
         provider: credential.provider,
         credentialId: credential.id,
         title: title || "Untitled",
-        html: finalHtml,
-        text: plainText,
-        page_builder: pageBuilder
+        html: html || "",
+        text: String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
       });
 
-      if (data?.success || data?.ok) {
+      if (data?.success) {
         toast.success(`Published to ${credential.name}`);
         onClose();
       } else {
@@ -391,258 +242,216 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       }
     } catch (error) {
       console.error("Publish error:", error);
-      toast.error(error?.response?.data?.error || error.message || "Publishing failed");
+      toast.error("Publishing failed");
     } finally {
       setPublishing(false);
     }
   };
 
-  const renderProviderFields = () => {
-    if (form.provider === "shopify") {
-      return (
-        <>
-          <div>
-            <Label>Access Token *</Label>
-            <Input
-              type="password"
-              value={form.access_token}
-              onChange={(e) => setForm({ ...form, access_token: e.target.value })}
-              placeholder="shpat_..."
-            />
-          </div>
-          <div>
-            <Label>Store Domain *</Label>
-            <Input
-              value={form.site_domain}
-              onChange={(e) => setForm({ ...form, site_domain: e.target.value })}
-              placeholder="your-store.myshopify.com"
-            />
-          </div>
-          
-          {/* NEW: Fetch Blogs Button */}
-          <div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleFetchBlogs}
-              disabled={!form.access_token || !form.site_domain || fetchingBlogs}
-              className="w-full"
-            >
-              {fetchingBlogs ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Fetching Blogs...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Fetch Available Blogs
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* NEW: Blog Selection Dropdown */}
-          {availableBlogs.length > 0 && (
-            <div>
-              <Label>Select Blog *</Label>
-              <Select value={selectedBlogId} onValueChange={handleBlogSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a blog..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableBlogs.map((blog) => (
-                    <SelectItem key={blog.id} value={blog.id}>
-                      {blog.title} (ID: {blog.id})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Fallback: Manual Blog ID input (hidden when blogs are fetched) */}
-          {availableBlogs.length === 0 && (
-            <div>
-              <Label>Blog ID * <span className="text-xs text-slate-500">(or fetch blogs above)</span></Label>
-              <Input
-                value={form.blog_id}
-                onChange={(e) => setForm({ ...form, blog_id: e.target.value })}
-                placeholder="12345678"
-              />
-            </div>
-          )}
-        </>
-      );
-    }
-
-    if (form.provider === "wordpress_org") {
-      return (
-        <>
-          <div>
-            <Label>Site Domain *</Label>
-            <Input
-              value={form.site_domain}
-              onChange={(e) => setForm({ ...form, site_domain: e.target.value })}
-              placeholder="https://www.yoursite.com"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Just the base URL (e.g., https://www.yoursite.com) - do NOT include /wp-admin or /wp-login.php
-            </p>
-          </div>
-          <div>
-            <Label>Username *</Label>
-            <Input
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              placeholder="your-wordpress-username"
-            />
-          </div>
-          <div>
-            <Label>Application Password *</Label>
-            <Input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Generate in WordPress: Users → Your Profile → Application Passwords
-            </p>
-          </div>
-
-          <div>
-            <Label>Page Builder (optional)</Label>
-            <Select
-              value={form?.config?.page_builder || "none"}
-              onValueChange={(v) => setForm({ ...form, config: { ...(form.config || {}), page_builder: v } })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="none" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None / Classic / Gutenberg</SelectItem>
-                <SelectItem value="elementor">Elementor</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-slate-500 mt-1">
-              If Elementor, your content will be sent as a self‑contained HTML block ("HTML island") for reliable rendering.
-            </p>
-          </div>
-        </>
-      );
-    }
-    
-    return null;
-  };
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Configure Publishing
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Publish to CMS</DialogTitle>
+              {helpVideoUrl && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowHelpVideo(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Video className="w-4 h-4" />
+                  Setup Help
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold mb-3">Your Publishing Destinations</h3>
-              {loading && credentials.length === 0 ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {credentials.length === 0 && !showAddForm && (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 mb-4">No publishing destinations configured</p>
+                  <Button onClick={() => setShowAddForm(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Publishing Destination
+                  </Button>
                 </div>
-              ) : credentials.length === 0 ? (
-                <p className="text-slate-500 text-sm py-4">No publishing destinations configured yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {credentials.map((cred) => (
-                    <div key={cred.id} className="flex items-center justify-between p-3 border rounded-lg">
+              )}
+
+              {credentials.length > 0 && !showAddForm && (
+                <>
+                  <div className="space-y-3">
+                    {credentials.map((cred) => (
+                      <div key={cred.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <div className="font-medium">{cred.name}</div>
+                          <div className="text-sm text-gray-500 capitalize">{cred.provider}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={() => handlePublish(cred)}
+                            disabled={publishing}
+                          >
+                            {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publish"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteCredential(cred.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddForm(true)}
+                    className="w-full"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Another Destination
+                  </Button>
+                </>
+              )}
+
+              {showAddForm && (
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="font-medium">Add Publishing Destination</h3>
+                  
+                  <div>
+                    <Label>Platform</Label>
+                    <Select value={form.provider} onValueChange={(v) => setForm({...form, provider: v})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="shopify">Shopify</SelectItem>
+                        <SelectItem value="wordpress_org">WordPress.org</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Connection Name</Label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => setForm({...form, name: e.target.value})}
+                      placeholder="My Shopify Store"
+                    />
+                  </div>
+
+                  {form.provider === "shopify" && (
+                    <>
                       <div>
-                        <p className="font-medium">{cred.name}</p>
-                        <p className="text-sm text-slate-500 capitalize">{cred.provider.replace('_', ' ')}</p>
+                        <Label>Store Domain</Label>
+                        <Input
+                          value={form.site_domain}
+                          onChange={(e) => setForm({...form, site_domain: e.target.value})}
+                          placeholder="mystore.myshopify.com"
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handlePublish(cred)}
-                          disabled={publishing || !title || !html}
-                        >
-                          {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-                          Publish
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteCredential(cred.id)}
-                          disabled={loading}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      
+                      <div>
+                        <Label>Access Token</Label>
+                        <Input
+                          type="password"
+                          value={form.access_token}
+                          onChange={(e) => setForm({...form, access_token: e.target.value})}
+                          placeholder="shpat_..."
+                        />
                       </div>
-                    </div>
-                  ))}
+
+                      <Button
+                        onClick={handleFetchBlogs}
+                        disabled={fetchingBlogs || !form.access_token || !form.site_domain}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {fetchingBlogs ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Fetching Blogs...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Fetch Available Blogs
+                          </>
+                        )}
+                      </Button>
+
+                      {availableBlogs.length > 0 && (
+                        <div>
+                          <Label>Select Blog</Label>
+                          <Select value={selectedBlogId} onValueChange={handleBlogSelect}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose a blog" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableBlogs.map((blog) => (
+                                <SelectItem key={blog.id} value={blog.id}>
+                                  {blog.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {form.provider === "wordpress_org" && (
+                    <>
+                      <div>
+                        <Label>Site URL</Label>
+                        <Input
+                          value={form.site_domain}
+                          onChange={(e) => setForm({...form, site_domain: e.target.value})}
+                          placeholder="https://mysite.com"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label>Username</Label>
+                        <Input
+                          value={form.username}
+                          onChange={(e) => setForm({...form, username: e.target.value})}
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Application Password</Label>
+                        <Input
+                          type="password"
+                          value={form.password}
+                          onChange={(e) => setForm({...form, password: e.target.value})}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button onClick={handleAddCredential} disabled={loading}>
+                      {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                      Add Destination
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowAddForm(false)}>
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
-
-            {!showAddForm ? (
-              <Button onClick={() => setShowAddForm(true)} variant="outline" className="w-full">
-                <Plus className="w-4 h-4 mr-2" />
-                Add New Destination
-              </Button>
-            ) : (
-              <div className="border rounded-lg p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold">Add New Publishing Destination</h4>
-                    {helpVideoUrl && form.provider === "shopify" && (
-                      <button
-                        type="button"
-                        onClick={() => setShowHelpVideo(true)}
-                        className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors"
-                        title="Watch setup tutorial"
-                      >
-                        <Video className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={() => setShowAddForm(false)}>Cancel</Button>
-                </div>
-
-                <div>
-                  <Label>Provider *</Label>
-                  <Select value={form.provider} onValueChange={(v) => setForm({ ...form, provider: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="shopify">Shopify</SelectItem>
-                      <SelectItem value="wordpress_org">WordPress.org (Self-Hosted)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Connection Name *</Label>
-                  <Input
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g., Main Blog"
-                  />
-                </div>
-
-                {renderProviderFields()}
-
-                <Button onClick={handleAddCredential} disabled={loading} className="w-full">
-                  {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                  Add Destination
-                </Button>
-              </div>
-            )}
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -650,7 +459,6 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         isOpen={showHelpVideo}
         onClose={() => setShowHelpVideo(false)}
         videoUrl={helpVideoUrl}
-        title="Shopify Setup Tutorial"
       />
     </>
   );
