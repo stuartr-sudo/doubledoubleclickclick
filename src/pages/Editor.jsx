@@ -3524,10 +3524,6 @@ ${truncatedHtml}`;
     if (!htmlString) return "";
 
     let cleaned = String(htmlString);
-    
-    // Remove ALL script tags (TikTok, YouTube, and any other scripts)
-    cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-    cleaned = cleaned.replace(/<script[^>]*\/>/gi, '');
 
     cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
 
@@ -3535,17 +3531,17 @@ ${truncatedHtml}`;
 
     cleaned = cleaned.replace(/\sdata-b44-[\w-]+=(["'])[\s\S]*?\1/gi, '');
 
-    cleaned = cleaned.replace(/style=(["'])([\s\S]*?)\1/gi, (m, q, styles) => {
-      const out = styles.replace(/\boutline(?:-offset)?\s*:\s*[^;"]*;?/gi, '').trim();
-      return out ? `style=${q}${out}${q}` : '';
-    });
-
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*"[^"]*"/gi, '');
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*'[^']*'/gi, '');
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*[^\s>'"]+/gi, '');
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*(("[^"]*"|'[^']*'|[^\s>]+))/gi, '');
 
     cleaned = cleaned.replace(/\s+data-[\w-]+\s*=\s*(?=[\s>])/gi, '');
+
+    cleaned = cleaned.replace(/style=(["'])([\s\S]*?)\1/gi, (m, q, styles) => {
+      const out = styles.replace(/\boutline(?:-offset)?\s*:\s*[^;"]*;?/gi, '').trim();
+      return out ? `style=${q}${out}${q}` : '';
+    });
 
     cleaned = cleaned.replace(/\s{2,}/g, ' ');
 
@@ -3557,28 +3553,26 @@ ${truncatedHtml}`;
   };
 
   const handleDownloadTxt = () => {
-    let exportContent = "";
-    if (title) {
-      const cleanTitle = cleanHtmlForExport(title);
-      exportContent += `<title>${cleanTitle}</title>\n\n`;
-    }
-    if (currentPost?.meta_title || currentPost?.meta_description) {
-      exportContent += "<!-- SEO METADATA -->\n";
-      if (currentPost.meta_title) {
-        exportContent += `<meta name="title" content="${cleanHtmlForExport(currentPost.meta_title)}" />\n`;
-      }
-      if (currentPost.meta_description) {
-        exportContent += `<meta name="description" content="${cleanHtmlForExport(currentPost.meta_description)}" />\n`;
-      }
-      exportContent += "\n";
-    }
+    const cleanTitle = title || "Untitled";
     const cleanedContent = cleanHtmlForExport(content);
-    exportContent += cleanedContent;
-    const blob = new Blob([exportContent], { type: "text/plain;charset=utf-8" });
+
+    const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${cleanTitle}</title>
+</head>
+<body>
+${cleanedContent}
+</body>
+</html>`;
+
+    const blob = new Blob([fullHtml], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(title || "content").replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+    a.download = `${cleanTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
