@@ -3524,6 +3524,10 @@ ${truncatedHtml}`;
     if (!htmlString) return "";
 
     let cleaned = String(htmlString);
+    
+    // Remove ALL script tags (TikTok, YouTube, and any other scripts)
+    cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+    cleaned = cleaned.replace(/<script[^>]*\/>/gi, '');
 
     cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
 
