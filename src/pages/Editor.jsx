@@ -3525,6 +3525,19 @@ ${truncatedHtml}`;
 
     let cleaned = String(htmlString);
 
+    // Remove ALL script tags (TikTok, YouTube, and any other scripts)
+    cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+    cleaned = cleaned.replace(/<script[^>]*\/>/gi, '');
+    
+    // Remove all meta tags
+    cleaned = cleaned.replace(/<meta[^>]*\/?>/gi, '');
+    
+    // Remove title tags
+    cleaned = cleaned.replace(/<title[^>]*>[\s\S]*?<\/title>/gi, '');
+    
+    // Remove style tags
+    cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+
     cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
 
     cleaned = cleaned.replace(/<([a-z0-9:-]+)\b[^>]*class=["'][^"']*b44-select-handle\b[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, '');
@@ -3532,6 +3545,7 @@ ${truncatedHtml}`;
     cleaned = cleaned.replace(/\sdata-b44-[\w-]+=(["'])[\s\S]*?\1/gi, '');
 
     cleaned = cleaned.replace(/style=(["'])([\s\S]*?)\1/gi, (m, q, styles) => {
+      // Remove only outline styles, but preserve all other styles (especially for embeds)
       const out = styles.replace(/\boutline(?:-offset)?\s*:\s*[^;"]*;?/gi, '').trim();
       return out ? `style=${q}${out}${q}` : '';
     });
@@ -3554,22 +3568,17 @@ ${truncatedHtml}`;
 
   const handleDownloadTxt = () => {
     let exportContent = "";
+    
+    // Add ONLY the clean title without any data attributes
     if (title) {
       const cleanTitle = cleanHtmlForExport(title);
       exportContent += `<title>${cleanTitle}</title>\n\n`;
     }
-    if (currentPost?.meta_title || currentPost?.meta_description) {
-      exportContent += "<!-- SEO METADATA -->\n";
-      if (currentPost.meta_title) {
-        exportContent += `<meta name="title" content="${cleanHtmlForExport(currentPost.meta_title)}" />\n`;
-      }
-      if (currentPost.meta_description) {
-        exportContent += `<meta name="description" content="${cleanHtmlForExport(currentPost.meta_description)}" />\n`;
-      }
-      exportContent += "\n";
-    }
+    
+    // Add ONLY the clean HTML content
     const cleanedContent = cleanHtmlForExport(content);
     exportContent += cleanedContent;
+    
     const blob = new Blob([exportContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
