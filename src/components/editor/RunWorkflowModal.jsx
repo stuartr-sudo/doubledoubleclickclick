@@ -198,12 +198,12 @@ export default function RunWorkflowModal({
     });
     console.log(`🔥 FLASH: Message added to conversation`);
 
-    const result = await waitForAgentResponse(conversation, conversation.id);
+    const result = await waitForAgentResponse(conversation.id);
     console.log(`🔥 FLASH: callAgent completed for ${agentName}`);
     return result;
   };
 
-  const waitForAgentResponse = async (conversation, conversationId, timeoutSec = 120) => {
+  const waitForAgentResponse = async (conversationId, timeoutSec = 120) => {
     console.log(`🔥 FLASH: Waiting for agent response (${timeoutSec}s timeout)`);
     const { agentSDK } = await import("@/agents");
     const deadline = Date.now() + timeoutSec * 1000;
@@ -351,74 +351,6 @@ export default function RunWorkflowModal({
       });
 
       try {
-        // IMPROVED: Humanize step handler with better error handling
-        if (type === "humanize") {
-          console.log("🔥 FLASH: Starting humanize step");
-
-          // Extract plain text from HTML (strip all tags)
-          const plainText = current.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-
-          if (!plainText || plainText.length < 50) {
-            console.log("🔥 FLASH: Humanize skipped - insufficient text content (less than 50 chars)");
-            console.log(`🔥 FLASH: ========== Completed step ${i + 1}/${steps.length}: ${rawType} ==========`);
-            continue;
-          }
-
-          // Check if text is too long (Undetectable.AI has limits, e.g., 10,000 chars)
-          if (plainText.length > 10000) {
-            console.log("🔥 FLASH: Humanize skipped - text too long (>10000 chars)");
-            toast.warning("Text too long for humanization (max 10,000 characters). Skipping step.");
-            console.log(`🔥 FLASH: ========== Completed step ${i + 1}/${steps.length}: ${rawType} ==========`);
-            continue;
-          }
-
-          console.log(`🔥 FLASH: Humanizing ${plainText.length} characters of text`);
-
-          try {
-            // Call humanizeText function with error handling
-            const response = await base44.functions.invoke('humanizeText', {
-              text: plainText,
-              tone: 'formal'
-            });
-
-            console.log("🔥 FLASH: Humanize API response received:", response?.status);
-
-            if (!response?.data?.humanizedText) {
-              console.error("🔥 FLASH: Humanize returned no text. Response:", response);
-              throw new Error("Humanize API returned no text or invalid response structure");
-            }
-
-            console.log(`🔥 FLASH: Humanize completed, received ${response.data.humanizedText.length} characters`);
-
-            // Replace content with humanized version, preserving basic paragraph structure
-            const paragraphs = response.data.humanizedText.split('\n\n').filter(p => p.trim());
-            current = paragraphs.map(p => `<p>${p.trim()}</p>`).join('\n');
-
-          } catch (humanizeError) {
-            console.error("🔥 FLASH: Humanize API error:", humanizeError);
-            console.error("🔥 FLASH: Error response:", humanizeError?.response?.data);
-
-            // Check if it's an API key issue or other backend error
-            if (humanizeError?.response?.status === 500) {
-              const errorMsg = humanizeError?.response?.data?.error || humanizeError.message;
-              console.error("🔥 FLASH: Backend error:", errorMsg);
-
-              if (errorMsg?.includes('UndetectableAI_API') || errorMsg?.includes('not set')) {
-                toast.error("Humanize step failed: UndetectableAI API key not configured");
-                throw new Error("UndetectableAI_API secret is not set. Please configure it in settings.");
-              }
-
-              toast.error(`Humanize step failed: ${errorMsg}`);
-              throw new Error(`Humanize API error: ${errorMsg}`);
-            }
-
-            throw humanizeError; // Re-throw other errors
-          }
-
-          console.log(`🔥 FLASH: ========== Completed step ${i + 1}/${steps.length}: ${rawType} ==========`);
-          continue;
-        }
-
         if (type === "links + references" || type === "links_references" || type === "cite_sources") {
           console.log("🔥 FLASH: Calling generateExternalReferences function");
           const { data } = await base44.functions.invoke("generateExternalReferences", { html: current });
@@ -721,7 +653,7 @@ export default function RunWorkflowModal({
             flash_workflow_id: selectedWorkflow.id
           });
         } else if (itemType === "webhook") {
-            await base44.entities.WebhookReceived.update(itemId, {
+          await base44.entities.WebhookReceived.update(itemId, {
             flash_status: "running",
             flash_workflow_id: selectedWorkflow.id
           });
@@ -944,7 +876,7 @@ export default function RunWorkflowModal({
   if (running || status?.status === "completed" || status?.status === "failed") {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-2xl w-[90vw] max-h-[80vh] flex flex-col overflow-hidden bg-white text-slate-900 border-slate-200">
+        <DialogContent className="max-w-3xl bg-white max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-indigo-600" />
@@ -1054,71 +986,69 @@ export default function RunWorkflowModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl w-[90vw] max-h-[80vh] flex flex-col overflow-hidden bg-white text-slate-900 border-slate-200">
-        <DialogHeader className="flex-shrink-0">
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-white text-slate-900">
+        <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-900">Flash Workflow</DialogTitle>
           <DialogDescription className="text-slate-600">
             Select a workflow to enhance your content with AI-powered tools
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-3 py-4 min-h-0">
-          {loadingWorkflows ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-            </div>
-          ) : workflows.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              No workflows available
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {workflows.map((wf) => (
-                <button
-                  key={wf.id}
-                  onClick={() => setSelectedWorkflowId(String(wf.id))}
-                  className={`text-left p-4 rounded-xl border-2 transition-all w-full ${
-                    selectedWorkflowId === String(wf.id)
-                      ? "border-indigo-500 bg-indigo-50 shadow-md"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                              <Crown className="w-4 h-4 text-amber-600" />
-                          </div>
-                          <h4 className="font-semibold text-slate-900">{wf.name}</h4>
-                          {wf.is_default && (
-                             <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">
-                                  Recommended
-                              </Badge>
-                          )}
-                      </div>
-                      {wf.description && (
-                        <p className="text-sm text-slate-600 mb-3">{wf.description}</p>
-                      )}
-                      <div className="flex flex-wrap gap-1.5">
-                        {(wf.workflow_steps || []).filter(s => s.enabled !== false).map((step, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs"
-                          >
-                            {STEP_LABELS[step.type] || step.type}
-                          </span>
-                        ))}
-                      </div>
+        {loadingWorkflows ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          </div>
+        ) : workflows.length === 0 ? (
+          <div className="text-center py-12 text-slate-500">
+            No workflows available
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {workflows.map((wf) => (
+              <button
+                key={wf.id}
+                onClick={() => setSelectedWorkflowId(String(wf.id))}
+                className={`text-left p-4 rounded-xl border-2 transition-all w-full ${
+                  selectedWorkflowId === String(wf.id)
+                    ? "border-indigo-500 bg-indigo-50 shadow-md"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                            <Crown className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <h4 className="font-semibold text-slate-900">{wf.name}</h4>
+                        {wf.is_default && (
+                           <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">
+                                Recommended
+                            </Badge>
+                        )}
                     </div>
-                    {selectedWorkflowId === String(wf.id) && (
-                      <CheckCircle2 className="w-6 h-6 text-indigo-600 flex-shrink-0" />
+                    {wf.description && (
+                      <p className="text-sm text-slate-600 mb-3">{wf.description}</p>
                     )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {(wf.workflow_steps || []).filter(s => s.enabled !== false).map((step, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs"
+                        >
+                          {STEP_LABELS[step.type] || step.type}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                  {selectedWorkflowId === String(wf.id) && (
+                    <CheckCircle2 className="w-6 h-6 text-indigo-600 flex-shrink-0" />
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Fixed footer with action buttons */}
         {(workflows.length > 0) && (

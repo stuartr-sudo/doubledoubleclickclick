@@ -656,26 +656,17 @@ function LayoutContent({ children, currentPageName }) {
   useEffect(() => {
     const loadTokenHelpVideo = async () => {
       try {
-        // Ensure we only call the API when authenticated and user is ready
-        const authed = await base44.auth.isAuthenticated();
-        if (!authed || !user?.id) return;
-
-        // Use existing retry helper for resiliency
-        const settings = await retry(() => AppSettings.list());
-        const videoSetting = Array.isArray(settings)
-          ? settings.find((s) => s.key === "token_help_video")
-          : null;
-
+        const settings = await AppSettings.list();
+        const videoSetting = settings.find(s => s.key === "token_help_video");
         if (videoSetting?.value) {
           setTokenHelpVideoUrl(videoSetting.value);
         }
-      } catch (_err) {
-        // Silently ignore network hiccups instead of logging errors to console
-        // to avoid noisy error overlays in the UI.
+      } catch (error) {
+        console.error("Failed to load token help video:", error);
       }
     };
     loadTokenHelpVideo();
-  }, [user?.id]); // re-run only when a user is present
+  }, []);
 
   // Listen for token balance updates
   useEffect(() => {
@@ -1112,6 +1103,9 @@ function LayoutContent({ children, currentPageName }) {
         .hide-scrollbar {
           -ms-overflow-style: none; /* IE and Edge */
           scrollbar-width: none;    /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none; /* Chrome, Safari and Opera */
         }
         .topics-tables-scope table {
           display: block;

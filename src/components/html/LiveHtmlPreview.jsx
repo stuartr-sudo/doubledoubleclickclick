@@ -133,7 +133,7 @@ export default function LiveHtmlPreview({
 
         // Add global drag state and helpers
         var __dragState = { id: null, overEl: null, pos: 'before' };
-        var __dropSelector = '[data-b44-type], .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, p, div, section, article, h1, h2, h3, h4, h5, h6, li, img';
+        var __dropSelector = 'img, [data-b44-type], .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, p, div, section, article, h1, h2, h3, h4, h5, h6, li';
         function clearDropClasses(){
           try {
             document.querySelectorAll('.b44-drop-before, .b44-drop-after').forEach(function(n){
@@ -243,12 +243,8 @@ export default function LiveHtmlPreview({
           muts.forEach(function(m){
             m.addedNodes && m.addedNodes.forEach(function(n){
               if (n && n.nodeType === 1) {
-                if (n.tagName === 'IMG') {
-                  bindImageHandlers(n.parentElement || document);
-                  markDraggable(n); // NEW: Make newly added images draggable
-                } else {
-                  bindImageHandlers(n);
-                }
+                if (n.tagName === 'IMG') bindImageHandlers(n.parentElement || document);
+                else bindImageHandlers(n);
 
                 // NEW: set up any newly added shadow-host blocks
                 if (n.matches && n.matches('[data-b44-shadow-host]')) {
@@ -256,12 +252,6 @@ export default function LiveHtmlPreview({
                 } else if (n.querySelectorAll) {
                   const hosts = n.querySelectorAll('[data-b44-shadow-host]');
                   if (hosts && hosts.length) setupShadowBlocks(n);
-                }
-                // NEW: Check for newly added img elements that might need to be made draggable
-                if (n.matches && n.matches('img')) {
-                  markDraggable(n);
-                } else if (n.querySelectorAll) {
-                  n.querySelectorAll('img').forEach(markDraggable);
                 }
               }
             });
@@ -367,7 +357,7 @@ export default function LiveHtmlPreview({
         // This is a global listener, specific clicks will override.
         document.addEventListener('click', function(e){
           try {
-            const sel = '.b44-faq, .b44-tldr, .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, [data-b44-type], img'; // ADDED: img to the selector
+            const sel = '.b44-faq, .b44-tldr, .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, [data-b44-type]';
             const block = e.target && e.target.closest && e.target.closest(sel);
             if (!block) return;
             ensureFeatureDataAttrs(block); // Ensure it's properly tagged if it wasn't already
@@ -469,6 +459,7 @@ export default function LiveHtmlPreview({
             // No longer apply margin here, rely on CSS.
             // if (!img.style.margin) img.style.margin = '1rem 0';
             img.style.cursor = 'pointer';
+            markDraggable(img);
           });
 
           const ytIframes = document.querySelectorAll('iframe[src*="youtube.com/embed"], iframe[src*="youtu.be"], iframe[src*="youtube-nocookie.com/embed"]');
@@ -495,7 +486,7 @@ export default function LiveHtmlPreview({
             if (!el.dataset.b44Id) { el.dataset.b44Id = String(nextId++); }
             el.style.cursor = 'pointer';
             // Specific styles for promoted product should generally be handled by CSS only,
-            // but for dynamic sizing/alignment, it might be adjusted by the applyChange function.
+            // but width/alignment from here might still be adjusted by the applyChange function.
             // Default margin is now zeroed out in CSS.
             // if (!el.style.margin) el.style.margin = '1rem 0';
             el.style.maxWidth = '100%';
@@ -534,7 +525,6 @@ export default function LiveHtmlPreview({
             document.querySelectorAll('.b44-audio-inline').forEach(markDraggable);
             document.querySelectorAll('blockquote.tiktok-embed').forEach(markDraggable);
             document.querySelectorAll('.youtube-video-container').forEach(markDraggable);
-            document.querySelectorAll('img').forEach(markDraggable); // ADDED: Make images draggable
 
             // NEW: Auto-tag Flash-generated FAQ / TLDR so they become selectable + draggable
             document.querySelectorAll('.b44-faq').forEach(function(el){
@@ -557,10 +547,10 @@ export default function LiveHtmlPreview({
               (m.addedNodes || []).forEach(function(n){
                 if (!n || n.nodeType !== 1) return;
                 // Check if the added node itself matches
-                if (n.matches && (n.matches('.b44-faq, .b44-tldr, .b44-references, img') || n.matches('[data-b44-type]'))) { // ADDED: img to the selector
+                if (n.matches && (n.matches('.b44-faq, .b44-tldr, .b44-references') || n.matches('[data-b44-type]'))) {
                   ensureFeatureDataAttrs(n);
                 } else if (n.querySelectorAll) {
-                  n.querySelectorAll('.b44-faq, .b44-tldr, .b44-references, [data-b44-type], img').forEach(function(el){ // ADDED: img to the selector
+                  n.querySelectorAll('.b44-faq, .b44-tldr, .b44-references, [data-b44-type]').forEach(function(el){
                     ensureFeatureDataAttrs(el);
                   });
                 }
@@ -1143,11 +1133,6 @@ export default function LiveHtmlPreview({
               const audioSelected = document.querySelector('.b44-audio-inline[style*="outline: 2px solid #3b82f6"]');
               if (audioSelected && audioSelected.dataset && audioSelected.dataset.b44Id) {
                 elementToDelete = audioSelected;
-              }
-              // NEW: Check if an image is selected for deletion
-              const imgSelected = document.querySelector('img[style*="outline: 2px solid #3b82f6"]');
-              if (imgSelected && imgSelected.dataset && imgSelected.dataset.b44Id) {
-                elementToDelete = imgSelected;
               }
             }
 
