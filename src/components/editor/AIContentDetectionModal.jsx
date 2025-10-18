@@ -6,10 +6,10 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle } from
+"@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Progress } from "@/components/ui/progress"; // Keep import for now, though it's replaced in JSX
 import { AlertTriangle, CheckCircle, Loader2, Zap, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -19,7 +19,7 @@ export default function AIContentDetectionModal({ isOpen, onClose, currentConten
 
   const handleAnalyze = async () => {
     if (!currentContent?.trim()) return;
-    
+
     setIsAnalyzing(true);
     try {
       const cleanContent = currentContent.replace(/<[^>]*>/g, '');
@@ -48,7 +48,7 @@ Please be thorough and specific in your analysis.
               items: { type: "string" }
             },
             problematic_phrases: {
-              type: "array", 
+              type: "array",
               items: { type: "string" }
             },
             writing_patterns: {
@@ -82,31 +82,31 @@ Please be thorough and specific in your analysis.
 
   const getRiskColor = (riskLevel) => {
     switch (riskLevel) {
-      case 'LOW': return 'text-green-400 border-green-400';
-      case 'MEDIUM': return 'text-yellow-400 border-yellow-400';
-      case 'HIGH': return 'text-red-400 border-red-400';
-      default: return 'text-gray-400 border-gray-400';
+      case 'LOW':return 'text-emerald-600 border-emerald-300';
+      case 'MEDIUM':return 'text-amber-600 border-amber-300';
+      case 'HIGH':return 'text-rose-600 border-rose-300';
+      default:return 'text-slate-500 border-slate-300';
     }
   };
 
   const getRiskIcon = (riskLevel) => {
     switch (riskLevel) {
-      case 'LOW': return <CheckCircle className="w-4 h-4" />;
-      case 'MEDIUM': return <AlertTriangle className="w-4 h-4" />;
-      case 'HIGH': return <Shield className="w-4 h-4" />;
-      default: return <AlertTriangle className="w-4 h-4" />;
+      case 'LOW':return <CheckCircle className="w-4 h-4" />;
+      case 'MEDIUM':return <AlertTriangle className="w-4 h-4" />;
+      case 'HIGH':return <Shield className="w-4 h-4" />;
+      default:return <AlertTriangle className="w-4 h-4" />;
     }
   };
 
   const getProgressBarGradient = (score) => {
     if (score <= 30) {
-      return `linear-gradient(90deg, #10b981 0%, #84cc16 100%)`;
+      return `linear-gradient(90deg, #34d399 0%, #a7f3d0 100%)`; // green shades
     } else if (score <= 60) {
-      return `linear-gradient(90deg, #84cc16 0%, #f59e0b 100%)`;
+      return `linear-gradient(90deg, #fcd34d 0%, #fef08a 100%)`; // yellow shades
     } else if (score <= 80) {
-      return `linear-gradient(90deg, #f59e0b 0%, #ef4444 100%)`;
+      return `linear-gradient(90deg, #fb923c 0%, #fed7aa 100%)`; // orange shades
     } else {
-      return `linear-gradient(90deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)`;
+      return `linear-gradient(90deg, #f87171 0%, #fca5a5 100%)`; // red shades
     }
   };
 
@@ -126,165 +126,180 @@ Please be thorough and specific in your analysis.
     }
   }, [isOpen, currentContent, analysisResult, isAnalyzing]); // Added dependencies for clarity and correctness
 
+  const percent = Number(analysisResult?.confidence_score || 0);
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="b44-modal max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="b44-modal max-w-5xl max-h-[90vh] overflow-y-auto bg-white border border-slate-200">
         <div className="p-6">
-          <DialogHeader className="mb-6">
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Shield className="w-6 h-6 text-blue-400" />
+          <DialogHeader className="mb-2">
+            <DialogTitle className="flex items-center gap-2 text-xl text-slate-900">
+              <Shield className="w-6 h-6 text-blue-600" />
               AI Content Detection
             </DialogTitle>
-            <DialogDescription className="text-white/70 text-base">
-              Analyzing your content for AI-generated characteristics and providing recommendations
+            <DialogDescription className="text-slate-600 text-sm">
+              Analyze your content for AI-generated characteristics and get actionable recommendations.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-8">
-            {isAnalyzing && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-600/20 to-cyan-600/20 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+          <div className="space-y-6">
+            {isAnalyzing &&
+            <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                 </div>
-                <p className="text-white/70 text-lg">Analyzing your content...</p>
-                <p className="text-white/50 text-sm mt-2">This may take a few moments</p>
+                <p className="text-slate-700 text-lg">Analyzing your content...</p>
+                <p className="text-slate-500 text-sm mt-1">This may take a few moments</p>
               </div>
-            )}
+            }
 
-            {analysisResult && (
-              <div className="space-y-8">
+            {analysisResult &&
+            <div className="space-y-6">
                 {/* Overall Score */}
-                <div className="bg-white/5 rounded-xl p-8 border border-white/10">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold">AI Detection Results</h3>
-                    <Badge className={`border text-base px-4 py-2 ${getRiskColor(analysisResult.risk_level)}`}>
+                <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-slate-900">AI Detection Results</h3>
+                    <Badge className={`border ${getRiskColor(analysisResult.risk_level)} bg-white`}>
                       {getRiskIcon(analysisResult.risk_level)}
                       <span className="ml-2">{analysisResult.risk_level} RISK</span>
                     </Badge>
                   </div>
-                  
-                  <div className="mb-6">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-lg">AI Confidence Score</span>
-                      <span className="font-bold text-xl">{analysisResult.confidence_score}%</span>
+
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-slate-700">AI Confidence Score</span>
+                      <span className="font-semibold text-slate-900">{percent}%</span>
                     </div>
-                    <div className="relative">
-                      <Progress 
-                        value={analysisResult.confidence_score} 
-                        className={`h-4 ${getProgressBarAnimation(analysisResult.confidence_score)}`}
-                      />
-                      <style jsx>{`
-                        .progress-bar {
-                          background: ${getProgressBarGradient(analysisResult.confidence_score)} !important;
-                        }
-                      `}</style>
+                    {/* Custom gradient progress bar for high-contrast */}
+                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                      className={`h-full ${getProgressBarAnimation(percent)}`}
+                      style={{ width: `${Math.max(0, Math.min(100, percent))}%`, background: getProgressBarGradient(percent) }} />
+
                     </div>
                   </div>
 
-                  <p className="text-white/80 text-base leading-relaxed">
-                    {analysisResult.summary}
-                  </p>
+                  {analysisResult.summary &&
+                <p className="text-slate-700 leading-relaxed">
+                      {analysisResult.summary}
+                    </p>
+                }
                 </div>
 
                 {/* Analysis Details */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {analysisResult.ai_indicators?.length > 0 && (
-                    <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                      <h4 className="font-medium mb-4 flex items-center gap-2 text-lg">
-                        <AlertTriangle className="w-5 h-5 text-yellow-400" />
-                        AI Indicators Found
-                      </h4>
-                      <ul className="space-y-3 text-base text-white/80">
-                        {analysisResult.ai_indicators.map((indicator, index) => (
-                          <li key={index} className="flex items-start gap-3">
-                            <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></span>
-                            {indicator}
+                  {/* AI Indicators */}
+                  <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <h4 className="font-semibold mb-4 flex items-center gap-2 text-slate-900">
+                      <AlertTriangle className="w-5 h-5 text-amber-500" />
+                      AI Indicators Found
+                    </h4>
+                    {analysisResult.ai_indicators?.length > 0 ?
+                  <ul className="space-y-2 text-slate-700">
+                        {analysisResult.ai_indicators.map((indicator, index) =>
+                    <li key={index} className="flex items-start gap-2">
+                            <span className="mt-2 h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
+                            <span>{indicator}</span>
                           </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                    )}
+                      </ul> :
 
-                  {analysisResult.problematic_phrases?.length > 0 && (
-                    <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                      <h4 className="font-medium mb-4 flex items-center gap-2 text-lg">
-                        <Zap className="w-5 h-5 text-red-400" />
-                        Problematic Phrases
-                      </h4>
-                      <div className="space-y-2">
-                        {analysisResult.problematic_phrases.map((phrase, index) => (
-                          <div key={index} className="bg-red-400/10 px-3 py-2 rounded-lg text-red-300 border border-red-400/20 text-sm">
-                            "{phrase}"
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <p className="text-slate-500 text-sm">No specific indicators found.</p>
+                  }
+                  </div>
 
-                  {analysisResult.writing_patterns?.length > 0 && (
-                    <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                      <h4 className="font-medium mb-4 text-lg">Writing Patterns</h4>
-                      <ul className="space-y-3 text-base text-white/80">
-                        {analysisResult.writing_patterns.map((pattern, index) => (
-                          <li key={index} className="flex items-start gap-3">
-                            <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></span>
-                            {pattern}
+                  {/* Problematic Phrases */}
+                  <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <h4 className="font-semibold mb-4 flex items-center gap-2 text-slate-900">
+                      <Zap className="w-5 h-5 text-rose-600" />
+                      Problematic Phrases
+                    </h4>
+                    {analysisResult.problematic_phrases?.length > 0 ?
+                  <div className="flex flex-wrap gap-2">
+                        {analysisResult.problematic_phrases.map((phrase, index) =>
+                    <span
+                      key={index}
+                      className="px-2.5 py-1 rounded-md text-sm border bg-rose-50 text-rose-700 border-rose-200">
+
+                            “{phrase}”
+                          </span>
+                    )}
+                      </div> :
+
+                  <p className="text-slate-500 text-sm">No problematic phrases detected.</p>
+                  }
+                  </div>
+
+                  {/* Writing Patterns */}
+                  <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <h4 className="font-semibold mb-4 text-slate-900">Writing Patterns</h4>
+                    {analysisResult.writing_patterns?.length > 0 ?
+                  <ul className="space-y-2 text-slate-700">
+                        {analysisResult.writing_patterns.map((pattern, index) =>
+                    <li key={index} className="flex items-start gap-2">
+                            <span className="mt-2 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
+                            <span>{pattern}</span>
                           </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                    )}
+                      </ul> :
 
-                  {analysisResult.recommendations?.length > 0 && (
-                    <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                      <h4 className="font-medium mb-4 flex items-center gap-2 text-lg">
-                        <CheckCircle className="w-5 h-5 text-green-400" />
-                        Recommendations
-                      </h4>
-                      <ul className="space-y-3 text-base text-white/80">
-                        {analysisResult.recommendations.map((rec, index) => (
-                          <li key={index} className="flex items-start gap-3">
-                            <span className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></span>
-                            {rec}
+                  <p className="text-slate-500 text-sm">No notable patterns highlighted.</p>
+                  }
+                  </div>
+
+                  {/* Recommendations */}
+                  <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <h4 className="font-semibold mb-4 flex items-center gap-2 text-slate-900">
+                      <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      Recommendations
+                    </h4>
+                    {analysisResult.recommendations?.length > 0 ?
+                  <ul className="space-y-2 text-slate-700">
+                        {analysisResult.recommendations.map((rec, index) =>
+                    <li key={index} className="flex items-start gap-2">
+                            <span className="mt-2 h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                            <span>{rec}</span>
                           </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                    )}
+                      </ul> :
+
+                  <p className="text-slate-500 text-sm">No recommendations available.</p>
+                  }
+                  </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <Button
-                    onClick={handleAnalyze}
-                    variant="outline"
-                    className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex-1 py-3 text-base"
-                  >
+                  onClick={handleAnalyze}
+                  variant="outline"
+                  className="bg-white border-slate-300 text-slate-800 hover:bg-slate-50 hover:text-slate-900 flex-1 py-2.5">
+
                     <Shield className="w-4 h-4 mr-2" />
                     Re-analyze Content
                   </Button>
                   <Button
-                    onClick={handleClose}
-                    className="bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 flex-1 py-3 text-base"
-                  >
+                  onClick={handleClose} className="bg-slate-900 text-gray-100 px-4 py-2.5 text-sm font-medium rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-slate-800 flex-1">
+
+
                     Close
                   </Button>
                 </div>
               </div>
-            )}
+            }
 
-            {!analysisResult && !isAnalyzing && !currentContent && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-gray-600/20 to-slate-600/20 flex items-center justify-center">
-                  <Shield className="w-8 h-8 text-gray-400" />
+            {!analysisResult && !isAnalyzing && !currentContent &&
+            <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                  <Shield className="w-8 h-8 text-slate-500" />
                 </div>
-                <p className="text-white/70 text-lg">No content to analyze</p>
-                <p className="text-white/50 text-sm mt-2">Start writing in the editor first</p>
+                <p className="text-slate-700 text-lg">No content to analyze</p>
+                <p className="text-slate-500 text-sm mt-1">Start writing in the editor first</p>
               </div>
-            )}
+            }
           </div>
         </div>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }

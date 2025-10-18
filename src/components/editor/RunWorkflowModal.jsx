@@ -351,6 +351,42 @@ export default function RunWorkflowModal({
       });
 
       try {
+        // NEW: Humanize step handler
+        if (type === "humanize") {
+          console.log("🔥 FLASH: Starting humanize step");
+          
+          // Extract plain text from HTML (strip all tags)
+          const plainText = current.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          
+          if (!plainText || plainText.length < 50) {
+            console.log("🔥 FLASH: Humanize skipped - insufficient text content (less than 50 chars)");
+            console.log(`🔥 FLASH: ========== Completed step ${i + 1}/${steps.length}: ${rawType} ==========`);
+            continue;
+          }
+          
+          console.log(`🔥 FLASH: Humanizing ${plainText.length} characters of text`);
+          
+          // Call humanizeText function
+          const { data } = await base44.functions.invoke('humanizeText', {
+            text: plainText,
+            tone: 'formal' // Default tone for flash workflows
+          });
+          
+          if (!data?.humanizedText) {
+            throw new Error("Humanize returned no text");
+          }
+          
+          console.log(`🔥 FLASH: Humanize completed, received ${data.humanizedText.length} characters`);
+          
+          // Replace content with humanized version, preserving basic paragraph structure
+          // This assumes the output of humanizeText is plain text with paragraph breaks
+          const paragraphs = data.humanizedText.split('\n\n').filter(p => p.trim());
+          current = paragraphs.map(p => `<p>${p.trim()}</p>`).join('\n');
+          
+          console.log(`🔥 FLASH: ========== Completed step ${i + 1}/${steps.length}: ${rawType} ==========`);
+          continue;
+        }
+
         if (type === "links + references" || type === "links_references" || type === "cite_sources") {
           console.log("🔥 FLASH: Calling generateExternalReferences function");
           const { data } = await base44.functions.invoke("generateExternalReferences", { html: current });
