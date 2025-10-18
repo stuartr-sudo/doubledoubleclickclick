@@ -133,7 +133,7 @@ export default function LiveHtmlPreview({
 
         // Add global drag state and helpers
         var __dragState = { id: null, overEl: null, pos: 'before' };
-        var __dropSelector = 'img, [data-b44-type], .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, p, div, section, article, h1, h2, h3, h4, h5, h6, li';
+        var __dropSelector = 'img, .b44-faq, [data-b44-type], .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, p, div, section, article, h1, h2, h3, h4, h5, h6, li';
         function clearDropClasses(){
           try {
             document.querySelectorAll('.b44-drop-before, .b44-drop-after').forEach(function(n){
@@ -490,6 +490,13 @@ export default function LiveHtmlPreview({
             // Default margin is now zeroed out in CSS.
             // if (!el.style.margin) el.style.margin = '1rem 0';
             el.style.maxWidth = '100%';
+          });
+
+          const faqs = document.querySelectorAll('.b44-faq');
+          faqs.forEach(function(faq){
+            if (!faq.dataset.b44Id) { faq.dataset.b44Id = String(nextId++); }
+            faq.style.cursor = 'pointer';
+            markDraggable(faq);
           });
 
           // NEW: after products exist in DOM, render their shadow content
@@ -907,7 +914,7 @@ export default function LiveHtmlPreview({
             if (!target) return;
             // NEW: Do not apply width/margin for images with data-infographic="true"
             if (target.matches('img[data-infographic="true"]')) {
-              // Skip width/margin changes for infographics, they are full-width
+              // Skip width/align changes for infographics, they are full-width
               // Still allow outline/selection behavior
             } else {
               if (typeof width === 'number') {
