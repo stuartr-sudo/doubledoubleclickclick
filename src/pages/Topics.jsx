@@ -18,8 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog";
+  DialogFooter } from
+"@/components/ui/dialog";
 import { airtableCreateRecord } from "@/api/functions";
 import { airtableListFields } from "@/api/functions";
 import { airtableDeleteRecord } from "@/api/functions";
@@ -52,11 +52,11 @@ const GET_QUESTIONS_RATE_LIMIT = {
 };
 
 const KEYWORD_MAP_HEADERS = [
-  "Keyword",
-  "Get Questions",
-  "Search Volume",
-  "Actions"
-];
+"Keyword",
+"Get Questions",
+"Search Volume",
+"Actions"];
+
 
 const KEYWORD_MAP_LAYOUT = "2fr 200px 100px 100px";
 
@@ -68,16 +68,16 @@ function getLabel(fields, tableContext = null) {
 
   if (tableContext === "companyProducts") {
     const NAME_KEYS = [
-      "Page Name",
-      "PageName",
-      "Product Name",
-      "ProductName",
-      "Name",
-      "Title",
-      "H1",
-      "SEO Title",
-      "Seo Title"
-    ];
+    "Page Name",
+    "PageName",
+    "Product Name",
+    "ProductName",
+    "Name",
+    "Title",
+    "H1",
+    "SEO Title",
+    "Seo Title"];
+
 
     const stripHtml = (s) => String(s || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     const safeTruncate = (s, n = 80) => s.length > n ? s.slice(0, n) + "..." : s;
@@ -99,7 +99,7 @@ function getLabel(fields, tableContext = null) {
         try {
           const obj = JSON.parse(text);
           const guess =
-            obj?.page_name || obj?.pageName || obj?.name || obj?.title || obj?.product_name || obj?.productName;
+          obj?.page_name || obj?.pageName || obj?.name || obj?.title || obj?.product_name || obj?.productName;
           if (typeof guess === "string" && guess.trim()) {
             const clean = stripHtml(guess);
             if (clean) return safeTruncate(clean, 80);
@@ -128,8 +128,8 @@ function getLinkedProductFieldName(fieldsObj) {
     lowerMap.get("link to company products") ||
     lowerMap.get("promoted product") ||
     lowerMap.get("promoted products") ||
-    "Promoted Product"
-  );
+    "Promoted Product");
+
 }
 
 const renderFieldValue = (value) => {
@@ -214,7 +214,7 @@ export default function TopicsPage() {
   const [onboardingTimeRemaining, setOnboardingTimeRemaining] = useState(0);
 
   const topicsGateRef = React.useRef(true);
-  React.useEffect(() => { topicsGateRef.current = topicsGateSatisfied; }, [topicsGateSatisfied]);
+  React.useEffect(() => {topicsGateRef.current = topicsGateSatisfied;}, [topicsGateSatisfied]);
 
   const pickField = useCallback((fieldsArr, candidates) => {
     const lowerMap = new Map((fieldsArr || []).map((f) => [String(f).toLowerCase(), f]));
@@ -399,7 +399,7 @@ export default function TopicsPage() {
         }
       }
     })();
-    return () => { isMounted = false; };
+    return () => {isMounted = false;};
   }, [selectedUsername]);
 
   useEffect(() => {
@@ -451,25 +451,25 @@ export default function TopicsPage() {
       const productFormula = `{Client Username} = '${sanitizedUsername}'`;
 
       const mainDataPromise = Promise.all([
-        listWithFilter(TABLE_IDS.keywordMap, usernameFormula),
-        listWithFilter(TABLE_IDS.faq, usernameFormula)
-      ]);
+      listWithFilter(TABLE_IDS.keywordMap, usernameFormula),
+      listWithFilter(TABLE_IDS.faq, usernameFormula)]
+      );
 
       const now = Date.now();
       const cacheSnapshot = auxDataCacheRef.current || { tm: [], bc: [], pp: [], cacheTime: 0 };
       const shouldRefreshCache =
-        now - (cacheSnapshot.cacheTime || 0) > CACHE_DURATION ||
-        (cacheSnapshot.tm?.length || 0) === 0 ||
-        (cacheSnapshot.bc?.length || 0) === 0 ||
-        (cacheSnapshot.pp?.length || 0) === 0;
+      now - (cacheSnapshot.cacheTime || 0) > CACHE_DURATION ||
+      (cacheSnapshot.tm?.length || 0) === 0 ||
+      (cacheSnapshot.bc?.length || 0) === 0 ||
+      (cacheSnapshot.pp?.length || 0) === 0;
 
       let auxDataPromise;
       if (shouldRefreshCache) {
         auxDataPromise = Promise.allSettled([
-          listWithFilter(TABLE_IDS.targetMarket, usernameFormula),
-          listWithFilter(TABLE_IDS.blogCategories, usernameFormula),
-          listWithFilter(TABLE_IDS.companyProducts, productFormula)
-        ]).then(async (results) => {
+        listWithFilter(TABLE_IDS.targetMarket, usernameFormula),
+        listWithFilter(TABLE_IDS.blogCategories, usernameFormula),
+        listWithFilter(TABLE_IDS.companyProducts, productFormula)]
+        ).then(async (results) => {
           let tmArr = results[0].status === "fulfilled" ? results[0].value || [] : [];
           let bcArr = results[1].status === "fulfilled" ? results[1].value || [] : [];
           let ppArr = results[2].status === "fulfilled" ? results[2].value || [] : [];
@@ -489,7 +489,7 @@ export default function TopicsPage() {
                 const lower = Object.fromEntries(Object.entries(f).map(([k, v]) => [String(k).toLowerCase(), v]));
                 let val = null;
                 for (const k of keyCandidates) {
-                  if (lower.hasOwnProperty(k)) { val = lower[k]; break; }
+                  if (lower.hasOwnProperty(k)) {val = lower[k];break;}
                 }
                 if (Array.isArray(val)) return val.includes(username);
                 return String(val || "") === username;
@@ -520,7 +520,7 @@ export default function TopicsPage() {
 
       const manualSet = getManualKwSet();
       const processedKeywords = (keywords || []).map((r) =>
-        manualSet.has(r.id) ? { ...r, __manualAdded: true } : r
+      manualSet.has(r.id) ? { ...r, __manualAdded: true } : r
       );
 
       setKeywordRows(processedKeywords);
@@ -625,7 +625,7 @@ export default function TopicsPage() {
     if (!pendingUsername || !availableUsernames || availableUsernames.length === 0) return;
     if (availableUsernames.includes(pendingUsername)) {
       if (useWorkspaceScoping) {
-      } else { handleUsernameSelect(pendingUsername); }
+      } else {handleUsernameSelect(pendingUsername);}
       setPendingUsername(null);
     }
   }, [availableUsernames, pendingUsername, handleUsernameSelect, useWorkspaceScoping]);
@@ -639,7 +639,7 @@ export default function TopicsPage() {
       const target = all.find((el) => (el.textContent || '').toLowerCase().includes(focusQuestion.toLowerCase()));
       if (target) {
         target.classList.add('ring-2', 'ring-emerald-400', 'rounded-md', 'bg-emerald-500/10');
-        try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { console.error("Scroll failed:", e); }
+        try {target.scrollIntoView({ behavior: 'smooth', block: 'center' });} catch (e) {console.error("Scroll failed:", e);}
         setTimeout(() => {
           target.classList.remove('ring-2', 'ring-emerald-400', 'rounded-md', 'bg-emerald-500/10');
         }, 4500);
@@ -653,7 +653,7 @@ export default function TopicsPage() {
     const ppKey = getLinkedProductFieldName(fields || {});
     const pp = fields?.[ppKey] || [];
     return Array.isArray(tm) && tm.length > 0 &&
-      Array.isArray(pp) && pp.length > 0;
+    Array.isArray(pp) && pp.length > 0;
   };
 
   const { consumeTokensForFeature } = useTokenConsumption();
@@ -741,17 +741,17 @@ export default function TopicsPage() {
     let becameComplete = false;
 
     stateSetter((currentRows) =>
-      currentRows.map((row) => {
-        if (row.id === recordId) {
-          const wasCompleteBefore = isComplete(row.fields || {});
-          const updatedFields = { ...row.fields, [writeFieldName]: newValue };
-          fullyUpdatedRowFields = updatedFields;
-          const nowComplete = isComplete(updatedFields || {});
-          becameComplete = !wasCompleteBefore && nowComplete;
-          return { ...row, fields: updatedFields };
-        }
-        return row;
-      })
+    currentRows.map((row) => {
+      if (row.id === recordId) {
+        const wasCompleteBefore = isComplete(row.fields || {});
+        const updatedFields = { ...row.fields, [writeFieldName]: newValue };
+        fullyUpdatedRowFields = updatedFields;
+        const nowComplete = isComplete(updatedFields || {});
+        becameComplete = !wasCompleteBefore && nowComplete;
+        return { ...row, fields: updatedFields };
+      }
+      return row;
+    })
     );
 
     const canonicalLower = String(fieldName).toLowerCase();
@@ -771,8 +771,8 @@ export default function TopicsPage() {
         const ppKey = getLinkedProductFieldName(fullyUpdatedRowFields || {});
 
         const isNowComplete =
-          Array.isArray(fullyUpdatedRowFields[tmKey]) && fullyUpdatedRowFields[tmKey].length > 0 &&
-          ppKey && Array.isArray(fullyUpdatedRowFields[ppKey]) && fullyUpdatedRowFields[ppKey].length > 0;
+        Array.isArray(fullyUpdatedRowFields[tmKey]) && fullyUpdatedRowFields[tmKey].length > 0 &&
+        ppKey && Array.isArray(fullyUpdatedRowFields[ppKey]) && fullyUpdatedRowFields[ppKey].length > 0;
 
         if (becameComplete) {
           await consumeTokensForFeature("topics_assignment_complete");
@@ -799,7 +799,7 @@ export default function TopicsPage() {
         console.log('[Topics] Airtable sync complete');
         return;
       }
-      
+
       console.log('[Topics] Syncing to Airtable (fallback):', {
         recordId,
         field: finalWriteFieldName,
@@ -865,8 +865,8 @@ export default function TopicsPage() {
 
       const brandFieldCandidate = pickField(available, ["Brand ID", "brand id", "BrandID", "Brand Name", "brand name", "Brand", "brand"]);
       const brandTargetField = brandFieldKey && available.some((f) => f === brandFieldKey) ?
-        brandFieldKey :
-        brandFieldCandidate;
+      brandFieldKey :
+      brandFieldCandidate;
 
       if (!keywordKey) {
         setError("Airtable: No suitable keyword field found (tried Keyword/Name/Title).");
@@ -951,8 +951,8 @@ export default function TopicsPage() {
 
       const brandFieldCandidate = pickField(available, ["Brand ID", "brand id", "BrandID", "Brand Name", "brand name", "Brand", "brand"]);
       const brandTargetField = brandFieldKey && available.some((f) => f === brandFieldKey) ?
-        brandFieldKey :
-        brandFieldCandidate;
+      brandFieldKey :
+      brandFieldCandidate;
 
       if (!keywordKey) {
         setError("Airtable: No suitable keyword/question field found.");
@@ -1014,14 +1014,14 @@ export default function TopicsPage() {
   const handleCreateArticle = useCallback(async (question) => {
     try {
       const currentUser = await User.me();
-      const timestamps = Array.isArray(currentUser.article_creation_timestamps)
-        ? currentUser.article_creation_timestamps
-        : [];
+      const timestamps = Array.isArray(currentUser.article_creation_timestamps) ?
+      currentUser.article_creation_timestamps :
+      [];
 
       const now = Date.now();
-      const thirtyMinsAgo = now - (30 * 60 * 1000);
+      const thirtyMinsAgo = now - 30 * 60 * 1000;
 
-      const recentCreations = timestamps.filter(ts => {
+      const recentCreations = timestamps.filter((ts) => {
         const timestamp = new Date(ts).getTime();
         return timestamp > thirtyMinsAgo;
       });
@@ -1156,8 +1156,8 @@ export default function TopicsPage() {
         <div className="text-center py-12 text-slate-600 flex justify-center items-center gap-2">
           <Loader2 className="w-5 h-5 animate-spin" />
           <span>Loading...</span>
-        </div>
-      );
+        </div>);
+
     }
 
     if (!useWorkspaceScoping && availableUsernames.length === 0 && currentUser?.role !== "admin") {
@@ -1168,8 +1168,8 @@ export default function TopicsPage() {
           <p className="text-amber-700/80 mt-2">
             Your account does not have any usernames assigned. Please contact an administrator.
           </p>
-        </div>
-      );
+        </div>);
+
     }
 
     if (!selectedUsername) {
@@ -1178,8 +1178,8 @@ export default function TopicsPage() {
           <Users className="w-12 h-12 mx-auto mb-4 text-slate-400" />
           <h3 className="text-xl font-semibold text-slate-900">Select a Workspace</h3>
           <p className="text-slate-600">Choose a workspace from the top navigation to view topics.</p>
-        </div>
-      );
+        </div>);
+
     }
 
     if (onboardingTimeRemaining > 0) {
@@ -1198,8 +1198,8 @@ export default function TopicsPage() {
             </div>
             <div className="text-sm text-slate-500">time remaining</div>
           </div>
-        </div>
-      );
+        </div>);
+
     }
 
     if (useWorkspaceScoping && isInitialDataLoadSuppressed.current) {
@@ -1208,8 +1208,8 @@ export default function TopicsPage() {
           <Info className="w-12 h-12 mx-auto mb-4 text-slate-400" />
           <h3 className="text-xl font-semibold text-slate-900">Data Load Suppressed</h3>
           <p className="text-slate-600">Click "Refresh" to load topics for {selectedUsername}.</p>
-        </div>
-      );
+        </div>);
+
     }
 
     if (loadingData) {
@@ -1217,8 +1217,8 @@ export default function TopicsPage() {
         <div className="text-center py-12 text-slate-600 flex justify-center items-center gap-2">
           <Loader2 className="w-5 h-5 animate-spin" />
           <span>Loading topics for {selectedUsername}...</span>
-        </div>
-      );
+        </div>);
+
     }
 
     if (error) {
@@ -1280,7 +1280,7 @@ export default function TopicsPage() {
             className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
 
             {faqKeywordFilter &&
-              <div className="sticky top-0 z-30 bg-indigo-50 border-b border-indigo-200 px-4 py-2 flex items-center justify-between">
+            <div className="sticky top-0 z-30 bg-indigo-50 border-b border-indigo-200 px-4 py-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-indigo-700" />
                   <span className="text-sm text-indigo-800">
@@ -1288,10 +1288,10 @@ export default function TopicsPage() {
                   </span>
                 </div>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFaqKeywordFilter(null)}
-                  className="text-indigo-700 hover:bg-indigo-100 h-7 px-2">
+                variant="ghost"
+                size="sm"
+                onClick={() => setFaqKeywordFilter(null)}
+                className="text-indigo-700 hover:bg-indigo-100 h-7 px-2">
 
                   Clear Filter
                 </Button>
@@ -1311,8 +1311,8 @@ export default function TopicsPage() {
 
           </TabsContent>
         </Tabs>
-      </>
-    );
+      </>);
+
   })();
 
   if (checkingTopicsGate) {
@@ -1320,8 +1320,8 @@ export default function TopicsPage() {
       <div className="min-h-[50vh] flex items-center justify-center text-slate-600">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
         <span>Loading…</span>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -1342,26 +1342,26 @@ export default function TopicsPage() {
               const updatedTopics = [...arr, uname];
               const completionTimestamp = new Date().toISOString();
 
-              const existingCompletionTimestamps = me.topics_onboarding_completed_at
-                ? (typeof me.topics_onboarding_completed_at === 'string'
-                  ? JSON.parse(me.topics_onboarding_completed_at)
-                  : me.topics_onboarding_completed_at)
-                : {};
+              const existingCompletionTimestamps = me.topics_onboarding_completed_at ?
+              typeof me.topics_onboarding_completed_at === 'string' ?
+              JSON.parse(me.topics_onboarding_completed_at) :
+              me.topics_onboarding_completed_at :
+              {};
 
               const updatedCompletionTimestamps = {
                 ...existingCompletionTimestamps,
-                [uname]: completionTimestamp,
+                [uname]: completionTimestamp
               };
 
               await User.updateMyUserData({
                 topics: updatedTopics,
-                topics_onboarding_completed_at: JSON.stringify(updatedCompletionTimestamps),
+                topics_onboarding_completed_at: JSON.stringify(updatedCompletionTimestamps)
               });
 
-              setCurrentUser(prev => ({
+              setCurrentUser((prev) => ({
                 ...prev,
                 topics: updatedTopics,
-                topics_onboarding_completed_at: JSON.stringify(updatedCompletionTimestamps),
+                topics_onboarding_completed_at: JSON.stringify(updatedCompletionTimestamps)
               }));
 
               setTopicsGateSatisfied(true);
@@ -1370,13 +1370,13 @@ export default function TopicsPage() {
               toast.success(`Topics onboarding complete for ${uname}. Processing keywords...`);
             }
           }
-        }}
-      />
+        }} />
 
-      {topicsGateSatisfied && (
-        <div className="w-full px-6">
-          {onboardingTimeRemaining > 0 && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+
+      {topicsGateSatisfied &&
+      <div className="w-full px-6">
+          {onboardingTimeRemaining > 0 &&
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="text-blue-600">
                   <Clock className="w-5 h-5 animate-pulse" />
@@ -1391,7 +1391,7 @@ export default function TopicsPage() {
                 </div>
               </div>
             </div>
-          )}
+        }
 
           <div className="bg-white border border-slate-200 rounded-xl p-2 mb-2">
             <div className="flex items-center gap-1 flex-nowrap">
@@ -1400,34 +1400,34 @@ export default function TopicsPage() {
               <div className="h-5 w-px bg-slate-200" />
 
               {!useWorkspaceScoping &&
-                <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1">
                   <Users className="w-4 h-4 text-slate-500" />
                   <Select
-                    value={localSelectedUsername || ""}
-                    onValueChange={handleUsernameSelect}
-                    disabled={loadingInitial}>
+                value={localSelectedUsername || ""}
+                onValueChange={handleUsernameSelect}
+                disabled={loadingInitial}>
                     <SelectTrigger className="w-40 h-8 bg-white border-slate-300 text-slate-900 text-sm">
                       <SelectValue placeholder={loadingInitial ? "Loading..." : "Select username"} />
                     </SelectTrigger>
                     <SelectContent className="bg-white border border-slate-200">
                       {availableUsernames.map((name) =>
-                        <SelectItem key={name} value={name} className="text-slate-900 hover:bg-slate-100">
+                  <SelectItem key={name} value={name} className="text-slate-900 hover:bg-slate-100">
                           {name}
                         </SelectItem>
-                      )}
+                  )}
                     </SelectContent>
                   </Select>
                 </div>
-              }
+            }
 
               {!useWorkspaceScoping && <div className="h-5 w-px bg-slate-200" />}
 
               <div className="relative">
                 <Input
-                  placeholder="Search…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-7 w-[180px] h-8 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 text-sm" />
+                placeholder="Search…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-7 w-[180px] h-8 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 text-sm" />
                 <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
 
@@ -1436,9 +1436,9 @@ export default function TopicsPage() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   <Switch
-                    checked={showSelectedOnly}
-                    onCheckedChange={setShowSelectedOnly}
-                    disabled={activeTab !== "keyword_map"} className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white" />
+                  checked={showSelectedOnly}
+                  onCheckedChange={setShowSelectedOnly}
+                  disabled={activeTab !== "keyword_map"} className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white" />
 
                   <span className={`text-[11px] ${activeTab !== "keyword_map" ? "text-slate-400" : "text-slate-700"}`}>
                     Selected
@@ -1447,9 +1447,9 @@ export default function TopicsPage() {
 
                 <div className="flex items-center gap-1">
                   <Switch
-                    checked={showCompleteOnly}
-                    onCheckedChange={setShowCompleteOnly}
-                    disabled={activeTab !== "keyword_map"} className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white" />
+                  checked={showCompleteOnly}
+                  onCheckedChange={setShowCompleteOnly}
+                  disabled={activeTab !== "keyword_map"} className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white" />
 
                   <span className={`text-[11px] ${activeTab !== "keyword_map" ? "text-slate-400" : "text-slate-700"}`}>
                     Complete
@@ -1458,9 +1458,9 @@ export default function TopicsPage() {
 
                 <div className="flex items-center gap-1">
                   <Switch
-                    checked={showManualOnly}
-                    onCheckedChange={setShowManualOnly}
-                    disabled={activeTab !== "keyword_map"} className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white" />
+                  checked={showManualOnly}
+                  onCheckedChange={setShowManualOnly}
+                  disabled={activeTab !== "keyword_map"} className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white" />
 
                   <span className={`text-[11px] ${activeTab !== "keyword_map" ? "text-slate-400" : "text-slate-700"}`}>
                     Manual
@@ -1470,20 +1470,20 @@ export default function TopicsPage() {
 
               <div className="ml-auto flex items-center gap-1">
                 <Button
-                  onClick={refreshData}
-                  disabled={!selectedUsername || loadingData}
-                  size="icon"
-                  variant="outline"
-                  className="h-8 w-8 bg-white border border-slate-300 text-slate-900 hover:bg-slate-50"
-                  title="Refresh">
+                onClick={refreshData}
+                disabled={!selectedUsername || loadingData}
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 bg-white border border-slate-300 text-slate-900 hover:bg-slate-50"
+                title="Refresh">
 
                   <RefreshCw className={`w-4 h-4 ${loadingData ? "animate-spin" : ""}`} />
                 </Button>
                 <Button
-                  onClick={() => setShowInlineAdd((v) => !v)}
-                  disabled={!selectedUsername}
-                  size="sm"
-                  className="gap-2 h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-sm">
+                onClick={() => setShowInlineAdd((v) => !v)}
+                disabled={!selectedUsername}
+                size="sm" className="inline-flex items-center justify-center whitespace-nowrap font-medium ring-offset-background transition-all duration-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 rounded-md px-3 gap-2 h-8 bg-gradient-to-r from-slate-900 to-indigo-900 hover:from-slate-950 hover:to-indigo-950 hover:scale-102 text-white text-sm animate-[subtle-pulse_3s_ease-in-out_infinite] hover:animate-none">
+
 
                   <Plus className="w-4 h-4" />
                   Add Keyword
@@ -1493,19 +1493,19 @@ export default function TopicsPage() {
           </div>
 
           {showInlineAdd &&
-            <div className="bg-white border border-slate-200 rounded-xl p-2 mb-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-2 mb-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Input
-                  value={inlineKeywordText}
-                  onChange={(e) => setInlineKeywordText(e.target.value)}
-                  placeholder="Enter keyword or question"
-                  className="bg-white border-slate-300 text-slate-900 h-8 flex-1 min-w-[220px]"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && inlineKeywordText.trim() && !creating) {
-                      e.preventDefault();
-                      handleInlineSubmit();
-                    }
-                  }} />
+              value={inlineKeywordText}
+              onChange={(e) => setInlineKeywordText(e.target.value)}
+              placeholder="Enter keyword or question"
+              className="bg-white border-slate-300 text-slate-900 h-8 flex-1 min-w-[220px]"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && inlineKeywordText.trim() && !creating) {
+                  e.preventDefault();
+                  handleInlineSubmit();
+                }
+              }} />
 
                 <Select value={inlineTarget} onValueChange={setInlineTarget}>
                   <SelectTrigger className="w-44 h-8 bg-white border-slate-300 text-slate-900">
@@ -1517,26 +1517,26 @@ export default function TopicsPage() {
                   </SelectContent>
                 </Select>
                 <Button
-                  onClick={handleInlineSubmit}
-                  disabled={!inlineKeywordText.trim() || creating}
-                  className="h-8 bg-emerald-600 hover:bg-emerald-700">
+              onClick={handleInlineSubmit}
+              disabled={!inlineKeywordText.trim() || creating}
+              className="h-8 bg-emerald-600 hover:bg-emerald-700">
 
                   {creating ? "Adding..." : "Submit"}
                 </Button>
                 <Button
-                  variant="outline"
-                  onClick={() => { setShowInlineAdd(false); setNewKeyword(""); setNewFaqKeyword(""); setInlineKeywordText(""); setInlineTarget("keyword_map"); }}
-                  className="h-8 bg-white border-slate-300 text-slate-900 hover:bg-slate-50">
+              variant="outline"
+              onClick={() => {setShowInlineAdd(false);setNewKeyword("");setNewFaqKeyword("");setInlineKeywordText("");setInlineTarget("keyword_map");}}
+              className="h-8 bg-white border-slate-300 text-slate-900 hover:bg-slate-50">
 
                   Cancel
                 </Button>
               </div>
             </div>
-          }
+        }
 
           {renderPageBody}
         </div>
-      )}
+      }
 
       <Dialog open={showAddKeyword} onOpenChange={setShowAddKeyword}>
         <DialogContent className="bg-white border border-slate-200 text-slate-900">
@@ -1610,12 +1610,12 @@ export default function TopicsPage() {
         open={!!deleteTarget}
         loading={deleteLoading}
         onConfirm={confirmDelete}
-        onClose={() => { if (!deleteLoading) setDeleteTarget(null); }}
+        onClose={() => {if (!deleteLoading) setDeleteTarget(null);}}
         title="Delete record"
-        description="Are you sure you want to delete this record? This action cannot be undone."
-      />
-    </div>
-  );
+        description="Are you sure you want to delete this record? This action cannot be undone." />
+
+    </div>);
+
 }
 
 // --- Reusable DataTable Component (for Keyword Map) ---
@@ -1664,7 +1664,7 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
     const ppKey = getLinkedProductFieldName(fields);
     const pp = fields?.[ppKey] || [];
     return Array.isArray(tm) && tm.length > 0 &&
-      Array.isArray(pp) && pp.length > 0;
+    Array.isArray(pp) && pp.length > 0;
   };
 
   const scrollRef = React.useRef(null);
@@ -1673,7 +1673,7 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
     if (!el) return;
 
     const isInteractive = (target) =>
-      !!(target && target.closest('button, [role="button"], a, input, select, textarea, [contenteditable="true"]'));
+    !!(target && target.closest('button, [role="button"], a, input, select, textarea, [contenteditable="true"]'));
 
     const onWheel = (e) => {
       const canScrollX = el.scrollWidth > el.clientWidth;
@@ -1780,27 +1780,27 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
           style={{ gridTemplateColumns: layout, gap: "1.5rem", padding: "0.5rem 1.5rem" }}>
 
           {headers.map((header) =>
-            <div
-              key={header}
-              className={header === "Search Volume" ? "text-right" : header === "Actions" ? "text-center" : "whitespace-nowrap"}>
+          <div
+            key={header}
+            className={header === "Search Volume" ? "text-right" : header === "Actions" ? "text-center" : "whitespace-nowrap"}>
 
               {header === "Search Volume" ?
-                <button
-                  type="button"
-                  onClick={toggleSvSort}
-                  className="inline-flex items-center gap-1 hover:text-slate-800 transition-colors"
-                  title="Sort by Search Volume">
+            <button
+              type="button"
+              onClick={toggleSvSort}
+              className="inline-flex items-center gap-1 hover:text-slate-800 transition-colors"
+              title="Sort by Search Volume">
 
                   <span>Search Volume</span>
                   {svSort === "asc" ?
-                    <ArrowUp className="w-3.5 h-3.5" /> :
-                    svSort === "desc" ?
-                      <ArrowDown className="w-3.5 h-3.5" /> :
-                      <ArrowUpDown className="w-3.5 h-3.5" />
-                  }
-                </button> :
-                header
+              <ArrowUp className="w-3.5 h-3.5" /> :
+              svSort === "desc" ?
+              <ArrowDown className="w-3.5 h-3.5" /> :
+              <ArrowUpDown className="w-3.5 h-3.5" />
               }
+                </button> :
+            header
+            }
             </div>
           )}
         </div>
@@ -1825,84 +1825,84 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
                 style={{ gridTemplateColumns: layout, gap: "1.5rem", padding: density === "compact" ? "0.5rem 1.5rem" : "1rem 2rem" }}>
 
                 {headers.map((header) =>
-                  <div
-                    key={`${row.id}-${header}`}
-                    className={header === "Search Volume" ? "text-right font-mono tabular-nums text-slate-700" : header === "Actions" ? "text-center" : "min-w-0"}>
+                <div
+                  key={`${row.id}-${header}`}
+                  className={header === "Search Volume" ? "text-right font-mono tabular-nums text-slate-700" : header === "Actions" ? "text-center" : "min-w-0"}>
 
                     {header === "Keyword" ?
-                      <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                         {row.__manualAdded &&
-                          <span className="h-5 w-5 rounded-full border border-slate-300 text-slate-600 text-[10px] flex items-center justify-center">
+                    <span className="h-5 w-5 rounded-full border border-slate-300 text-slate-600 text-[10px] flex items-center justify-center">
                             m
                           </span>
-                        }
+                    }
                         <span className="text-slate-900 truncate">{keywordText || "-"}</span>
                         {complete && (
-                          postId ?
-                            <Link to={`${createPageUrl('Editor')}?postId=${postId}`}>
+                    postId ?
+                    <Link to={`${createPageUrl('Editor')}?postId=${postId}`}>
                               <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 px-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                                title="Open in Editor">
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                        title="Open in Editor">
 
                                 Written
                               </Button>
                             </Link> :
 
-                            <Badge className="bg-emerald-100/70 text-emerald-800 border border-emerald-200">
+                    <Badge className="bg-emerald-100/70 text-emerald-800 border border-emerald-200">
                               Writing Article
                             </Badge>)
 
-                        }
+                    }
                       </div> :
-                      header === "Get Questions" ?
-                        <div className="flex items-center gap-2">
+                  header === "Get Questions" ?
+                  <div className="flex items-center gap-2">
                           <Switch
-                            checked={isToggled}
-                            onCheckedChange={(checked) =>
-                              handleUpdate(tableId, row.id, "Get Questions", checked)
-                            } className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white"
+                      checked={isToggled}
+                      onCheckedChange={(checked) =>
+                      handleUpdate(tableId, row.id, "Get Questions", checked)
+                      } className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white"
 
-                            style={{
-                              '--switch-thumb': isToggled ? '#ffffff' : '#64748b'
-                            }} />
+                      style={{
+                        '--switch-thumb': isToggled ? '#ffffff' : '#64748b'
+                      }} />
 
                           {isLoading &&
-                            <div className="flex items-center gap-1 text-xs text-slate-600">
+                    <div className="flex items-center gap-1 text-xs text-slate-600">
                               <Loader2 className="w-4 h-4 animate-spin" />
                               <span>Searching...</span>
                             </div>
-                          }
+                    }
                           {canShowButton &&
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewQuestions(fields["Keyword"])}
-                              className="text-xs px-2 py-1 h-6 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewQuestions(fields["Keyword"])}
+                      className="text-xs px-2 py-1 h-6 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
                               View Questions
                             </Button>
-                          }
+                    }
                         </div> :
-                        header === "Search Volume" ?
-                          <span>{formatNumber(fields[header])}</span> :
-                          header === "Actions" ?
-                            <Button
-                              variant="ghost"
-                              size="icon" className="text-red-600 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 w-8 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => onDeleteRow && onDeleteRow(tableId, row.id)}
-                              title="Delete keyword">
+                  header === "Search Volume" ?
+                  <span>{formatNumber(fields[header])}</span> :
+                  header === "Actions" ?
+                  <Button
+                    variant="ghost"
+                    size="icon" className="text-red-600 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 w-8 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => onDeleteRow && onDeleteRow(tableId, row.id)}
+                    title="Delete keyword">
                               <Trash2 className="w-4 h-4" />
                             </Button> :
-                            renderFieldValue(fields[header])
-                    }
+                  renderFieldValue(fields[header])
+                  }
                   </div>
                 )}
-              </div>
-            );
+              </div>);
+
           })}
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };

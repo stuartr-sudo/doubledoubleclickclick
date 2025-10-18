@@ -29,7 +29,8 @@ export default function CredentialModal({ open, onClose, provider, userName, onC
     endpoint_url: "",
     http_method: "POST",
     header_key: "X-Webhook-Secret",
-    header_value: ""
+    header_value: "",
+    author_name: "" // Added author_name to form state
   });
 
   React.useEffect(() => {
@@ -56,6 +57,7 @@ export default function CredentialModal({ open, onClose, provider, userName, onC
         payload.site_domain = (form.site_domain || "").replace(/^https?:\/\//i, "").replace(/\/+$/,'') || undefined;
         payload.access_token = form.access_token || undefined;
         payload.blog_id = form.blog_id || undefined;
+        payload.author_name = form.author_name || undefined; // Added author_name to Shopify payload
       } else if (provider === "wordpress") {
         payload.site_domain = (form.site_domain || "").replace(/\/+$/,'') || undefined;
         payload.username = form.username || undefined;
@@ -114,16 +116,40 @@ export default function CredentialModal({ open, onClose, provider, userName, onC
         <>
           {commonName}
           <div>
-            <Label>Store Domain</Label>
-            <Input value={form.site_domain} onChange={(e) => setForm({ ...form, site_domain: e.target.value })} placeholder="yourstore.myshopify.com" />
+            <Label>Access Token *</Label>
+            <Input
+              type="password"
+              value={form.access_token}
+              onChange={(e) => setForm({ ...form, access_token: e.target.value })}
+              placeholder="shpat_..."
+            />
           </div>
           <div>
-            <Label>Admin API Access Token</Label>
-            <Input value={form.access_token} onChange={(e) => setForm({ ...form, access_token: e.target.value })} placeholder="shpat_xxx" />
+            <Label>Store Domain *</Label>
+            <Input
+              value={form.site_domain}
+              onChange={(e) => setForm({ ...form, site_domain: e.target.value })}
+              placeholder="your-store.myshopify.com"
+            />
           </div>
-          <div className="col-span-2">
-            <Label>Blog ID (optional)</Label>
-            <Input value={form.blog_id} onChange={(e) => setForm({ ...form, blog_id: e.target.value })} placeholder="e.g., 123456789" />
+          <div>
+            <Label>Blog ID *</Label>
+            <Input
+              value={form.blog_id}
+              onChange={(e) => setForm({ ...form, blog_id: e.target.value })}
+              placeholder="12345678"
+            />
+          </div>
+          <div>
+            <Label>Author Name (optional)</Label>
+            <Input
+              value={form.author_name || ''}
+              onChange={(e) => setForm({ ...form, author_name: e.target.value })}
+              placeholder="John Doe"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Default author name for articles published to Shopify
+            </p>
           </div>
         </>
       );

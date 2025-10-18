@@ -24,21 +24,21 @@ export function Tabs({ value, onValueChange, defaultValue, children, className }
       <div className={cn("w-full", className)}>
         {children}
       </div>
-    </TabsContext.Provider>
-  );
+    </TabsContext.Provider>);
+
 }
 
 export function TabsList({ children, className }) {
   return (
-    <div
-      className={cn(
-        "inline-flex h-10 items-center justify-center rounded-md bg-slate-100 p-1 text-slate-500",
-        className
-      )}
-    >
+    <div className="bg-zinc-200 text-slate-200 mb-4 p-1 rounded-xl h-10 items-center justify-center grid w-full grid-cols-2 border border-slate-200 shadow-sm">
+
+
+
+
+
       {children}
-    </div>
-  );
+    </div>);
+
 }
 
 export function TabsTrigger({ value, children, className }) {
@@ -51,15 +51,15 @@ export function TabsTrigger({ value, children, className }) {
       onClick={() => setActiveTab(value)}
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        isActive
-          ? "bg-white text-slate-950 shadow-sm"
-          : "text-slate-600 hover:text-slate-900",
+        isActive ?
+        "bg-white text-slate-950 shadow-sm" :
+        "text-slate-600 hover:text-slate-900",
         className
-      )}
-    >
+      )}>
+
       {children}
-    </button>
-  );
+    </button>);
+
 }
 
 export function TabsContent({ value, children, className }) {
@@ -74,9 +74,9 @@ export function TabsContent({ value, children, className }) {
       className={cn(
         "mt-2 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2",
         className
-      )}
-    >
+      )}>
+
       {children}
-    </div>
-  );
+    </div>);
+
 }

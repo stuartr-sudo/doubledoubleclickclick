@@ -510,24 +510,27 @@ export default function BrandGuidelinesManager() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="identity" className="flex items-center gap-2">
-                <FileCode className="w-4 h-4" />
-                Identity
-              </TabsTrigger>
-              <TabsTrigger value="colors" className="flex items-center gap-2">
-                <Palette className="w-4 h-4" />
-                Colors
-              </TabsTrigger>
-              <TabsTrigger value="typography" className="flex items-center gap-2">
-                <Type className="w-4 h-4" />
-                Typography
-              </TabsTrigger>
-              <TabsTrigger value="layout" className="flex items-center gap-2">
-                <LayoutIcon className="w-4 h-4" />
-                Layout
-              </TabsTrigger>
-            </TabsList>
+            {/* NEW: Single-row segmented tab header (no wrapping, 4 equal columns) */}
+            <div className="mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <TabsTrigger value="identity" className="w-full h-10 rounded-lg flex items-center justify-center gap-2">
+                  <FileCode className="w-4 h-4" />
+                  <span>Identity</span>
+                </TabsTrigger>
+                <TabsTrigger value="colors" className="w-full h-10 rounded-lg flex items-center justify-center gap-2">
+                  <Palette className="w-4 h-4" />
+                  <span>Colors</span>
+                </TabsTrigger>
+                <TabsTrigger value="typography" className="w-full h-10 rounded-lg flex items-center justify-center gap-2">
+                  <Type className="w-4 h-4" />
+                  <span>Typography</span>
+                </TabsTrigger>
+                <TabsTrigger value="layout" className="w-full h-10 rounded-lg flex items-center justify-center gap-2">
+                  <LayoutIcon className="w-4 h-4" />
+                  <span>Layout</span>
+                </TabsTrigger>
+              </div>
+            </div>
 
             {/* Identity Tab */}
             <TabsContent value="identity" className="space-y-4">

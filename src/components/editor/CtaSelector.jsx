@@ -4,37 +4,63 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Share2 } from "lucide-react";
-import { CustomContentTemplate } from "@/api/entities";
+import { CustomContentTemplate } from "@/api/entities"; // This import might become redundant if CustomContentTemplate is only used in TemplateProvider
 import CtaTemplateFillModal from "./CtaTemplateFillModal";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useTemplates } from '@/components/providers/TemplateProvider'; // NEW IMPORT
 
 export default function CtaSelector({ isOpen, onClose, onInsert, pageHtml, pageTitle, preferredUsername }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [ctaTemplates, setCtaTemplates] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // Now reflects loading status of the provider
+  // const [ctaTemplates, setCtaTemplates] = useState([]); // REMOVED: Now derived from provider
   const [fillOpen, setFillOpen] = useState(false);
   const [templateToFill, setTemplateToFill] = useState(null);
   const { consumeTokensForFeature } = useTokenConsumption();
 
-  const loadCtaTemplates = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const tpls = await CustomContentTemplate.filter({ associated_ai_feature: "cta", is_active: true }).catch(() => []);
-      const activeTemplates = Array.isArray(tpls) ? tpls : [];
-      setCtaTemplates(activeTemplates);
-    } catch (error) {
-      console.error("Error loading CTA templates:", error);
-      setCtaTemplates([]); // Ensure state is clear on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // NEW: Use template provider
+  const { templates, loadTemplates, getTemplatesByFeature } = useTemplates();
+
+  // DERIVED: ctaTemplates now comes from the provider and is filtered
+  const ctaTemplates = React.useMemo(() => {
+    const productOnlyTemplates = getTemplatesByFeature('cta').filter((template) => {
+      // Define names to filter out
+      const excludedNames = [
+        'cta',
+        'testimonial',
+        'underline effect',
+        'high-end & polished'
+      ];
+
+      const hasInvalidName = template.name && excludedNames.some(excludedName => 
+        template.name.toLowerCase().includes(excludedName)
+      );
+      return !hasInvalidName;
+    });
+    return productOnlyTemplates;
+  }, [getTemplatesByFeature]); // Depend on getTemplatesByFeature to re-evaluate when templates change
+
+
+  // REMOVED: Replaced by useEffect below and provider's loadTemplates
+  // const loadCtaTemplates = useCallback(async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const tpls = await CustomContentTemplate.filter({ associated_ai_feature: "cta", is_active: true }).catch(() => []);
+  //     const activeTemplates = Array.isArray(tpls) ? tpls : [];
+  //     setCtaTemplates(activeTemplates);
+  //   } catch (error) {
+  //     console.error("Error loading CTA templates:", error);
+  //     setCtaTemplates([]); // Ensure state is clear on error
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }, []);
 
   useEffect(() => {
     if (isOpen) {
-      loadCtaTemplates();
+      setIsLoading(true); // Set local loading state
+      loadTemplates().finally(() => setIsLoading(false)); // Call provider's loadTemplates
     }
-  }, [isOpen, loadCtaTemplates]);
+  }, [isOpen, loadTemplates]); // Depend on isOpen and loadTemplates from provider
 
   // Placeholder renderer: replace {{PLACEHOLDER}} (case-insensitive) with provided values
   const renderTemplateHTML = useCallback((tplHtml, data) => {

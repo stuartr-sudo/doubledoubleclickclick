@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, Filter, FileText, Link as LinkIcon, ClipboardPaste, Trash2, Clock, Calendar as CalendarIcon, SortAsc, Zap } from "lucide-react";
+import { Loader2, Search, Filter, FileText, Link as LinkIcon, ClipboardPaste, Trash2, Clock, Calendar as CalendarIcon, SortAsc, Zap, Globe } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import PasteContentModal from "@/components/content/PasteContentModal";
+import PublishToCMSModal from "@/components/editor/PublishToCMSModal"; // New Import
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,15 +21,15 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
-} from
-  "@/components/ui/alert-dialog";
+  AlertDialogTitle } from
+
+"@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import FlashButton from "../components/content/FlashButton";
 
-export default function Content() {
+export default function Content() {// Renamed from ContentPage as per original file
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [allowedUsernames, setAllowedUsernames] = useState([]);
@@ -37,7 +38,7 @@ export default function Content() {
   const [localSelectedUsername, setLocalSelectedUsername] = useState("all");
 
   const [statusFilter, setStatusFilter] = useState("all");
-  const [flashStatusFilter, setFlashStatusFilter] = useState("all"); // NEW: State for flash status filter
+  const [flashStatusFilter, setFlashStatusFilter] = useState("all"); // State for flash status filter
   const [q, setQ] = useState("");
   const [items, setItems] = useState([]); // unified: posts + webhooks
   // itemsRef is no longer needed as the new polling useEffect will capture the latest `items` state via its `runningItemKeys` dependency.
@@ -59,6 +60,10 @@ export default function Content() {
   const selectedUsername = useWorkspaceScoping ? globalUsername : localSelectedUsername;
 
   const navigate = useNavigate(); // Initialize useNavigate
+
+  // New state for publish modal
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [publishingPost, setPublishingPost] = useState(null);
 
   // Generate a sensible default username for paste modal
   const defaultPasteUsername = useMemo(() => {
@@ -190,16 +195,16 @@ export default function Content() {
       const posts = await BlogPost.filter({ user_name: usernames }, "-updated_date");
 
       // Wait 200ms before second request
-      await new Promise(res => setTimeout(res, 200));
+      await new Promise((res) => setTimeout(res, 200));
 
       const hooks = await WebhookReceived.filter({ user_name: usernames }, "-updated_date");
 
       console.log("Loaded posts:", posts?.length, "webhooks:", hooks?.length);
 
       const normalizedContent = [
-        ...(posts || []).map(normalizePost),
-        ...(hooks || []).map(normalizeWebhook)
-      ];
+      ...(posts || []).map(normalizePost),
+      ...(hooks || []).map(normalizeWebhook)];
+
 
 
       const deduped = dedupeSmart(normalizedContent);
@@ -302,7 +307,7 @@ export default function Content() {
 
           // NEW: Longer stagger between requests (300ms instead of 100ms)
           if (i > 0) {
-            await new Promise(res => setTimeout(res, 300));
+            await new Promise((res) => setTimeout(res, 300));
           }
 
           try {
@@ -333,7 +338,7 @@ export default function Content() {
                   flash_status: updatedItem.flash_status || null,
                   flashed_at: updatedItem.flashed_at || null
                 });
-              } else { // It must be a webhook
+              } else {// It must be a webhook
                 updates.push({
                   id: updatedItem.id,
                   title: updatedItem.title || "(Untitled)",
@@ -355,7 +360,7 @@ export default function Content() {
               console.warn(`📊 POLLING: Rate limited on ${item.type} ${item.id}, backing off aggressively`);
               // Increase backoff multiplier
               pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 8); // More aggressive backoff
-              setPollInterval(prev => Math.min(prev * pollBackoffRef.current, 30000)); // Max 30 seconds
+              setPollInterval((prev) => Math.min(prev * pollBackoffRef.current, 30000)); // Max 30 seconds
               hitRateLimit = true;
               break; // Stop polling this batch
             } else {
@@ -395,7 +400,7 @@ export default function Content() {
         // Back off on general errors as well if it's a rate limit error
         if (error?.response?.status === 429) {
           pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 8);
-          setPollInterval(prev => Math.min(prev * pollBackoffRef.current, 30000));
+          setPollInterval((prev) => Math.min(prev * pollBackoffRef.current, 30000));
         }
       }
     }, pollInterval); // Use dynamic interval
@@ -425,10 +430,10 @@ export default function Content() {
       const byUser = selectedUsername === "all" ? true : it.user_name === selectedUsername;
       const byStatus = statusFilter === "all" ? true : it.status === statusFilter;
       const byQuery = q.trim() ?
-        (it.title || "").toLowerCase().includes(q.trim().toLowerCase()) :
-        true;
-      
-      // NEW: Flash status filter
+      (it.title || "").toLowerCase().includes(q.trim().toLowerCase()) :
+      true;
+
+      // Flash status filter
       if (flashStatusFilter !== "all") {
         const itemFlashStatus = it.flash_status || "idle";
         if (flashStatusFilter !== itemFlashStatus) {
@@ -449,7 +454,7 @@ export default function Content() {
     }
 
     return result;
-  }, [items, q, statusFilter, selectedUsername, sortByCountdown, flashStatusFilter]); // NEW: Added flashStatusFilter to dependencies
+  }, [items, q, statusFilter, selectedUsername, sortByCountdown, flashStatusFilter]);
 
   const onOpenItem = (row) => {
     if (row.type === "post") {
@@ -472,7 +477,7 @@ export default function Content() {
       }
 
       setItems((prev) =>
-        prev.filter((it) => !(it.id === itemToDelete.id && it.type === itemToDelete.type))
+      prev.filter((it) => !(it.id === itemToDelete.id && it.type === itemToDelete.type))
       );
       toast.success("Content item deleted.");
     } catch (error) {
@@ -484,21 +489,51 @@ export default function Content() {
   };
 
   const allStatuses = [
-    { key: "all", label: "All Status" },
-    // Webhook statuses
-    { key: "received", label: "received" },
-    { key: "editing", label: "editing" },
-    { key: "published", label: "published" },
-    // Post statuses
-    { key: "draft", label: "draft" },
-    { key: "archived", label: "archived" }];
+  { key: "all", label: "All Status" },
+  // Webhook statuses
+  { key: "received", label: "received" },
+  { key: "editing", label: "editing" },
+  { key: "published", label: "published" },
+  // Post statuses
+  { key: "draft", label: "draft" },
+  { key: "archived", label: "archived" }];
 
+  const handlePublishClick = async (post) => {
+    // Load full post data including HTML content
+    try {
+      let fullPostData = null;
+      if (post.type === "webhook") {
+        const result = await WebhookReceived.filter({ id: post.id });
+        fullPostData = result && result[0];
+      } else if (post.type === "post") {
+        const result = await BlogPost.filter({ id: post.id });
+        fullPostData = result && result[0];
+      }
 
+      if (fullPostData) {
+        setPublishingPost({
+          ...post, // Keep existing properties from the list item
+          content: fullPostData.content || post.content || "" // Prioritize fresh content, fallback to list item, then empty string
+        });
+        setPublishModalOpen(true);
+      } else {
+        toast.error("Failed to load post content for publishing.");
+      }
+    } catch (error) {
+      console.error("Error loading post for publish:", error);
+      toast.error("Failed to load post content for publishing.");
+    }
+  };
+
+  const handlePublishModalClose = () => {
+    setPublishModalOpen(false);
+    setPublishingPost(null);
+  };
 
   return (
-    // Updated styling for main div
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="max-w-6xl mx-auto px-6 py-8">
+    // Updated styling for main div from outline
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-[1400px] mx-auto px-6 py-8">
 
         {/* Combined filters and actions row */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -522,10 +557,10 @@ export default function Content() {
                 </SelectTrigger>
                 <SelectContent className="bg-white border border-slate-200 text-slate-900 shadow-xl">
                   {allStatuses.map((s) =>
-                    <SelectItem
-                      key={s.key}
-                      value={s.key}
-                      className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                  <SelectItem
+                    key={s.key}
+                    value={s.key}
+                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
                       {s.label}
                     </SelectItem>
                   )}
@@ -533,7 +568,7 @@ export default function Content() {
               </Select>
             </div>
 
-            {/* NEW: Flash status filter */}
+            {/* Flash status filter */}
             <div className="min-w-[180px]">
               <Select value={flashStatusFilter} onValueChange={setFlashStatusFilter}>
                 <SelectTrigger className="w-full bg-white border border-slate-300 text-slate-900">
@@ -571,25 +606,25 @@ export default function Content() {
             </div>
 
             {!useWorkspaceScoping &&
-              <div className="min-w-[180px]">
+            <div className="min-w-[180px]">
                 <Select value={localSelectedUsername} onValueChange={setLocalSelectedUsername}>
                   <SelectTrigger className="w-full bg-white border border-slate-300 text-slate-900">
                     <SelectValue placeholder="All Usernames" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border border-slate-200 text-slate-900 shadow-xl">
                     <SelectItem
-                      value="all"
-                      className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                    value="all"
+                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
                       All Usernames
                     </SelectItem>
                     {allowedUsernames.map((u) =>
-                      <SelectItem
-                        key={u}
-                        value={u}
-                        className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
+                  <SelectItem
+                    key={u}
+                    value={u}
+                    className="text-slate-900 hover:bg-slate-100 focus:bg-slate-100 data-[highlighted]:bg-slate-100">
                         {u}
                       </SelectItem>
-                    )}
+                  )}
                   </SelectContent>
                 </Select>
               </div>
@@ -618,116 +653,176 @@ export default function Content() {
         </div>
 
         {/* Updated styling for inner container */}
-        <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="px-4 py-3 border-b border-slate-200">
             <div className="flex items-center justify-between">
               <div className="text-slate-600">{loading ? "Loading…" : `${filtered.length} item${filtered.length === 1 ? "" : "s"}`}</div>
-              {/* Removed the 'Only scoped to your brands' text */}
             </div>
           </div>
 
           {loading ?
-            <div className="py-16 flex items-center justify-center">
+          <div className="py-16 flex items-center justify-center">
               <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
             </div> :
-            filtered.length === 0 ?
-              <div className="py-16 text-center text-slate-500">
-                No content found for your selection.
-              </div> :
+          filtered.length === 0 ?
+          <div className="py-16 text-center text-slate-500">
+              No content found for your selection.
+            </div> :
 
-              <div className="divide-y divide-slate-200">
-                {filtered.map((row) => {
-                  const isWebhook = row.type === "webhook";
-                  const dotClass = isWebhook ? "bg-cyan-500" : "bg-blue-600";
-                  const daysFromPublish = calculateDaysFromPublish(row);
+          <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-8">
+                      {/* Reduced checkbox column width from w-12 to w-8 and px-6 to px-3 */}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Title
+                    </th>
+                    {!useWorkspaceScoping &&
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-32">
+                        Username
+                      </th>
+                  }
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-28">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-32">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-28">
+                      Priority
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider w-52">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {filtered.map((post) => {
+                  const isWebhook = post.type === "webhook";
+                  const daysFromPublish = calculateDaysFromPublish(post);
+                  const flashStatus = post.flash_status || "idle";
+
+                  const getFlashStatusBadge = (status) => {
+                    switch (status) {
+                      case "running":
+                        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 flex-shrink-0">Running</Badge>;
+                      case "completed":
+                        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 flex-shrink-0">Completed</Badge>;
+                      case "failed":
+                        return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200 flex-shrink-0">Failed</Badge>;
+                      default:
+                        return <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 flex-shrink-0">Not Flashed</Badge>;
+                    }
+                  };
 
                   return (
-                    <div
-                      key={`${row.type}-${row.id}`}
-                      className="px-4 py-3 hover:bg-slate-50 grid items-center gap-3 grid-cols-[16px_1fr_120px_100px_auto_auto_auto]">
-                      {/* Left dot */}
-                      <div className={`h-3 w-3 rounded-full ${dotClass}`} />
+                    <tr key={`${post.type}-${post.id}`} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          {/* Reduced padding from px-6 py-4 to px-3 py-3 */}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {/* Icon for type */}
+                            <span className="w-5 h-5 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0">
+                              {post.type === "post" ?
+                            <FileText className="w-3 h-3 text-blue-600" /> :
 
-                      {/* Title area */}
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0">
-                            {row.type === "post" ?
-                              <FileText className="w-4 h-4 text-blue-600" /> :
-                              <LinkIcon className="w-4 h-4 text-cyan-600" />
+                            <LinkIcon className="w-3 h-3 text-cyan-600" />
                             }
-                          </span>
-                          <span className="truncate text-slate-900 font-medium">{row.title}</span>
-                          {row.user_name ?
-                            <span className="px-2 py-0.5 text-xs rounded-md bg-slate-100 text-slate-700 border border-slate-200 flex-shrink-0">
-                              {row.user_name}
-                            </span> :
-                            null}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-0.5">
-                          {new Date(row.updated_at || Date.now()).toLocaleString()}
-                        </div>
-                      </div>
-
-                      {/* Status */}
-                      <div className="justify-self-end">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 capitalize">
-                          {row.status}
-                        </span>
-                      </div>
-
-                      {/* 60-day Countdown */}
-                      <div className="justify-self-end">
-                        {daysFromPublish !== null ?
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
-                            daysFromPublish <= 20 ? 'bg-green-50 text-green-700 border border-green-200' :
-                              daysFromPublish <= 40 ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
-                                daysFromPublish <= 50 ? 'bg-orange-50 text-orange-700 border border-orange-200' :
-                                  'bg-red-50 text-red-700 border border-red-200'}`
-                          }>
-                            <Clock className="w-3 h-3" />
-                            <span>{daysFromPublish}d</span>
-                          </div> :
-
-                          <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-slate-400 bg-slate-50 border border-slate-200">
-                            <CalendarIcon className="w-3 h-3" />
-                            <span>--</span>
+                            </span>
+                            {/* Title with flash status indicator */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <div className="text-sm font-medium text-slate-900 truncate">
+                                  {post.title}
+                                </div>
+                                {getFlashStatusBadge(flashStatus)}
+                              </div>
+                            </div>
                           </div>
+                        </td>
+                        {!useWorkspaceScoping &&
+                      <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="text-sm text-slate-600 truncate block">{post.user_name || '-'}</span>
+                          </td>
+                      }
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {/* Status badge */}
+                          <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 capitalize text-xs">
+                            {post.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
+                          {new Date(post.updated_at || Date.now()).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {/* Priority / Countdown */}
+                          {daysFromPublish !== null ?
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                        daysFromPublish <= 20 ? 'bg-green-50 text-green-700 border border-green-200' :
+                        daysFromPublish <= 40 ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                        daysFromPublish <= 50 ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                        'bg-red-50 text-red-700 border border-red-200'}`
+                        }>
+                              <Clock className="w-3 h-3" />
+                              <span>{daysFromPublish}d</span>
+                            </div> :
+
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-slate-400 bg-slate-50 border border-slate-200">
+                              <CalendarIcon className="w-3 h-3" />
+                              <span>--</span>
+                            </div>
                         }
-                      </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenItem(post);
+                            }}
+                            className="bg-gradient-to-r from-slate-800 to-indigo-900 hover:from-slate-700 hover:to-indigo-800 text-white px-2.5 text-xs font-medium rounded-md inline-flex items-center justify-center gap-1 whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8">
+                              Open
+                            </Button>
 
-                      {/* Action Buttons: Open, Delete, Flash - Grouped and styled as per outline */}
-                      <div className="col-span-3 justify-self-end flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenItem(row);
-                          }}
-                          className="bg-gradient-to-r from-slate-800 to-indigo-900 hover:from-slate-700 hover:to-indigo-800 text-white px-3 text-sm font-medium rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9">
-                          Open
-                        </Button>
+                            <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setItemToDelete(post);
+                            }}
+                            className="bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-md h-8 w-8 inline-flex items-center justify-center transition-all"
+                            title={`Delete "${post.title}"`}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setItemToDelete(row);
-                          }}
-                          className="bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-md h-10 w-10 inline-flex items-center justify-center transition-all"
-                          title={`Delete "${row.title}"`}>
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                            {/* Flash Button */}
+                            <FlashButton
+                            item={post}
+                            onStatusChange={handleFlashStatusChange} />
 
-                        {/* CRITICAL: Pass handleFlashStatusChange to FlashButton */}
-                        <FlashButton
-                          item={row}
-                          onStatusChange={handleFlashStatusChange} />
 
-                      </div>
-                    </div>);
+                            {/* Publish Button */}
+                            <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePublishClick(post);
+                            }} className="gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 rounded-md bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white h-8 w-8 p-0 inline-flex items-center justify-center"
+
+                            title="Publish to CMS">
+                              <Globe className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>);
 
                 })}
-              </div>
+                </tbody>
+              </table>
+            </div>
           }
         </div>
 
@@ -765,5 +860,16 @@ export default function Content() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* NEW: Publish Modal */}
+      {publishingPost &&
+      <PublishToCMSModal
+        isOpen={publishModalOpen}
+        onClose={handlePublishModalClose}
+        title={publishingPost.title}
+        html={publishingPost.content} />
+
+      }
     </div>);
+
 }

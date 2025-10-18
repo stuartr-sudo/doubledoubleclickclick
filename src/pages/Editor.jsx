@@ -1860,12 +1860,15 @@ Current Title: ${title}`;
             }
           }
 
+          // Clean the current editor content before preparing postData
+          const cleanedContentForSave = cleanHtmlForPublish(content);
+
           // Prepare data for saving
           let postData = {
             title: title || "Untitled Draft",
-            content: content || "",
+            content: cleanedContentForSave || "", // Use the cleaned content
             status: "draft",
-            reading_time: Math.ceil((content || "").replace(/<[^>]*>/g, '').split(' ').length / 200),
+            reading_time: Math.ceil((cleanedContentForSave || "").replace(/<[^>]*>/g, '').split(' ').length / 200),
             priority: priority || 'medium',
             client_session_key: sessionKeyRef.current || null,
             // Carry over SEO metadata from currentPost state (which is updated by handleSEOSave)
@@ -2157,6 +2160,7 @@ Current Title: ${title}`;
 
       case "flash": // NEW: Wire up Flash button in Ask AI modal
         setShowFlashModal(true);
+        setAskAIBar((s) => ({ ...s, visible: false })); // Close floating bar after click
         return;
 
       case "autolink":
@@ -2612,16 +2616,70 @@ Current Title: ${title}`;
   }, [loadPublishCredentials]);
 
 
-  const extractFirstImageUrl = (html) => {
-    const m = String(html || "").match(/<img[^>]*src=["']([^"']+)["']/i);
-    return m && m[1] ? m[1] : "";
+  const extractFirstImageUrl = (htmlString) => {
+    const imgMatch = /<img[^>]+src=["']([^"']+)["']/i.exec(htmlString || "");
+    return imgMatch ? imgMatch[1] : "";
   };
+
+  // NEW function: cleanHtmlForPublish (replaces cleanHtmlForShopify logic, but is more generic)
+  const cleanHtmlForPublish = (html) => {
+    let cleaned = String(html || "");
+
+    // Remove select handles FIRST (these are div elements)
+    // Targeting specific class with div to avoid issues with other elements that might have similar classes
+    cleaned = cleaned.replace(/<div[^>]*class=["'][^"']*b44-select-handle[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+
+    // Remove ALL data-* attributes
+    cleaned = cleaned.replace(/\s+data-[a-zA-Z0-9_-]+=["'][^"']*["']/gi, '');
+    // Also consider single quotes for data attributes if necessary
+    cleaned = cleaned.replace(/\s+data-[a-zA-Z0-9_-]+='[^']*'/gi, '');
+
+    // Remove editor affordances
+    cleaned = cleaned.replace(/\s+draggable=["'](?:true|false)["']/gi, '');
+    cleaned = cleaned.replace(/\s+draggable='(?:true|false)'/gi, '');
+    cleaned = cleaned.replace(/\s+contenteditable=["'](?:true|false)["']/gi, '');
+    cleaned = cleaned.replace(/\s+contenteditable='(?:true|false)'/gi, '');
+
+    // Remove inline event handlers (e.g., onclick, onmouseover)
+    cleaned = cleaned.replace(/\s+on\w+=["'][^"']*["']/gi, '');
+    cleaned = cleaned.replace(/\s+on\w+='[^']*'/gi, '');
+
+    // Remove Base44 classes while preserving others
+    cleaned = cleaned.replace(/class=(["'])([^"']*)\1/gi, (match, quote, classes) => {
+      const kept = classes.split(/\s+/).filter(c => c && !c.startsWith('b44-'));
+      return kept.length ? `class=${quote}${kept.join(' ')}${quote}` : '';
+    });
+
+    // Remove empty class attributes (e.g., class="")
+    cleaned = cleaned.replace(/\s+class=["']\s*["']/gi, '');
+
+    // Clean outline styles and remove empty style attributes
+    cleaned = cleaned.replace(/style=(["'])([\s\S]*?)\1/gi, (match, quote, styles) => {
+      const clean = styles.replace(/\s*outline(?:-offset)?\s*:[^;]*;?\s*/gi, '').trim();
+      return clean ? `style=${quote}${clean}${quote}` : '';
+    });
+    // Remove empty style attributes that might result from cleaning
+    cleaned = cleaned.replace(/\s+style=["']\s*["']/gi, '');
+
+    // Normalize whitespace:
+    // Remove multiple spaces
+    cleaned = cleaned.replace(/\s{2,}/g, ' ');
+    // Remove space before >
+    cleaned = cleaned.replace(/\s+>/g, '>');
+    // Remove space between > and < tags
+    cleaned = cleaned.replace(/>\s+</g, '><');
+    // Remove leading/trailing whitespace
+    cleaned = cleaned.trim();
+
+    return cleaned;
+  };
+
 
   const buildWordPressHtmlIslandBlock = (rawHtml) => {
     const cleanHtml = (html) => {
       let cleaned = String(html || "");
 
-      cleaned = cleaned.replace(/<([a-z0-9:-]+)\b[^>]*class=["'][^"']*b44-select-handle\b[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, '');
+      cleaned = cleaned.replace(/<([a-z0-9:-]+)\b[^>]*class=["'][^"']*b44-select-handle[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, '');
 
       cleaned = cleaned.replace(/\s+data-filename=["'][^"']*["']/gi, '');
       cleaned = cleaned.replace(/\s+data-linenumber=["'][^"']*["']/gi, '');
@@ -2857,8 +2915,8 @@ Current Title: ${title}`;
               content.setAttribute('aria-hidden', checkbox.checked ? 'false' : 'true'); // Fixed accessibility issue with aria-hidden logic
             }
           }
-        });
-      }
+        }
+      });
     });
 
     document.querySelectorAll('input[type="checkbox"][id^="faq-"], input[type="checkbox"][id^="accordion-"]').forEach(function(cb) {
@@ -2908,6 +2966,7 @@ Current Title: ${title}`;
     }
 
     if (provider === "wordpress" || provider === "wordpress_org") {
+      // For WordPress, content is processed by buildWordPressHtmlIslandBlock, which has its own cleaning
       const htmlForWp = postToPublish.overrideHtml
         || buildWordPressHtmlIslandBlock(postToPublish.content || "");
 
@@ -2936,13 +2995,17 @@ Current Title: ${title}`;
     try {
       const plainText = String(postToPublish.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
+      // For other providers, `postToPublish.content` should already be cleaned by `savePost`.
+      // No additional generic `cleanHtmlForPublish` call needed here.
+      const contentForPublish = postToPublish.content;
+
       if (provider === "webhook") {
         const coverCandidate = postToPublish.featured_image || extractFirstImageUrl(postToPublish.content);
         const { data } = await securePublish({
           provider: "webhook",
           credentialId: credentialId,
           title: postToPublish.title || "Untitled",
-          html: postToPublish.content || "",
+          html: contentForPublish,
           text: plainText,
           coverUrl: coverCandidate || undefined,
           status: "published"
@@ -2967,7 +3030,7 @@ Current Title: ${title}`;
           provider: "notion",
           credentialId: credentialId,
           title: postToPublish.title || "Untitled",
-          html: postToPublish.content || "",
+          html: contentForPublish,
           text: plainText,
           coverUrl: coverCandidate
         });
@@ -2980,7 +3043,7 @@ Current Title: ${title}`;
         provider,
         credentialId: credentialId,
         title: postToPublish.title || "Untitled",
-        html: postToPublish.content || "",
+        html: contentForPublish,
         text: plainText
       });
       if (data?.success || data?.ok) toast.success(`Published to ${label || provider}.`);
@@ -3084,19 +3147,28 @@ ${truncatedHtml}`;
     else setIsPublishing(true);
 
     const performSaveWithRetry = async (attempt = 0) => {
-      let finalContent = options.overrideHtml !== undefined ? options.overrideHtml : content;
+      let finalContentToSave; // This variable will hold the HTML that gets saved to the database.
+
+      // If `options.overrideHtml` is provided (e.g., for WP specific HTML that's already specially cleaned), use it as is.
+      // Otherwise, take the live editor content and clean it with the generic cleaner before saving.
+      if (options.overrideHtml !== undefined && options.overrideHtml !== null) {
+        finalContentToSave = options.overrideHtml;
+      } else {
+        finalContentToSave = cleanHtmlForPublish(content); // Clean the live editor content
+      }
+
       let postData = {
         title: title || "Untitled Post",
-        content: finalContent,
+        content: finalContentToSave, // Use the prepared HTML (cleaned, or override)
         status,
-        reading_time: Math.ceil(content.replace(/<[^>]*>/g, '').split(' ').length / 200),
+        reading_time: Math.ceil((finalContentToSave || "").replace(/<[^>]*>/g, '').split(' ').length / 200),
         scheduled_publish_date: options.scheduledPublishDate || null,
         priority,
         client_session_key: sessionKeyRef.current || null,
         generated_llm_schema: currentPost?.generated_llm_schema || null
       };
 
-      const enableSchemaGeneration = false;
+      const enableSchemaGeneration = false; // Keeping this as it was
 
       if (isPublishFlow) {
         let schemaJsonString = currentPost?.generated_llm_schema || null;
@@ -3104,7 +3176,8 @@ ${truncatedHtml}`;
         if (enableSchemaGeneration && !schemaJsonString) {
           toast.info("Generating hyper-detailed AI schema for your content. This may take up to a minute...", { duration: 60000 });
           try {
-            const generatedSchema = await generateSchemaForPost(title, content);
+            // Schema generation uses the current `content` state, not `finalContentToSave` yet, as `finalContentToSave` might be WP-specific html
+            const generatedSchema = await generateSchemaForPost(title, content); 
             if (generatedSchema) {
               schemaJsonString = generatedSchema;
               postData.generated_llm_schema = schemaJsonString;
@@ -3117,9 +3190,9 @@ ${truncatedHtml}`;
 
         if (schemaJsonString && String(schemaJsonString).trim().startsWith("{")) {
           const schemaScript = `<script type="application/ld+json">${schemaJsonString}</script>`;
-          if (!finalContent.includes(schemaScript.substring(0, 50))) {
-            finalContent = `${schemaScript}\n${finalContent}`;
-            postData.content = finalContent;
+          // If schema is to be added, it's prepended to the content that's already clean (or was an override)
+          if (!postData.content.includes(schemaScript.substring(0, 50))) {
+            postData.content = `${schemaScript}\n${postData.content}`;
           }
         }
       }
@@ -3189,7 +3262,7 @@ ${truncatedHtml}`;
               _overrideProvider: options.publishTo.provider,
               _overrideCredentialId: options.publishTo.credentialId,
               _overrideLabel: options.publishTo.labelOverride,
-              overrideHtml: options.overrideHtml
+              overrideHtml: options.overrideHtml // Pass original overrideHtml for WP cases
             });
           }
 
@@ -3303,7 +3376,7 @@ ${truncatedHtml}`;
     try {
       const isWordPress = credential?.provider === "wordpress" || credential?.provider === "wordpress_org";
       const original = content;
-      const htmlForWp = isWordPress ? buildWordPressHtmlIslandBlock(original) : original;
+      const htmlForWp = isWordPress ? buildWordPressHtmlIslandBlock(original) : original; // This output is specifically for WP, should not be re-cleaned by generic `cleanHtmlForPublish`
 
       await savePost('published', {
         publishTo: {
@@ -3311,7 +3384,7 @@ ${truncatedHtml}`;
           credentialId: credential.id,
           labelOverride: credential.name
         },
-        overrideHtml: isWordPress ? htmlForWp : undefined
+        overrideHtml: isWordPress ? htmlForWp : undefined // Pass htmlForWp if WP, otherwise undefined for generic content flow
       });
       toast.success(`Published to ${credential.name}`);
     } catch (error)
@@ -3706,8 +3779,54 @@ ${content}
             showPublishOptions={showPublishOptions}
             onDownloadTxt={handleDownloadTxt}
             onPublishToGoogleDocs={handlePublishGoogleDocs}
-            onPublishToShopify={handlePublishToShopify}
             onOpenPublishOptions={() => setShowCMSModal(true)}
+            onPublishToConfigured={async (credential) => {
+              if (!credential || !credential.id) {
+                toast.error("Invalid credential");
+                return;
+              }
+
+              console.log('Publishing to configured credential:', {
+                provider: credential.provider,
+                id: credential.id,
+                name: credential.name
+              });
+
+              // For Shopify, show the modal with featured image selection
+              if (credential.provider === 'shopify') {
+                shopifyPreset.current = { credentialId: credential.id };
+                console.log('Set shopifyPreset to:', shopifyPreset.current);
+                setShowShopifyModal(true);
+                return;
+              }
+
+              // For other providers, do direct publish with cleaned HTML
+              setIsPublishing(true);
+              try {
+                const cleanedHtml = cleanHtmlForPublish(content);
+                const plainText = cleanedHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+                const { data } = await securePublish({ // Changed from base44.functions.invoke to direct securePublish call
+                  provider: credential.provider,
+                  credentialId: credential.id,
+                  title: title,
+                  html: cleanedHtml,
+                  text: plainText,
+                  page_builder: credential?.config?.page_builder || "none"
+                });
+
+                if (data?.success || data?.ok) {
+                  toast.success(`Published to ${credential.name}`);
+                } else {
+                  toast.error(data?.error || "Publishing failed");
+                }
+              } catch (error) {
+                console.error("Publish error:", error);
+                toast.error(error?.response?.data?.error || error.message || "Publishing failed");
+              } finally {
+                setIsPublishing(false);
+              }
+            }}
             isSavingAuto={isSavingAuto}
             lastSaved={lastSaved}
           />
@@ -4034,12 +4153,15 @@ ${content}
               html={content} />
             <ShopifyPublishModal
               isOpen={showShopifyModal}
-              onClose={() => setShowShopifyModal(false)}
+              onClose={() => {
+                setShowShopifyModal(false);
+                shopifyPreset.current = { credentialId: null }; // Reset preset on close
+              }}
               username={currentPost?.user_name || currentWebhook?.user_name || null}
               processingId={currentPost?.processing_id || currentWebhook?.processing_id || null}
               title={title}
-              html={content}
-              defaultCredentialId={shopifyPreset.current.credentialId}
+              html={cleanHtmlForPublish(content)}
+              defaultCredentialId={shopifyPreset.current?.credentialId} // Added optional chaining
               excerpt={excerptForShopify}
               slug={derivedSlug}
               tags={derivedTags}

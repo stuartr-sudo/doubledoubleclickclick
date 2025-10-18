@@ -30,7 +30,8 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
     featured_image: "",
     tags: [],
     excerpt: "",
-    generated_llm_schema: ""
+    generated_llm_schema: "",
+    export_seo_as_tags: false // Added new state property
   });
 
   const [autoLoading, setAutoLoading] = useState(false);
@@ -120,7 +121,8 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
         featured_image: postData.featured_image || firstImg || "",
         tags: postData.tags || [],
         excerpt: postData.excerpt || postData.meta_description || "",
-        generated_llm_schema: postData.generated_llm_schema || ""
+        generated_llm_schema: postData.generated_llm_schema || "",
+        export_seo_as_tags: postData.export_seo_as_tags !== false // Initialize new property
       });
     }
     autoInitRef.current = false;
@@ -742,7 +744,25 @@ ${text}`
                 <p className="text-xs text-slate-500 mt-2">Will be used when publishing (e.g., Shopify excerpt).</p>
               </div>
 
-              {/* JSON-LD Schema editor - Retained as per preserving functionality */}
+              {/* Export SEO as Tags Toggle - NEW SECTION */}
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 col-span-1 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-semibold text-slate-800">Export SEO Metadata as Shopify Tags</Label>
+                    <p className="text-xs text-slate-500 mt-1">
+                      When enabled, meta_title, meta_description, and focus_keyword will be added as tags when publishing to Shopify
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={metadata.export_seo_as_tags}
+                    onChange={(e) => setMetadata((prev) => ({ ...prev, export_seo_as_tags: e.target.checked }))}
+                    className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* JSON-LD Schema editor */}
               <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 col-span-1 md:col-span-2">
                 <Label htmlFor="schema" className="flex items-center gap-2 text-base font-semibold mb-3 text-slate-800">
                   JSON-LD Schema

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, RefreshCw, Edit, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
-import { CustomContentTemplate } from "@/api/entities";
+import { CustomContentTemplate } from "@/api/entities"; // This import is now technically not directly used for fetching, but the type might be. Keeping it for now.
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTemplates } from '@/components/providers/TemplateProvider';
+
 
 // Enhance generated HTML for "fact" type; mention Perplexity when available.
 // Assume props: type ("callout" | "fact"), onInsert(html)
@@ -50,25 +52,27 @@ export default function CalloutGeneratorModal({ isOpen, onClose, selectedText, o
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  const [customTemplates, setCustomTemplates] = useState([]);
+  // Removed: const [customTemplates, setCustomTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [useCustomTemplate, setUseCustomTemplate] = useState(false);
 
-  const loadCustomTemplates = useCallback(async () => {
-    try {
-      const templates = await CustomContentTemplate.filter({
-        associated_ai_feature: type,
-        is_active: true
-      });
-      setCustomTemplates(templates);
-      if (templates.length > 0 && !selectedTemplate) {
-        setSelectedTemplate(templates[0]);
-      }
-    } catch (error) {
-      console.error("Error loading custom templates:", error);
-      toast.error("Failed to load custom templates.");
+  // Added: Use TemplateProvider
+  const { templates, loadTemplates, getTemplatesByFeature } = useTemplates();
+
+  // Derived customTemplates from the provider
+  const customTemplates = React.useMemo(() => {
+    return getTemplatesByFeature(type);
+  }, [getTemplatesByFeature, type]);
+
+  // Removed: const loadCustomTemplates = useCallback(async () => { ... });
+
+  // Effect to set initial selectedTemplate when customTemplates are loaded
+  useEffect(() => {
+    if (customTemplates.length > 0 && !selectedTemplate) {
+      setSelectedTemplate(customTemplates[0]);
     }
-  }, [type, selectedTemplate]);
+  }, [customTemplates, selectedTemplate]);
+
 
   const generateCallout = useCallback(async () => {
     if (!selectedText?.trim()) {
@@ -126,9 +130,9 @@ Return just the callout text, no extra formatting.`;
 
   useEffect(() => {
     if (isOpen) {
-      loadCustomTemplates();
+      loadTemplates(); // Load from cache or fetch if needed
     }
-  }, [isOpen, loadCustomTemplates]);
+  }, [isOpen, loadTemplates]);
 
   const applyCustomTemplate = (content, sourceUrl = "") => {
     if (!useCustomTemplate || !selectedTemplate) {
@@ -203,7 +207,7 @@ Return just the callout text, no extra formatting.`;
     setIsEditing(false);
     setUseCustomTemplate(false);
     setSelectedTemplate(null);
-    setCustomTemplates([]);
+    // Removed: setCustomTemplates([]); as it's no longer a state
     onClose();
   };
 

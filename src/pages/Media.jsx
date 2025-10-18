@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageIcon, Youtube, Video } from "lucide-react";
@@ -26,29 +27,32 @@ export default function Media() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white border border-slate-200 p-1 h-12 mb-6">
-            <TabsTrigger 
-              value="images" 
-              className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800 flex items-center gap-2"
-            >
-              <ImageIcon className="w-4 h-4" />
-              Images
-            </TabsTrigger>
-            <TabsTrigger 
-              value="youtube" 
-              className="data-[state=active]:bg-red-100 data-[state=active]:text-red-800 flex items-center gap-2"
-            >
-              <Youtube className="w-4 h-4" />
-              YouTube
-            </TabsTrigger>
-            <TabsTrigger 
-              value="tiktok" 
-              className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800 flex items-center gap-2"
-            >
-              <Video className="w-4 h-4" />
-              TikTok
-            </TabsTrigger>
-          </TabsList>
+          {/* REPLACED TabsList with a custom single-row segmented header for 3 tabs */}
+          <div className="mb-6">
+            <div className="bg-slate-200 p-1 rounded-xl grid grid-cols-3 gap-2 border border-slate-200 h-12 shadow-sm">
+              <TabsTrigger
+                value="images"
+                className="w-full h-10 rounded-lg flex items-center justify-center gap-2 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">
+
+                <ImageIcon className="w-4 h-4" />
+                Images
+              </TabsTrigger>
+              <TabsTrigger
+                value="youtube"
+                className="w-full h-10 rounded-lg flex items-center justify-center gap-2 data-[state=active]:bg-red-100 data-[state=active]:text-red-800">
+
+                <Youtube className="w-4 h-4" />
+                YouTube
+              </TabsTrigger>
+              <TabsTrigger
+                value="tiktok"
+                className="w-full h-10 rounded-lg flex items-center justify-center gap-2 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800">
+
+                <Video className="w-4 h-4" />
+                TikTok
+              </TabsTrigger>
+            </div>
+          </div>
 
           <TabsContent value="images" className="mt-0">
             <ImageLibrary />
@@ -63,6 +67,6 @@ export default function Media() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>);
+
 }

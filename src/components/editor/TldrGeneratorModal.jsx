@@ -16,6 +16,7 @@ import { Wand2, RefreshCw } from "lucide-react"; // Copy and Check are no longer
 import { Label } from "@/components/ui/label";
 // Select components are no longer used
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useTemplates } from '@/components/providers/TemplateProvider';
 
 export default function TldrGeneratorModal({
   isOpen,
@@ -31,10 +32,15 @@ export default function TldrGeneratorModal({
   const [error, setError] = useState(null);
 
   // Template state (simplified: always-visible dropdown)
-  const [customTemplates, setCustomTemplates] = useState([]);
+  // const [customTemplates, setCustomTemplates] = useState([]); // Removed, now from provider
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const { consumeTokensForFeature } = useTokenConsumption(); // Initialize the hook
+  const { templates, loadTemplates, getTemplatesByFeature } = useTemplates();
+
+  const customTemplates = React.useMemo(() => {
+    return getTemplatesByFeature('tldr');
+  }, [getTemplatesByFeature]);
 
   // Build safe preview HTML for a template (or default)
   const DEFAULT_PREVIEW_TEXT = "A short, one‑line key takeaway preview.";
@@ -158,24 +164,25 @@ Requirements:
   }, [selectedText, consumeTokensForFeature, selectedTemplate, onInsert, handleCloseModal]);
 
   // Load custom templates (TLDR feature)
-  const loadCustomTemplates = useCallback(async () => {
-    try {
-      const templates = await CustomContentTemplate.filter({
-        associated_ai_feature: "tldr",
-        is_active: true
-      });
-      setCustomTemplates(templates || []);
-      // don't auto-select; user chooses explicitly
-    } catch (error) {
-      console.error("Error loading custom templates:", error);
-    }
-  }, []);
+  // Replaced by useTemplates hook
+  // const loadCustomTemplates = useCallback(async () => {
+  //   try {
+  //     const templates = await CustomContentTemplate.filter({
+  //       associated_ai_feature: "tldr",
+  //       is_active: true
+  //     });
+  //     setCustomTemplates(templates || []);
+  //     // don't auto-select; user chooses explicitly
+  //   } catch (error) {
+  //     console.error("Error loading custom templates:", error);
+  //   }
+  // }, []);
 
   useEffect(() => {
     if (isOpen) {
-      loadCustomTemplates();
+      loadTemplates(); // Load from cache
     }
-  }, [isOpen, loadCustomTemplates]);
+  }, [isOpen, loadTemplates]);
 
   // handleCopy is removed as content is no longer displayed for copying
   // const handleCopy = async () => {

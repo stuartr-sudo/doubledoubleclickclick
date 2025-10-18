@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,24 +11,58 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Loader2, Plus, Trash2, Settings, ExternalLink, Video, RefreshCw } from "lucide-react";
+import { Loader2, Plus, Trash2, Settings, ExternalLink, Video, RefreshCw, Edit, Globe } from "lucide-react";
 import { toast } from "sonner";
 import VideoModal from "@/components/common/VideoModal";
+import { useCredentials } from "@/components/providers/CredentialsProvider"; // NEW import
 
-// Cache credentials to avoid rate limits
-let credentialsCache = null;
-let cacheTimestamp = 0;
-const CACHE_DURATION = 60000; // 60 seconds
+const cleanHtmlForPublish = (html) => {
+  let cleaned = String(html || "");
+
+  // Remove select handles
+  cleaned = cleaned.replace(/<div[^>]*class=["'][^"']*b44-select-handle[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+
+  // Remove ALL data-* attributes
+  cleaned = cleaned.replace(/\s+data-[a-zA-Z0-9_-]+=["'][^"']*["']/gi, '');
+
+  // Remove editor affordances
+  cleaned = cleaned.replace(/\s+draggable=["'](?:true|false)["']/gi, '');
+  cleaned = cleaned.replace(/\s+contenteditable=["'](?:true|false)["']/gi, '');
+
+  // Remove Base44 classes
+  cleaned = cleaned.replace(/class=(["'])([^"']*)\1/gi, (match, quote, classes) => {
+    const kept = classes.split(/\s+/).filter(c => c && !c.startsWith('b44-'));
+    return kept.length ? `class=${quote}${kept.join(' ')}${quote}` : '';
+  });
+
+  // Remove empty attributes
+  cleaned = cleaned.replace(/\s+class=["']\s*["']/gi, '');
+  cleaned = cleaned.replace(/\s+style=["']\s*["']/gi, '');
+
+  // Normalize whitespace
+  cleaned = cleaned.replace(/\s{2,}/g, ' ');
+  cleaned = cleaned.replace(/\s+>/g, '>');
+
+  return cleaned.trim();
+};
 
 export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
-  const [credentials, setCredentials] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Used for actions within this modal (add/delete/publish)
   const [publishing, setPublishing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showHelpVideo, setShowHelpVideo] = useState(false);
   const [helpVideoUrl, setHelpVideoUrl] = useState("");
-  
+  const [editingCredential, setEditingCredential] = useState(null);
+
+  // NEW: Get credentials and related functions from the context provider
+  const {
+    credentials,
+    loadCredentials: loadCredentialsFromProvider, // Renamed to avoid conflict
+    invalidateCache,
+    loading: credentialsLoading, // Loading state from the provider
+  } = useCredentials();
+
   // Shopify blog fetching states
   const [fetchingBlogs, setFetchingBlogs] = useState(false);
   const [availableBlogs, setAvailableBlogs] = useState([]);
@@ -50,7 +84,8 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     headers: {},
     signing_secret: "",
     config: { page_builder: "none" },
-    user_name: ""
+    user_name: "", // Initialized empty, will be set in useEffect
+    author_name: "",
   });
 
   // Helper: build a scoped HTML island (safe, portable)
@@ -130,13 +165,6 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     return `<style>${css}</style>\n<div class="ls-article"><main class="ls-container">${rawHtml}</main></div>`;
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      loadCredentialsAndUser();
-      loadHelpVideo();
-    }
-  }, [isOpen]);
-
   const loadHelpVideo = async () => {
     try {
       const settings = await base44.entities.AppSettings.list();
@@ -149,87 +177,96 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     }
   };
 
-  const loadCredentialsAndUser = async () => {
-    setLoading(true);
-    
+  // NEW: loadCurrentUser function using useCallback for stability in dependencies
+  const loadCurrentUser = useCallback(async () => {
     try {
-      // Always fetch user, it's a light call and often cached by base44 itself
       const user = await base44.auth.me();
       setCurrentUser(user);
-      
-      const assignedUsernames = Array.isArray(user.assigned_usernames) ? user.assigned_usernames : [];
-      
-      if (assignedUsernames.length === 0) {
-        setCredentials([]);
-        setForm(prev => ({ ...prev, user_name: "" }));
-        setLoading(false);
-        return;
-      }
+    } catch (error) {
+      console.error("Error loading current user:", error);
+      setCurrentUser(null);
+      toast.error("Failed to load user information.");
+    }
+  }, []);
 
-      // Check credentials cache first
-      const now = Date.now();
-      if (credentialsCache && (now - cacheTimestamp) < CACHE_DURATION) {
-        const userCreds = credentialsCache.filter(cred => 
-          cred.user_name && assignedUsernames.includes(cred.user_name)
-        );
-        setCredentials(userCreds);
-      } else {
-        // Fetch all credentials and filter by assigned usernames
-        const allCreds = await base44.entities.IntegrationCredential.list();
-        const userCreds = allCreds.filter(cred => 
-          cred.user_name && assignedUsernames.includes(cred.user_name)
-        );
-        
-        // Cache the results
-        credentialsCache = userCreds;
-        cacheTimestamp = now;
-        
-        setCredentials(userCreds);
+  // Main effect for modal open/close actions
+  useEffect(() => {
+    if (isOpen) {
+      loadCurrentUser(); // Fetch current user
+      loadHelpVideo(); // Fetch help video URL
+      loadCredentialsFromProvider(); // Load credentials (uses cache from provider)
+
+      // Only reset form state if not already in an editing context or adding a new form
+      if (!editingCredential && !showAddForm) {
+        setForm(prev => ({
+          ...prev,
+          provider: "shopify",
+          name: "",
+          access_token: "",
+          refresh_token: "",
+          site_domain: "",
+          database_id: "",
+          collection_id: "",
+          blog_id: "",
+          username: "",
+          password: "",
+          endpoint_url: "",
+          http_method: "POST",
+          headers: {},
+          signing_secret: "",
+          config: { page_builder: "none" },
+          user_name: "", // Will be updated by a subsequent effect when currentUser is available
+          author_name: ""
+        }));
+        setAvailableBlogs([]);
+        setSelectedBlogId("");
+        setShowAddForm(false);
       }
-      
+    } else {
+      // Reset states when modal closes
+      setEditingCredential(null);
+      setAvailableBlogs([]);
+      setSelectedBlogId("");
+      setShowAddForm(false);
+    }
+  }, [isOpen, editingCredential, showAddForm, loadCurrentUser, loadCredentialsFromProvider]);
+
+  // NEW: Effect to set form.user_name based on current user and URL params, once currentUser is available
+  useEffect(() => {
+    if (isOpen && currentUser) {
+      const assignedUsernames = Array.isArray(currentUser.assigned_usernames) ? currentUser.assigned_usernames : [];
+      let targetUsername = assignedUsernames[0] || "";
+
       const urlParams = new URLSearchParams(window.location.search);
       const postId = urlParams.get('post');
       const webhookId = urlParams.get('webhook');
-      
-      let targetUsername = assignedUsernames[0] || "";
 
-      if (postId) {
-        try {
-          const posts = await base44.entities.BlogPost.filter({ id: postId });
-          if (posts && posts.length > 0 && posts[0].user_name) {
-            targetUsername = posts[0].user_name;
+      const determineInitialUsername = async () => {
+        let determinedUsername = targetUsername;
+        if (postId) {
+          try {
+            const posts = await base44.entities.BlogPost.filter({ id: postId });
+            if (posts && posts.length > 0 && posts[0].user_name && assignedUsernames.includes(posts[0].user_name)) {
+              determinedUsername = posts[0].user_name;
+            }
+          } catch (e) {
+            console.warn("Failed to determine username from post ID:", e);
           }
-        } catch (e) {
-          // Silent
-        }
-      } else if (webhookId) {
-        try {
-          const webhooks = await base44.entities.WebhookReceived.filter({ id: webhookId });
-          if (webhooks && webhooks.length > 0 && webhooks[0].user_name) {
-            targetUsername = webhooks[0].user_name;
+        } else if (webhookId) {
+          try {
+            const webhooks = await base44.entities.WebhookReceived.filter({ id: webhookId });
+            if (webhooks && webhooks.length > 0 && webhooks[0].user_name && assignedUsernames.includes(webhooks[0].user_name)) {
+              determinedUsername = webhooks[0].user_name;
+            }
+          } catch (e) {
+            console.warn("Failed to determine username from webhook ID:", e);
           }
-        } catch (e) {
-          // Silent
         }
-      }
-      
-      setForm(prev => ({ ...prev, user_name: targetUsername }));
-      
-    } catch (error) {
-      console.error("Error loading credentials:", error);
-      
-      if (error?.response?.status === 429) {
-        toast.error("Too many requests. Please wait a moment and try again.");
-      } else {
-        toast.error("Failed to load credentials");
-      }
-      
-      setCredentials([]);
-      setCurrentUser(null);
-    } finally {
-      setLoading(false);
+        setForm(prev => ({ ...prev, user_name: determinedUsername }));
+      };
+      determineInitialUsername();
     }
-  };
+  }, [isOpen, currentUser]); // Only depends on isOpen and currentUser because it sets form.user_name
 
   // NEW: Fetch Shopify blogs when access token and store domain are entered
   const handleFetchBlogs = async () => {
@@ -241,7 +278,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     setFetchingBlogs(true);
     setAvailableBlogs([]);
     setSelectedBlogId("");
-    
+
     try {
       const { data } = await base44.functions.invoke('fetchShopifyBlogs', {
         access_token: form.access_token,
@@ -251,9 +288,11 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       if (data.success && data.blogs && data.blogs.length > 0) {
         setAvailableBlogs(data.blogs);
         toast.success(`Found ${data.blogs.length} blog${data.blogs.length === 1 ? '' : 's'}`);
-        
-        // Auto-select first blog
-        if (data.blogs.length === 1) {
+
+        // Auto-select the blog if it matches the current form's blog_id (useful during edit)
+        if (form.blog_id && data.blogs.some(blog => blog.id === form.blog_id)) {
+          setSelectedBlogId(form.blog_id);
+        } else if (data.blogs.length === 1) { // Otherwise, auto-select the first blog if only one
           setSelectedBlogId(data.blogs[0].id);
           setForm(prev => ({ ...prev, blog_id: data.blogs[0].id }));
         }
@@ -274,6 +313,36 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     setForm(prev => ({ ...prev, blog_id: blogId }));
   };
 
+  // NEW: handleEditCredential function
+  const handleEditCredential = (cred) => {
+    setEditingCredential(cred);
+    setForm({
+      provider: cred.provider,
+      name: cred.name || "",
+      access_token: cred.access_token || "",
+      refresh_token: cred.refresh_token || "",
+      site_domain: cred.site_domain || "",
+      database_id: cred.database_id || "",
+      collection_id: cred.collection_id || "",
+      blog_id: cred.blog_id || "",
+      username: cred.username || "",
+      password: "", // Passwords are not usually returned from API, user will re-enter if needed
+      endpoint_url: cred.endpoint_url || "",
+      http_method: cred.http_method || "POST",
+      headers: cred.headers || {},
+      signing_secret: cred.signing_secret || "",
+      config: cred.config || { page_builder: "none" },
+      user_name: cred.user_name || currentUser?.assigned_usernames?.[0] || "",
+      author_name: cred.author_name || "",
+    });
+    setShowAddForm(true);
+
+    // If editing Shopify credential with blog_id, set it as selected
+    if (cred.provider === "shopify" && cred.blog_id) {
+      setSelectedBlogId(cred.blog_id);
+    }
+  };
+
   const handleAddCredential = async () => {
     if (!form.name || !form.provider) {
       toast.error("Please provide a name and select a provider");
@@ -285,7 +354,8 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       return;
     }
 
-    if (form.provider === "wordpress_org" && (!form.site_domain || !form.username || !form.password)) {
+    if (form.provider === "wordpress_org" && (!form.site_domain || !form.username || (!editingCredential && !form.password))) {
+      // Password is required for new WordPress credentials, but optional for update if not changed
       toast.error("WordPress.org requires a site domain, username, and application password");
       return;
     }
@@ -303,22 +373,32 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         ...(form.collection_id && { collection_id: form.collection_id.trim() }),
         ...(form.blog_id && { blog_id: form.blog_id.trim() }),
         ...(form.username && { username: form.username.trim() }),
+        // Only send password if it's set (for new or if user explicitly updated it)
         ...(form.password && { password: form.password.trim() }),
         ...(form.endpoint_url && { endpoint_url: form.endpoint_url.trim() }),
         ...(form.http_method && { http_method: form.http_method }),
         ...(form.signing_secret && { signing_secret: form.signing_secret.trim() }),
-        ...(Object.keys(form.headers || {}).length > 0 && { headers: form.headers }),
-        ...(Object.keys(form.config || {}).length > 0 && { config: form.config })
+        // Ensure headers and config are objects, even if empty
+        headers: form.headers || {},
+        config: form.config || { page_builder: "none" },
+        ...(form.author_name && { author_name: form.author_name.trim() })
       };
 
-      await base44.entities.IntegrationCredential.create(credentialData);
-      
-      // Clear cache to force reload
-      credentialsCache = null;
-      cacheTimestamp = 0;
-      
-      toast.success("Credential added successfully");
-      
+      if (editingCredential) {
+        // Update existing credential
+        await base44.entities.IntegrationCredential.update(editingCredential.id, credentialData);
+        toast.success("Credential updated successfully");
+      } else {
+        // Create new credential
+        await base44.entities.IntegrationCredential.create(credentialData);
+        toast.success("Credential added successfully");
+      }
+
+      // NEW: Invalidate cache and reload from provider
+      invalidateCache();
+      await loadCredentialsFromProvider(true); // true to force fresh fetch
+
+      // Reset form and states
       setForm({
         provider: "shopify",
         name: "",
@@ -335,18 +415,19 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         headers: {},
         signing_secret: "",
         config: { page_builder: "none" },
-        user_name: currentUser?.assigned_usernames?.[0] || ""
+        user_name: currentUser?.assigned_usernames?.[0] || "",
+        author_name: ""
       });
       setAvailableBlogs([]);
       setSelectedBlogId("");
       setShowAddForm(false);
-      
-      await loadCredentialsAndUser();
+      setEditingCredential(null); // Reset editing state
+
     } catch (error) {
       if (error?.response?.status === 429) {
         toast.error("Too many requests. Please wait a moment.");
       } else {
-        toast.error("Failed to add credential");
+        toast.error(editingCredential ? "Failed to update credential" : "Failed to add credential");
       }
     } finally {
       setLoading(false);
@@ -355,17 +436,16 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
   const handleDeleteCredential = async (id) => {
     if (!confirm("Are you sure you want to delete this credential?")) return;
-    
+
     setLoading(true);
     try {
       await base44.entities.IntegrationCredential.delete(id);
-      
-      // Clear cache
-      credentialsCache = null;
-      cacheTimestamp = 0;
-      
+
+      // NEW: Invalidate cache and reload from provider
+      invalidateCache();
+      await loadCredentialsFromProvider(true); // true to force fresh fetch
+
       toast.success("Credential deleted");
-      await loadCredentialsAndUser();
     } catch (error) {
       if (error?.response?.status === 429) {
         toast.error("Too many requests. Please wait a moment.");
@@ -394,42 +474,43 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       return;
     }
 
-    console.log('Selected credential:', {
-      id: credential.id,
-      name: credential.name,
-      provider: credential.provider,
-      site_domain: credential.site_domain
-    });
-
     setPublishing(true);
     try {
-      const plainText = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const cleanedHtml = cleanHtmlForPublish(html); // Clean the input HTML first
 
+      // Then apply the WordPress Elementor specific wrapping if needed, using the cleaned HTML
       const isWordPress = credential.provider === "wordpress_org";
       const pageBuilder = credential?.config?.page_builder || "none";
-      const shouldWrapIsland = isWordPress && pageBuilder === "elementor"; 
-      const finalHtml = shouldWrapIsland ? buildHtmlIsland(html || "") : (html || "");
+      const shouldWrapIsland = isWordPress && pageBuilder === "elementor";
+      const finalHtmlForPublish = shouldWrapIsland ? buildHtmlIsland(cleanedHtml) : cleanedHtml;
+
+      const plainText = finalHtmlForPublish.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
       const payload = {
         provider: credential.provider,
         credentialId: credential.id,
         title: title.trim(),
-        html: finalHtml,
+        html: finalHtmlForPublish,
         text: plainText,
-        page_builder: pageBuilder
+        page_builder: pageBuilder,
       };
 
-      console.log('Publishing payload:', {
+      // If Shopify credential, include author_name
+      if (credential.provider === "shopify" && credential.author_name) {
+        payload.author_name = credential.author_name;
+      }
+
+      console.log('Publishing with cleaned HTML:', {
         provider: payload.provider,
         credentialId: payload.credentialId,
         titleLength: payload.title.length,
-        htmlLength: payload.html.length,
-        textLength: payload.text.length
+        originalHtmlLength: html.length,
+        cleanedHtmlLength: cleanedHtml.length,
+        finalHtmlLength: finalHtmlForPublish.length,
+        removedBytes: html.length - cleanedHtml.length
       });
 
       const { data } = await base44.functions.invoke('securePublish', payload);
-
-      console.log('Publish response:', data);
 
       if (data?.success || data?.ok) {
         toast.success(`Published to ${credential.name}`);
@@ -444,13 +525,13 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
       console.error("Error message:", error.message);
       console.error("Response data:", error?.response?.data);
       console.error("Response status:", error?.response?.status);
-      
-      const errorMsg = error?.response?.data?.error || 
-                       error?.response?.data?.message || 
+
+      const errorMsg = error?.response?.data?.error ||
+                       error?.response?.data?.message ||
                        error?.response?.data?.detail ||
-                       error.message || 
+                       error.message ||
                        "Publishing failed";
-      
+
       toast.error(`Publish failed: ${errorMsg}`);
     } finally {
       setPublishing(false);
@@ -478,8 +559,8 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
               placeholder="your-store.myshopify.com"
             />
           </div>
-          
-          {/* NEW: Fetch Blogs Button */}
+
+          {/* Fetch Blogs Button */}
           <div>
             <Button
               type="button"
@@ -502,7 +583,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
             </Button>
           </div>
 
-          {/* NEW: Blog Selection Dropdown */}
+          {/* Blog Selection Dropdown */}
           {availableBlogs.length > 0 && (
             <div>
               <Label>Select Blog *</Label>
@@ -521,8 +602,8 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
             </div>
           )}
 
-          {/* Fallback: Manual Blog ID input (hidden when blogs are fetched) */}
-          {availableBlogs.length === 0 && (
+          {/* Fallback: Manual Blog ID input (shown when no blogs are fetched yet, or if editing an existing blog that wasn't fetched) */}
+          {(!availableBlogs.length || (editingCredential && selectedBlogId && !availableBlogs.some(blog => blog.id === selectedBlogId))) && (
             <div>
               <Label>Blog ID * <span className="text-xs text-slate-500">(or fetch blogs above)</span></Label>
               <Input
@@ -532,6 +613,19 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
               />
             </div>
           )}
+
+          {/* Author Name field */}
+          <div>
+            <Label>Author Name</Label>
+            <Input
+              value={form.author_name || ''}
+              onChange={(e) => setForm({ ...form, author_name: e.target.value })}
+              placeholder="e.g., John Doe"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Author name that will appear on published Shopify articles
+            </p>
+          </div>
         </>
       );
     }
@@ -564,10 +658,10 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
               type="password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+              placeholder={editingCredential ? "Leave blank to keep existing password" : "xxxx xxxx xxxx xxxx xxxx xxxx"}
             />
             <p className="text-xs text-slate-500 mt-1">
-              Generate in WordPress: Users → Your Profile → Application Passwords
+              {editingCredential ? "Leave blank to keep existing password. Generate new in WordPress: Users → Your Profile → Application Passwords." : "Generate in WordPress: Users → Your Profile → Application Passwords"}
             </p>
           </div>
 
@@ -592,7 +686,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         </>
       );
     }
-    
+
     return null;
   };
 
@@ -610,7 +704,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
           <div className="space-y-6">
             <div>
               <h3 className="font-semibold mb-3">Your Publishing Destinations</h3>
-              {loading && credentials.length === 0 ? (
+              {credentialsLoading && credentials.length === 0 ? ( // Use provider's loading state
                 <div className="flex justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
                 </div>
@@ -627,17 +721,28 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
+                          variant="outline"
+                          onClick={() => handleEditCredential(cred)}
+                          disabled={loading || publishing}
+                          title="Edit connection"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
                           onClick={() => handlePublish(cred)}
                           disabled={publishing || !title || !html}
+                          title="Publish article"
                         >
-                          {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+                          {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
                           Publish
                         </Button>
                         <Button
                           size="sm"
                           variant="destructive"
                           onClick={() => handleDeleteCredential(cred.id)}
-                          disabled={loading}
+                          disabled={loading || publishing}
+                          title="Delete connection"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -649,7 +754,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
             </div>
 
             {!showAddForm ? (
-              <Button onClick={() => setShowAddForm(true)} variant="outline" className="w-full">
+              <Button onClick={() => setShowAddForm(true)} variant="outline" className="w-full" disabled={credentialsLoading || loading}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add New Destination
               </Button>
@@ -657,7 +762,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
               <div className="border rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-semibold">Add New Publishing Destination</h4>
+                    <h4 className="font-semibold">{editingCredential ? 'Edit' : 'Add New'} Publishing Destination</h4>
                     {helpVideoUrl && form.provider === "shopify" && (
                       <button
                         type="button"
@@ -669,12 +774,37 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
                       </button>
                     )}
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => setShowAddForm(false)}>Cancel</Button>
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    setShowAddForm(false);
+                    setEditingCredential(null);
+                    // Reset form fields and blog states for a clean slate next time 'add' is clicked
+                    setForm({
+                      provider: "shopify",
+                      name: "",
+                      access_token: "",
+                      refresh_token: "",
+                      site_domain: "",
+                      database_id: "",
+                      collection_id: "",
+                      blog_id: "",
+                      username: "",
+                      password: "",
+                      endpoint_url: "",
+                      http_method: "POST",
+                      headers: {},
+                      signing_secret: "",
+                      config: { page_builder: "none" },
+                      user_name: currentUser?.assigned_usernames?.[0] || "",
+                      author_name: ""
+                    });
+                    setAvailableBlogs([]);
+                    setSelectedBlogId("");
+                  }}>Cancel</Button>
                 </div>
 
                 <div>
                   <Label>Provider *</Label>
-                  <Select value={form.provider} onValueChange={(v) => setForm({ ...form, provider: v })}>
+                  <Select value={form.provider} onValueChange={(v) => setForm({ ...form, provider: v })} disabled={!!editingCredential}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -698,7 +828,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
                 <Button onClick={handleAddCredential} disabled={loading} className="w-full">
                   {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                  Add Destination
+                  {editingCredential ? 'Update Destination' : 'Add Destination'}
                 </Button>
               </div>
             )}

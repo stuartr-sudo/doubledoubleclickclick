@@ -31,6 +31,8 @@ import usePageTutorial from '@/components/hooks/usePageTutorial';
 import { base44 } from "@/api/base44Client";
 import { Username } from "@/api/entities";
 import { Sitemap } from "@/api/entities";
+import { TemplateProvider } from '@/components/providers/TemplateProvider'; // Added TemplateProvider
+import { CredentialsProvider } from '@/components/providers/CredentialsProvider'; // Added CredentialsProvider
 
 const navStructure = [
 // Core link
@@ -1054,9 +1056,20 @@ function LayoutContent({ children, currentPageName }) {
           z-index: 250 !important;
         }
 
-        /* === NEW: Ensure our modals always sit above popovers === */
+        /* === Z-INDEX HIERARCHY === */
+        /* Base modals (like ShopifyPublishModal) */
         .b44-modal {
-          z-index: 200 !important; /* higher than default dialog (z-50), but lower than popovers (z-250) */
+          z-index: 200 !important;
+        }
+        
+        /* Nested modals (like ImageLibraryModal opened from ShopifyPublishModal) */
+        .b44-modal[style*="z-index: 300"] {
+          z-index: 300 !important;
+        }
+        
+        /* Alert dialogs above nested modals */
+        [role="alertdialog"][style*="z-index: 350"] {
+          z-index: 350 !important;
         }
 
         /* FIX: Remove unwanted borders and outlines from navigation elements */
@@ -1204,9 +1217,13 @@ export default function Layout(props) {
   return (
     <FeatureFlagProvider>
       <WorkspaceProvider>
-        <LayoutContent {...props} />
+        <TemplateProvider>
+          <CredentialsProvider>
+            <LayoutContent {...props} />
+          </CredentialsProvider>
+        </TemplateProvider>
       </WorkspaceProvider>
-    </FeatureFlagProvider>);
-
+    </FeatureFlagProvider>
+  );
 }
 

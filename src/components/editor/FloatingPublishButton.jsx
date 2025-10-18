@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,22 +16,20 @@ import {
   Globe,
   Settings,
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { useCredentials } from "@/components/providers/CredentialsProvider";
 
 export default function FloatingPublishButton({
   isPublishing,
   showPublishOptions = true,
   onDownloadTxt,
   onPublishToGoogleDocs,
-  onPublishToShopify,
   onOpenPublishOptions,
   onPublishToConfigured,
   isSavingAuto,
   lastSaved,
 }) {
-  const [configuredCredentials, setConfiguredCredentials] = useState([]);
-  const [credentialsLoaded, setCredentialsLoaded] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { credentials, loadCredentials } = useCredentials();
 
   const [showSaved, setShowSaved] = React.useState(false);
   const savedTimeoutRef = React.useRef(null);
@@ -53,73 +50,17 @@ export default function FloatingPublishButton({
     }
   }, [lastSaved]);
 
-  // Load credentials ONLY when dropdown opens, and only once
-  const handleDropdownOpenChange = async (open) => {
-    setDropdownOpen(open);
-    
-    if (open && !credentialsLoaded) {
-      setCredentialsLoaded(true); // Mark as loaded immediately to prevent duplicate calls
-      
-      try {
-        // Add 1.5 second delay to avoid rate limit on initial load
-        await new Promise(res => setTimeout(res, 1500));
-        
-        const user = await base44.auth.me();
-        const assignedUsernames = Array.isArray(user?.assigned_usernames) ? user.assigned_usernames : [];
-        
-        if (assignedUsernames.length === 0) {
-          setConfiguredCredentials([]);
-          return;
-        }
-
-        const allCreds = [];
-        for (let i = 0; i < assignedUsernames.length; i++) {
-          if (i > 0) {
-            // 1 second delay between each username request
-            await new Promise(res => setTimeout(res, 1000));
-          }
-          
-          try {
-            const creds = await base44.entities.IntegrationCredential.filter(
-              { user_name: assignedUsernames[i] }, 
-              "-updated_date"
-            );
-            if (creds && creds.length > 0) {
-              allCreds.push(...creds);
-            }
-          } catch (err) {
-            // If rate limited, stop trying and silently fail
-            if (err?.response?.status === 429) {
-              console.warn("Rate limit hit, stopping credential load");
-              break;
-            }
-            // For other errors, continue with next username
-            continue;
-          }
-        }
-        
-        setConfiguredCredentials(allCreds);
-      } catch (error) {
-        // Silent fail - credentials section just won't show
-        if (error?.response?.status !== 429) {
-          console.warn("Failed to load credentials:", error?.message);
-        }
-        setConfiguredCredentials([]);
-      }
-    }
-  };
-
-  // Check if user has any Shopify credentials configured
-  const hasShopifyCredential = configuredCredentials.some(
-    cred => cred.provider === 'shopify'
-  );
+  // Load credentials from cache on mount
+  useEffect(() => {
+    loadCredentials();
+  }, [loadCredentials]);
 
   return (
     <div
       className="fixed right-6 z-10 flex flex-col items-end gap-2 pointer-events-auto"
       style={{ top: '200px' }}
     >
-      <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownOpenChange}>
+      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             disabled={isPublishing}
@@ -149,10 +90,10 @@ export default function FloatingPublishButton({
             Publish to Google Docs
           </DropdownMenuItem>
 
-          {configuredCredentials.length > 0 && (
+          {credentials.length > 0 && (
             <>
               <DropdownMenuSeparator />
-              {configuredCredentials.map((credential) => (
+              {credentials.map((credential) => (
                 <DropdownMenuItem 
                   key={credential.id}
                   onClick={() => {
@@ -167,14 +108,6 @@ export default function FloatingPublishButton({
           )}
 
           <DropdownMenuSeparator />
-          
-          {/* Only show "Publish to Shopify" if user has a Shopify credential configured */}
-          {hasShopifyCredential && (
-            <DropdownMenuItem onClick={onPublishToShopify}>
-              <Globe className="w-4 h-4 mr-2" />
-              Publish to Shopify
-            </DropdownMenuItem>
-          )}
           
           <DropdownMenuItem onClick={onOpenPublishOptions}>
             <Settings className="w-4 h-4 mr-2" />
@@ -191,9 +124,7 @@ export default function FloatingPublishButton({
       )}
 
       {!isSavingAuto && showSaved && lastSaved && (
-        <div
-          className="bg-white px-3 py-1.5 rounded-lg shadow-lg border border-slate-200 text-xs text-slate-600 transition-opacity duration-500 opacity-100"
-        >
+        <div className="bg-white px-3 py-1.5 rounded-lg shadow-lg border border-slate-200 text-xs text-slate-600 transition-opacity duration-500 opacity-100">
           Saved {savedTimeLabel}
         </div>
       )}

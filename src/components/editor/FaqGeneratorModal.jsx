@@ -13,6 +13,7 @@ import { ContentEndpoint } from "@/api/entities";
 import { callFaqEndpoint } from "@/api/functions";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { agentSDK } from "@/agents";
+import { useTemplates } from '@/components/providers/TemplateProvider';
 
 // Basic HTML-safe replacer for text nodes
 const escapeHtml = (s) =>
@@ -120,16 +121,20 @@ function renderDefaultAccordion(faqs, { title = "Frequently Asked Questions", op
 
 export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onInsert }) {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [templates, setTemplates] = useState([]);
+  const [error, setError] = useState(null); // Used for general errors and warnings
   const [selectedTemplateKey, setSelectedTemplateKey] = useState("default");
   const [title, setTitle] = useState("Frequently Asked Questions");
-  const [error, setError] = useState(null); // Used for general errors and warnings
   const [examplePreviewHtml, setExamplePreviewHtml] = useState("");
 
   // HIDDEN: selected endpoint from admin page (no UI exposed)
   const [selectedEndpointId, setSelectedEndpointId] = useState("");
 
   const { consumeTokensForFeature } = useTokenConsumption();
+  const { templates, loadTemplates, getTemplatesByFeature } = useTemplates();
+
+  const customTemplates = React.useMemo(() => {
+    return getTemplatesByFeature('faq');
+  }, [getTemplatesByFeature]);
 
   // NEW: single-flight token to prevent race conditions
   const runRef = React.useRef(0);
@@ -231,7 +236,7 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
       setError(null); // Clear specific template warnings if default is selected
       return null;
     }
-    const tpl = templates.find((t) => t.id === selectedTemplateKey) || null;
+    const tpl = customTemplates.find((t) => t.id === selectedTemplateKey) || null;
     if (!tpl) {
       setError(null);
       return null;
@@ -244,17 +249,10 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
     }
     setError(null);
     return tpl;
-  }, [selectedTemplateKey, templates, isItemTemplate]);
+  }, [selectedTemplateKey, customTemplates, isItemTemplate]);
 
-  // Load templates and auto-pick active FAQ endpoint (hidden)
-  useEffect(() => {
-    if (!isOpen) return;
-    (async () => {
-      // Load templates
-      const listTemplates = await CustomContentTemplate.filter({ associated_ai_feature: "faq", is_active: true });
-      setTemplates(listTemplates || []);
-
-      // Load FAQ-capable endpoints (active and marked/name/notes contains 'faq')
+  const loadEndpoint = useCallback(async () => {
+    try {
       const listEndpoints = await ContentEndpoint.list("-updated_date").catch(() => []);
       const faqLikeEndpoints = (listEndpoints || []).filter((e) => {
         const n = (e.name || "").toLowerCase();
@@ -263,13 +261,22 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
       });
 
       if (faqLikeEndpoints.length > 0) {
-        // pick the most recently updated active FAQ endpoint
         setSelectedEndpointId(faqLikeEndpoints[0].id);
       } else {
         setSelectedEndpointId("");
       }
-    })();
-  }, [isOpen]);
+    } catch (err) {
+      console.error("Error loading endpoints:", err);
+    }
+  }, []);
+
+  // Load templates and auto-pick active FAQ endpoint (hidden)
+  useEffect(() => {
+    if (isOpen) {
+      loadTemplates(); // Load from cache
+      loadEndpoint();
+    }
+  }, [isOpen, loadTemplates, loadEndpoint]);
   
   // Update example preview when template changes
   useEffect(() => {
@@ -286,7 +293,7 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
           : renderDefaultAccordion(sampleFaqs, { title: "Example FAQs", openFirst: true, includeJsonLd: false });
 
       setExamplePreviewHtml(html);
-  }, [selectedTemplateKey, templates, isOpen, getTemplate]);
+  }, [selectedTemplateKey, customTemplates, isOpen, getTemplate]);
 
 
   const handleGenerateFaqs = async () => {
@@ -481,7 +488,7 @@ Article: """${text}"""`,
                       <div className="font-medium text-slate-900">Default (Accordion)</div>
                       <div className="text-xs text-slate-500 mt-1">Simple, clean, built-in style.</div>
                     </button>
-                    {templates.map((t) => (
+                    {customTemplates.map((t) => (
                       <button
                         key={t.id}
                         type="button"

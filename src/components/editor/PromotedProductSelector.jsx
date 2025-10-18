@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,12 +28,12 @@ import { extractProductMeta } from "@/api/functions";
 import { amazonProduct } from "@/api/functions";
 import TemplatePreviewFrame from "./TemplatePreviewFrame";
 import { InvokeLLM } from "@/api/integrations";
-
+import { useTemplates } from '@/components/providers/TemplateProvider'; // NEW IMPORT
 
 export default function PromotedProductSelector({ isOpen, onClose, onInsert }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState([]);
-  const [templates, setTemplates] = useState([]);
+  // const [templates, setTemplates] = useState([]); // REMOVED: templates will come from provider
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -59,6 +59,7 @@ export default function PromotedProductSelector({ isOpen, onClose, onInsert }) {
   const { consumeTokensForFeature } = useTokenConsumption();
   const { selectedUsername: globalUsername } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
+  const { templates: allTemplates, loadTemplates } = useTemplates(); // NEW: Access templates and loader from provider
 
   // Determine active username filter based on workspace scoping
   const selectedUsername = useWorkspaceScoping ? globalUsername || "all" : localSelectedUsername;
@@ -68,6 +69,24 @@ export default function PromotedProductSelector({ isOpen, onClose, onInsert }) {
     currentUser,
     defaultEnabled: true
   });
+
+  // NEW: Memoize the filtered templates from the provider's allTemplates
+  const templates = useMemo(() => {
+    const productOnlyTemplates = allTemplates.filter((template) => {
+      const isProductTemplate = template.associated_ai_feature === "product";
+      const isActive = template.is_active !== false;
+
+      // Additional filter to exclude any templates with CTA or Testimonial in the name
+      const hasInvalidName = template.name && (
+        template.name.toLowerCase().includes('cta') ||
+        template.name.toLowerCase().includes('testimonial') ||
+        template.name.toLowerCase().includes('underline effect') ||
+        template.name.toLowerCase().includes('high-end & polished'));
+
+      return isProductTemplate && isActive && !hasInvalidName;
+    });
+    return productOnlyTemplates;
+  }, [allTemplates]); // Depend on allTemplates from the provider
 
   useEffect(() => {
     // Fetch current user details once on component mount
@@ -101,11 +120,12 @@ export default function PromotedProductSelector({ isOpen, onClose, onInsert }) {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [productsData, templatesData, user] = await Promise.all([
-      PromotedProduct.list(),
-      CustomContentTemplate.list(),
-      User.me().catch(() => null)]
-      );
+      // Changed: templatesData removed from Promise.all, loadTemplates() added
+      const [productsData, user] = await Promise.all([
+        PromotedProduct.list(),
+        User.me().catch(() => null),
+        loadTemplates() // NEW: Trigger template loading from the provider
+      ]);
 
       // Filter products and get associated usernames based on user permissions
       let filteredProducts = productsData || [];
@@ -133,23 +153,8 @@ export default function PromotedProductSelector({ isOpen, onClose, onInsert }) {
       setProducts(filteredProducts);
       setAvailableUsernameObjects(allowedUsernameObjects);
 
-      // STRICT filtering: Only show templates that are EXACTLY for products
-      const productOnlyTemplates = (templatesData || []).filter((template) => {
-        const isProductTemplate = template.associated_ai_feature === "product";
-        const isActive = template.is_active !== false;
-
-        // Additional filter to exclude any templates with CTA or Testimonial in the name
-        const hasInvalidName = template.name && (
-        template.name.toLowerCase().includes('cta') ||
-        template.name.toLowerCase().includes('testimonial') ||
-        template.name.toLowerCase().includes('underline effect') ||
-        template.name.toLowerCase().includes('high-end & polished'));
-
-
-        return isProductTemplate && isActive && !hasInvalidName;
-      });
-
-      setTemplates(productOnlyTemplates);
+      // OLD: Removed direct filtering and setting of templates state here.
+      // Now, 'templates' is a useMemo-derived value from 'allTemplates' which comes from the provider.
 
     } catch (error) {
       console.error("Error loading data for product selector:", error);

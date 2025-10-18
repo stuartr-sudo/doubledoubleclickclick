@@ -218,15 +218,15 @@ export default function ImageLibraryModal({ isOpen, onClose, onInsert, usernameF
   return (
     <>
       <Dialog open={!!isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-7xl w-[90vw] h-[85vh] p-0 flex flex-col bg-slate-50 text-slate-900 rounded-lg shadow-2xl">
+        <DialogContent className="max-w-7xl w-[90vw] h-[85vh] p-0 flex flex-col bg-slate-50 text-slate-900 rounded-lg shadow-2xl" style={{ zIndex: 300 }}>
           {/* Header */}
           <div className="flex-shrink-0 p-4 border-b border-slate-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-800">Image Library</h2>
             <div className="flex items-center gap-2">
               <Button
-                onClick={() => setShowImportFromUrl(!showImportFromUrl)} className="bg-blue-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-green-700">
-
-
+                onClick={() => setShowImportFromUrl(!showImportFromUrl)}
+                className="bg-blue-900 text-white px-4 py-2 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 hover:bg-green-700"
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Import from URL
               </Button>
@@ -413,7 +413,7 @@ export default function ImageLibraryModal({ isOpen, onClose, onInsert, usernameF
       </Dialog>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent style={{ zIndex: 350 }}>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>

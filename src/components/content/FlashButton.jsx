@@ -13,14 +13,14 @@ export default function FlashButton({ item, onStatusChange }) {
   const isCompleted = flashStatus === "completed";
   const isFailed = flashStatus === "failed";
 
-  const getButtonClass = () => {
-    if (isRunning) return "bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-500 hover:to-purple-500 text-white cursor-not-allowed";
-    if (isCompleted) return "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-500 hover:to-green-600 text-white cursor-not-allowed";
-    if (isFailed) return "bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white";
-    return "bg-gradient-to-r from-teal-400 to-cyan-500 hover:from-teal-500 hover:to-cyan-600 text-white";
-  };
+const getButtonClass = () => {
+  if (isRunning) return "bg-gradient-to-b from-blue-600 to-blue-800 hover:from-blue-600 hover:to-blue-800 text-white cursor-not-allowed";
+  if (isCompleted) return "bg-gradient-to-b from-emerald-400 to-green-500 hover:from-emerald-400 hover:to-green-500 text-white cursor-not-allowed";
+  if (isFailed) return "bg-gradient-to-b from-orange-400 to-amber-600 hover:from-orange-500 hover:to-amber-700 text-white";
+  return "bg-gradient-to-b from-pink-400 to-rose-600 hover:from-pink-500 hover:to-rose-700 text-white";
+};
 
-  const buttonClass = `h-10 w-10 rounded-md inline-flex items-center justify-center ${getButtonClass()}`;
+  const buttonClass = `h-8 w-8 rounded-md inline-flex items-center justify-center transition-all ${getButtonClass()}`;
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -84,15 +84,15 @@ export default function FlashButton({ item, onStatusChange }) {
   // Render different icons based on flash status
   const renderIcon = () => {
     if (isRunning) {
-      return <Loader2 className="w-4 h-4 animate-spin" />;
+      return <Loader2 className="w-3.5 h-3.5 animate-spin" />;
     }
     if (isCompleted) {
-      return <CheckCircle2 className="w-4 h-4" />;
+      return <CheckCircle2 className="w-3.5 h-3.5" />;
     }
     if (isFailed) {
-      return <AlertCircle className="w-4 h-4" />;
+      return <AlertCircle className="w-3.5 h-3.5" />;
     }
-    return <Zap className="w-4 h-4" />;
+    return <Zap className="w-3.5 h-3.5" />;
   };
 
   return (
