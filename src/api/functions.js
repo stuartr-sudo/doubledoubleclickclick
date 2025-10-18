@@ -245,3 +245,5 @@ export const validateBrandSpecs = base44.functions.validateBrandSpecs;
 
 export const exportBrandAssets = base44.functions.exportBrandAssets;
 
+export const detectAiContent = base44.functions.detectAiContent;
+
