@@ -243,8 +243,8 @@ export default function HumanizeTextModal({ isOpen, onClose, selectedText, onRew
                   Cancel
                 </Button>
                 <Button
-                onClick={handleUseText}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white">
+                onClick={handleUseText} className="bg-gradient-to-r text-slate-100 px-4 py-2 text-sm font-medium rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-primary/90 h-10 flex-1 from-emerald-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700">
+
 
                   Use This Text
                 </Button>
