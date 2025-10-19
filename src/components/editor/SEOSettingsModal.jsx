@@ -487,19 +487,8 @@ Content: """${text}"""`,
         //   return;
         // }
 
-      let parsedSchema;
-      try {
-        parsedSchema = JSON.parse(schemaJson);
-      } catch (parseError) {
-        console.error("Failed to parse agent response as JSON:", parseError);
-        toast.error("Agent returned invalid JSON. Please check the output and fix manually.");
-        setMetadata((prev) => ({ ...prev, generated_llm_schema: schemaJson }));
-        return;
-      }
-
-      const schemaStr = JSON.stringify(parsedSchema, null, 2);
-      setMetadata((prev) => ({ ...prev, generated_llm_schema: schemaStr }));
-      toast.success("Schema generated successfully by AI agent!");
+      // TODO: Replace agentSDK functionality with Supabase conversation management
+      toast.error("Schema generation is temporarily disabled during migration.");
     } catch (e) {
       console.error("Schema generation failed:", e);
       toast.error(e?.message || "Failed to generate schema.");
