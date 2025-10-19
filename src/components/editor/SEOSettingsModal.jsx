@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { InvokeLLM } from "@/api/integrations";
 import ImageLibraryModal from "./ImageLibraryModal";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
-import { agentSDK } from "@/agents";
+// import { agentSDK } from "@/agents"; // TODO: Replace with Supabase conversation management
 import FeatureHelpIcon from "./FeatureHelpIcon";
 
 export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) {
@@ -419,7 +419,8 @@ Content: """${text}"""`,
 
       const text = String(html).slice(0, 20000);
 
-      const conversation = await agentSDK.createConversation({
+      // TODO: Replace agentSDK functionality with Supabase conversation management
+      // const conversation = await agentSDK.createConversation({
         agent_name: "schema_generator",
         metadata: { purpose: "Generate JSON-LD schema for article" }
       });
@@ -428,7 +429,7 @@ Content: """${text}"""`,
         throw new Error("Could not start conversation with schema_generator agent.");
       }
 
-      await agentSDK.addMessage(conversation, {
+      // await agentSDK.addMessage(conversation, {
         role: "user",
         content: `Generate a valid JSON-LD schema (one JSON object, no code fences) for this blog article. Prefer BlogPosting/Article. Include:
 - headline (title)
@@ -465,10 +466,10 @@ ${text}`
         attempts++;
         await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
-        const updatedConversation = await agentSDK.getConversation(conversation.id);
-        const lastMessage = updatedConversation?.messages?.[updatedConversation.messages.length - 1];
+        // const updatedConversation = await agentSDK.getConversation(conversation.id);
+        // const lastMessage = updatedConversation?.messages?.[updatedConversation.messages.length - 1];
 
-        if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || (lastMessage.content && lastMessage.content.length > 10))) {
+        // if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || (lastMessage.content && lastMessage.content.length > 10))) {
           let contentStr = lastMessage.content || "";
 
           contentStr = contentStr.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
