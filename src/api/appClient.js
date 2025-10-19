@@ -85,6 +85,11 @@ export const app = {
           const { error } = await supabase.from(tableName).delete().eq('id', id);
           if (error) throw error;
           return true;
+        },
+        list: async () => {
+          const { data, error } = await supabase.from(tableName).select('*');
+          if (error) throw error;
+          return data || [];
         }
       };
     }
