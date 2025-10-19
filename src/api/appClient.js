@@ -16,8 +16,18 @@ export const app = {
       if (typeof window !== 'undefined') window.location.href = '/login';
     },
     logout: async () => { if (typeof window !== 'undefined') window.location.href = '/login'; },
-    updateMe: async () => { throw new Error('updateMe not implemented'); },
-    me: async () => { throw new Error('me not implemented'); }
+    updateMe: async () => { return { id: 'stub', full_name: 'Stub User' }; },
+    // TEMP: return a stubbed user so UI renders while auth is wired
+    me: async () => ({
+      id: 'stub-user-id',
+      email: 'stub@example.com',
+      full_name: 'Stub User',
+      is_superadmin: true,
+      role: 'admin',
+      assigned_usernames: ['default'],
+      token_balance: 20,
+      completed_tutorial_ids: ['welcome_onboarding', 'getting_started_scrape']
+    })
   },
   entities: new Proxy({}, {
     get: () => ({
