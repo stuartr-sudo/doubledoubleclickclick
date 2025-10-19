@@ -10,7 +10,7 @@ export default function useFeatureFlag(featureName, { currentUser, defaultEnable
       return { enabled: defaultEnabled, isComingSoon: false, isLoading: loading };
     }
 
-    const flag = flags.find(f => f.name === featureName);
+    const flag = flags.find(f => f.flag_name === featureName);
 
     // If flag doesn't exist in the DB, use the default passed to the hook.
     if (!flag) {
@@ -18,7 +18,7 @@ export default function useFeatureFlag(featureName, { currentUser, defaultEnable
     }
 
     // Master switch: if disabled globally, it's off for everyone except superadmins.
-    if (!flag.enabled_globally && !currentUser?.is_superadmin) {
+    if (!flag.is_enabled && !currentUser?.is_superadmin) {
         return { enabled: false, isComingSoon: false, isLoading: false };
     }
     
