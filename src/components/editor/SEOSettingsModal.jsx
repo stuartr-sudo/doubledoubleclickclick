@@ -421,38 +421,38 @@ Content: """${text}"""`,
 
       // TODO: Replace agentSDK functionality with Supabase conversation management
       // const conversation = await agentSDK.createConversation({
-        agent_name: "schema_generator",
-        metadata: { purpose: "Generate JSON-LD schema for article" }
-      });
+      //   agent_name: "schema_generator",
+      //   metadata: { purpose: "Generate JSON-LD schema for article" }
+      // });
 
-      if (!conversation?.id) {
-        throw new Error("Could not start conversation with schema_generator agent.");
-      }
+      // if (!conversation?.id) {
+      //   throw new Error("Could not start conversation with schema_generator agent.");
+      // }
 
       // await agentSDK.addMessage(conversation, {
-        role: "user",
-        content: `Generate a valid JSON-LD schema (one JSON object, no code fences) for this blog article. Prefer BlogPosting/Article. Include:
-- headline (title)
-- description (use meta_description/excerpt)
-- author if inferable (string ok, e.g., "${postData?.author_name || "Unknown Author"}")
-- datePublished (use current date if unknown, e.g., "${new Date().toISOString().split('T')[0]}")
-- dateModified (current date, e.g., "${new Date().toISOString().split('T')[0]}")
-- mainEntityOfPage (slug as URL path ok, e.g., "/${metadata.slug}")
-- image if present (use featured_image if available)
-- keywords from tags (array)
-- publisher as Organization if inferable (e.g., "${postData?.site_name || "Your Company"}")
-Return ONLY a single JSON object.
-
-Context:
-Title: ${title}
-Slug: ${metadata.slug}
-Meta description: ${metadata.meta_description || metadata.excerpt}
-Excerpt: ${metadata.excerpt}
-Tags: ${(metadata.tags || []).join(", ")}
-Featured Image: ${metadata.featured_image || ""}
-HTML (truncated):
-${text}`
-      });
+      //   role: "user",
+      //   content: `Generate a valid JSON-LD schema (one JSON object, no code fences) for this blog article. Prefer BlogPosting/Article. Include:
+      // - headline (title)
+      // - description (use meta_description/excerpt)
+      // - author if inferable (string ok, e.g., "${postData?.author_name || "Unknown Author"}")
+      // - datePublished (use current date if unknown, e.g., "${new Date().toISOString().split('T')[0]}")
+      // - dateModified (current date, e.g., "${new Date().toISOString().split('T')[0]}")
+      // - mainEntityOfPage (slug as URL path ok, e.g., "/${metadata.slug}")
+      // - image if present (use featured_image if available)
+      // - keywords from tags (array)
+      // - publisher as Organization if inferable (e.g., "${postData?.site_name || "Your Company"}")
+      // Return ONLY a single JSON object.
+      //
+      // Context:
+      // Title: ${title}
+      // Slug: ${metadata.slug}
+      // Meta description: ${metadata.meta_description || metadata.excerpt}
+      // Excerpt: ${metadata.excerpt}
+      // Tags: ${(metadata.tags || []).join(", ")}
+      // Featured Image: ${metadata.featured_image || ""}
+      // HTML (truncated):
+      // ${text}`
+      // });
 
       const pollTimeout = 90000;
       const pollInterval = 2000;
