@@ -124,6 +124,30 @@ export const base44 = {
     },
   },
   auth: {
+    async me() {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session');
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+
+    async logout() {
+      await supabase.auth.signOut();
+    },
+
+    async loginWithRedirect(redirectUrl) {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl
+        }
+      });
+    },
+
     updateMe: async (updates) => {
       const { data, error } = await supabase.auth.updateUser({
         data: updates
