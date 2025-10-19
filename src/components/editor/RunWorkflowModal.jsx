@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CheckCircle2, Loader2, Play, AlertCircle, Crown, User as UserIcon, Sparkles, ChevronRight } from "lucide-react";

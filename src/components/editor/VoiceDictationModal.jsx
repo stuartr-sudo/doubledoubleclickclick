@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Mic, Square, Copy, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import { User } from "@/api/entities";

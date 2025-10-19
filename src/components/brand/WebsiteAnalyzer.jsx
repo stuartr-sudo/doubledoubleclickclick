@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Globe, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 
 export default function WebsiteAnalyzer({
   onAnalysisComplete,
