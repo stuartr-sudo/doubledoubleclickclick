@@ -22,19 +22,31 @@ export const app = {
       if (typeof window !== 'undefined') window.location.href = '/login';
     },
     updateMe: async (updates) => {
-      const user = await getCurrentUser();
-      if (!user) throw new Error('Not authenticated');
-      
-      const { error } = await supabase
-        .from('user_profiles')
-        .update(updates)
-        .eq('id', user.id);
-      
-      if (error) throw error;
-      return getCurrentUser();
+      // Stub: return fake user until Supabase is configured
+      console.warn('[appClient] updateMe is stubbed');
+      return {
+        id: 'stub-user-id',
+        email: 'stub@example.com',
+        full_name: 'Stub User',
+        is_superadmin: true,
+        role: 'admin',
+        assigned_usernames: ['default'],
+        token_balance: 20,
+        completed_tutorial_ids: ['welcome_onboarding', 'getting_started_scrape']
+      };
     },
     me: async () => {
-      return getCurrentUser();
+      // Stub: return fake user until Supabase is configured
+      return {
+        id: 'stub-user-id',
+        email: 'stub@example.com',
+        full_name: 'Stub User',
+        is_superadmin: true,
+        role: 'admin',
+        assigned_usernames: ['default'],
+        token_balance: 20,
+        completed_tutorial_ids: ['welcome_onboarding', 'getting_started_scrape']
+      };
     }
   },
   entities: new Proxy({}, {
