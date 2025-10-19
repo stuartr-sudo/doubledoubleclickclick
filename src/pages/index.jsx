@@ -474,7 +474,7 @@ function PagesContent() {
     );
 }
 
-export default function Pages() {
+export default function App() {
     return (
         <Router>
             <PagesContent />
