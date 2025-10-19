@@ -16,7 +16,8 @@ import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { AppSettings } from "@/api/entities";
 // import { agentSDK } from "@/agents"; // TODO: Replace with Supabase conversation management
 import { User } from "@/api/entities";
-import { supabase } from "@/api/supabaseClient"; // Added import
+import { supabase } from "@/api/supabaseClient";
+import { base44 } from "@/api/base44Client";
 
 const COUNTRY_OPTIONS = [
   { label: "Algeria", value: "2012" }, { label: "Angola", value: "2024" }, { label: "Azerbaijan", value: "2031" },

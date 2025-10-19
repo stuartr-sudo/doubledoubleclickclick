@@ -38,16 +38,26 @@ export const useAuth = () => {
 
         if (createError) {
           console.error('Error creating user profile:', createError)
-          // Return basic profile even if creation fails
-          return {
-            ...authUser,
-            ...basicProfile
-          }
+      // Return basic profile even if creation fails
+      return {
+        ...authUser,
+        ...basicProfile,
+        topics_onboarding_completed_at: '{}',
+        topics_timer_override: '{}',
+        topics_timer_hours: '{}',
+        topics: [],
+        article_creation_timestamps: []
+      }
         }
 
         return {
           ...authUser,
-          ...basicProfile
+          ...basicProfile,
+          topics_onboarding_completed_at: '{}',
+          topics_timer_override: '{}',
+          topics_timer_hours: '{}',
+          topics: [],
+          article_creation_timestamps: []
         }
       }
 
@@ -62,7 +72,12 @@ export const useAuth = () => {
         is_superadmin: data?.is_superadmin || false,
         role: data?.role || 'user',
         completed_tutorial_ids: data?.completed_tutorial_ids || [],
-        topics_completed_at: data?.topics_completed_at
+        topics_completed_at: data?.topics_completed_at,
+        topics_onboarding_completed_at: data?.topics_onboarding_completed_at || '{}',
+        topics_timer_override: data?.topics_timer_override || '{}',
+        topics_timer_hours: data?.topics_timer_hours || '{}',
+        topics: data?.topics || [],
+        article_creation_timestamps: data?.article_creation_timestamps || []
       }
     } catch (err) {
       console.error('Error in fetchUserProfile:', err)
@@ -75,6 +90,11 @@ export const useAuth = () => {
         is_superadmin: false,
         role: 'user',
         completed_tutorial_ids: [],
+        topics_onboarding_completed_at: '{}',
+        topics_timer_override: '{}',
+        topics_timer_hours: '{}',
+        topics: [],
+        article_creation_timestamps: [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -365,7 +385,12 @@ export const User = {
       is_superadmin: profile?.is_superadmin || false,
       role: profile?.role || 'user',
       completed_tutorial_ids: profile?.completed_tutorial_ids || [],
-      topics_completed_at: profile?.topics_completed_at
+      topics_completed_at: profile?.topics_completed_at,
+      topics_onboarding_completed_at: profile?.topics_onboarding_completed_at || '{}',
+      topics_timer_override: profile?.topics_timer_override || '{}',
+      topics_timer_hours: profile?.topics_timer_hours || '{}',
+      topics: profile?.topics || [],
+      article_creation_timestamps: profile?.article_creation_timestamps || []
     }
   },
 
@@ -385,5 +410,42 @@ export const User = {
     }
 
     return await User.me()
+  },
+
+  updateMyUserData: async (updates) => {
+    // Alias for updateMe for backwards compatibility
+    return await User.updateMe(updates)
+  },
+
+  // Topics onboarding specific methods
+  completeTopicsOnboarding: async (username, topics) => {
+    const currentUser = await User.me();
+    if (!currentUser) throw new Error('User not authenticated');
+
+    const currentTopics = currentUser.topics || [];
+    const updatedTopics = Array.from(new Set([...currentTopics, username]));
+    
+    const currentOnboardingData = currentUser.topics_onboarding_completed_at || {};
+    currentOnboardingData[username] = new Date().toISOString();
+
+    return await User.updateMe({
+      topics: updatedTopics,
+      topics_onboarding_completed_at: JSON.stringify(currentOnboardingData)
+    });
+  },
+
+  hasCompletedTopicsOnboarding: async (username) => {
+    const currentUser = await User.me();
+    if (!currentUser) return false;
+    
+    const onboardingData = currentUser.topics_onboarding_completed_at;
+    if (!onboardingData) return false;
+    
+    try {
+      const parsed = typeof onboardingData === 'string' ? JSON.parse(onboardingData) : onboardingData;
+      return parsed[username] !== undefined;
+    } catch {
+      return false;
+    }
   }
 }

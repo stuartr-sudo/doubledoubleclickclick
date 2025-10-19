@@ -14,8 +14,8 @@ export const FeatureFlagProvider = ({ children }) => {
       setLoading(true);
       try {
         const [flagsData, productsData] = await Promise.all([
-          FeatureFlag.list(),
-          AppProduct.list(),
+          FeatureFlag.filter().catch(() => []),
+          AppProduct.filter().catch(() => []),
         ]);
         setFlags(flagsData || []);
         setProducts(productsData || []);

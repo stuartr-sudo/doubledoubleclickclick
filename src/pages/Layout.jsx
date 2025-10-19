@@ -25,6 +25,7 @@ import { FeatureFlagProvider, useFeatureFlagData } from "@/components/providers/
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import TokenTopUpBanner from "@/components/common/TokenTopUpBanner";
 import VideoModal from "@/components/common/VideoModal";
+import TopicsOnboardingModal from "@/components/onboarding/TopicsOnboardingModal";
 import { WorkspaceProvider, WorkspaceContext } from "@/components/providers/WorkspaceProvider";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import usePageTutorial from '@/components/hooks/usePageTutorial';
@@ -351,13 +352,15 @@ const retry = async (fn, retries = 3, delay = 500) => {
 function LayoutContent({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, loading: isUserLoading, signOut } = useAuth();
+  const { user, loading: isUserLoading, signOut, updateProfile } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [navReady, setNavReady] = useState(false); // NEW: Track when navigation is ready to render
   const [showTokenHelpVideo, setShowTokenHelpVideo] = useState(false);
   const [tokenHelpVideoUrl, setTokenHelpVideoUrl] = useState("");
+  const [showTopicsOnboarding, setShowTopicsOnboarding] = useState(false);
+  const [topicsOnboardingUsername, setTopicsOnboardingUsername] = useState(null);
 
   // NEW: Page tutorial system
   const { showVideo: showPageTutorial, videoUrl: pageTutorialUrl, videoTitle: pageTutorialTitle, closeVideo: closePageTutorial } = usePageTutorial(currentPageName);
@@ -521,6 +524,49 @@ function LayoutContent({ children, currentPageName }) {
     }
   }, [user, currentPageName, navigate]);
 
+  // Topics Onboarding Detection and Modal Display
+  useEffect(() => {
+    if (!user || isUserLoading || !navReady) return;
+
+    const checkTopicsOnboarding = async () => {
+      try {
+        // Get the selected username from workspace context
+        const workspaceData = localStorage.getItem('workspace_data');
+        const selectedUsername = workspaceData ? JSON.parse(workspaceData).selectedUsername : null;
+        
+        if (!selectedUsername) return;
+
+        // Check if user has completed topics onboarding for this username
+        const hasCompleted = await User.hasCompletedTopicsOnboarding(selectedUsername);
+        
+        if (!hasCompleted) {
+          // Show Topics Onboarding Modal
+          window.dispatchEvent(new CustomEvent('showTopicsOnboarding', { 
+            detail: { username: selectedUsername } 
+          }));
+        }
+      } catch (error) {
+        console.error('Error checking topics onboarding:', error);
+      }
+    };
+
+    checkTopicsOnboarding();
+  }, [user, navReady]);
+
+  // Listen for Topics Onboarding Modal events
+  useEffect(() => {
+    const handleShowTopicsOnboarding = (event) => {
+      setTopicsOnboardingUsername(event.detail.username);
+      setShowTopicsOnboarding(true);
+    };
+
+    window.addEventListener('showTopicsOnboarding', handleShowTopicsOnboarding);
+    
+    return () => {
+      window.removeEventListener('showTopicsOnboarding', handleShowTopicsOnboarding);
+    };
+  }, []);
+
   // Notify listeners when user changes
   useEffect(() => {
     if (user) {
@@ -540,13 +586,14 @@ function LayoutContent({ children, currentPageName }) {
   useEffect(() => {
     const loadTokenHelpVideo = async () => {
       try {
-        const settings = await AppSettings.list();
+        const settings = await AppSettings.filter();
         const videoSetting = settings.find(s => s.key === "token_help_video");
         if (videoSetting?.value) {
           setTokenHelpVideoUrl(videoSetting.value);
         }
       } catch (error) {
         console.error("Failed to load token help video:", error);
+        // Silently fail - this is not critical functionality
       }
     };
     loadTokenHelpVideo();
@@ -555,15 +602,10 @@ function LayoutContent({ children, currentPageName }) {
   // Listen for token balance updates
   useEffect(() => {
     const handleTokenBalanceUpdate = (event) => {
-      if (event.detail && typeof event.detail.newBalance === 'number') {
-        setUser((prevUser) => {
-          if (prevUser) {
-            return {
-              ...prevUser,
-              token_balance: event.detail.newBalance
-            };
-          }
-          return prevUser;
+      if (event.detail && typeof event.detail.newBalance === 'number' && user?.id) {
+        // Update user profile in Supabase when token balance changes
+        updateProfile({ token_balance: event.detail.newBalance }).catch(error => {
+          console.error('Error updating token balance:', error);
         });
       }
     };
@@ -862,6 +904,17 @@ function LayoutContent({ children, currentPageName }) {
         onClose={closePageTutorial}
         videoUrl={pageTutorialUrl}
         title={pageTutorialTitle}
+      />
+
+      {/* Topics Onboarding Modal */}
+      <TopicsOnboardingModal
+        isOpen={showTopicsOnboarding}
+        onClose={() => setShowTopicsOnboarding(false)}
+        username={topicsOnboardingUsername}
+        onCompleted={() => {
+          setShowTopicsOnboarding(false);
+          setTopicsOnboardingUsername(null);
+        }}
       />
 
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />

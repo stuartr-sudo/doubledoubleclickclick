@@ -2474,9 +2474,13 @@ export default function Editor() {
     try {
       if (importHtml === '1') {
         const imported = localStorage.getItem('htmlstudio_content') || "";
+        const importedTitle = localStorage.getItem('htmlstudio_title') || "";
         setContent(imported);
+        setTitle(importedTitle);
         sendToPreview({ type: "set-html", html: imported });
         localStorage.removeItem('htmlstudio_content');
+        localStorage.removeItem('htmlstudio_title');
+        localStorage.removeItem('htmlstudio_url');
       } else if (postId) {
         await loadPostContent(postId);
       } else if (webhookId) {

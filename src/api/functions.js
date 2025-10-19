@@ -199,4 +199,4 @@ export const securePublish = async (data) => callVercelFunction('/publishing/pub
 // Scraping functions
 export const scrapeWithFirecrawl = async (data) => callVercelFunction('/scraping/firecrawl', data)
 export const extractWebsiteContent = async (data) => callVercelFunction('/scraping/extract-content', data)
-export const getSitemapPages = async (data) => callVercelFunction('/scraping/sitemap', data)
+export const getSitemapPages = async (data) => callVercelFunction('/getSitemapPages', data)

@@ -42,6 +42,7 @@ const createEntityWrapper = (entityName) => {
       const { data, error } = await query
       
       if (error) {
+        console.error(`Error fetching ${entityName}:`, error);
         throw new Error(`Failed to fetch ${entityName}: ${error.message}`)
       }
       
@@ -158,6 +159,24 @@ export const LandingPageContent = createEntityWrapper('LandingPageContent')
 export const WaitlistEntry = createEntityWrapper('WaitlistEntry')
 export const ContactMessage = createEntityWrapper('ContactMessage')
 export const Username = createEntityWrapper('Username')
+
+// Add topics-specific methods to Username
+Username.addTopic = async (usernameId, topic) => {
+  const response = await fetch('/api/topics/add-keyword', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+    },
+    body: JSON.stringify({ username_id: usernameId, keyword: topic })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to add topic: ${response.statusText}`);
+  }
+  
+  return response.json();
+};
 export const ScheduledPost = createEntityWrapper('ScheduledPost')
 export const Testimonial = createEntityWrapper('Testimonial')
 export const ContentVariant = createEntityWrapper('ContentVariant')
