@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { User } from "@/api/entities";
 import { BlogPost } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,14 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, Globe, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { createPageUrl } from "@/utils";
-import { supabase } from "@/api/supabaseClient";
 import { Sitemap } from "@/api/entities";
 import { BrandGuidelines } from "@/api/entities";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
-import { scrapeWithFirecrawl, extractWebsiteContent, getSitemapPages, llmRouter } from "@/api/functions";
+import { scrapeWithFirecrawl, extractWebsiteContent, llmRouter } from "@/api/functions";
 
 export default function GettingStarted() {
-  const { user, loading } = useAuth();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   const [blogUrl, setBlogUrl] = useState("");
   const [scraping, setScraping] = useState(false);
@@ -31,17 +30,31 @@ export default function GettingStarted() {
   const [importEta, setImportEta] = useState(60);
 
   useEffect(() => {
-    if (user?.completed_tutorial_ids?.includes('getting_started_scrape')) {
-      window.location.href = createPageUrl('Dashboard');
-      return;
-    }
-  }, [user]);
+    loadUser();
+  }, []);
 
   const normalizeUrl = (url) => {
     if (!url) return "";
     const trimmed = String(url).trim();
     if (/^https?:\/\//i.test(trimmed)) return trimmed;
     return `https://${trimmed}`;
+  };
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await User.me();
+      setUser(currentUser);
+
+      if (currentUser?.completed_tutorial_ids?.includes('getting_started_scrape')) {
+        window.location.href = createPageUrl('Dashboard');
+        return;
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Error loading user:", error);
+      window.location.href = createPageUrl('Home');
+    }
   };
 
   const extractDomain = (url) => {
@@ -142,21 +155,30 @@ export default function GettingStarted() {
         console.log('[Background] Fetching sitemap for:', domain);
         
         try {
-          const response = await getSitemapPages({
-            url: `https://${domain}`,
-            limit: 200
+          // Use new Vercel function instead of base44.functions.invoke
+          const response = await fetch('/api/getSitemapPages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              url: `https://${domain}`,
+              limit: 200
+            })
           });
-          const data = response.data;
 
-          if (data?.success && Array.isArray(data.pages) && data.pages.length > 0) {
-            await Sitemap.create({
-              domain,
-              pages: data.pages,
-              user_name: userName
-            });
-            console.log('[Background] Sitemap saved successfully:', data.pages.length, 'pages');
-          } else {
-            console.log('[Background] Sitemap fetch successful but no pages found or data format incorrect for:', domain);
+          if (response.ok) {
+            const data = await response.json();
+            if (data?.success && Array.isArray(data.pages) && data.pages.length > 0) {
+              await Sitemap.create({
+                domain,
+                pages: data.pages,
+                user_name: userName
+              });
+              console.log('[Background] Sitemap saved successfully:', data.pages.length, 'pages');
+            } else {
+              console.log('[Background] Sitemap fetch successful but no pages found or data format incorrect for:', domain);
+            }
           }
         } catch (sitemapError) {
           console.log('[Background] Sitemap generation failed (silently):', sitemapError?.message);
@@ -191,19 +213,21 @@ Return a JSON object with these fields:
   "target_market": "description of target audience"
 }`;
 
-          const response = await llmRouter({
-            provider: 'openai',
-            model: 'gpt-4',
-            messages: [
-              {
-                role: 'user',
-                content: prompt
+          // Use new llmRouter function instead of base44.integrations.Core.InvokeLLM
+          const guidelinesData = await llmRouter({
+            prompt,
+            add_context_from_internet: true,
+            response_json_schema: {
+              type: "object",
+              properties: {
+                voice_and_tone: { type: "string" },
+                content_style_rules: { type: "string" },
+                prohibited_elements: { type: "string" },
+                preferred_elements: { type: "string" },
+                target_market: { type: "string" }
               }
-            ],
-            max_tokens: 2000,
-            temperature: 0.7
+            }
           });
-          const guidelinesData = response.data;
 
           if (guidelinesData) {
             await BrandGuidelines.create({
@@ -211,7 +235,7 @@ Return a JSON object with these fields:
               name: `${domain} Brand Guidelines`,
               voice_and_tone: guidelinesData.voice_and_tone || "Professional and clear",
               content_style_rules: guidelinesData.content_style_rules || "Use active voice and concise sentences",
-              prohibited_elements: guidelinesData.prohibited_elements || "",
+              prohibited_elements: guidelinesData.prohibited preconditioned_elements || "",
               preferred_elements: guidelinesData.preferred_elements || "",
               target_market: guidelinesData.target_market || ""
             });
@@ -254,7 +278,7 @@ Return a JSON object with these fields:
       let data = null;
       let lastError = null;
 
-      // Try scrapeWithFirecrawl first
+      // Try scrapeWithFirecrawl first - use new function instead of base44.functions.invoke
       try {
         const response = await scrapeWithFirecrawl({ url: url });
         data = response.data;
@@ -263,7 +287,7 @@ Return a JSON object with these fields:
         console.warn('[GettingStarted] scrapeWithFirecrawl failed:', firecrawlError.message, 'Trying extractWebsiteContent...');
         lastError = firecrawlError;
         
-        // Fallback to extractWebsiteContent
+        // Fallback to extractWebsiteContent - use new function instead of base44.functions.invoke
         try {
           const response = await extractWebsiteContent({ url: url });
           data = response.data;
@@ -301,17 +325,10 @@ Return a JSON object with these fields:
       });
 
       const currentCompleted = user?.completed_tutorial_ids || [];
-      const updatedCompleted = Array.from(new Set([...currentCompleted, "getting_started_scrape"]));
-      
-      // Update user profile in Supabase
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ completed_tutorial_ids: updatedCompleted })
-        .eq('id', user.id);
-
-      if (updateError) {
-        console.error('Error updating user profile:', updateError);
-      }
+      // Use new User.updateMyUserData instead of base44.auth.updateMe
+      await User.updateMyUserData({
+        completed_tutorial_ids: Array.from(new Set([...currentCompleted, "getting_started_scrape"]))
+      });
 
       // NEW: Trigger background sitemap and guidelines generation
       if (username) {
@@ -322,15 +339,18 @@ Return a JSON object with these fields:
 
       toast.success("Blog post imported successfully! Opening in editor...");
 
+      // Turn off loading states BEFORE navigation
+      setImporting(false);
+      setScraping(false);
+
       setTimeout(() => {
         window.location.href = createPageUrl(`Editor?post=${newPost.id}`);
       }, 600);
     } catch (err) {
       console.error("[GettingStarted] Scraping error:", err);
       setError(err?.message || "Failed to import blog post. Please try again.");
-      setScraping(false); // Turn off button loader on error
-    } finally {
-      setImporting(false); // Ensure MagicOrbLoader is turned off
+      setScraping(false);
+      setImporting(false);
     }
   };
 
@@ -351,8 +371,10 @@ Return a JSON object with these fields:
     setImportEta(60);   // Set ETA
     try {
       await scrapeAndOpenEditor(blogUrl); // Delegate to unified scraper
-    } finally {
-      setImporting(false); // Hide MagicOrbLoader
+      // Don't set importing to false here - let scrapeAndOpenEditor handle it
+    } catch (error) {
+      console.error('[GettingStarted] Manual scrape error:', error);
+      setImporting(false); // Only hide loader on error
     }
   };
 
@@ -367,20 +389,40 @@ Return a JSON object with these fields:
 
     setFetchingPages(true);
     try {
-      // Client-side sitemap scraping (no API calls needed)
-      const pages = await scrapeSitemapClientSide(siteUrl);
-      
-      setPages(pages);
-      if (pages.length === 0) {
+      // Use new Vercel function instead of base44.functions.invoke
+      const response = await fetch('/api/getSitemapPages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          url: siteUrl,
+          limit: 200
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data?.success) {
+        throw new Error(data?.error || "Could not fetch sitemap pages");
+      }
+
+      const items = Array.isArray(data.pages) ? data.pages : [];
+      setPages(items);
+      if (items.length === 0) {
         setSitemapError("No pages found on that website");
-      } else {
-        // NEW: Trigger background sitemap and guidelines generation
-        const username = user?.assigned_usernames?.[0] || "";
-        if (username && pages.length > 0) {
-          generateSitemapAndGuidelines(siteUrl, username).catch((err) => {
-            console.log('[Background] Silent error:', err?.message);
-          });
-        }
+      }
+
+      // NEW: Trigger background sitemap and guidelines generation
+      const username = user?.assigned_usernames?.[0] || "";
+      if (username && items.length > 0) {
+        generateSitemapAndGuidelines(siteUrl, username).catch((err) => {
+          console.log('[Background] Silent error:', err?.message);
+        });
       }
     } catch (e) {
       console.error("Sitemap fetch error:", e);
@@ -391,167 +433,6 @@ Return a JSON object with these fields:
     }
   };
 
-  // Client-side sitemap scraping function
-  const scrapeSitemapClientSide = async (baseUrl) => {
-    const pages = [];
-    const visited = new Set();
-    
-    try {
-      // Normalize URL
-      const url = normalizeUrl(baseUrl);
-      const urlObj = new URL(url);
-      const domain = urlObj.hostname;
-      
-      // Try to fetch sitemap.xml first
-      const sitemapUrls = [
-        `${url}/sitemap.xml`,
-        `${url}/sitemap_index.xml`,
-        `${url}/sitemaps.xml`
-      ];
-
-      let sitemapFound = false;
-
-      for (const sitemapUrl of sitemapUrls) {
-        try {
-          const response = await fetch(sitemapUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; DoubleClickBot/1.0)'
-            },
-            mode: 'cors'
-          });
-
-          if (response.ok) {
-            const xml = await response.text();
-            const sitemapPages = parseSitemapXML(xml, 50);
-            if (sitemapPages.length > 0) {
-              pages.push(...sitemapPages);
-              sitemapFound = true;
-              break;
-            }
-          }
-        } catch (error) {
-          console.log(`Sitemap ${sitemapUrl} not found or error:`, error.message);
-          continue;
-        }
-      }
-
-      // If no sitemap found, try to discover pages by crawling common paths
-      if (!sitemapFound) {
-        const commonPaths = [
-          '/',
-          '/about',
-          '/contact',
-          '/blog',
-          '/news',
-          '/products',
-          '/services',
-          '/pricing',
-          '/faq',
-          '/support',
-          '/home',
-          '/index'
-        ];
-
-        for (const path of commonPaths) {
-          const fullUrl = `${url}${path}`;
-          
-          try {
-            const response = await fetch(fullUrl, {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (compatible; DoubleClickBot/1.0)'
-              },
-              mode: 'cors'
-            });
-
-            if (response.ok) {
-              pages.push({
-                url: fullUrl,
-                title: extractTitleFromUrl(fullUrl)
-              });
-              
-              if (pages.length >= 20) {
-                break;
-              }
-            }
-          } catch (error) {
-            // Ignore individual page errors
-            continue;
-          }
-        }
-      }
-
-      return pages;
-    } catch (error) {
-      console.error('Error during client-side sitemap scraping:', error);
-      throw new Error('Failed to scrape sitemap: ' + error.message);
-    }
-  };
-
-  // Helper function to parse sitemap XML
-  const parseSitemapXML = (xml, limit) => {
-    const pages = [];
-    
-    try {
-      // Simple regex-based parsing for sitemap URLs
-      const urlMatches = xml.match(/<loc>(.*?)<\/loc>/g);
-      
-      if (urlMatches) {
-        for (const match of urlMatches) {
-          const url = match.replace(/<\/?loc>/g, '').trim();
-          if (url && isValidUrl(url)) {
-            pages.push({
-              url: url,
-              title: extractTitleFromUrl(url)
-            });
-            
-            if (pages.length >= limit) {
-              break;
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error parsing sitemap XML:', error);
-    }
-
-    return pages;
-  };
-
-  // Helper function to validate URL
-  const isValidUrl = (string) => {
-    try {
-      new URL(string);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  };
-
-  // Helper function to extract title from URL
-  const extractTitleFromUrl = (url) => {
-    try {
-      const urlObj = new URL(url);
-      const pathname = urlObj.pathname;
-      
-      // Extract meaningful title from URL path
-      if (pathname === '/' || pathname === '') {
-        return 'Home';
-      }
-      
-      const segments = pathname.split('/').filter(Boolean);
-      const lastSegment = segments[segments.length - 1];
-      
-      return lastSegment
-        .replace(/[-_]/g, ' ')
-        .replace(/\.[^/.]+$/, '') // Remove file extension
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-    } catch (error) {
-      return 'Page';
-    }
-  };
-
   const handlePageSelect = async (pageUrl) => {
     setImporting(true); // Show MagicOrbLoader
     setImportEta(60);   // Set ETA
@@ -559,8 +440,10 @@ Return a JSON object with these fields:
       const normalizedUrl = normalizeUrl(pageUrl);
       console.log('[GettingStarted] Sitemap URL:', pageUrl, '→ Normalized:', normalizedUrl);
       await scrapeAndOpenEditor(normalizedUrl);
-    } finally {
-      setImporting(false); // Hide MagicOrbLoader
+      // Don't set importing to false here - let scrapeAndOpenEditor handle it
+    } catch (error) {
+      console.error('[GettingStarted] Page select error:', error);
+      setImporting(false); // Only hide loader on error
     }
   };
 
@@ -733,7 +616,7 @@ Return a JSON object with these fields:
 
                 {pages.length === 0 && !fetchingPages && !sitemapError && (
                   <div className="text-center py-8 text-slate-500">
-                    <Globe className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <Globe className="w-12 h-12 mx-auto mb-3 text-slate--%" />
                     <p className="text-sm">Enter your website URL above to fetch pages</p>
                   </div>
                 )}
