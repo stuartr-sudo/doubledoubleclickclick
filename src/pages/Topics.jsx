@@ -34,7 +34,7 @@ import { Username } from "@/api/entities";
 import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
 import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal";
 import { callPromptWebhook } from "@/api/functions";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 
 // --- Configuration ---
 const TABLE_IDS = {
