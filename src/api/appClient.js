@@ -1,29 +1,20 @@
-import { supabase, getCurrentUser } from './supabaseClient';
-
-// Export both 'app' and 'base44' (alias) to support gradual migration
+// Minimal stub client - no Supabase, no auth, just makes UI work
 export const app = {
   functions: {
     invoke: async (functionName, data) => {
-      const res = await fetch(`/api/${functionName}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data || {})
-      });
-      if (!res.ok) throw new Error(`Function ${functionName} failed`);
-      return res.json();
+      console.warn(`[stub] Function invoked: ${functionName}`, data);
+      return { success: true, data: {} };
     }
   },
   auth: {
     loginWithRedirect: (returnTo) => {
-      if (typeof window !== 'undefined') window.location.href = '/login';
+      console.warn('[stub] loginWithRedirect called');
     },
     logout: async () => {
-      await supabase.auth.signOut();
-      if (typeof window !== 'undefined') window.location.href = '/login';
+      console.warn('[stub] logout called');
     },
     updateMe: async (updates) => {
-      // Stub: return fake user until Supabase is configured
-      console.warn('[appClient] updateMe is stubbed');
+      console.warn('[stub] updateMe called', updates);
       return {
         id: 'stub-user-id',
         email: 'stub@example.com',
@@ -36,7 +27,6 @@ export const app = {
       };
     },
     me: async () => {
-      // Stub: return fake user until Supabase is configured
       return {
         id: 'stub-user-id',
         email: 'stub@example.com',
@@ -51,45 +41,30 @@ export const app = {
   },
   entities: new Proxy({}, {
     get: (target, entityName) => {
-      const tableName = entityName
-        .replace(/([A-Z])/g, '_$1')
-        .toLowerCase()
-        .replace(/^_/, '') + 's';
-      
       return {
         filter: async (filters = {}) => {
-          let query = supabase.from(tableName).select('*');
-          Object.entries(filters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) query = query.eq(key, value);
-          });
-          const { data, error } = await query;
-          if (error) throw error;
-          return data || [];
+          console.warn(`[stub] ${entityName}.filter`, filters);
+          return [];
         },
         findById: async (id) => {
-          const { data, error } = await supabase.from(tableName).select('*').eq('id', id).single();
-          if (error) throw error;
-          return data;
+          console.warn(`[stub] ${entityName}.findById`, id);
+          return null;
         },
         create: async (payload) => {
-          const { data, error } = await supabase.from(tableName).insert(payload).select().single();
-          if (error) throw error;
-          return data;
+          console.warn(`[stub] ${entityName}.create`, payload);
+          return { id: `stub-${Date.now()}`, ...payload };
         },
         update: async (id, payload) => {
-          const { data, error } = await supabase.from(tableName).update(payload).eq('id', id).select().single();
-          if (error) throw error;
-          return data;
+          console.warn(`[stub] ${entityName}.update`, id, payload);
+          return { id, ...payload };
         },
         delete: async (id) => {
-          const { error } = await supabase.from(tableName).delete().eq('id', id);
-          if (error) throw error;
+          console.warn(`[stub] ${entityName}.delete`, id);
           return true;
         },
         list: async () => {
-          const { data, error } = await supabase.from(tableName).select('*');
-          if (error) throw error;
-          return data || [];
+          console.warn(`[stub] ${entityName}.list`);
+          return [];
         }
       };
     }

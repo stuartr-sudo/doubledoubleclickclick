@@ -146,8 +146,6 @@ import InfographicExamplesAdmin from "./InfographicExamplesAdmin";
 
 import GettingStarted from "./GettingStarted";
 
-import Login from "./Login";
-
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -317,15 +315,6 @@ function _getCurrentPage(url) {
 function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
-    
-    // Bypass Layout for /login
-    if (location.pathname === '/login') {
-        return (
-            <Routes>
-                <Route path="/login" element={<Login />} />
-            </Routes>
-        );
-    }
     
     return (
         <Layout currentPageName={currentPage}>
