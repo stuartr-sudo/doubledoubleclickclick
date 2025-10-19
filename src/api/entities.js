@@ -1,234 +1,121 @@
-import { supabase } from './supabaseClient';
+import { base44 } from './base44Client';
 
-// Helper function to convert table names to entity names
-const getTableName = (entityName) => {
-  return entityName
-    .replace(/([A-Z])/g, '_$1')
-    .toLowerCase()
-    .replace(/^_/, '')
-    .replace(/s$/, '') + 's'
-}
 
-// Generic entity wrapper that maintains Base44 API compatibility
-const createEntityWrapper = (entityName) => {
-  const tableName = getTableName(entityName)
-  
-  return {
-    async filter(filters = {}, sortBy = null) {
-      let query = supabase.from(tableName).select('*')
-      
-      // Apply filters
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          if (typeof value === 'object' && value.operator) {
-            query = query[value.operator](key, value.value)
-          } else {
-            query = query.eq(key, value)
-          }
-        }
-      })
-      
-      // Apply sorting
-      if (sortBy) {
-        const { column, ascending = true } = sortBy
-        query = query.order(column, { ascending })
-      }
-      
-      const { data, error } = await query
-      if (error) throw error
-      return data
-    },
-    
-    async findById(id) {
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .eq('id', id)
-        .single()
-      
-      if (error) throw error
-      return data
-    },
-    
-    async create(data) {
-      const { data: result, error } = await supabase
-        .from(tableName)
-        .insert(data)
-        .select()
-        .single()
-      
-      if (error) throw error
-      return result
-    },
-    
-    async update(id, data) {
-      const { data: result, error } = await supabase
-        .from(tableName)
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single()
-      
-      if (error) throw error
-      return result
-    },
-    
-    async delete(id) {
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq('id', id)
-      
-      if (error) throw error
-      return true
-    },
+export const BlogPost = base44.entities.BlogPost;
 
-    // Add specific methods for certain entities
-    async list(sortBy = null) {
-      let query = supabase.from(tableName).select('*')
-      
-      if (sortBy) {
-        const { column, ascending = true } = sortBy
-        query = query.order(column, { ascending })
-      }
-      
-      const { data, error } = await query
-      if (error) throw error
-      return data
-    }
-  }
-}
+export const WebhookReceived = base44.entities.WebhookReceived;
 
-// Create all entities
-export const BlogPost = createEntityWrapper('BlogPost')
-export const WebhookReceived = createEntityWrapper('WebhookReceived')
-export const AvailablePage = createEntityWrapper('AvailablePage')
-export const YouTubeVideo = createEntityWrapper('YouTubeVideo')
-export const PromotedProduct = createEntityWrapper('PromotedProduct')
-export const ImageLibraryItem = createEntityWrapper('ImageLibraryItem')
-export const Sitemap = createEntityWrapper('Sitemap')
-export const CallToAction = createEntityWrapper('CallToAction')
-export const EmailCaptureForm = createEntityWrapper('EmailCaptureForm')
-export const CapturedEmail = createEntityWrapper('CapturedEmail')
-export const TikTokVideo = createEntityWrapper('TikTokVideo')
-export const GeneratedVideo = createEntityWrapper('GeneratedVideo')
-export const LandingPageContent = createEntityWrapper('LandingPageContent')
-export const WaitlistEntry = createEntityWrapper('WaitlistEntry')
-export const ContactMessage = createEntityWrapper('ContactMessage')
-export const Username = createEntityWrapper('Username')
-export const ScheduledPost = createEntityWrapper('ScheduledPost')
-export const Testimonial = createEntityWrapper('Testimonial')
-export const ContentVariant = createEntityWrapper('ContentVariant')
-export const IntegrationCredential = createEntityWrapper('IntegrationCredential')
-export const OnboardingWizard = createEntityWrapper('OnboardingWizard')
-export const Invoice = createEntityWrapper('Invoice')
-export const ServiceItem = createEntityWrapper('ServiceItem')
-export const VideoProject = createEntityWrapper('VideoProject')
-export const VideoScene = createEntityWrapper('VideoScene')
-export const Json2VideoTemplate = createEntityWrapper('Json2VideoTemplate')
-export const BlogCategory = createEntityWrapper('BlogCategory')
-export const BrandGuidelines = createEntityWrapper('BrandGuidelines')
-export const FeatureFlag = createEntityWrapper('FeatureFlag')
-export const EditorWorkflow = createEntityWrapper('EditorWorkflow')
-export const WorkflowRunStatus = createEntityWrapper('WorkflowRunStatus')
-export const SalesPageContent = createEntityWrapper('SalesPageContent')
-export const ProductStyleTemplate = createEntityWrapper('ProductStyleTemplate')
-export const AppProduct = createEntityWrapper('AppProduct')
-export const ShopifyPublishLog = createEntityWrapper('ShopifyPublishLog')
-export const PageOption = createEntityWrapper('PageOption')
-export const PageStyle = createEntityWrapper('PageStyle')
-export const WritingStyle = createEntityWrapper('WritingStyle')
-export const ContentEndpoint = createEntityWrapper('ContentEndpoint')
-export const WebPage = createEntityWrapper('WebPage')
-export const LlmModelLabel = createEntityWrapper('LlmModelLabel')
-export const LlmSettings = createEntityWrapper('LlmSettings')
-export const CrmCredential = createEntityWrapper('CrmCredential')
-export const WebhookPayloadTemplate = createEntityWrapper('WebhookPayloadTemplate')
-export const CustomContentTemplate = createEntityWrapper('CustomContentTemplate')
-export const TutorialVideo = createEntityWrapper('TutorialVideo')
-export const PricingFaq = createEntityWrapper('PricingFaq')
-export const OnboardingStep = createEntityWrapper('OnboardingStep')
-export const Affiliate = createEntityWrapper('Affiliate')
-export const AffiliatePack = createEntityWrapper('AffiliatePack')
-export const AppSettings = createEntityWrapper('AppSettings')
-export const AmazonProductVideo = createEntityWrapper('AmazonProductVideo')
-export const DashboardBanner = createEntityWrapper('DashboardBanner')
-export const WordPressPublishLog = createEntityWrapper('WordPressPublishLog')
-export const ImagineerJob = createEntityWrapper('ImagineerJob')
-export const InfographicVisualTypeExample = createEntityWrapper('InfographicVisualTypeExample')
-export const BrandSpecifications = createEntityWrapper('BrandSpecifications')
+export const AvailablePage = base44.entities.AvailablePage;
 
-// Add specific methods for certain entities
-BlogPost.findById = async (id) => {
-  const response = await fetch('/api/blog-posts/find', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${(await (await import('@/api/supabaseClient')).supabase.auth.getSession()).data.session?.access_token}`
-    },
-    body: JSON.stringify({ id })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to find blog post: ${response.statusText}`);
-  }
-  
-  return response.json();
-};
+export const YouTubeVideo = base44.entities.YouTubeVideo;
 
-// Add topics-specific methods to Username
-Username.addTopic = async (usernameId, topic) => {
-  const response = await fetch('/api/topics/add-keyword', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-    },
-    body: JSON.stringify({ username_id: usernameId, keyword: topic })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to add topic: ${response.statusText}`);
-  }
-  
-  return response.json();
-};
+export const PromotedProduct = base44.entities.PromotedProduct;
 
-// User entity with auth methods
-export const User = {
-  async me() {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      throw new Error('No active session');
-    }
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    return user;
-  },
+export const ImageLibraryItem = base44.entities.ImageLibraryItem;
 
-  async logout() {
-    await supabase.auth.signOut();
-  },
+export const Sitemap = base44.entities.Sitemap;
 
-  async loginWithRedirect(redirectUrl) {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl
-      }
-    });
-  },
+export const CallToAction = base44.entities.CallToAction;
 
-  async updateMe(updates) {
-    const { data, error } = await supabase.auth.updateUser({
-      data: updates
-    });
-    
-    if (error) throw error;
-    return data.user;
-  }
-};
+export const EmailCaptureForm = base44.entities.EmailCaptureForm;
 
-// Export createEntityWrapper for individual entity files
-export { createEntityWrapper }
+export const CapturedEmail = base44.entities.CapturedEmail;
+
+export const TikTokVideo = base44.entities.TikTokVideo;
+
+export const GeneratedVideo = base44.entities.GeneratedVideo;
+
+export const LandingPageContent = base44.entities.LandingPageContent;
+
+export const WaitlistEntry = base44.entities.WaitlistEntry;
+
+export const ContactMessage = base44.entities.ContactMessage;
+
+export const Username = base44.entities.Username;
+
+export const ScheduledPost = base44.entities.ScheduledPost;
+
+export const Testimonial = base44.entities.Testimonial;
+
+export const ContentVariant = base44.entities.ContentVariant;
+
+export const IntegrationCredential = base44.entities.IntegrationCredential;
+
+export const OnboardingWizard = base44.entities.OnboardingWizard;
+
+export const Invoice = base44.entities.Invoice;
+
+export const ServiceItem = base44.entities.ServiceItem;
+
+export const VideoProject = base44.entities.VideoProject;
+
+export const VideoScene = base44.entities.VideoScene;
+
+export const Json2VideoTemplate = base44.entities.Json2VideoTemplate;
+
+export const BlogCategory = base44.entities.BlogCategory;
+
+export const BrandGuidelines = base44.entities.BrandGuidelines;
+
+export const FeatureFlag = base44.entities.FeatureFlag;
+
+export const EditorWorkflow = base44.entities.EditorWorkflow;
+
+export const WorkflowRunStatus = base44.entities.WorkflowRunStatus;
+
+export const SalesPageContent = base44.entities.SalesPageContent;
+
+export const ProductStyleTemplate = base44.entities.ProductStyleTemplate;
+
+export const AppProduct = base44.entities.AppProduct;
+
+export const ShopifyPublishLog = base44.entities.ShopifyPublishLog;
+
+export const PageOption = base44.entities.PageOption;
+
+export const PageStyle = base44.entities.PageStyle;
+
+export const WritingStyle = base44.entities.WritingStyle;
+
+export const ContentEndpoint = base44.entities.ContentEndpoint;
+
+export const WebPage = base44.entities.WebPage;
+
+export const LlmModelLabel = base44.entities.LlmModelLabel;
+
+export const LlmSettings = base44.entities.LlmSettings;
+
+export const CrmCredential = base44.entities.CrmCredential;
+
+export const WebhookPayloadTemplate = base44.entities.WebhookPayloadTemplate;
+
+export const CustomContentTemplate = base44.entities.CustomContentTemplate;
+
+export const TutorialVideo = base44.entities.TutorialVideo;
+
+export const PricingFaq = base44.entities.PricingFaq;
+
+export const OnboardingStep = base44.entities.OnboardingStep;
+
+export const Affiliate = base44.entities.Affiliate;
+
+export const AffiliatePack = base44.entities.AffiliatePack;
+
+export const AppSettings = base44.entities.AppSettings;
+
+export const AmazonProductVideo = base44.entities.AmazonProductVideo;
+
+export const DashboardBanner = base44.entities.DashboardBanner;
+
+export const WordPressPublishLog = base44.entities.WordPressPublishLog;
+
+export const ImagineerJob = base44.entities.ImagineerJob;
+
+export const InfographicVisualTypeExample = base44.entities.InfographicVisualTypeExample;
+
+export const BrandSpecifications = base44.entities.BrandSpecifications;
+
+
+
+// auth sdk:
+export const User = base44.auth;

@@ -8,7 +8,7 @@ import { User } from "@/api/entities";
 import { ImageLibraryItem } from "@/api/entities";
 import { GeneratedVideo } from "@/api/entities";
 import { ImagineerJob } from "@/api/entities"; // Ensure ImagineerJob is imported as it's used
-import { supabase } from "@/api/supabaseClient";
+import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,7 +85,7 @@ import InfographicsModal from "../components/editor/InfographicsModal";
 import { buildFaqAccordionHtml } from "@/components/editor/FaqAccordionBlock";
 import { generateArticleFaqs } from "@/api/functions";
 import { findSourceAndCite } from "@/api/functions";
-// import { agentSDK } from "@/agents"; // TODO: Replace with Supabase conversation management
+import { agentSDK } from "@/agents";
 
 import ImagineerModal from "../components/editor/ImagineerModal";
 import { initiateImagineerGeneration } from "@/api/functions";
@@ -1625,8 +1625,84 @@ export default function Editor() {
   const { enabled: isAiTitleRewriteEnabled } = useFeatureFlag('ai_title_rewrite', { currentUser });
 
   const handleRewriteTitle = async () => {
-    // TODO: Replace agentSDK functionality with Supabase conversation management
-    toast.message("AI Title Rewrite feature is temporarily disabled during migration.");
+    if (!isAiTitleRewriteEnabled) {
+      toast.message("AI Title Rewrite is not enabled for your account.");
+      return;
+    }
+
+    const tokenResult = await consumeTokensForFeature('ai_title_rewrite');
+    if (!tokenResult.success) {
+      return;
+    }
+
+    setIsRewritingTitle(true);
+    try {
+      const conversation = await agentSDK.createConversation({
+        agent_name: "seo_title_rewriter",
+      });
+
+      if (!conversation?.id) {
+        throw new Error("Could not start a conversation with the AI agent.");
+      }
+
+      const truncatedContent = (content || "").substring(0, 15000);
+      const prompt = `Rewrite the blog post title to be highly optimized for SEO while remaining natural and compelling.
+Constraints:
+- Under 60 characters
+- Include the primary keyword if it appears in the content or title
+- No quotes or emojis
+- Title Case
+
+Article Content (may be empty if not provided):
+${truncatedContent || "(no article body provided, use semantic rewriting based on the current title only)"}
+
+Current Title: ${title}`;
+
+      await agentSDK.addMessage(conversation, {
+        role: "user",
+        content: prompt,
+      });
+
+      const pollTimeout = 90000;
+      const pollInterval = 2000;
+      const startTime = Date.now();
+
+      let newTitle = "";
+      let attempts = 0;
+      const maxAttempts = Math.ceil(pollTimeout / pollInterval);
+
+      while (Date.now() - startTime < pollTimeout && attempts < maxAttempts) {
+        attempts++;
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+
+        const updatedConversation = await agentSDK.getConversation(conversation.id);
+        const lastMessage = updatedConversation?.messages?.[updatedConversation.messages.length - 1];
+
+        if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || lastMessage.content)) {
+          let contentStr = lastMessage.content || "";
+          newTitle = contentStr
+            .replace(/^["']|["']$/g, "")
+            .replace(/^\*\*|\*\*$/g, "")
+            .replace(/^#+\s*/, "")
+            .replace(/\n+/g, " ")
+            .trim();
+
+          if (newTitle && newTitle.length > 5) break;
+        }
+      }
+
+      if (newTitle && newTitle.length > 5) {
+        setTitle(newTitle);
+        toast.success("AI successfully rewrote the title!");
+      } else {
+        throw new Error("AI did not generate a valid title. Please try again.");
+      }
+    } catch (error) {
+      console.error("AI title rewrite error:", error);
+      toast.error(error.message || "Failed to rewrite title.");
+    } finally {
+      setIsRewritingTitle(false);
+    }
   };
 
   const handleCiteSources = async () => {
@@ -2304,8 +2380,8 @@ export default function Editor() {
   const loadPostContent = useCallback(async (postId) => {
     const fetchPostWithRetry = async (currentPostId, attempt = 0) => {
       try {
-        const found = await BlogPost.findById(currentPostId);
-        if (!found) {
+        const found = await BlogPost.filter({ id: currentPostId });
+        if (!found || found.length === 0) {
           toast.error("Post not found");
           setTitle("");
           setContent("");
@@ -2315,7 +2391,7 @@ export default function Editor() {
           sendToPreview({ type: "set-html", html: "" });
           return;
         }
-        const post = found;
+        const post = found[0];
         setCurrentPost(post);
         setTitle(post.title || "");
         setContent(post.content || "");
@@ -2474,13 +2550,9 @@ export default function Editor() {
     try {
       if (importHtml === '1') {
         const imported = localStorage.getItem('htmlstudio_content') || "";
-        const importedTitle = localStorage.getItem('htmlstudio_title') || "";
         setContent(imported);
-        setTitle(importedTitle);
         sendToPreview({ type: "set-html", html: imported });
         localStorage.removeItem('htmlstudio_content');
-        localStorage.removeItem('htmlstudio_title');
-        localStorage.removeItem('htmlstudio_url');
       } else if (postId) {
         await loadPostContent(postId);
       } else if (webhookId) {
@@ -3039,9 +3111,55 @@ export default function Editor() {
     generatingSchemaRef.current = true;
     setIsGeneratingSchema(true);
 
-    // TODO: Replace agentSDK functionality with Supabase conversation management
-    toast.message("Schema generation feature is temporarily disabled during migration.");
-    return null;
+    const conversation = await agentSDK.createConversation({
+      agent_name: "schema_generator"
+    });
+
+    if (!conversation?.id) {
+      throw new Error("Could not start a conversation with the AI agent.");
+    }
+
+    const maxContentLength = 20000;
+    const truncatedHtml = htmlContent.substring(0, maxContentLength);
+    const prompt = `Based on the following article content, generate a comprehensive and detailed JSON-LD schema (using schema.org vocabulary) for a BlogPosting. Be as specific and thorough as possible.
+Article Title: ${postTitle}
+HTML Content:
+${truncatedHtml}`;
+
+    await agentSDK.addMessage(conversation, {
+      role: "user",
+      content: prompt
+    });
+
+    const pollTimeout = 60000;
+    const pollInterval = 3000;
+    const startTime = Date.now();
+
+    try {
+      while (Date.now() - startTime < pollTimeout) {
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+
+        const updatedConversation = await agentSDK.getConversation(conversation.id);
+        const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
+
+        if (lastMessage?.role === 'assistant' && lastMessage.is_complete) {
+          try {
+            const cleanedContent = lastMessage.
+              content.
+              replace(/^```json\s*/, '').
+              replace(/\s*```$/, '');
+            JSON.parse(cleanedContent);
+            return cleanedContent;
+          } catch (e) {
+
+          }
+        }
+      }
+      throw new Error("Schema generation timed out after 60 seconds. Please try again or publish without schema.");
+    } finally {
+      generatingSchemaRef.current = false;
+      setIsGeneratingSchema(false);
+    }
   };
 
   const savePost = async (status, options = {}) => {

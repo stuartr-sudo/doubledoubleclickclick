@@ -25,11 +25,10 @@ import { FeatureFlagProvider, useFeatureFlagData } from "@/components/providers/
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import TokenTopUpBanner from "@/components/common/TokenTopUpBanner";
 import VideoModal from "@/components/common/VideoModal";
-import TopicsOnboardingModal from "@/components/onboarding/TopicsOnboardingModal";
 import { WorkspaceProvider, WorkspaceContext } from "@/components/providers/WorkspaceProvider";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import usePageTutorial from '@/components/hooks/usePageTutorial';
-import { useAuth } from "@/hooks/useAuth";
+import { base44 } from "@/api/base44Client";
 import { Username } from "@/api/entities";
 import { Sitemap } from "@/api/entities";
 import { TemplateProvider } from '@/components/providers/TemplateProvider'; // Added TemplateProvider
@@ -352,15 +351,14 @@ const retry = async (fn, retries = 3, delay = 500) => {
 function LayoutContent({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, loading: isUserLoading, signOut, updateProfile } = useAuth();
+  const [user, setUser] = useState(undefined); // undefined: not checked, null: logged out
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [navReady, setNavReady] = useState(false); // NEW: Track when navigation is ready to render
   const [showTokenHelpVideo, setShowTokenHelpVideo] = useState(false);
   const [tokenHelpVideoUrl, setTokenHelpVideoUrl] = useState("");
-  const [showTopicsOnboarding, setShowTopicsOnboarding] = useState(false);
-  const [topicsOnboardingUsername, setTopicsOnboardingUsername] = useState(null);
 
   // NEW: Page tutorial system
   const { showVideo: showPageTutorial, videoUrl: pageTutorialUrl, videoTitle: pageTutorialTitle, closeVideo: closePageTutorial } = usePageTutorial(currentPageName);
@@ -382,10 +380,73 @@ function LayoutContent({ children, currentPageName }) {
     return Number.isFinite(n) ? n : 0;
   };
 
-  // Update superadmin status when user changes
-  useEffect(() => {
-    setIsSuperadmin(!!user?.is_superadmin);
-  }, [user]);
+  // NEW: helper to ensure a username exists for current user
+  const ensureUsernameAssigned = async (currentUser) => {
+    if (!currentUser) return currentUser;
+    if (Array.isArray(currentUser.assigned_usernames) && currentUser.assigned_usernames.length > 0) {
+      return currentUser;
+    }
+
+    // CHANGED: Build candidate from full_name (not random). Fallback to email local part.
+    const baseFromFullName = (currentUser.full_name || "")
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 24);
+
+    const emailLocal = ((currentUser.email || "user").split("@")[0] || "user")
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 24);
+
+    const candidate = baseFromFullName || emailLocal || "user";
+
+    // CHANGED: Always call backend function to guarantee uniqueness + RLS-safe creation
+    try {
+      const res = await base44.functions.invoke("autoAssignUsername", {
+        preferred_user_name: candidate,
+        display_name: currentUser.full_name || candidate
+      });
+      const uniqueName = res?.data?.username || candidate;
+      const updated = await base44.auth.updateMe({ assigned_usernames: [uniqueName] });
+      return updated;
+    } catch (_e) {
+      // If the backend function fails for any reason, return the original user
+      // We don't want to block the user from logging in just because username assignment failed.
+      console.error("Failed to auto-assign username:", _e);
+      return currentUser;
+    }
+  };
+
+  // NEW: helper to ensure token_balance is persisted (20 on first login) – idempotent
+  const ensureWelcomeTokens = async (currentUser) => {
+    if (!currentUser) return currentUser;
+    const marker = "welcome_seeded_20";
+    const processed = Array.isArray(currentUser.processed_stripe_payments)
+      ? currentUser.processed_stripe_payments
+      : [];
+    const alreadySeeded = processed.includes(marker);
+
+    const numericBalance =
+      currentUser.token_balance === undefined || currentUser.token_balance === null
+        ? NaN
+        : Number(currentUser.token_balance);
+
+    // seed only if not yet seeded and balance is not positive
+    if (!alreadySeeded && (!Number.isFinite(numericBalance) || numericBalance <= 0)) {
+      const updated = await base44.auth.updateMe({
+        token_balance: 20,
+        processed_stripe_payments: [...processed, marker],
+      });
+      return updated;
+    }
+    return currentUser;
+  };
 
   // Prevent Editor remounts while publishing (blocks pushState/replaceState to Editor)
   useEffect(() => {
@@ -445,11 +506,35 @@ function LayoutContent({ children, currentPageName }) {
     history.pushState = guard(originalPush);
     history.replaceState = guard(originalReplace);
 
-    // Note: Removed problematic window.location assignment code that was causing errors
+    // NEW: Intercept hard navigations (assign/replace) to Editor and convert to SPA replaceState
+    const origAssign = window.location.assign.bind(window.location);
+    const origLocReplace = window.location.replace.bind(window.location);
+
+    const interceptLocation = (origFn) => function (url) {
+      try {
+        const nextUrl = typeof url === 'string' ? url : (url ? String(url) : '');
+        if (nextUrl && /Editor/i.test(nextUrl)) {
+          // If trying to go to Editor via hard navigation, replace the URL without reload
+          history.replaceState({}, '', nextUrl);
+          // Do not dispatch any synthetic events to avoid remount; Router will keep current instance
+          safeDebug('Intercepted hard navigation to Editor; replaced URL without reload.');
+          return;
+        }
+      } catch (e) {
+        console.error("Error intercepting window.location:", e);
+        // fall through to original
+      }
+      return origFn.apply(window.location, arguments);
+    };
+
+    window.location.assign = interceptLocation(origAssign);
+    window.location.replace = interceptLocation(origLocReplace);
 
     return () => {
       history.pushState = originalPush;
       history.replaceState = originalReplace;
+      window.location.assign = origAssign;
+      window.location.replace = origLocReplace;
     };
   }, [currentPageName]);
 
@@ -475,109 +560,94 @@ function LayoutContent({ children, currentPageName }) {
     }
   }, [location.search, navigate]);
 
-  // Handle onboarding redirection logic
+  // Fetch user only once when the layout mounts for the first time.
+  // User session persists across page navigations.
   useEffect(() => {
-    if (!user || isUserLoading) return;
-
-    setIsRedirecting(false);
-    setNavReady(false); // Reset nav ready state
-
-    try {
-      // --- UPDATED ONBOARDING REDIRECTION LOGIC ---
-      const hasCompletedWelcome = user.completed_tutorial_ids?.includes("welcome_onboarding");
-      const hasCompletedGettingStarted = user.completed_tutorial_ids?.includes("getting_started_scrape");
-
-      // Define pages that are exceptions to the redirection rules
-      const redirectExceptions = ['post-payment', 'AccountSettings', 'Contact', 'Affiliate'];
-
-      if (!redirectExceptions.includes(currentPageName)) {
-        // NEW SCENARIO: User hasn't completed welcome → Welcome page
-        if (!hasCompletedWelcome && currentPageName !== 'Welcome') {
-          setIsRedirecting(true);
-          navigate(createPageUrl('Welcome'));
-          return;
-        }
-        
-        // NEW SCENARIO: User completed welcome but not getting started → GettingStarted page
-        if (hasCompletedWelcome && !hasCompletedGettingStarted && currentPageName !== 'GettingStarted') {
-          setIsRedirecting(true);
-          navigate(createPageUrl('GettingStarted'));
-          return;
-        }
-      }
-      
-      // Scenario: Fully onboarded user tries to access Welcome or GettingStarted → redirect to Dashboard
-      if (hasCompletedWelcome && hasCompletedGettingStarted) {
-        if (currentPageName === 'Welcome' || currentPageName === 'GettingStarted') {
-          setIsRedirecting(true);
-          navigate(createPageUrl('Dashboard'));
-          return;
-        }
-      }
-
-      // If we reach here, no redirect is needed, so navigation can be shown
-      setNavReady(true);
-
-    } catch (err) {
-      console.error("Error in onboarding redirection:", err);
-      setNavReady(true); // Show navigation even on error
-    }
-  }, [user, currentPageName, navigate]);
-
-  // Topics Onboarding Detection and Modal Display
-  useEffect(() => {
-    if (!user || isUserLoading || !navReady) return;
-
-    const checkTopicsOnboarding = async () => {
+    const fetchUserAndRedirect = async () => {
+      setIsUserLoading(true);
+      setIsRedirecting(false);
+      setNavReady(false); // Reset nav ready state
       try {
-        // Get the selected username from workspace context
-        const workspaceData = localStorage.getItem('workspace_data');
-        const selectedUsername = workspaceData ? JSON.parse(workspaceData).selectedUsername : null;
-        
-        if (!selectedUsername) return;
+        // MODIFIED: Use the new retry helper to make the user fetch more robust
+        const fetchedUser = await retry(() => User.me());
+        setUser(fetchedUser);
+        setIsSuperadmin(!!fetchedUser?.is_superadmin);
 
-        // Check if user has completed topics onboarding for this username
-        const hasCompleted = await User.hasCompletedTopicsOnboarding(selectedUsername);
-        
-        if (!hasCompleted) {
-          // Show Topics Onboarding Modal
-          window.dispatchEvent(new CustomEvent('showTopicsOnboarding', { 
-            detail: { username: selectedUsername } 
-          }));
+        // --- UPDATED ONBOARDING REDIRECTION LOGIC ---
+        const hasCompletedWelcome = fetchedUser.completed_tutorial_ids?.includes("welcome_onboarding");
+        const hasCompletedGettingStarted = fetchedUser.completed_tutorial_ids?.includes("getting_started_scrape");
+
+        // Define pages that are exceptions to the redirection rules
+        const redirectExceptions = ['post-payment', 'AccountSettings', 'Contact', 'Affiliate'];
+
+        if (!redirectExceptions.includes(currentPageName)) {
+          // NEW SCENARIO: User hasn't completed welcome → Welcome page
+          if (!hasCompletedWelcome && currentPageName !== 'Welcome') {
+            setIsRedirecting(true);
+            navigate(createPageUrl('Welcome'));
+            return;
+          }
+          
+          // NEW SCENARIO: User completed welcome but not getting started → GettingStarted page
+          if (hasCompletedWelcome && !hasCompletedGettingStarted && currentPageName !== 'GettingStarted') {
+            setIsRedirecting(true);
+            navigate(createPageUrl('GettingStarted'));
+            return;
+          }
         }
-      } catch (error) {
-        console.error('Error checking topics onboarding:', error);
+        
+        // Scenario: Fully onboarded user tries to access Welcome or GettingStarted → redirect to Dashboard
+        if (hasCompletedWelcome && hasCompletedGettingStarted) {
+          if (currentPageName === 'Welcome' || currentPageName === 'GettingStarted') {
+            setIsRedirecting(true);
+            navigate(createPageUrl('Dashboard'));
+            return;
+          }
+        }
+
+        // If we reach here, no redirect is needed, so navigation can be shown
+        setNavReady(true);
+
+      } catch (err) { // This will now catch the error only after all retries have failed
+        console.error("Failed to fetch user information after multiple attempts:", err);
+        setUser(null);
+        setIsSuperadmin(false);
+        setNavReady(true); // Show navigation even for logged-out state
+      } finally {
+        setIsUserLoading(false);
+        // Do NOT set setIsRedirecting(false) here, as it might happen before the navigate fully takes effect.
+        // The new page component will handle its own loading state.
       }
     };
+    fetchUserAndRedirect();
+  }, [location.pathname, navigate, currentPageName]);
 
-    checkTopicsOnboarding();
-  }, [user, navReady]);
+  // NEW: Self-heal effect right after user is fetched – fixes race where username/tokens not set yet
+  React.useEffect(() => {
+    let cancelled = false;
+    const runFixes = async () => {
+      if (!user) return;
 
-  // Listen for Topics Onboarding Modal events
-  useEffect(() => {
-    const handleShowTopicsOnboarding = (event) => {
-      setTopicsOnboardingUsername(event.detail.username);
-      setShowTopicsOnboarding(true);
+      // 1) Ensure a brand username exists
+      let u = await ensureUsernameAssigned(user);
+      // 2) Ensure real token balance is persisted (20) for first-time accounts
+      u = await ensureWelcomeTokens(u);
+
+      if (!cancelled && u && u.id === user.id) {
+        // Update in-memory user so header/Token Top Up reflect the true balance immediately
+        setUser(u);
+        // Notify listeners that rely on token balance/usernames
+        try {
+          window.dispatchEvent(new CustomEvent("userUpdated", { detail: { user: u } }));
+          if (typeof u.token_balance === "number") {
+            window.dispatchEvent(new CustomEvent("tokenBalanceUpdated", { detail: { newBalance: u.token_balance } }));
+          }
+        } catch (_) {}
+      }
     };
-
-    window.addEventListener('showTopicsOnboarding', handleShowTopicsOnboarding);
-    
-    return () => {
-      window.removeEventListener('showTopicsOnboarding', handleShowTopicsOnboarding);
-    };
-  }, []);
-
-  // Notify listeners when user changes
-  useEffect(() => {
-    if (user) {
-      try {
-        window.dispatchEvent(new CustomEvent("userUpdated", { detail: { user } }));
-        if (typeof user.token_balance === "number") {
-          window.dispatchEvent(new CustomEvent("tokenBalanceUpdated", { detail: { newBalance: user.token_balance } }));
-        }
-      } catch (_) {}
-    }
-  }, [user]);
+    runFixes();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   // Removed: Firecrawl webhook notifier effect (was causing duplicate sends)
   // Webhook is now called ONLY from TopicsOnboardingModal.handleComplete
@@ -586,14 +656,13 @@ function LayoutContent({ children, currentPageName }) {
   useEffect(() => {
     const loadTokenHelpVideo = async () => {
       try {
-        const settings = await AppSettings.filter();
+        const settings = await AppSettings.list();
         const videoSetting = settings.find(s => s.key === "token_help_video");
         if (videoSetting?.value) {
           setTokenHelpVideoUrl(videoSetting.value);
         }
       } catch (error) {
         console.error("Failed to load token help video:", error);
-        // Silently fail - this is not critical functionality
       }
     };
     loadTokenHelpVideo();
@@ -602,10 +671,15 @@ function LayoutContent({ children, currentPageName }) {
   // Listen for token balance updates
   useEffect(() => {
     const handleTokenBalanceUpdate = (event) => {
-      if (event.detail && typeof event.detail.newBalance === 'number' && user?.id) {
-        // Update user profile in Supabase when token balance changes
-        updateProfile({ token_balance: event.detail.newBalance }).catch(error => {
-          console.error('Error updating token balance:', error);
+      if (event.detail && typeof event.detail.newBalance === 'number') {
+        setUser((prevUser) => {
+          if (prevUser) {
+            return {
+              ...prevUser,
+              token_balance: event.detail.newBalance
+            };
+          }
+          return prevUser;
         });
       }
     };
@@ -623,7 +697,7 @@ function LayoutContent({ children, currentPageName }) {
   });
 
   const handleLogout = async () => {
-    await signOut();
+    await User.logout();
     window.location.href = '/';
   };
 
@@ -644,20 +718,7 @@ function LayoutContent({ children, currentPageName }) {
           <p className="text-slate-600 text-lg font-medium">Loading your workspace...</p>
         </div>
       </div>);
-  }
 
-  // Authentication guard - redirect to login if no user
-  if (!isUserLoading && !user) {
-    console.log('No authenticated user found, redirecting to login');
-    navigate('/login');
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-pulse mx-auto mb-4"></div>
-          <p className="text-slate-600 text-lg font-medium">Redirecting to login...</p>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -872,7 +933,7 @@ function LayoutContent({ children, currentPageName }) {
 
               <h2 className="text-xl font-semibold text-slate-800">Please Log In</h2>
               <p className="text-slate-600 mt-2 mb-4">You need to be authenticated to access this page.</p>
-              <Button onClick={() => window.location.href = '/login'}>
+              <Button onClick={() => User.loginWithRedirect(window.location.href)}>
                 Log In
               </Button>
             </motion.div> :
@@ -904,17 +965,6 @@ function LayoutContent({ children, currentPageName }) {
         onClose={closePageTutorial}
         videoUrl={pageTutorialUrl}
         title={pageTutorialTitle}
-      />
-
-      {/* Topics Onboarding Modal */}
-      <TopicsOnboardingModal
-        isOpen={showTopicsOnboarding}
-        onClose={() => setShowTopicsOnboarding(false)}
-        username={topicsOnboardingUsername}
-        onCompleted={() => {
-          setShowTopicsOnboarding(false);
-          setTopicsOnboardingUsername(null);
-        }}
       />
 
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
