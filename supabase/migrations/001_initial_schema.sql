@@ -53,8 +53,13 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_feature_flags_name ON public.feature_flags(name);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON public.user_profiles(email);
+
 -- Seed initial feature flags
-INSERT INTO public.feature_flags (name, token_cost, enabled_globally) VALUES
+INSERT INTO public.feature_flags (name, token_cost, enabled_globally) 
+SELECT name, token_cost, enabled_globally FROM (VALUES
     ('ai_rewriter', 2, true),
     ('ai_seo', 3, true),
     ('ai_faq', 2, true),
@@ -75,7 +80,8 @@ INSERT INTO public.feature_flags (name, token_cost, enabled_globally) VALUES
     ('tiktok_import', 1, true),
     ('amazon_import', 1, true),
     ('sitemap_scraper', 1, true)
-ON CONFLICT (name) DO NOTHING;
+) AS t(name, token_cost, enabled_globally)
+WHERE NOT EXISTS (SELECT 1 FROM public.feature_flags WHERE feature_flags.name = t.name);
 
 -- Enable RLS (but allow all for now - we'll tighten later)
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
