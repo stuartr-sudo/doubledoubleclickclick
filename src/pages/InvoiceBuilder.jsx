@@ -10,7 +10,7 @@ import { createPageUrl } from "@/utils";
 import { createInvoiceCheckoutSession } from "@/api/functions";
 import { Link as LinkIcon, ExternalLink, Copy, Check, Loader2, Mail, X } from "lucide-react";
 // import { getGmailStatus } from "@/api/functions/getGmailStatus"; // TODO: Implement Gmail status function
-import { sendTestEmail } from "@/api/functions/sendTestEmail";
+// import { sendTestEmail } from "@/api/functions/sendTestEmail"; // TODO: Implement send test email function
 import { Input } from "@/components/ui/input";
 import { User } from "@/api/entities"; // NEW IMPORT
 
@@ -244,15 +244,9 @@ export default function InvoiceBuilder() {
   };
 
   const handleSendTestEmail = async () => {
+    // TODO: Implement send test email function
     setSendingTest(true);
-    setGmailMsg("");
-    const to = (testEmail || invoice?.customer_email || "").trim();
-    const { data } = await sendTestEmail({ to: to || undefined });
-    if (data?.success) {
-      setGmailMsg(`Test email sent to ${data?.to || to || "recipient"}.`);
-    } else {
-      setGmailMsg(data?.error || "Failed to send test email.");
-    }
+    setGmailMsg("Test email functionality is temporarily disabled during migration.");
     setSendingTest(false);
   };
 
