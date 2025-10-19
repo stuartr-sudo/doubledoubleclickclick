@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Music, Loader2, Copy, ExternalLink, Download } from "lucide-react";
 import { toast } from "sonner";
 
-import { generateSunoMusic } from "@/api/functions/generateSunoMusic";
+// import { generateSunoMusic } from "@/api/functions/generateSunoMusic"; // TODO: Implement Suno music generation
 import { getSunoStatus } from "@/api/functions";
 
 export default function SunoStudio() {
@@ -90,15 +90,10 @@ export default function SunoStudio() {
       if (negativeTags.trim()) payload.negativeTags = negativeTags.trim();
       if (callBackUrl.trim()) payload.callBackUrl = callBackUrl.trim();
 
-      const { data } = await generateSunoMusic(payload);
-      if (!data?.taskId) {
-        setIsGenerating(false);
-        toast.error(data?.error || "No taskId returned.");
-        return;
-      }
-      setTaskId(data.taskId);
-      setStatusText("Task submitted");
-      startPolling(data.taskId);
+      // TODO: Implement Suno music generation
+      toast.error("Suno music generation is temporarily disabled during migration.");
+      setIsGenerating(false);
+      return;
     } catch (e) {
       setIsGenerating(false);
       setStatusText("");
