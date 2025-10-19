@@ -842,7 +842,7 @@ function LayoutContent({ children, currentPageName }) {
                     </DropdownMenuContent>
                   </DropdownMenu> :
 
-                <NavLink href="#" onClick={() => User.loginWithRedirect(window.location.href)}>
+                <NavLink href={createPageUrl('login')}>
                     Log In
                   </NavLink>
               ) : (
@@ -909,7 +909,7 @@ function LayoutContent({ children, currentPageName }) {
 
               <h2 className="text-xl font-semibold text-slate-800">Please Log In</h2>
               <p className="text-slate-600 mt-2 mb-4">You need to be authenticated to access this page.</p>
-              <Button onClick={() => User.loginWithRedirect(window.location.href)}>
+              <Button onClick={() => navigate('/login')}>
                 Log In
               </Button>
             </motion.div> :

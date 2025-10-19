@@ -140,12 +140,11 @@ export const base44 = {
     },
 
     async loginWithRedirect(redirectUrl) {
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl
-        }
-      });
+      // Route to email/password login page instead of OAuth
+      if (typeof window !== 'undefined') {
+        const target = redirectUrl && redirectUrl.includes('/login') ? redirectUrl : '/login';
+        window.location.href = target;
+      }
     },
 
     updateMe: async (updates) => {

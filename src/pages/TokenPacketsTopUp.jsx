@@ -133,7 +133,7 @@ export default function TokenPacketsTopUp() {
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Please Log In</h2>
           <p className="text-slate-600 mb-6">You need to be logged in to purchase token packets.</p>
-          <Button onClick={() => User.loginWithRedirect(window.location.href)}>
+          <Button onClick={() => navigate('/login')}>
             Log In
           </Button>
         </div>
