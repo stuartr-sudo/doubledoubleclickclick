@@ -131,101 +131,67 @@ const NavLink = ({ href, active, children, isMobile = false }) =>
 // The Gated components now must be defined outside the main component that uses them
 // because they rely on the useFeatureFlag hook from the provider context.
 const GatedDropdownMenuItem = ({ item, user, isSuperadmin }) => {
-  // This component wraps a dropdown menu item and checks its feature flag
-  const { enabled } = useFeatureFlag(item.featureFlag, {
-    currentUser: user,
-    defaultEnabled: false
-  });
-
-  // Check for superAdmin requirement after calling the hook
+  // SIMPLIFIED: No feature flag checks, just show everything
+  // Check for superAdmin requirement
   if (item.requireSuperAdmin && !(user?.is_superadmin || user?.role === 'admin')) {
     return null;
   }
 
-  // Only render if featureFlag is not defined or is enabled
-  if (!item.featureFlag || enabled) {
-    return (
-      <DropdownMenuItem asChild>
-        <Link to={createPageUrl(item.href)} className="flex items-center gap-2">
-          <item.icon className="w-4 h-4 text-slate-500" />
-          <span>{item.name}</span>
-        </Link>
-      </DropdownMenuItem>);
-
-  }
-  return null;
+  return (
+    <DropdownMenuItem asChild>
+      <Link to={createPageUrl(item.href)} className="flex items-center gap-2">
+        <item.icon className="w-4 h-4 text-slate-500" />
+        <span>{item.name}</span>
+      </Link>
+    </DropdownMenuItem>
+  );
 };
 
 const GatedMobileNavLink = ({ item, currentPageName, user, isSuperadmin }) => {
-  // This component wraps a mobile nav link and checks its feature flag
-  const { enabled } = useFeatureFlag(item.featureFlag, {
-    currentUser: user,
-    defaultEnabled: false
-  });
-
-  // Check for superAdmin requirement after calling the hook
+  // SIMPLIFIED: No feature flag checks, just show everything
+  // Check for superAdmin requirement
   if (item.requireSuperAdmin && !(user?.is_superadmin || user?.role === 'admin')) {
     return null;
   }
 
-  // Only render if featureFlag is not defined or is enabled
-  if (!item.featureFlag || enabled) {
-    return (
-      <NavLink href={createPageUrl(item.href)} active={currentPageName === item.href} isMobile>
-        <item.icon className="w-4 h-4 mr-2 text-slate-600" />
-        <span>{item.name}</span>
-      </NavLink>);
-
-  }
-  return null;
+  return (
+    <NavLink href={createPageUrl(item.href)} active={currentPageName === item.href} isMobile>
+      <item.icon className="w-4 h-4 mr-2 text-slate-600" />
+      <span>{item.name}</span>
+    </NavLink>
+  );
 };
 
 // Component to handle top-level nav item with feature flag
 const GatedNavItem = ({ item, currentPageName, user }) => {
-  const { enabled } = useFeatureFlag(item.featureFlag, {
-    currentUser: user,
-    defaultEnabled: false
-  });
-
-  // Check for superAdmin requirement after calling the hook
+  // SIMPLIFIED: No feature flag checks, just show everything
+  // Check for superAdmin requirement
   if (item.requireSuperAdmin && !(user?.is_superadmin || user?.role === 'admin')) {
     return null;
   }
 
-  // Only render if featureFlag is not defined or is enabled
-  if (!item.featureFlag || enabled) {
-    return (
-      <NavLink key={item.name} href={createPageUrl(item.href)} active={currentPageName === item.href}>
-        <item.icon className="w-4 h-4 mr-2 text-slate-600" />
-        {item.name}
-      </NavLink>);
-
-  }
-  return null;
+  return (
+    <NavLink key={item.name} href={createPageUrl(item.href)} active={currentPageName === item.href}>
+      <item.icon className="w-4 h-4 mr-2 text-slate-600" />
+      {item.name}
+    </NavLink>
+  );
 };
 
 // Component to handle mobile nav item with feature flag  
 const GatedMobileNavItem = ({ item, currentPageName, user }) => {
-  const { enabled } = useFeatureFlag(item.featureFlag, {
-    currentUser: user,
-    defaultEnabled: false
-  });
-
-  // Check for superAdmin requirement after calling the hook
+  // SIMPLIFIED: No feature flag checks, just show everything
+  // Check for superAdmin requirement
   if (item.requireSuperAdmin && !(user?.is_superadmin || user?.role === 'admin')) {
     return null;
   }
 
-  // Only render if featureFlag is not defined or is enabled
-  if (!item.featureFlag || enabled) {
-    return (
-      <NavLink key={item.name} href={createPageUrl(item.href)} active={currentPageName === item.href} isMobile>
-        <item.icon className="w-4 h-4 mr-2 text-slate-600" />
-        {item.name}
-      </NavLink>);
-
-  }
-  return null;
+  return (
+    <NavLink key={item.name} href={createPageUrl(item.href)} active={currentPageName === item.href} isMobile>
+      <item.icon className="w-4 h-4 mr-2 text-slate-600" />
+      {item.name}
+    </NavLink>
+  );
 };
 
 // NEW: Component to handle dropdown category with feature flag
