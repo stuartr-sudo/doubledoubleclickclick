@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from './supabaseClient';
 
 // Helper function to convert table names to entity names
 const getTableName = (entityName) => {
@@ -18,35 +18,36 @@ const createEntityWrapper = (entityName) => {
       let query = supabase.from(tableName).select('*')
       
       // Apply filters
-      if (filters && typeof filters === 'object') {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== null && value !== undefined) {
-            if (Array.isArray(value)) {
-              query = query.in(key, value)
-            } else {
-              query = query.eq(key, value)
-            }
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (typeof value === 'object' && value.operator) {
+            query = query[value.operator](key, value.value)
+          } else {
+            query = query.eq(key, value)
           }
-        })
-      }
+        }
+      })
       
       // Apply sorting
       if (sortBy) {
-        if (sortBy.startsWith('-')) {
-          query = query.order(sortBy.substring(1), { ascending: false })
-        } else {
-          query = query.order(sortBy, { ascending: true })
-        }
+        const { column, ascending = true } = sortBy
+        query = query.order(column, { ascending })
       }
       
       const { data, error } = await query
+      if (error) throw error
+      return data
+    },
+    
+    async findById(id) {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('id', id)
+        .single()
       
-      if (error) {
-        console.error(`Error fetching ${entityName}:`, error);
-        throw new Error(`Failed to fetch ${entityName}: ${error.message}`)
-      }
-      
-      return data || []
+      if (error) throw error
+      return data
     },
     
     async create(data) {
@@ -56,10 +57,7 @@ const createEntityWrapper = (entityName) => {
         .select()
         .single()
       
-      if (error) {
-        throw new Error(`Failed to create ${entityName}: ${error.message}`)
-      }
-      
+      if (error) throw error
       return result
     },
     
@@ -71,10 +69,7 @@ const createEntityWrapper = (entityName) => {
         .select()
         .single()
       
-      if (error) {
-        throw new Error(`Failed to update ${entityName}: ${error.message}`)
-      }
-      
+      if (error) throw error
       return result
     },
     
@@ -84,67 +79,29 @@ const createEntityWrapper = (entityName) => {
         .delete()
         .eq('id', id)
       
-      if (error) {
-        throw new Error(`Failed to delete ${entityName}: ${error.message}`)
-      }
-      
-      return { success: true }
+      if (error) throw error
+      return true
     },
-    
-    async findById(id) {
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .eq('id', id)
-        .single()
+
+    // Add specific methods for certain entities
+    async list(sortBy = null) {
+      let query = supabase.from(tableName).select('*')
       
-      if (error) {
-        throw new Error(`Failed to find ${entityName}: ${error.message}`)
+      if (sortBy) {
+        const { column, ascending = true } = sortBy
+        query = query.order(column, { ascending })
       }
       
+      const { data, error } = await query
+      if (error) throw error
       return data
     }
   }
 }
 
-// Export all entities with Base44-compatible interface
+// Create all entities
 export const BlogPost = createEntityWrapper('BlogPost')
 export const WebhookReceived = createEntityWrapper('WebhookReceived')
-
-// Add missing functions that the Editor expects
-WebhookReceived.update = async (id, updates) => {
-  const response = await fetch('/api/webhooks?action=update', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-    },
-    body: JSON.stringify({ id, updates })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to update webhook: ${response.statusText}`);
-  }
-  
-  return response.json();
-};
-
-WebhookReceived.filter = async (filters = {}, sortBy = null) => {
-  const response = await fetch('/api/webhooks?action=filter', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-    },
-    body: JSON.stringify({ filters, sortBy })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to filter webhooks: ${response.statusText}`);
-  }
-  
-  return response.json();
-};
 export const AvailablePage = createEntityWrapper('AvailablePage')
 export const YouTubeVideo = createEntityWrapper('YouTubeVideo')
 export const PromotedProduct = createEntityWrapper('PromotedProduct')
@@ -159,24 +116,6 @@ export const LandingPageContent = createEntityWrapper('LandingPageContent')
 export const WaitlistEntry = createEntityWrapper('WaitlistEntry')
 export const ContactMessage = createEntityWrapper('ContactMessage')
 export const Username = createEntityWrapper('Username')
-
-// Add topics-specific methods to Username
-Username.addTopic = async (usernameId, topic) => {
-  const response = await fetch('/api/topics/add-keyword', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-    },
-    body: JSON.stringify({ username_id: usernameId, keyword: topic })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to add topic: ${response.statusText}`);
-  }
-  
-  return response.json();
-};
 export const ScheduledPost = createEntityWrapper('ScheduledPost')
 export const Testimonial = createEntityWrapper('Testimonial')
 export const ContentVariant = createEntityWrapper('ContentVariant')
@@ -219,8 +158,77 @@ export const ImagineerJob = createEntityWrapper('ImagineerJob')
 export const InfographicVisualTypeExample = createEntityWrapper('InfographicVisualTypeExample')
 export const BrandSpecifications = createEntityWrapper('BrandSpecifications')
 
-// Export User from auth hook for backwards compatibility
-export { User } from '../hooks/useAuth.js'
+// Add specific methods for certain entities
+BlogPost.findById = async (id) => {
+  const response = await fetch('/api/blog-posts/find', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${(await (await import('@/api/supabaseClient')).supabase.auth.getSession()).data.session?.access_token}`
+    },
+    body: JSON.stringify({ id })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to find blog post: ${response.statusText}`);
+  }
+  
+  return response.json();
+};
+
+// Add topics-specific methods to Username
+Username.addTopic = async (usernameId, topic) => {
+  const response = await fetch('/api/topics/add-keyword', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+    },
+    body: JSON.stringify({ username_id: usernameId, keyword: topic })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to add topic: ${response.statusText}`);
+  }
+  
+  return response.json();
+};
+
+// User entity with auth methods
+export const User = {
+  async me() {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      throw new Error('No active session');
+    }
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
+  },
+
+  async logout() {
+    await supabase.auth.signOut();
+  },
+
+  async loginWithRedirect(redirectUrl) {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl
+      }
+    });
+  },
+
+  async updateMe(updates) {
+    const { data, error } = await supabase.auth.updateUser({
+      data: updates
+    });
+    
+    if (error) throw error;
+    return data.user;
+  }
+};
 
 // Export createEntityWrapper for individual entity files
 export { createEntityWrapper }
