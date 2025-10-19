@@ -506,35 +506,11 @@ function LayoutContent({ children, currentPageName }) {
     history.pushState = guard(originalPush);
     history.replaceState = guard(originalReplace);
 
-    // NEW: Intercept hard navigations (assign/replace) to Editor and convert to SPA replaceState
-    const origAssign = window.location.assign.bind(window.location);
-    const origLocReplace = window.location.replace.bind(window.location);
-
-    const interceptLocation = (origFn) => function (url) {
-      try {
-        const nextUrl = typeof url === 'string' ? url : (url ? String(url) : '');
-        if (nextUrl && /Editor/i.test(nextUrl)) {
-          // If trying to go to Editor via hard navigation, replace the URL without reload
-          history.replaceState({}, '', nextUrl);
-          // Do not dispatch any synthetic events to avoid remount; Router will keep current instance
-          safeDebug('Intercepted hard navigation to Editor; replaced URL without reload.');
-          return;
-        }
-      } catch (e) {
-        console.error("Error intercepting window.location:", e);
-        // fall through to original
-      }
-      return origFn.apply(window.location, arguments);
-    };
-
-    window.location.assign = interceptLocation(origAssign);
-    window.location.replace = interceptLocation(origLocReplace);
+    // Removed problematic window.location override code that was causing crashes
 
     return () => {
       history.pushState = originalPush;
       history.replaceState = originalReplace;
-      window.location.assign = origAssign;
-      window.location.replace = origLocReplace;
     };
   }, [currentPageName]);
 
