@@ -30,8 +30,21 @@ export const app = {
       if (typeof window !== 'undefined') window.location.href = '/login';
     },
     logout: async () => {
-      await supabase.auth.signOut();
-      if (typeof window !== 'undefined') window.location.href = '/login';
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error('Logout error:', error);
+        }
+      } catch (err) {
+        console.error('Logout exception:', err);
+      } finally {
+        // Clear local storage and redirect regardless of error
+        if (typeof window !== 'undefined') {
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.href = '/login';
+        }
+      }
     },
     updateMe: async (updates) => {
       const user = await getCurrentUser();
