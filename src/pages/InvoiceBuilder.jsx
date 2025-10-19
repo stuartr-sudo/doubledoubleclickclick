@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { createInvoiceCheckoutSession } from "@/api/functions";
 import { Link as LinkIcon, ExternalLink, Copy, Check, Loader2, Mail, X } from "lucide-react";
-import { getGmailStatus } from "@/api/functions/getGmailStatus";
+// import { getGmailStatus } from "@/api/functions/getGmailStatus"; // TODO: Implement Gmail status function
 import { sendTestEmail } from "@/api/functions/sendTestEmail";
 import { Input } from "@/components/ui/input";
 import { User } from "@/api/entities"; // NEW IMPORT
@@ -118,15 +118,10 @@ export default function InvoiceBuilder() {
 
   useEffect(() => {
     const loadGmailStatus = async () => {
+      // TODO: Implement Gmail status function
       setGmailLoading(true);
-      const { data } = await getGmailStatus();
-      setGmailConnected(!!data?.connected);
-      if (data?.connected) {
-        setGmailMsg("Connected to Gmail.");
-      } else {
-        const list = Array.isArray(data?.missing) ? data.missing.join(", ") : "Unknown";
-        setGmailMsg(`Not connected. Missing: ${list}`);
-      }
+      setGmailConnected(false);
+      setGmailMsg("Gmail integration temporarily disabled during migration.");
       setGmailLoading(false);
     };
     loadGmailStatus();
