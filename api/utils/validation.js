@@ -39,7 +39,25 @@ export const fileUploadSchema = z.object({
 })
 
 // Validation helper for request validation
-export const validateRequest = async (req, options = {}) => {
+export const validateRequest = (req, res, method = 'POST') => {
+  // Check method
+  if (req.method !== method) {
+    res.status(405).json({ success: false, error: 'Method not allowed' });
+    return false;
+  }
+
+  // Check authentication
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ success: false, error: 'Missing or invalid authorization header' });
+    return false;
+  }
+
+  return true;
+}
+
+// Legacy validateRequest for backwards compatibility
+export const validateRequestLegacy = async (req, options = {}) => {
   const { requiredAuth = false, allowedMethods = ['GET', 'POST', 'PUT', 'DELETE'] } = options;
 
   // Check method
@@ -87,7 +105,30 @@ export const validateRequest = async (req, options = {}) => {
 }
 
 // Validation helper for schema validation
-export const validateSchema = (schema, data) => {
+export const validateSchema = (req, res, schema) => {
+  try {
+    // Basic validation - in production you'd want more sophisticated validation
+    const { body } = req;
+    
+    // Check required fields
+    if (schema.required) {
+      for (const field of schema.required) {
+        if (!body[field]) {
+          res.status(400).json({ success: false, error: `Missing required field: ${field}` });
+          return false;
+        }
+      }
+    }
+
+    return true;
+  } catch (error) {
+    res.status(400).json({ success: false, error: `Validation error: ${error.message}` });
+    return false;
+  }
+}
+
+// Legacy validateSchema for Zod
+export const validateSchemaLegacy = (schema, data) => {
   try {
     return schema.parse(data)
   } catch (error) {

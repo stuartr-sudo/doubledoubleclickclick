@@ -1,111 +1,61 @@
-import { createClient } from '@supabase/supabase-js';
-import { validateRequest } from '../utils/validation.js';
-import { createResponse } from '../utils/response.js';
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase configuration');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { validateRequest, validateSchema } from '../utils/validation';
+import { sendResponse } from '../utils/response';
+import { getSupabaseClient } from '../utils/supabase';
+import Firecrawl from '@mendable/firecrawl-js';
 
 export default async function handler(req, res) {
+  if (!validateRequest(req, res, 'POST')) {
+    return;
+  }
+
+  const schema = {
+    type: 'object',
+    properties: {
+      url: { type: 'string', format: 'url' },
+      params: {
+        type: 'object',
+        properties: {
+          pageOptions: { type: 'object' },
+          extractorOptions: { type: 'object' },
+          timeout: { type: 'number' },
+          returnOnlyMainContent: { type: 'boolean' },
+          waitFor: { type: 'number' },
+          country: { type: 'string' },
+          proxy: { type: 'string' },
+        },
+        additionalProperties: true,
+      },
+    },
+    required: ['url'],
+    additionalProperties: false,
+  };
+
+  if (!validateSchema(req, res, schema)) {
+    return;
+  }
+
+  const { url, params } = req.body;
+  const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
+
+  if (!firecrawlApiKey) {
+    return sendResponse(res, 500, { success: false, error: 'Firecrawl API key not configured.' });
+  }
+
   try {
-    const { method } = req;
+    const firecrawl = new Firecrawl({ apiKey: firecrawlApiKey });
+    const result = await firecrawl.scrapeUrl(url, params);
 
-    // Validate request
-    const validation = await validateRequest(req, {
-      requiredAuth: true,
-      allowedMethods: ['POST']
-    });
-
-    if (!validation.success) {
-      return createResponse(res, validation.error, 401);
+    if (result && result.success) {
+      return sendResponse(res, 200, { success: true, data: result.data });
+    } else {
+      // Fallback if Firecrawl fails or returns no data
+      console.warn(`Firecrawl scrape failed for ${url}: ${result?.error || 'Unknown error'}. Attempting fallback.`);
+      // Implement a simpler fetch or another scraping method here if needed
+      // For now, we'll just return the Firecrawl error
+      return sendResponse(res, 500, { success: false, error: result?.error || 'Failed to extract content using Firecrawl and no fallback available.' });
     }
-
-    const { user } = validation;
-    const { url } = req.body;
-
-    if (!url) {
-      return createResponse(res, { error: 'URL is required' }, 400);
-    }
-
-    // Validate URL
-    try {
-      new URL(url);
-    } catch (error) {
-      return createResponse(res, { error: 'Invalid URL format' }, 400);
-    }
-
-    try {
-      // Fetch the URL content
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; DoubleClickBot/1.0)'
-        },
-        timeout: 30000
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const html = await response.text();
-
-      // Extract title from HTML
-      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-      const title = titleMatch ? titleMatch[1].trim() : 'Untitled';
-
-      // Extract meta description
-      const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i);
-      const description = descMatch ? descMatch[1].trim() : '';
-
-      // Extract main content (simplified extraction)
-      const contentMatch = html.match(/<main[^>]*>(.*?)<\/main>/is) || 
-                          html.match(/<article[^>]*>(.*?)<\/article>/is) ||
-                          html.match(/<div[^>]*class=["'][^"']*content[^"']*["'][^>]*>(.*?)<\/div>/is);
-      
-      const mainContent = contentMatch ? contentMatch[1] : html;
-
-      // Clean up HTML (basic cleaning)
-      const cleanedContent = mainContent
-        .replace(/<script[^>]*>.*?<\/script>/gis, '')
-        .replace(/<style[^>]*>.*?<\/style>/gis, '')
-        .replace(/<nav[^>]*>.*?<\/nav>/gis, '')
-        .replace(/<header[^>]*>.*?<\/header>/gis, '')
-        .replace(/<footer[^>]*>.*?<\/footer>/gis, '');
-
-      // Log the scraping action
-      await supabase
-        .from('analytics_events')
-        .insert({
-          user_id: user.id,
-          event_name: 'url_scraped',
-          properties: { url, method: 'extract-content' },
-          timestamp: new Date().toISOString()
-        });
-
-      return createResponse(res, {
-        success: true,
-        data: {
-          title: title,
-          content: cleanedContent,
-          description: description,
-          url: url,
-          html: cleanedContent
-        },
-        method: 'extract-content'
-      });
-
-    } catch (error) {
-      console.error('Content extraction error:', error);
-      return createResponse(res, { error: 'Failed to extract content: ' + error.message }, 500);
-    }
-
   } catch (error) {
-    console.error('Extract content API error:', error);
-    return createResponse(res, { error: 'Internal server error' }, 500);
+    console.error('Extract website content error:', error);
+    return sendResponse(res, 500, { success: false, error: error.message || 'Internal server error during content extraction.' });
   }
 }
