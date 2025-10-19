@@ -185,11 +185,6 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
       if (!/data-b44-type\s*=\s*["']faq["']/.test(html)) {
         html = html.replace(/<section\b/i, '<section data-b44-type="faq"');
       }
-      // ensure data-b44-id attribute for selection/deletion
-      if (!/data-b44-id\s*=/.test(html)) {
-        const elId = `faq-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        html = html.replace(/<section\b/i, `<section data-b44-id="${elId}"`);
-      }
       return html;
     } catch {
       // fallback regex if DOMParser fails
@@ -198,11 +193,6 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
         let block = m[0];
         if (!/data-b44-type\s*=\s*["']faq["']/.test(block)) {
           block = block.replace(/<section\b/i, '<section data-b44-type="faq"');
-        }
-        // ensure data-b44-id attribute for selection/deletion
-        if (!/data-b44-id\s*=/.test(block)) {
-          const elId = `faq-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-          block = block.replace(/<section\b/i, `<section data-b44-id="${elId}"`);
         }
         return block;
       }
@@ -333,11 +323,7 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
 
         const faqSection = extractFaqSection(agentHtml);
         if (faqSection) {
-          // CRITICAL FIX: Ensure agent-generated FAQ blocks have data-b44-id for selection/deletion
-          const elId = `faq-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-          const finalFaqHtml = faqSection.includes('data-b44-id=') ? faqSection : faqSection.replace(/<section\b/, `<section data-b44-id="${elId}"`);
-          
-          onInsert(finalFaqHtml);
+          onInsert(faqSection);
           onClose();
           setIsGenerating(false);
           return; // Agent call successful, done here.
@@ -428,13 +414,9 @@ ${baseText.slice(0, 12000)}
 
       // Guarantee draggable/selectable marker for fallback methods
       const withMarker = html.includes('data-b44-type=') ? html : html.replace(/<section\b/, '<section data-b44-type="faq"');
-      
-      // CRITICAL FIX: Ensure FAQ blocks have data-b44-id for selection/deletion
-      const elId = `faq-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      const finalHtml = withMarker.includes('data-b44-id=') ? withMarker : withMarker.replace(/<section\b/, `<section data-b44-id="${elId}"`);
 
       // Insert directly and close modal
-      onInsert(finalHtml);
+      onInsert(withMarker);
       onClose();
     } catch (e) {
         setError(`An error occurred: ${e.message}`);

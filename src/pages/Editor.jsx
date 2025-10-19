@@ -1836,6 +1836,78 @@ Current Title: ${title}`;
     return null;
   }, [currentPost, currentWebhook, sessionKeyRef]);
 
+  const onSave = async (isAutoSave = false) => {
+    // This function seems to be part of an older or unused pattern.
+    // The autoSaveRef and savePost function handle saving logic.
+    // Keeping it here if it's referenced elsewhere but it's not directly in the outline to modify.
+    // ... keep existing code (onSave function logic) ...
+  };
+
+  const cleanHtmlForPublish = (html) => {
+    if (!html) return "";
+    let cleaned = String(html || ""); // Ensure it's a string
+
+    // Remove editor-specific ephemeral UI elements and related styles
+    cleaned = cleaned.replace(/<div[^>]*class=["'][^"']*b44-select-handle[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+    cleaned = cleaned.replace(/<div[^>]*class=["'][^"']*drag-handle[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+    cleaned = cleaned.replace(/<div[^>]*class=["'][^"']*resize-handle[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+    cleaned = cleaned.replace(/<div[^>]*id=["']b44-active-selection-outline["'][^>]*>[\s\S]*?<\/div>/gi, '');
+    
+    // Remove specific editor-only data attributes, but PRESERVE data-b44-id and data-b44-type
+    // This regex matches any data- attribute EXCEPT data-b44-id and data-b44-type
+    cleaned = cleaned.replace(/\s+data-(?!b44-id|b44-type)([a-zA-Z0-9_-]+)=["'][^"']*["']/gi, '');
+    cleaned = cleaned.replace(/\s+data-(?!b44-id|b44-type)([a-zA-Z0-9_-]+)='[^']*'/gi, '');
+
+    // Remove editor affordances
+    cleaned = cleaned.replace(/\s+draggable=["'](?:true|false)["']/gi, '');
+    cleaned = cleaned.replace(/\s+draggable='(?:true|false)'/gi, '');
+    cleaned = cleaned.replace(/\s+contenteditable=["'](?:true|false)["']/gi, '');
+    cleaned = cleaned.replace(/\s+contenteditable='(?:true|false)'/gi, '');
+
+    // Remove inline event handlers (e.g., onclick, onmouseover)
+    cleaned = cleaned.replace(/\s+on\w+=["'][^"']*["']/gi, '');
+    cleaned = cleaned.replace(/\s+on\w+='[^']*'/gi, '');
+
+    // Remove Base44 classes while preserving others
+    cleaned = cleaned.replace(/class=(["'])([^"']*)\1/gi, (match, quote, classes) => {
+      const kept = classes.split(/\s+/).filter(c => c && !c.startsWith('b44-'));
+      return kept.length ? `class=${quote}${kept.join(' ')}${quote}` : '';
+    });
+
+    // Remove empty class attributes (e.g., class="")
+    cleaned = cleaned.replace(/\s+class=["']\s*["']/gi, '');
+
+    // Clean outline styles and remove empty style attributes, also specifically "cursor: pointer"
+    cleaned = cleaned.replace(/style=(["'])([\s\S]*?)\1/gi, (match, quote, styles) => {
+      const clean = styles
+        .replace(/\s*outline(?:-offset)?\s*:[^;]*;?\s*/gi, '')
+        .replace(/\s*cursor:\s*pointer;?\s*/gi, '') // New: remove cursor: pointer from styles
+        .trim();
+      return clean ? `style=${quote}${clean}${quote}` : '';
+    });
+    // Remove empty style attributes that might result from cleaning
+    cleaned = cleaned.replace(/\s+style=["']\s*["']/gi, '');
+
+    // Normalize whitespace:
+    // Remove multiple spaces
+    cleaned = cleaned.replace(/\s{2,}/g, ' ');
+    // Remove space before >
+    cleaned = cleaned.replace(/\s+>/g, '>');
+    // Remove space between > and < tags
+    cleaned = cleaned.replace(/>\s+</g, '><');
+    // Remove leading/trailing whitespace
+    cleaned = cleaned.trim();
+
+    return cleaned;
+  };
+
+  const onPublish = async () => {
+    // This function seems to be part of an older or unused pattern.
+    // The savePost function handles publishing logic.
+    // Keeping it here if it's referenced elsewhere but it's not directly in the outline to modify.
+    // ... keep existing code (onPublish function logic) ...
+  };
+
   // Definition for autoSave function and store in ref
   useEffect(() => {
     autoSaveRef.current = async () => {
@@ -2621,70 +2693,22 @@ Current Title: ${title}`;
     return imgMatch ? imgMatch[1] : "";
   };
 
-  // NEW function: cleanHtmlForPublish (replaces cleanHtmlForShopify logic, but is more generic)
-  const cleanHtmlForPublish = (html) => {
-    let cleaned = String(html || "");
-
-    // Remove select handles FIRST (these are div elements)
-    // Targeting specific class with div to avoid issues with other elements that might have similar classes
-    cleaned = cleaned.replace(/<div[^>]*class=["'][^"']*b44-select-handle[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
-
-    // Remove ALL data-* attributes
-    cleaned = cleaned.replace(/\s+data-[a-zA-Z0-9_-]+=["'][^"']*["']/gi, '');
-    // Also consider single quotes for data attributes if necessary
-    cleaned = cleaned.replace(/\s+data-[a-zA-Z0-9_-]+='[^']*'/gi, '');
-
-    // Remove editor affordances
-    cleaned = cleaned.replace(/\s+draggable=["'](?:true|false)["']/gi, '');
-    cleaned = cleaned.replace(/\s+draggable='(?:true|false)'/gi, '');
-    cleaned = cleaned.replace(/\s+contenteditable=["'](?:true|false)["']/gi, '');
-    cleaned = cleaned.replace(/\s+contenteditable='(?:true|false)'/gi, '');
-
-    // Remove inline event handlers (e.g., onclick, onmouseover)
-    cleaned = cleaned.replace(/\s+on\w+=["'][^"']*["']/gi, '');
-    cleaned = cleaned.replace(/\s+on\w+='[^']*'/gi, '');
-
-    // Remove Base44 classes while preserving others
-    cleaned = cleaned.replace(/class=(["'])([^"']*)\1/gi, (match, quote, classes) => {
-      const kept = classes.split(/\s+/).filter(c => c && !c.startsWith('b44-'));
-      return kept.length ? `class=${quote}${kept.join(' ')}${quote}` : '';
-    });
-
-    // Remove empty class attributes (e.g., class="")
-    cleaned = cleaned.replace(/\s+class=["']\s*["']/gi, '');
-
-    // Clean outline styles and remove empty style attributes
-    cleaned = cleaned.replace(/style=(["'])([\s\S]*?)\1/gi, (match, quote, styles) => {
-      const clean = styles.replace(/\s*outline(?:-offset)?\s*:[^;]*;?\s*/gi, '').trim();
-      return clean ? `style=${quote}${clean}${quote}` : '';
-    });
-    // Remove empty style attributes that might result from cleaning
-    cleaned = cleaned.replace(/\s+style=["']\s*["']/gi, '');
-
-    // Normalize whitespace:
-    // Remove multiple spaces
-    cleaned = cleaned.replace(/\s{2,}/g, ' ');
-    // Remove space before >
-    cleaned = cleaned.replace(/\s+>/g, '>');
-    // Remove space between > and < tags
-    cleaned = cleaned.replace(/>\s+</g, '><');
-    // Remove leading/trailing whitespace
-    cleaned = cleaned.trim();
-
-    return cleaned;
-  };
-
 
   const buildWordPressHtmlIslandBlock = (rawHtml) => {
     const cleanHtml = (html) => {
       let cleaned = String(html || "");
 
-      cleaned = cleaned.replace(/<([a-z0-9:-]+)\b[^>]*class=["'][^"']*b44-select-handle[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, '');
+      // For WordPress export, we remove b44-select-handle and other editor-only elements/attributes,
+      // and also remove b44-id/b44-type if they are not specifically handled by WP blocks.
+      // This function needs to be distinct from cleanHtmlForPublish which saves to our DB.
+      cleaned = cleaned.replace(/<div[^>]*class=["'][^"']*b44-select-handle[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
 
       cleaned = cleaned.replace(/\s+data-filename=["'][^"']*["']/gi, '');
       cleaned = cleaned.replace(/\s+data-linenumber=["'][^"']*["']/gi, '');
       cleaned = cleaned.replace(/\s+data-visual-selector-id=["'][^"']*["']/gi, '');
 
+      // For WordPress, we *do* remove data-b44-id and data-b44-type as they are internal editor attributes
+      // and not meant for the final published HTML on external platforms unless converted to a WP block.
       cleaned = cleaned.replace(/\s+data-b44-id=["'][^"']*["']/gi, '');
       cleaned = cleaned.replace(/\s+data-b44-type=["'][^"']*["']/gi, '');
       cleaned = cleaned.replace(/\s+data-b44-processed=["'][^"']*["']/gi, '');

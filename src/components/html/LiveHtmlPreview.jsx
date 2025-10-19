@@ -456,8 +456,6 @@ export default function LiveHtmlPreview({
           const imgs = document.querySelectorAll('img');
           imgs.forEach(function(img){
             if (!img.dataset.b44Id) { img.dataset.b44Id = String(nextId++); }
-            // No longer apply margin here, rely on CSS.
-            // if (!img.style.margin) img.style.margin = '1rem 0';
             img.style.cursor = 'pointer';
             markDraggable(img);
           });
@@ -485,24 +483,17 @@ export default function LiveHtmlPreview({
           prods.forEach(function(el){
             if (!el.dataset.b44Id) { el.dataset.b44Id = String(nextId++); }
             el.style.cursor = 'pointer';
-            // Specific styles for promoted product should generally be handled by CSS only,
-            // but width/alignment from here might still be adjusted by the applyChange function.
-            // Default margin is now zeroed out in CSS.
-            // if (!el.style.margin) el.style.margin = '1rem 0';
             el.style.maxWidth = '100%';
           });
-
-          // NEW: after products exist in DOM, render their shadow content
+          
           setupShadowBlocks(document);
 
-          // NEW: Ensure audio elements or their wrappers get a data-b44-id
           const audios = document.querySelectorAll('audio, .b44-audio-inline');
           audios.forEach(function(aud){
             if (!aud.dataset.b44Id) { aud.dataset.b44Id = String(nextId++); }
             aud.style.cursor = 'pointer';
           });
 
-          // ensure all custom blocks get a data-b44-id (e.g., FAQ)
           try {
             document.querySelectorAll('[data-b44-type]').forEach(function(el){
               if (!el.dataset.b44Id) { el.dataset.b44Id = String(nextId++); }
@@ -513,12 +504,10 @@ export default function LiveHtmlPreview({
             markSelectable(el, 'cta');
           });
 
-          // ensure image error handlers are bound after IDs assigned
           bindImageHandlers(document);
 
           styleTikTokEmbedsDefault();
 
-          // NEW: make feature blocks draggable (TLDR/FAQ/Testimonial/etc.)
           try {
             document.querySelectorAll('[data-b44-type]').forEach(markDraggable);
             document.querySelectorAll('.b44-promoted-product').forEach(markDraggable);
@@ -526,14 +515,12 @@ export default function LiveHtmlPreview({
             document.querySelectorAll('blockquote.tiktok-embed').forEach(markDraggable);
             document.querySelectorAll('.youtube-video-container').forEach(markDraggable);
 
-            // NEW: Auto-tag Flash-generated FAQ / TLDR so they become selectable + draggable
-            document.querySelectorAll('.b44-faq').forEach(function(el){
+            document.querySelectorAll('.b44-faq, [data-b44-type="faq"]').forEach(function(el){
               ensureFeatureDataAttrs(el, 'faq');
             });
             document.querySelectorAll('.b44-tldr').forEach(function(el){
               ensureFeatureDataAttrs(el, 'tldr');
             });
-            // NEW: auto-tag references if present
             document.querySelectorAll('.b44-references').forEach(function(el){
               ensureFeatureDataAttrs(el, 'references');
             });
