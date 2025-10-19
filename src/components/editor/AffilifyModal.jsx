@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useRef } from "react";
-import { agentSDK } from "@/agents";
+// import { agentSDK } from "@/agents"; // TODO: Replace with Supabase conversation management
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,33 +89,9 @@ export default function AffilifyModal({ isOpen, onClose, originalHtml, selectedT
       join("\n");
     }
 
-    const conv = await agentSDK.createConversation({
-      agent_name: "affilify",
-      metadata: { name: "Affilify run", description: hasSelection ? "Selection-only affiliate transform" : "Full article affiliate transform" }
-    });
-    setConversation(conv);
-
-    if (subRef.current) {
-      try {subRef.current();} catch (_) {}
-    }
-    subRef.current = agentSDK.subscribeToConversation(conv.id, (data) => {
-      const msgs = data?.messages || [];
-      for (let i = msgs.length - 1; i >= 0; i--) {
-        const m = msgs[i];
-        if (m.role === "assistant" && typeof m.content === "string" && m.content.trim()) {
-          setOutputHtml(m.content);
-          break;
-        }
-      }
-      if (data?.messages?.some((m) => m.role === "assistant")) {
-        setIsRunning(false);
-      }
-    });
-
-    await agentSDK.addMessage(conv, {
-      role: "user",
-      content
-    });
+    // TODO: Replace agentSDK functionality with Supabase conversation management
+    toast.error("Affilify functionality is temporarily disabled during migration.");
+    setIsRunning(false);
   };
 
   const handleApply = () => {
