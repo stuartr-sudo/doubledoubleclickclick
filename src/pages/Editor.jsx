@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { BlogPost } from "@/api/entities";
-import { WebhookReceived } from "@/api/entities";
-import { Username } from "@/api/entities";
-import { IntegrationCredential } from "@/api/entities";
-import { User } from "@/api/entities";
-import { ImageLibraryItem } from "@/api/entities";
-import { GeneratedVideo } from "@/api/entities";
-import { ImagineerJob } from "@/api/entities"; // Ensure ImagineerJob is imported as it's used
+import { BlogPost } from "@/entities/BlogPost";
+import { WebhookReceived } from "@/entities/WebhookReceived";
+import { Username } from "@/entities/Username";
+import { IntegrationCredential } from "@/entities/IntegrationCredential";
+import { User } from "@/entities/User";
+import { ImageLibraryItem } from "@/entities/ImageLibraryItem";
+import { GeneratedVideo } from "@/entities/GeneratedVideo";
+import { ImagineerJob } from "@/entities/ImagineerJob"; // Ensure ImagineerJob is imported as it's used
 import { supabase } from "@/api/supabaseClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
