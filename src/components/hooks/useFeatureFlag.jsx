@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { useFeatureFlagData } from '@/components/providers/FeatureFlagProvider';
 
-export default function useFeatureFlag(featureName, { currentUser, defaultEnabled = false } = {}) {
+export default function useFeatureFlag(featureName, { currentUser, defaultEnabled = true } = {}) {
   const { flags, products, loading } = useFeatureFlagData();
 
   const result = useMemo(() => {
-    if (loading) {
-      return { enabled: false, isComingSoon: false, isLoading: true };
+    // When data is loading or empty (stubbed), default to enabled
+    if (loading || !flags || flags.length === 0) {
+      return { enabled: defaultEnabled, isComingSoon: false, isLoading: loading };
     }
 
     const flag = flags.find(f => f.name === featureName);
