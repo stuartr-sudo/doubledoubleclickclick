@@ -367,28 +367,20 @@ Return a JSON object with these fields:
 
     setFetchingPages(true);
     try {
-      const response = await getSitemapPages({
-        url: siteUrl,
-        limit: 200
-      });
-      const data = response.data;
-
-      if (!data?.success) {
-        throw new Error(data?.error || "Could not fetch sitemap pages");
-      }
-
-      const items = Array.isArray(data.pages) ? data.pages : [];
-      setPages(items);
-      if (items.length === 0) {
+      // Client-side sitemap scraping (no API calls needed)
+      const pages = await scrapeSitemapClientSide(siteUrl);
+      
+      setPages(pages);
+      if (pages.length === 0) {
         setSitemapError("No pages found on that website");
-      }
-
-      // NEW: Trigger background sitemap and guidelines generation
-      const username = user?.assigned_usernames?.[0] || "";
-      if (username && items.length > 0) {
-        generateSitemapAndGuidelines(siteUrl, username).catch((err) => {
-          console.log('[Background] Silent error:', err?.message);
-        });
+      } else {
+        // NEW: Trigger background sitemap and guidelines generation
+        const username = user?.assigned_usernames?.[0] || "";
+        if (username && pages.length > 0) {
+          generateSitemapAndGuidelines(siteUrl, username).catch((err) => {
+            console.log('[Background] Silent error:', err?.message);
+          });
+        }
       }
     } catch (e) {
       console.error("Sitemap fetch error:", e);
@@ -396,6 +388,167 @@ Return a JSON object with these fields:
       setPages([]);
     } finally {
       setFetchingPages(false);
+    }
+  };
+
+  // Client-side sitemap scraping function
+  const scrapeSitemapClientSide = async (baseUrl) => {
+    const pages = [];
+    const visited = new Set();
+    
+    try {
+      // Normalize URL
+      const url = normalizeUrl(baseUrl);
+      const urlObj = new URL(url);
+      const domain = urlObj.hostname;
+      
+      // Try to fetch sitemap.xml first
+      const sitemapUrls = [
+        `${url}/sitemap.xml`,
+        `${url}/sitemap_index.xml`,
+        `${url}/sitemaps.xml`
+      ];
+
+      let sitemapFound = false;
+
+      for (const sitemapUrl of sitemapUrls) {
+        try {
+          const response = await fetch(sitemapUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; DoubleClickBot/1.0)'
+            },
+            mode: 'cors'
+          });
+
+          if (response.ok) {
+            const xml = await response.text();
+            const sitemapPages = parseSitemapXML(xml, 50);
+            if (sitemapPages.length > 0) {
+              pages.push(...sitemapPages);
+              sitemapFound = true;
+              break;
+            }
+          }
+        } catch (error) {
+          console.log(`Sitemap ${sitemapUrl} not found or error:`, error.message);
+          continue;
+        }
+      }
+
+      // If no sitemap found, try to discover pages by crawling common paths
+      if (!sitemapFound) {
+        const commonPaths = [
+          '/',
+          '/about',
+          '/contact',
+          '/blog',
+          '/news',
+          '/products',
+          '/services',
+          '/pricing',
+          '/faq',
+          '/support',
+          '/home',
+          '/index'
+        ];
+
+        for (const path of commonPaths) {
+          const fullUrl = `${url}${path}`;
+          
+          try {
+            const response = await fetch(fullUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; DoubleClickBot/1.0)'
+              },
+              mode: 'cors'
+            });
+
+            if (response.ok) {
+              pages.push({
+                url: fullUrl,
+                title: extractTitleFromUrl(fullUrl)
+              });
+              
+              if (pages.length >= 20) {
+                break;
+              }
+            }
+          } catch (error) {
+            // Ignore individual page errors
+            continue;
+          }
+        }
+      }
+
+      return pages;
+    } catch (error) {
+      console.error('Error during client-side sitemap scraping:', error);
+      throw new Error('Failed to scrape sitemap: ' + error.message);
+    }
+  };
+
+  // Helper function to parse sitemap XML
+  const parseSitemapXML = (xml, limit) => {
+    const pages = [];
+    
+    try {
+      // Simple regex-based parsing for sitemap URLs
+      const urlMatches = xml.match(/<loc>(.*?)<\/loc>/g);
+      
+      if (urlMatches) {
+        for (const match of urlMatches) {
+          const url = match.replace(/<\/?loc>/g, '').trim();
+          if (url && isValidUrl(url)) {
+            pages.push({
+              url: url,
+              title: extractTitleFromUrl(url)
+            });
+            
+            if (pages.length >= limit) {
+              break;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing sitemap XML:', error);
+    }
+
+    return pages;
+  };
+
+  // Helper function to validate URL
+  const isValidUrl = (string) => {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  // Helper function to extract title from URL
+  const extractTitleFromUrl = (url) => {
+    try {
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname;
+      
+      // Extract meaningful title from URL path
+      if (pathname === '/' || pathname === '') {
+        return 'Home';
+      }
+      
+      const segments = pathname.split('/').filter(Boolean);
+      const lastSegment = segments[segments.length - 1];
+      
+      return lastSegment
+        .replace(/[-_]/g, ' ')
+        .replace(/\.[^/.]+$/, '') // Remove file extension
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    } catch (error) {
+      return 'Page';
     }
   };
 

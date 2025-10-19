@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sitemap Functionality Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="url"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+            border: 1px solid #dee2e6;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .loading {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
+        }
+        .page-item {
+            padding: 8px;
+            margin: 4px 0;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .page-item:hover {
+            background: #e9ecef;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background-color: #fdfdfd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sitemap Functionality Test</h1>
+        <p>Use this page to test the sitemap scraping functionality with your deployed Vercel app.</p>
+
+        <div class="test-section">
+            <h3>1. Test Sitemap Scraping</h3>
+            <div class="form-group">
+                <label for="siteUrl">Website URL to test:</label>
+                <input type="url" id="siteUrl" value="https://valentia.com/" placeholder="https://example.com">
+            </div>
+            <button onclick="testSitemapScraping()">Test Sitemap Scraping</button>
+            <div id="sitemap-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Test Authentication</h3>
+            <div class="form-group">
+                <label for="email">Your Email:</label>
+                <input type="text" id="email" value="stuartr@doubleclick.work" placeholder="your@email.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Your password">
+            </div>
+            <button onclick="testAuthentication()">Test Authentication</button>
+            <div id="auth-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Test Complete Flow</h3>
+            <p>This will test the complete flow: authenticate, then scrape sitemap.</p>
+            <button onclick="testCompleteFlow()">Test Complete Flow</button>
+            <div id="complete-result" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const VERCEL_APP_URL = 'https://sewo-9izhc1l02-doubleclicks.vercel.app'; // Updated URL
+
+        async function testSitemapScraping() {
+            const siteUrl = document.getElementById('siteUrl').value;
+            const resultDiv = document.getElementById('sitemap-result');
+
+            if (!siteUrl) {
+                resultDiv.innerHTML = '<span class="error">Please enter a website URL.</span>';
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                return;
+            }
+
+            resultDiv.innerHTML = 'Testing sitemap scraping...';
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+
+            try {
+                const response = await fetch(`${VERCEL_APP_URL}/api/scraping/sitemap`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: siteUrl,
+                        limit: 50
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.success && data.pages && data.pages.length > 0) {
+                        let resultHtml = `✅ Sitemap scraping successful!\n\n`;
+                        resultHtml += `Found ${data.pages.length} pages:\n\n`;
+                        
+                        data.pages.slice(0, 10).forEach((page, index) => {
+                            resultHtml += `${index + 1}. ${page.url}\n`;
+                            if (page.title) {
+                                resultHtml += `   Title: ${page.title}\n`;
+                            }
+                            resultHtml += `\n`;
+                        });
+                        
+                        if (data.pages.length > 10) {
+                            resultHtml += `... and ${data.pages.length - 10} more pages\n`;
+                        }
+                        
+                        resultHtml += `\nMethod used: ${data.method}`;
+                        
+                        resultDiv.innerHTML = resultHtml;
+                        resultDiv.className = 'result success';
+                    } else {
+                        resultDiv.innerHTML = `❌ No pages found or scraping failed: ${data.error || 'Unknown error'}`;
+                        resultDiv.className = 'result error';
+                    }
+                } else {
+                    resultDiv.innerHTML = `❌ API Error (${response.status}): ${data.error || 'Unknown error'}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Network Error: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testAuthentication() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('auth-result');
+
+            if (!email || !password) {
+                resultDiv.innerHTML = '<span class="error">Please enter both email and password.</span>';
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                return;
+            }
+
+            resultDiv.innerHTML = 'Testing authentication...';
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+
+            try {
+                // First, try to get a session token by signing in
+                const response = await fetch(`${VERCEL_APP_URL}/api/auth/signin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `✅ Authentication successful!\n\nUser: ${data.user?.email || 'Unknown'}\nSession: ${data.session ? 'Active' : 'No session'}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = `❌ Authentication failed (${response.status}): ${data.error || 'Unknown error'}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Authentication error: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testCompleteFlow() {
+            const resultDiv = document.getElementById('complete-result');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const siteUrl = document.getElementById('siteUrl').value;
+
+            if (!email || !password || !siteUrl) {
+                resultDiv.innerHTML = '<span class="error">Please fill in all fields (email, password, and site URL).</span>';
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                return;
+            }
+
+            resultDiv.innerHTML = 'Testing complete flow...\n\nStep 1: Authenticating...';
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+
+            try {
+                // Step 1: Authenticate
+                const authResponse = await fetch(`${VERCEL_APP_URL}/api/auth/signin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const authData = await authResponse.json();
+
+                if (!authResponse.ok) {
+                    resultDiv.innerHTML = `❌ Authentication failed: ${authData.error || 'Unknown error'}`;
+                    resultDiv.className = 'result error';
+                    return;
+                }
+
+                resultDiv.innerHTML += '\n✅ Authentication successful!\n\nStep 2: Testing sitemap scraping...';
+
+                // Step 2: Test sitemap scraping with auth token
+                const sitemapResponse = await fetch(`${VERCEL_APP_URL}/api/scraping/sitemap`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authData.session?.access_token || 'no-token'}`
+                    },
+                    body: JSON.stringify({
+                        url: siteUrl,
+                        limit: 50
+                    })
+                });
+
+                const sitemapData = await sitemapResponse.json();
+
+                if (sitemapResponse.ok) {
+                    if (sitemapData.success && sitemapData.pages && sitemapData.pages.length > 0) {
+                        let resultHtml = `✅ Complete flow test successful!\n\n`;
+                        resultHtml += `Authentication: ✅ Success\n`;
+                        resultHtml += `Sitemap scraping: ✅ Success\n\n`;
+                        resultHtml += `Found ${sitemapData.pages.length} pages:\n\n`;
+                        
+                        sitemapData.pages.slice(0, 5).forEach((page, index) => {
+                            resultHtml += `${index + 1}. ${page.url}\n`;
+                            if (page.title) {
+                                resultHtml += `   Title: ${page.title}\n`;
+                            }
+                            resultHtml += `\n`;
+                        });
+                        
+                        if (sitemapData.pages.length > 5) {
+                            resultHtml += `... and ${sitemapData.pages.length - 5} more pages\n`;
+                        }
+                        
+                        resultHtml += `\nMethod used: ${sitemapData.method}`;
+                        
+                        resultDiv.innerHTML = resultHtml;
+                        resultDiv.className = 'result success';
+                    } else {
+                        resultDiv.innerHTML = `✅ Authentication successful!\n❌ Sitemap scraping failed: ${sitemapData.error || 'No pages found'}`;
+                        resultDiv.className = 'result error';
+                    }
+                } else {
+                    resultDiv.innerHTML = `✅ Authentication successful!\n❌ Sitemap scraping failed (${sitemapResponse.status}): ${sitemapData.error || 'Unknown error'}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Complete flow test failed: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+    </script>
+</body>
+</html>
