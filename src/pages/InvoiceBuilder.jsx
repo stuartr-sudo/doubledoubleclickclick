@@ -9,8 +9,8 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { createInvoiceCheckoutSession } from "@/api/functions";
 import { Link as LinkIcon, ExternalLink, Copy, Check, Loader2, Mail, X } from "lucide-react";
-// import { getGmailStatus } from "@/api/functions/getGmailStatus"; // TODO: Implement Gmail status function
-// import { sendTestEmail } from "@/api/functions/sendTestEmail"; // TODO: Implement send test email function
+import { getGmailStatus } from "@/api/functions/getGmailStatus";
+import { sendTestEmail } from "@/api/functions/sendTestEmail";
 import { Input } from "@/components/ui/input";
 import { User } from "@/api/entities"; // NEW IMPORT
 
@@ -118,10 +118,15 @@ export default function InvoiceBuilder() {
 
   useEffect(() => {
     const loadGmailStatus = async () => {
-      // TODO: Implement Gmail status function
       setGmailLoading(true);
-      setGmailConnected(false);
-      setGmailMsg("Gmail integration temporarily disabled during migration.");
+      const { data } = await getGmailStatus();
+      setGmailConnected(!!data?.connected);
+      if (data?.connected) {
+        setGmailMsg("Connected to Gmail.");
+      } else {
+        const list = Array.isArray(data?.missing) ? data.missing.join(", ") : "Unknown";
+        setGmailMsg(`Not connected. Missing: ${list}`);
+      }
       setGmailLoading(false);
     };
     loadGmailStatus();
@@ -244,9 +249,15 @@ export default function InvoiceBuilder() {
   };
 
   const handleSendTestEmail = async () => {
-    // TODO: Implement send test email function
     setSendingTest(true);
-    setGmailMsg("Test email functionality is temporarily disabled during migration.");
+    setGmailMsg("");
+    const to = (testEmail || invoice?.customer_email || "").trim();
+    const { data } = await sendTestEmail({ to: to || undefined });
+    if (data?.success) {
+      setGmailMsg(`Test email sent to ${data?.to || to || "recipient"}.`);
+    } else {
+      setGmailMsg(data?.error || "Failed to send test email.");
+    }
     setSendingTest(false);
   };
 

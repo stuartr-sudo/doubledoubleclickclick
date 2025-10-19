@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-// import { agentSDK } from "@/agents"; // TODO: Replace with Supabase conversation management
+import { agentSDK } from "@/agents";
 import {
   Dialog,
   DialogContent,

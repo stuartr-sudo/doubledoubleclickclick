@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { User } from "@/api/entities";
 import { BlogPost } from "@/api/entities";
@@ -7,10 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, Globe, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { createPageUrl } from "@/utils";
+import { base44 } from "@/api/base44Client";
 import { Sitemap } from "@/api/entities";
 import { BrandGuidelines } from "@/api/entities";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
-import { scrapeWithFirecrawl, extractWebsiteContent, llmRouter } from "@/api/functions";
 
 export default function GettingStarted() {
   const [user, setUser] = useState(null);
@@ -155,30 +156,20 @@ export default function GettingStarted() {
         console.log('[Background] Fetching sitemap for:', domain);
         
         try {
-          // Use new Vercel function instead of base44.functions.invoke
-          const response = await fetch('/api/getSitemapPages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              url: `https://${domain}`,
-              limit: 200
-            })
+          const { data } = await base44.functions.invoke('getSitemapPages', {
+            url: `https://${domain}`,
+            limit: 200
           });
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data?.success && Array.isArray(data.pages) && data.pages.length > 0) {
-              await Sitemap.create({
-                domain,
-                pages: data.pages,
-                user_name: userName
-              });
-              console.log('[Background] Sitemap saved successfully:', data.pages.length, 'pages');
-            } else {
-              console.log('[Background] Sitemap fetch successful but no pages found or data format incorrect for:', domain);
-            }
+          if (data?.success && Array.isArray(data.pages) && data.pages.length > 0) {
+            await Sitemap.create({
+              domain,
+              pages: data.pages,
+              user_name: userName
+            });
+            console.log('[Background] Sitemap saved successfully:', data.pages.length, 'pages');
+          } else {
+            console.log('[Background] Sitemap fetch successful but no pages found or data format incorrect for:', domain);
           }
         } catch (sitemapError) {
           console.log('[Background] Sitemap generation failed (silently):', sitemapError?.message);
@@ -213,8 +204,7 @@ Return a JSON object with these fields:
   "target_market": "description of target audience"
 }`;
 
-          // Use new llmRouter function instead of base44.integrations.Core.InvokeLLM
-          const guidelinesData = await llmRouter({
+          const guidelinesData = await base44.integrations.Core.InvokeLLM({
             prompt,
             add_context_from_internet: true,
             response_json_schema: {
@@ -278,18 +268,18 @@ Return a JSON object with these fields:
       let data = null;
       let lastError = null;
 
-      // Try scrapeWithFirecrawl first - use new function instead of base44.functions.invoke
+      // Try scrapeWithFirecrawl first
       try {
-        const response = await scrapeWithFirecrawl({ url: url });
+        const response = await base44.functions.invoke('scrapeWithFirecrawl', { url: url });
         data = response.data;
         console.log('[GettingStarted] scrapeWithFirecrawl response:', JSON.stringify(data, null, 2));
       } catch (firecrawlError) {
         console.warn('[GettingStarted] scrapeWithFirecrawl failed:', firecrawlError.message, 'Trying extractWebsiteContent...');
         lastError = firecrawlError;
         
-        // Fallback to extractWebsiteContent - use new function instead of base44.functions.invoke
+        // Fallback to extractWebsiteContent
         try {
-          const response = await extractWebsiteContent({ url: url });
+          const response = await base44.functions.invoke('extractWebsiteContent', { url: url });
           data = response.data;
           console.log('[GettingStarted] extractWebsiteContent response:', JSON.stringify(data, null, 2));
         } catch (extractError) {
@@ -325,8 +315,7 @@ Return a JSON object with these fields:
       });
 
       const currentCompleted = user?.completed_tutorial_ids || [];
-      // Use new User.updateMyUserData instead of base44.auth.updateMe
-      await User.updateMyUserData({
+      await base44.auth.updateMe({
         completed_tutorial_ids: Array.from(new Set([...currentCompleted, "getting_started_scrape"]))
       });
 
@@ -339,18 +328,15 @@ Return a JSON object with these fields:
 
       toast.success("Blog post imported successfully! Opening in editor...");
 
-      // Turn off loading states BEFORE navigation
-      setImporting(false);
-      setScraping(false);
-
       setTimeout(() => {
         window.location.href = createPageUrl(`Editor?post=${newPost.id}`);
       }, 600);
     } catch (err) {
       console.error("[GettingStarted] Scraping error:", err);
       setError(err?.message || "Failed to import blog post. Please try again.");
-      setScraping(false);
-      setImporting(false);
+      setScraping(false); // Turn off button loader on error
+    } finally {
+      setImporting(false); // Ensure MagicOrbLoader is turned off
     }
   };
 
@@ -371,10 +357,8 @@ Return a JSON object with these fields:
     setImportEta(60);   // Set ETA
     try {
       await scrapeAndOpenEditor(blogUrl); // Delegate to unified scraper
-      // Don't set importing to false here - let scrapeAndOpenEditor handle it
-    } catch (error) {
-      console.error('[GettingStarted] Manual scrape error:', error);
-      setImporting(false); // Only hide loader on error
+    } finally {
+      setImporting(false); // Hide MagicOrbLoader
     }
   };
 
@@ -389,23 +373,10 @@ Return a JSON object with these fields:
 
     setFetchingPages(true);
     try {
-      // Use new Vercel function instead of base44.functions.invoke
-      const response = await fetch('/api/getSitemapPages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          url: siteUrl,
-          limit: 200
-        })
+      const { data } = await base44.functions.invoke('getSitemapPages', {
+        url: siteUrl,
+        limit: 200
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
 
       if (!data?.success) {
         throw new Error(data?.error || "Could not fetch sitemap pages");
@@ -440,10 +411,8 @@ Return a JSON object with these fields:
       const normalizedUrl = normalizeUrl(pageUrl);
       console.log('[GettingStarted] Sitemap URL:', pageUrl, '→ Normalized:', normalizedUrl);
       await scrapeAndOpenEditor(normalizedUrl);
-      // Don't set importing to false here - let scrapeAndOpenEditor handle it
-    } catch (error) {
-      console.error('[GettingStarted] Page select error:', error);
-      setImporting(false); // Only hide loader on error
+    } finally {
+      setImporting(false); // Hide MagicOrbLoader
     }
   };
 
@@ -616,7 +585,7 @@ Return a JSON object with these fields:
 
                 {pages.length === 0 && !fetchingPages && !sitemapError && (
                   <div className="text-center py-8 text-slate-500">
-                    <Globe className="w-12 h-12 mx-auto mb-3 text-slate--%" />
+                    <Globe className="w-12 h-12 mx-auto mb-3 text-slate-300" />
                     <p className="text-sm">Enter your website URL above to fetch pages</p>
                   </div>
                 )}

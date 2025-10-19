@@ -85,7 +85,7 @@ import InfographicsModal from "../components/editor/InfographicsModal";
 import { buildFaqAccordionHtml } from "@/components/editor/FaqAccordionBlock";
 import { generateArticleFaqs } from "@/api/functions";
 import { findSourceAndCite } from "@/api/functions";
-// import { agentSDK } from "@/agents"; // Commented out - agents not available
+import { agentSDK } from "@/agents";
 
 import ImagineerModal from "../components/editor/ImagineerModal";
 import { initiateImagineerGeneration } from "@/api/functions";

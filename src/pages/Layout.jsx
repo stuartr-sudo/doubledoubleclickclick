@@ -506,11 +506,35 @@ function LayoutContent({ children, currentPageName }) {
     history.pushState = guard(originalPush);
     history.replaceState = guard(originalReplace);
 
-    // Removed problematic window.location override code that was causing crashes
+    // NEW: Intercept hard navigations (assign/replace) to Editor and convert to SPA replaceState
+    const origAssign = window.location.assign.bind(window.location);
+    const origLocReplace = window.location.replace.bind(window.location);
+
+    const interceptLocation = (origFn) => function (url) {
+      try {
+        const nextUrl = typeof url === 'string' ? url : (url ? String(url) : '');
+        if (nextUrl && /Editor/i.test(nextUrl)) {
+          // If trying to go to Editor via hard navigation, replace the URL without reload
+          history.replaceState({}, '', nextUrl);
+          // Do not dispatch any synthetic events to avoid remount; Router will keep current instance
+          safeDebug('Intercepted hard navigation to Editor; replaced URL without reload.');
+          return;
+        }
+      } catch (e) {
+        console.error("Error intercepting window.location:", e);
+        // fall through to original
+      }
+      return origFn.apply(window.location, arguments);
+    };
+
+    window.location.assign = interceptLocation(origAssign);
+    window.location.replace = interceptLocation(origLocReplace);
 
     return () => {
       history.pushState = originalPush;
       history.replaceState = originalReplace;
+      window.location.assign = origAssign;
+      window.location.replace = origLocReplace;
     };
   }, [currentPageName]);
 
@@ -842,7 +866,7 @@ function LayoutContent({ children, currentPageName }) {
                     </DropdownMenuContent>
                   </DropdownMenu> :
 
-                <NavLink href={createPageUrl('login')}>
+                <NavLink href="#" onClick={() => User.loginWithRedirect(window.location.href)}>
                     Log In
                   </NavLink>
               ) : (
@@ -909,7 +933,7 @@ function LayoutContent({ children, currentPageName }) {
 
               <h2 className="text-xl font-semibold text-slate-800">Please Log In</h2>
               <p className="text-slate-600 mt-2 mb-4">You need to be authenticated to access this page.</p>
-              <Button onClick={() => navigate('/login')}>
+              <Button onClick={() => User.loginWithRedirect(window.location.href)}>
                 Log In
               </Button>
             </motion.div> :

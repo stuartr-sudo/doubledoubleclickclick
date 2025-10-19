@@ -12,7 +12,7 @@ import { InvokeLLM } from "@/api/integrations";
 import { ContentEndpoint } from "@/api/entities";
 import { callFaqEndpoint } from "@/api/functions";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
-// import { agentSDK } from "@/agents"; // TODO: Replace with Supabase conversation management
+import { agentSDK } from "@/agents";
 import { useTemplates } from '@/components/providers/TemplateProvider';
 
 // Basic HTML-safe replacer for text nodes
@@ -139,14 +139,36 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
   // NEW: single-flight token to prevent race conditions
   const runRef = React.useRef(0);
 
-  // TODO: Replace agentSDK functionality with Supabase conversation management
+  // NEW: wait for agent reply (same pattern used by Flash workflow)
   const waitForAgentResponse = async (conversationId, timeoutSec = 120) => {
-    throw new Error("FAQ agent functionality is temporarily disabled during migration.");
+    const deadline = Date.now() + timeoutSec * 1000;
+    while (Date.now() < deadline) {
+      const conv = await agentSDK.getConversation(conversationId);
+      const msgs = conv?.messages || [];
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const m = msgs[i];
+        if (m.role === "assistant" && m.content) {
+          return String(m.content).trim();
+        }
+      }
+      await new Promise((r) => setTimeout(r, 900));
+    }
+    throw new Error("FAQ agent timed out");
   };
 
-  // TODO: Replace agentSDK functionality with Supabase conversation management
+  // NEW: call faq_agent with the full article HTML
   const callFaqAgent = async (html, selection = "") => {
-    throw new Error("FAQ agent functionality is temporarily disabled during migration.");
+    const conversation = await agentSDK.createConversation({
+      agent_name: "faq_agent",
+      metadata: { source: "ask_ai_menu" },
+    });
+    // Keep prompt minimal; agent is already instructed via config
+    const userMsg = selection && selection.trim().length > 80
+      ? `ARTICLE_HTML:\n${html}\n\nOPTIONAL_SELECTED_HTML:\n${selection}`
+      : `ARTICLE_HTML:\n${html}`;
+    await agentSDK.addMessage(conversation, { role: "user", content: userMsg });
+    const out = await waitForAgentResponse(conversation.id);
+    return out;
   };
 
   // NEW: extract the FAQ section from the agent's full HTML (so we only insert the block)

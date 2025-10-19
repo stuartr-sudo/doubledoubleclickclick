@@ -112,7 +112,7 @@ import DoubleClickTutorials from "./DoubleClickTutorials";
 
 import ImageLibrary from "./ImageLibrary";
 
-import PostPayment from "./post-payment";
+import post-payment from "./post-payment";
 
 import PricingFaqManager from "./PricingFaqManager";
 
@@ -145,10 +145,6 @@ import WordPressPublishLogs from "./WordPressPublishLogs";
 import InfographicExamplesAdmin from "./InfographicExamplesAdmin";
 
 import GettingStarted from "./GettingStarted";
-
-import Login from "./Login";
-
-import Signup from "./Signup";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -266,7 +262,7 @@ const PAGES = {
     
     ImageLibrary: ImageLibrary,
     
-    "post-payment": PostPayment,
+    post-payment: post-payment,
     
     PricingFaqManager: PricingFaqManager,
     
@@ -300,10 +296,6 @@ const PAGES = {
     
     GettingStarted: GettingStarted,
     
-    Login: Login,
-    
-    Signup: Signup,
-    
 }
 
 function _getCurrentPage(url) {
@@ -324,22 +316,11 @@ function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
     
-    // Check if current route is public (doesn't require authentication)
-    const isPublicRoute = location.pathname === '/login' || location.pathname === '/signup';
-    
-    if (isPublicRoute) {
-        return (
-            <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-            </Routes>
-        );
-    }
-    
     return (
         <Layout currentPageName={currentPage}>
-            <Routes>
-                <Route path="/" element={<Editor />} />
+            <Routes>            
+                
+                    <Route path="/" element={<Editor />} />
                 
                 
                 <Route path="/Editor" element={<Editor />} />
@@ -454,7 +435,7 @@ function PagesContent() {
                 
                 <Route path="/ImageLibrary" element={<ImageLibrary />} />
                 
-                <Route path="/post-payment" element={<PostPayment />} />
+                <Route path="/post-payment" element={<post-payment />} />
                 
                 <Route path="/PricingFaqManager" element={<PricingFaqManager />} />
                 
@@ -493,7 +474,7 @@ function PagesContent() {
     );
 }
 
-export default function App() {
+export default function Pages() {
     return (
         <Router>
             <PagesContent />

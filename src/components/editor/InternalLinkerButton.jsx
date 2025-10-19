@@ -6,7 +6,7 @@ import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
-import { supabase } from "@/api/supabaseClient";
+import { base44 } from "@/api/base44Client";
 
 const InternalLinkerButton = React.forwardRef(({ html, userName, onApply, disabled }, ref) => {
   const { enabled } = useFeatureFlag("auto-link", { defaultEnabled: false });

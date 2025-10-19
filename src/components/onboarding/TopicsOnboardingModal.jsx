@@ -14,10 +14,9 @@ import { amazonProduct } from "@/api/functions";
 import { toast } from "sonner";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { AppSettings } from "@/api/entities";
-// import { agentSDK } from "@/agents"; // TODO: Replace with Supabase conversation management
+import { agentSDK } from "@/agents";
 import { User } from "@/api/entities";
-import { supabase } from "@/api/supabaseClient";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/base44Client"; // Added import
 
 const COUNTRY_OPTIONS = [
   { label: "Algeria", value: "2012" }, { label: "Angola", value: "2024" }, { label: "Azerbaijan", value: "2031" },
@@ -98,9 +97,52 @@ const toCleanString = (val, maxLen = 4000) => {
   }
 };
 
-// TODO: Replace agentSDK functionality with Supabase conversation management
+// Robust agent summarizer with polling + timeout and string-only return
 const summarizeProductWithAgent = async (pageTitle, pageText, { timeoutMs = 30000, pollIntervalMs = 2000 } = {}) => {
-  throw new Error("Product summarizer functionality is temporarily disabled during migration.");
+  const title = toCleanString(pageTitle, 200) || "Untitled Product";
+  const text = toCleanString(pageText, 12000); // guard extremely long pages
+
+  const conversation = await agentSDK.createConversation({
+    agent_name: "product_summarizer",
+    metadata: { name: `Summarize: ${title.slice(0, 60)}` }
+  });
+
+  if (!conversation || !conversation.id) {
+    throw new Error("Failed to create product_summarizer conversation");
+  }
+
+  await agentSDK.addMessage(conversation, {
+    role: "user",
+    content: `Summarize the following product page into ~250-300 words, focusing on benefits and key features. 
+Return ONLY the summary text, no headings, lists, or markdown.
+
+Title: ${title}
+Content:
+${text}`
+  });
+
+  const startTime = Date.now();
+  let summaryContent = null;
+
+  while (Date.now() - startTime < timeoutMs) {
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs)); // Wait before checking
+
+    const updatedConversation = await agentSDK.getConversation(conversation.id);
+    const messages = updatedConversation?.messages || [];
+    const lastMessage = messages[messages.length - 1];
+
+    // Check if we have a complete assistant response (is_complete or sufficient content length)
+    if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || (lastMessage.content && lastMessage.content.length > 50))) {
+      summaryContent = toCleanString(lastMessage.content);
+      break;
+    }
+  }
+
+  if (summaryContent) {
+    return summaryContent;
+  } else {
+    throw new Error(`product_summarizer timed out after ${timeoutMs / 1000} seconds without a complete summary.`);
+  }
 };
 
 export default function TopicsOnboardingModal({

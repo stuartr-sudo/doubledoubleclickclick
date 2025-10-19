@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/api/supabaseClient";
+import { base44 } from "@/api/base44Client";
 import {
   Dialog,
   DialogContent,

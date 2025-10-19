@@ -2,7 +2,7 @@
 import React from "react";
 import { HelpCircle, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/api/supabaseClient";
+import { base44 } from "@/api/base44Client";
 import VideoModal from "@/components/common/VideoModal";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 

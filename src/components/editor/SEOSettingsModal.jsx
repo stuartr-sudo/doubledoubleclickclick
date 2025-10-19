@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { InvokeLLM } from "@/api/integrations";
 import ImageLibraryModal from "./ImageLibraryModal";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
-// import { agentSDK } from "@/agents"; // TODO: Replace with Supabase conversation management
+import { agentSDK } from "@/agents";
 import FeatureHelpIcon from "./FeatureHelpIcon";
 
 export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) {
@@ -419,47 +419,86 @@ Content: """${text}"""`,
 
       const text = String(html).slice(0, 20000);
 
-      // TODO: Replace agentSDK functionality with Supabase conversation management
-      // const conversation = await agentSDK.createConversation({
-      //   agent_name: "schema_generator",
-      //   metadata: { purpose: "Generate JSON-LD schema for article" }
-      // });
+      const conversation = await agentSDK.createConversation({
+        agent_name: "schema_generator",
+        metadata: { purpose: "Generate JSON-LD schema for article" }
+      });
 
-      // if (!conversation?.id) {
-      //   throw new Error("Could not start conversation with schema_generator agent.");
-      // }
+      if (!conversation?.id) {
+        throw new Error("Could not start conversation with schema_generator agent.");
+      }
 
-      // await agentSDK.addMessage(conversation, {
-      //   role: "user",
-      //   content: `Generate a valid JSON-LD schema (one JSON object, no code fences) for this blog article. Prefer BlogPosting/Article. Include:
-      // - headline (title)
-      // - description (use meta_description/excerpt)
-      // - author if inferable (string ok, e.g., "${postData?.author_name || "Unknown Author"}")
-      // - datePublished (use current date if unknown, e.g., "${new Date().toISOString().split('T')[0]}")
-      // - dateModified (current date, e.g., "${new Date().toISOString().split('T')[0]}")
-      // - mainEntityOfPage (slug as URL path ok, e.g., "/${metadata.slug}")
-      // - image if present (use featured_image if available)
-      // - keywords from tags (array)
-      // - publisher as Organization if inferable (e.g., "${postData?.site_name || "Your Company"}")
-      // Return ONLY a single JSON object.
-      //
-      // Context:
-      // Title: ${title}
-      // Slug: ${metadata.slug}
-      // Meta description: ${metadata.meta_description || metadata.excerpt}
-      // Excerpt: ${metadata.excerpt}
-      // Tags: ${(metadata.tags || []).join(", ")}
-      // Featured Image: ${metadata.featured_image || ""}
-      // HTML (truncated):
-      // ${text}`
-      // });
+      await agentSDK.addMessage(conversation, {
+        role: "user",
+        content: `Generate a valid JSON-LD schema (one JSON object, no code fences) for this blog article. Prefer BlogPosting/Article. Include:
+- headline (title)
+- description (use meta_description/excerpt)
+- author if inferable (string ok, e.g., "${postData?.author_name || "Unknown Author"}")
+- datePublished (use current date if unknown, e.g., "${new Date().toISOString().split('T')[0]}")
+- dateModified (current date, e.g., "${new Date().toISOString().split('T')[0]}")
+- mainEntityOfPage (slug as URL path ok, e.g., "/${metadata.slug}")
+- image if present (use featured_image if available)
+- keywords from tags (array)
+- publisher as Organization if inferable (e.g., "${postData?.site_name || "Your Company"}")
+Return ONLY a single JSON object.
+
+Context:
+Title: ${title}
+Slug: ${metadata.slug}
+Meta description: ${metadata.meta_description || metadata.excerpt}
+Excerpt: ${metadata.excerpt}
+Tags: ${(metadata.tags || []).join(", ")}
+Featured Image: ${metadata.featured_image || ""}
+HTML (truncated):
+${text}`
+      });
 
       const pollTimeout = 90000;
       const pollInterval = 2000;
       const startTime = Date.now();
 
-      // TODO: Replace agentSDK functionality with Supabase conversation management
-      toast.error("Schema generation is temporarily disabled during migration.");
+      let schemaJson = "";
+      let attempts = 0;
+      const maxAttempts = Math.ceil(pollTimeout / pollInterval);
+
+      while (Date.now() - startTime < pollTimeout && attempts < maxAttempts) {
+        attempts++;
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+
+        const updatedConversation = await agentSDK.getConversation(conversation.id);
+        const lastMessage = updatedConversation?.messages?.[updatedConversation.messages.length - 1];
+
+        if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || (lastMessage.content && lastMessage.content.length > 10))) {
+          let contentStr = lastMessage.content || "";
+
+          contentStr = contentStr.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+          contentStr = contentStr.trim();
+
+          if (contentStr && contentStr.length > 10) {
+            schemaJson = contentStr;
+            break;
+          }
+        }
+      }
+
+      if (!schemaJson || schemaJson.length < 10) {
+        toast.error("Agent didn't return a valid schema. Please try again.");
+        return;
+      }
+
+      let parsedSchema;
+      try {
+        parsedSchema = JSON.parse(schemaJson);
+      } catch (parseError) {
+        console.error("Failed to parse agent response as JSON:", parseError);
+        toast.error("Agent returned invalid JSON. Please check the output and fix manually.");
+        setMetadata((prev) => ({ ...prev, generated_llm_schema: schemaJson }));
+        return;
+      }
+
+      const schemaStr = JSON.stringify(parsedSchema, null, 2);
+      setMetadata((prev) => ({ ...prev, generated_llm_schema: schemaStr }));
+      toast.success("Schema generated successfully by AI agent!");
     } catch (e) {
       console.error("Schema generation failed:", e);
       toast.error(e?.message || "Failed to generate schema.");

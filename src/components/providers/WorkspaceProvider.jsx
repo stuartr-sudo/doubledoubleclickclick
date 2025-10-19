@@ -1,13 +1,14 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { User } from '@/api/entities';
 import { toast } from 'sonner';
 
 export const WorkspaceContext = createContext(null);
 
 export function WorkspaceProvider({ children }) {
-  const { user: currentUser, loading } = useAuth();
   const [assignedUsernames, setAssignedUsernames] = useState([]);
   const [selectedUsername, setSelectedUsernameState] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const setSelectedUsername = (username) => {
     setSelectedUsernameState(username);
@@ -17,20 +18,18 @@ export function WorkspaceProvider({ children }) {
   };
 
   const fetchWorkspaceData = useCallback(async () => {
-    if (!currentUser) {
-      setAssignedUsernames([]);
-      setSelectedUsernameState(null);
-      return;
-    }
-
+    setIsLoading(true);
     try {
+      const user = await User.me();
+      setCurrentUser(user);
+
       let usernames = [];
-      if (currentUser?.role === 'admin' || currentUser?.is_superadmin) {
+      if (user?.role === 'admin' || user?.is_superadmin) {
         // In a real scenario, you might fetch all usernames for admins.
         // For now, we'll stick to assigned usernames for consistency.
-        usernames = currentUser?.assigned_usernames || [];
+        usernames = user?.assigned_usernames || [];
       } else {
-        usernames = currentUser?.assigned_usernames || [];
+        usernames = user?.assigned_usernames || [];
       }
       
       const activeUsernames = usernames.filter(Boolean).sort((a, b) => a.localeCompare(b));
@@ -46,11 +45,14 @@ export function WorkspaceProvider({ children }) {
         setSelectedUsernameState(null);
       }
     } catch (error) {
-      console.error('Error fetching workspace data:', error);
+      // Not an error if user is not logged in, just means no workspace.
       setAssignedUsernames([]);
       setSelectedUsernameState(null);
+      setCurrentUser(null);
+    } finally {
+      setIsLoading(false);
     }
-  }, [currentUser]);
+  }, []);
 
   useEffect(() => {
     fetchWorkspaceData();
@@ -60,7 +62,7 @@ export function WorkspaceProvider({ children }) {
     assignedUsernames,
     selectedUsername,
     setSelectedUsername,
-    isLoading: loading,
+    isLoading,
     currentUser,
     refreshWorkspace: fetchWorkspaceData,
   };

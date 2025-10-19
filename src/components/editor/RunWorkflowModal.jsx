@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/api/supabaseClient";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CheckCircle2, Loader2, Play, AlertCircle, Crown, User as UserIcon, Sparkles, ChevronRight } from "lucide-react";
@@ -185,14 +185,47 @@ export default function RunWorkflowModal({
 
   const callAgent = async (agentName, content) => {
     console.log(`🔥 FLASH: callAgent started for ${agentName}`);
-    // TODO: Replace agentSDK functionality with Supabase conversation management
-    throw new Error("Workflow functionality is temporarily disabled during migration.");
+    const { agentSDK } = await import("@/agents");
+    const conversation = await agentSDK.createConversation({
+      agent_name: agentName,
+      metadata: { source: "flash_workflow" },
+    });
+    console.log(`🔥 FLASH: Conversation created:`, conversation.id);
+
+    await agentSDK.addMessage(conversation, {
+      role: "user",
+      content: content,
+    });
+    console.log(`🔥 FLASH: Message added to conversation`);
+
+    const result = await waitForAgentResponse(conversation.id);
+    console.log(`🔥 FLASH: callAgent completed for ${agentName}`);
+    return result;
   };
 
   const waitForAgentResponse = async (conversationId, timeoutSec = 120) => {
     console.log(`🔥 FLASH: Waiting for agent response (${timeoutSec}s timeout)`);
-    // TODO: Replace agentSDK functionality with Supabase conversation management
-    throw new Error("Workflow functionality is temporarily disabled during migration.");
+    const { agentSDK } = await import("@/agents");
+    const deadline = Date.now() + timeoutSec * 1000;
+    let attempts = 0;
+    while (Date.now() < deadline) {
+      attempts++;
+      if (attempts % 10 === 0) {
+        console.log(`🔥 FLASH: Still waiting... attempt ${attempts}`);
+      }
+      const conv = await agentSDK.getConversation(conversationId);
+      const messages = conv?.messages || [];
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const m = messages[i];
+        if (m.role === "assistant" && m.content) {
+          console.log(`🔥 FLASH: Agent responded after ${attempts} attempts`);
+          return String(m.content).trim();
+        }
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    console.error(`🔥 FLASH: Agent timed out after ${timeoutSec} seconds`);
+    throw new Error("Agent timed out after " + timeoutSec + " seconds");
   };
 
   const toPlain = (html = "") => String(html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
