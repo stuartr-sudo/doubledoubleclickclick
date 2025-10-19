@@ -112,7 +112,7 @@ import DoubleClickTutorials from "./DoubleClickTutorials";
 
 import ImageLibrary from "./ImageLibrary";
 
-import post-payment from "./post-payment";
+import PostPayment from "./post-payment";
 
 import PricingFaqManager from "./PricingFaqManager";
 
@@ -262,7 +262,7 @@ const PAGES = {
     
     ImageLibrary: ImageLibrary,
     
-    post-payment: post-payment,
+    PostPayment: PostPayment,
     
     PricingFaqManager: PricingFaqManager,
     
@@ -435,7 +435,7 @@ function PagesContent() {
                 
                 <Route path="/ImageLibrary" element={<ImageLibrary />} />
                 
-                <Route path="/post-payment" element={<post-payment />} />
+                <Route path="/post-payment" element={<PostPayment />} />
                 
                 <Route path="/PricingFaqManager" element={<PricingFaqManager />} />
                 
