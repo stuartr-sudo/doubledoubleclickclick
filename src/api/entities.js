@@ -1,4 +1,4 @@
-import { base44 } from './base44Client';
+import { app } from './appClient';
 
 
 export const BlogPost = app.entities.BlogPost;
