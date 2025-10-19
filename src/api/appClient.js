@@ -1,5 +1,6 @@
 import { supabase, getCurrentUser } from './supabaseClient';
 
+// Export both 'app' and 'base44' (alias) to support gradual migration
 export const app = {
   functions: {
     invoke: async (functionName, data) => {
@@ -77,5 +78,8 @@ export const app = {
     }
   })
 };
+
+// Alias for legacy code still importing 'base44'
+export const base44 = app;
 
 
