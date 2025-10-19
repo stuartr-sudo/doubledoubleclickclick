@@ -1,70 +1,82 @@
-// Minimal stub client - no Supabase, no auth, just makes UI work
+import { supabase, getCurrentUser } from '@/lib/supabase';
+
 export const app = {
   functions: {
     invoke: async (functionName, data) => {
-      console.warn(`[stub] Function invoked: ${functionName}`, data);
-      return { success: true, data: {} };
+      const res = await fetch(`/api/${functionName}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data || {})
+      });
+      if (!res.ok) throw new Error(`Function ${functionName} failed`);
+      return res.json();
     }
   },
   auth: {
     loginWithRedirect: (returnTo) => {
-      console.warn('[stub] loginWithRedirect called');
+      if (typeof window !== 'undefined') window.location.href = '/login';
     },
     logout: async () => {
-      console.warn('[stub] logout called');
+      await supabase.auth.signOut();
+      if (typeof window !== 'undefined') window.location.href = '/login';
     },
     updateMe: async (updates) => {
-      console.warn('[stub] updateMe called', updates);
-      return {
-        id: 'stub-user-id',
-        email: 'stub@example.com',
-        full_name: 'Stub User',
-        is_superadmin: true,
-        role: 'admin',
-        assigned_usernames: ['default'],
-        token_balance: 20,
-        completed_tutorial_ids: ['welcome_onboarding', 'getting_started_scrape']
-      };
+      const user = await getCurrentUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(updates)
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      return getCurrentUser();
     },
     me: async () => {
-      return {
-        id: 'stub-user-id',
-        email: 'stub@example.com',
-        full_name: 'Stub User',
-        is_superadmin: true,
-        role: 'admin',
-        assigned_usernames: ['default'],
-        token_balance: 20,
-        completed_tutorial_ids: ['welcome_onboarding', 'getting_started_scrape']
-      };
+      return getCurrentUser();
     }
   },
   entities: new Proxy({}, {
     get: (target, entityName) => {
+      const tableName = entityName
+        .replace(/([A-Z])/g, '_$1')
+        .toLowerCase()
+        .replace(/^_/, '') + 's';
+      
       return {
         filter: async (filters = {}) => {
-          console.warn(`[stub] ${entityName}.filter`, filters);
-          return [];
+          let query = supabase.from(tableName).select('*');
+          Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) query = query.eq(key, value);
+          });
+          const { data, error } = await query;
+          if (error) throw error;
+          return data || [];
         },
         findById: async (id) => {
-          console.warn(`[stub] ${entityName}.findById`, id);
-          return null;
+          const { data, error } = await supabase.from(tableName).select('*').eq('id', id).single();
+          if (error) throw error;
+          return data;
         },
         create: async (payload) => {
-          console.warn(`[stub] ${entityName}.create`, payload);
-          return { id: `stub-${Date.now()}`, ...payload };
+          const { data, error } = await supabase.from(tableName).insert(payload).select().single();
+          if (error) throw error;
+          return data;
         },
         update: async (id, payload) => {
-          console.warn(`[stub] ${entityName}.update`, id, payload);
-          return { id, ...payload };
+          const { data, error } = await supabase.from(tableName).update(payload).eq('id', id).select().single();
+          if (error) throw error;
+          return data;
         },
         delete: async (id) => {
-          console.warn(`[stub] ${entityName}.delete`, id);
+          const { error } = await supabase.from(tableName).delete().eq('id', id);
+          if (error) throw error;
           return true;
         },
         list: async () => {
-          console.warn(`[stub] ${entityName}.list`);
-          return [];
+          const { data, error } = await supabase.from(tableName).select('*');
+          if (error) throw error;
+          return data || [];
         }
       };
     }
