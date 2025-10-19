@@ -2304,8 +2304,8 @@ export default function Editor() {
   const loadPostContent = useCallback(async (postId) => {
     const fetchPostWithRetry = async (currentPostId, attempt = 0) => {
       try {
-        const found = await BlogPost.filter({ id: currentPostId });
-        if (!found || found.length === 0) {
+        const found = await BlogPost.findById(currentPostId);
+        if (!found) {
           toast.error("Post not found");
           setTitle("");
           setContent("");
@@ -2315,7 +2315,7 @@ export default function Editor() {
           sendToPreview({ type: "set-html", html: "" });
           return;
         }
-        const post = found[0];
+        const post = found;
         setCurrentPost(post);
         setTitle(post.title || "");
         setContent(post.content || "");
