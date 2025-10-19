@@ -235,7 +235,7 @@ Return a JSON object with these fields:
               name: `${domain} Brand Guidelines`,
               voice_and_tone: guidelinesData.voice_and_tone || "Professional and clear",
               content_style_rules: guidelinesData.content_style_rules || "Use active voice and concise sentences",
-              prohibited_elements: guidelinesData.prohibited preconditioned_elements || "",
+              prohibited_elements: guidelinesData.prohibited_elements || "",
               preferred_elements: guidelinesData.preferred_elements || "",
               target_market: guidelinesData.target_market || ""
             });
