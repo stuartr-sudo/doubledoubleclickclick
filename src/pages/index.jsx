@@ -146,6 +146,10 @@ import InfographicExamplesAdmin from "./InfographicExamplesAdmin";
 
 import GettingStarted from "./GettingStarted";
 
+import Login from "./Login";
+
+import Signup from "./Signup";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -296,6 +300,10 @@ const PAGES = {
     
     GettingStarted: GettingStarted,
     
+    Login: Login,
+    
+    Signup: Signup,
+    
 }
 
 function _getCurrentPage(url) {
@@ -316,11 +324,22 @@ function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
     
+    // Check if current route is public (doesn't require authentication)
+    const isPublicRoute = location.pathname === '/login' || location.pathname === '/signup';
+    
+    if (isPublicRoute) {
+        return (
+            <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+            </Routes>
+        );
+    }
+    
     return (
         <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Editor />} />
+            <Routes>
+                <Route path="/" element={<Editor />} />
                 
                 
                 <Route path="/Editor" element={<Editor />} />

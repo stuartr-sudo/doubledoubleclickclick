@@ -458,37 +458,14 @@ Content: """${text}"""`,
       const pollInterval = 2000;
       const startTime = Date.now();
 
-      let schemaJson = "";
-      let attempts = 0;
-      const maxAttempts = Math.ceil(pollTimeout / pollInterval);
-
-      while (Date.now() - startTime < pollTimeout && attempts < maxAttempts) {
-        attempts++;
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
-
-        // const updatedConversation = await agentSDK.getConversation(conversation.id);
-        // const lastMessage = updatedConversation?.messages?.[updatedConversation.messages.length - 1];
-
-        // if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || (lastMessage.content && lastMessage.content.length > 10))) {
-          let contentStr = lastMessage.content || "";
-
-          contentStr = contentStr.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
-          contentStr = contentStr.trim();
-
-          if (contentStr && contentStr.length > 10) {
-            schemaJson = contentStr;
-            break;
-          }
-        }
-      }
-
-        // if (!schemaJson || schemaJson.length < 10) {
-        //   toast.error("Agent didn't return a valid schema. Please try again.");
-        //   return;
-        // }
-
-        // TODO: Replace agentSDK functionality with Supabase conversation management
-        toast.error("Schema generation is temporarily disabled during migration.");
+      // TODO: Replace agentSDK functionality with Supabase conversation management
+      toast.error("Schema generation is temporarily disabled during migration.");
+    } catch (e) {
+      console.error("Schema generation failed:", e);
+      toast.error(e?.message || "Failed to generate schema.");
+    } finally {
+      setIsGeneratingSchema(false);
+    }
   };
 
   return (

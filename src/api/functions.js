@@ -18,7 +18,7 @@ export const captureEmail = async (data) => callVercelFunction('/email/capture',
 export const interestingFact = async (data) => callVercelFunction('/ai/interesting-fact', data)
 
 // Airtable functions (CRITICAL)
-export const publishToAirtable = async (data) => callVercelFunction('/airtable/publish', data)
+export const publishToAirtableLegacy = async (data) => callVercelFunction('/airtable/publish', data)
 export const airtableSync = async (data) => callVercelFunction('/airtable/sync', data)
 export const airtableListRecords = async (data) => callVercelFunction('/airtable/list-records', data)
 export const airtableCreateRecord = async (data) => callVercelFunction('/airtable/create-record', data)
@@ -114,7 +114,7 @@ export const getSunoStatus = async (data) => callVercelFunction('/ai/get-suno-st
 export const publishContentToNotionEnhanced = async (data) => callVercelFunction('/integrations/notion/publish-enhanced', data)
 export const findSourceAndCite = async (data) => callVercelFunction('/ai/find-source-and-cite', data)
 export const publishToShopifyEnhanced = async (data) => callVercelFunction('/integrations/shopify/publish-enhanced', data)
-export const extractWebsiteContent = async (data) => callVercelFunction('/integrations/website/extract-content', data)
+export const extractWebsiteContentLegacy = async (data) => callVercelFunction('/integrations/website/extract-content', data)
 export const executeEditorWorkflow = async (data) => callVercelFunction('/workflows/execute-editor', data)
 export const generateArticleFaqs = async (data) => callVercelFunction('/ai/generate-article-faqs', data)
 export const generatePageFromEndpoint = async (data) => callVercelFunction('/content/generate-page-from-endpoint', data)
@@ -123,7 +123,7 @@ export const generatePageFromEndpoint = async (data) => callVercelFunction('/con
 export const llmRouter = async (data) => callVercelFunction('/ai/llm-router', data)
 export const llmRouterStatus = async (data) => callVercelFunction('/ai/llm-router-status', data)
 
-export const securePublish = async (data) => callVercelFunction('/content/secure-publish', data)
+export const securePublishLegacy = async (data) => callVercelFunction('/content/secure-publish', data)
 export const checkAndConsumeTokens = async (data) => callVercelFunction('/utils/check-consume-tokens', data)
 export const callFeatureEndpoint = async (data) => callVercelFunction('/utils/call-feature-endpoint', data)
 export const listCallableFunctions = async (data) => callVercelFunction('/utils/list-callable-functions', data)
@@ -165,8 +165,8 @@ export const notifyFirecrawlWebsite = async (data) => callVercelFunction('/integ
 export const stylePreviewProxy = async (data) => callVercelFunction('/utils/style-preview-proxy', data)
 export const generateTldr = async (data) => callVercelFunction('/ai/generate-tldr', data)
 export const executeTldr = async (data) => callVercelFunction('/ai/execute-tldr', data)
-export const scrapeWithFirecrawl = async (data) => callVercelFunction('/integrations/firecrawl/scrape', data)
-export const getSitemapPages = async (data) => callVercelFunction('/integrations/sitemap/get-pages', data)
+export const scrapeWithFirecrawlLegacy = async (data) => callVercelFunction('/integrations/firecrawl/scrape', data)
+export const getSitemapPagesLegacy = async (data) => callVercelFunction('/integrations/sitemap/get-pages', data)
 export const fetchShopifyBlogs = async (data) => callVercelFunction('/integrations/shopify/fetch-blogs', data)
 export const analyzeWebsiteBrand = async (data) => callVercelFunction('/ai/analyze-website-brand', data)
 export const generateBrandCSS = async (data) => callVercelFunction('/ai/generate-brand-css', data)
@@ -180,3 +180,23 @@ export const createGmailDraft = async (data) => callVercelFunction('/integration
 // Video functions
 export const generateWavespeedVideo = async (data) => callVercelFunction('/ai/generate-wavespeed-video', data)
 export const getWavespeedResult = async (data) => callVercelFunction('/ai/get-wavespeed-result', data)
+
+// Publishing functions
+export const publishToDefaultNow = async (data) => callVercelFunction('/publishing/publish', data)
+export const publishToWordPress = async (data) => callVercelFunction('/publishing/wordpress', data)
+export const publishToShopify = async (data) => callVercelFunction('/publishing/shopify', data)
+export const publishToAirtable = async (data) => callVercelFunction('/publishing/airtable', data)
+
+// Webhook functions
+export const updateWebhookReceived = async (data) => callVercelFunction('/webhooks/update', data)
+export const filterWebhookReceived = async (data) => callVercelFunction('/webhooks/filter', data)
+export const listWebhookReceived = async (data) => callVercelFunction('/webhooks/list', data)
+
+// Additional Editor functions
+export const sendToAirtable = async (data) => callVercelFunction('/publishing/airtable', data)
+export const securePublish = async (data) => callVercelFunction('/publishing/publish', data)
+
+// Scraping functions
+export const scrapeWithFirecrawl = async (data) => callVercelFunction('/scraping/firecrawl', data)
+export const extractWebsiteContent = async (data) => callVercelFunction('/scraping/extract-content', data)
+export const getSitemapPages = async (data) => callVercelFunction('/scraping/sitemap', data)

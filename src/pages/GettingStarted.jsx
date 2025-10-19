@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { User } from "@/api/entities";
+import { useAuth } from "@/hooks/useAuth";
 import { BlogPost } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,10 @@ import { supabase } from "@/api/supabaseClient";
 import { Sitemap } from "@/api/entities";
 import { BrandGuidelines } from "@/api/entities";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
+import { scrapeWithFirecrawl, extractWebsiteContent, getSitemapPages, llmRouter } from "@/api/functions";
 
 export default function GettingStarted() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuth();
   
   const [blogUrl, setBlogUrl] = useState("");
   const [scraping, setScraping] = useState(false);
@@ -31,31 +31,17 @@ export default function GettingStarted() {
   const [importEta, setImportEta] = useState(60);
 
   useEffect(() => {
-    loadUser();
-  }, []);
+    if (user?.completed_tutorial_ids?.includes('getting_started_scrape')) {
+      window.location.href = createPageUrl('Dashboard');
+      return;
+    }
+  }, [user]);
 
   const normalizeUrl = (url) => {
     if (!url) return "";
     const trimmed = String(url).trim();
     if (/^https?:\/\//i.test(trimmed)) return trimmed;
     return `https://${trimmed}`;
-  };
-
-  const loadUser = async () => {
-    try {
-      const currentUser = await User.me();
-      setUser(currentUser);
-
-      if (currentUser?.completed_tutorial_ids?.includes('getting_started_scrape')) {
-        window.location.href = createPageUrl('Dashboard');
-        return;
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.error("Error loading user:", error);
-      window.location.href = createPageUrl('Home');
-    }
   };
 
   const extractDomain = (url) => {
@@ -156,10 +142,11 @@ export default function GettingStarted() {
         console.log('[Background] Fetching sitemap for:', domain);
         
         try {
-          const { data } = await base44.functions.invoke('getSitemapPages', {
+          const response = await getSitemapPages({
             url: `https://${domain}`,
             limit: 200
           });
+          const data = response.data;
 
           if (data?.success && Array.isArray(data.pages) && data.pages.length > 0) {
             await Sitemap.create({
@@ -204,20 +191,19 @@ Return a JSON object with these fields:
   "target_market": "description of target audience"
 }`;
 
-          const guidelinesData = await base44.integrations.Core.InvokeLLM({
-            prompt,
-            add_context_from_internet: true,
-            response_json_schema: {
-              type: "object",
-              properties: {
-                voice_and_tone: { type: "string" },
-                content_style_rules: { type: "string" },
-                prohibited_elements: { type: "string" },
-                preferred_elements: { type: "string" },
-                target_market: { type: "string" }
+          const response = await llmRouter({
+            provider: 'openai',
+            model: 'gpt-4',
+            messages: [
+              {
+                role: 'user',
+                content: prompt
               }
-            }
+            ],
+            max_tokens: 2000,
+            temperature: 0.7
           });
+          const guidelinesData = response.data;
 
           if (guidelinesData) {
             await BrandGuidelines.create({
@@ -270,7 +256,7 @@ Return a JSON object with these fields:
 
       // Try scrapeWithFirecrawl first
       try {
-        const response = await base44.functions.invoke('scrapeWithFirecrawl', { url: url });
+        const response = await scrapeWithFirecrawl({ url: url });
         data = response.data;
         console.log('[GettingStarted] scrapeWithFirecrawl response:', JSON.stringify(data, null, 2));
       } catch (firecrawlError) {
@@ -279,7 +265,7 @@ Return a JSON object with these fields:
         
         // Fallback to extractWebsiteContent
         try {
-          const response = await base44.functions.invoke('extractWebsiteContent', { url: url });
+          const response = await extractWebsiteContent({ url: url });
           data = response.data;
           console.log('[GettingStarted] extractWebsiteContent response:', JSON.stringify(data, null, 2));
         } catch (extractError) {
@@ -315,9 +301,17 @@ Return a JSON object with these fields:
       });
 
       const currentCompleted = user?.completed_tutorial_ids || [];
-      await base44.auth.updateMe({
-        completed_tutorial_ids: Array.from(new Set([...currentCompleted, "getting_started_scrape"]))
-      });
+      const updatedCompleted = Array.from(new Set([...currentCompleted, "getting_started_scrape"]));
+      
+      // Update user profile in Supabase
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ completed_tutorial_ids: updatedCompleted })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Error updating user profile:', updateError);
+      }
 
       // NEW: Trigger background sitemap and guidelines generation
       if (username) {
@@ -373,10 +367,11 @@ Return a JSON object with these fields:
 
     setFetchingPages(true);
     try {
-      const { data } = await base44.functions.invoke('getSitemapPages', {
+      const response = await getSitemapPages({
         url: siteUrl,
         limit: 200
       });
+      const data = response.data;
 
       if (!data?.success) {
         throw new Error(data?.error || "Could not fetch sitemap pages");

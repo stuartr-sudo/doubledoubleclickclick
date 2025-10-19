@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { User } from "@/api/entities";
-import { AppSettings } from "@/api/entities";
+import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -66,7 +65,31 @@ export default function Welcome() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await User.me();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        window.location.href = '/login';
+        return;
+      }
+
+      // Get user profile from user_profiles table
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        window.location.href = '/login';
+        return;
+      }
+
+      const currentUser = {
+        ...authUser,
+        ...profile
+      };
+      
       setUser(currentUser);
 
       // Check if user has already completed onboarding
@@ -79,18 +102,16 @@ export default function Welcome() {
       setLoading(false);
     } catch (error) {
       console.error("Error loading user:", error);
-      // If no user, redirect to home
-      window.location.href = createPageUrl('Home');
+      // If no user, redirect to login
+      window.location.href = '/login';
     }
   };
 
   const loadWelcomeVideo = async () => {
     try {
-      const settings = await AppSettings.list();
-      const welcomeSetting = settings.find(s => s.key === "welcome_onboarding_video");
-      if (welcomeSetting?.value) {
-        setWelcomeVideoUrl(welcomeSetting.value);
-      }
+      // For now, set a default welcome video URL
+      // TODO: Implement app_settings table in Supabase later
+      setWelcomeVideoUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
     } catch (error) {
       console.error("Error loading welcome video:", error);
     }
@@ -107,7 +128,16 @@ export default function Welcome() {
       if (user) {
         const currentCompleted = user.completed_tutorial_ids || [];
         const updatedCompleted = Array.from(new Set([...currentCompleted, "welcome_onboarding"]));
-        await User.updateMyUserData({ completed_tutorial_ids: updatedCompleted });
+        
+        // Update user profile in Supabase
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ completed_tutorial_ids: updatedCompleted })
+          .eq('id', user.id);
+
+        if (error) {
+          throw error;
+        }
       }
       toast.success("Welcome complete! Let's get you started.");
       // Redirect to GettingStarted instead of Dashboard
@@ -130,7 +160,16 @@ export default function Welcome() {
           "welcome_onboarding",
           "getting_started_scrape"
         ]));
-        await User.updateMyUserData({ completed_tutorial_ids: updatedCompleted });
+        
+        // Update user profile in Supabase
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ completed_tutorial_ids: updatedCompleted })
+          .eq('id', user.id);
+
+        if (error) {
+          throw error;
+        }
       }
       window.location.href = createPageUrl('Dashboard');
     } catch (error) {

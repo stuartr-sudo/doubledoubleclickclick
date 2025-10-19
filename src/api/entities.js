@@ -109,6 +109,41 @@ const createEntityWrapper = (entityName) => {
 // Export all entities with Base44-compatible interface
 export const BlogPost = createEntityWrapper('BlogPost')
 export const WebhookReceived = createEntityWrapper('WebhookReceived')
+
+// Add missing functions that the Editor expects
+WebhookReceived.update = async (id, updates) => {
+  const response = await fetch('/api/webhooks?action=update', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+    },
+    body: JSON.stringify({ id, updates })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to update webhook: ${response.statusText}`);
+  }
+  
+  return response.json();
+};
+
+WebhookReceived.filter = async (filters = {}, sortBy = null) => {
+  const response = await fetch('/api/webhooks?action=filter', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+    },
+    body: JSON.stringify({ filters, sortBy })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to filter webhooks: ${response.statusText}`);
+  }
+  
+  return response.json();
+};
 export const AvailablePage = createEntityWrapper('AvailablePage')
 export const YouTubeVideo = createEntityWrapper('YouTubeVideo')
 export const PromotedProduct = createEntityWrapper('PromotedProduct')

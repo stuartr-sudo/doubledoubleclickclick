@@ -1,84 +1,108 @@
-import { verifyAuth } from '../utils/auth.js'
-import { createSuccessResponse, createErrorResponse, handleCors } from '../utils/response.js'
-import { supabaseAdmin } from '../utils/auth.js'
+import { createClient } from '@supabase/supabase-js';
+import { validateRequest } from '../utils/validation.js';
+import { createResponse } from '../utils/response.js';
 
-export default async function handler(request) {
-  // Handle CORS preflight
-  const corsResponse = handleCors(request)
-  if (corsResponse) return corsResponse
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (request.method !== 'POST') {
-    return createErrorResponse('Method not allowed', 405)
-  }
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing Supabase configuration');
+}
 
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+export default async function handler(req, res) {
   try {
-    // Verify authentication
-    const user = await verifyAuth(request)
-    
-    // Parse form data
-    const formData = await request.formData()
-    const file = formData.get('file')
-    const bucket = formData.get('bucket') || 'images'
-    const path = formData.get('path') || `${user.user_name}/${Date.now()}-${file.name}`
+    const { method } = req;
+
+    // Validate request
+    const validation = await validateRequest(req, {
+      requiredAuth: true,
+      allowedMethods: ['POST']
+    });
+
+    if (!validation.success) {
+      return createResponse(res, validation.error, 401);
+    }
+
+    const { user } = validation;
+
+    // Parse multipart form data
+    const formData = await req.formData();
+    const file = formData.get('file');
+    const bucket = formData.get('bucket') || 'images';
+    const folder = formData.get('folder') || 'uploads';
 
     if (!file) {
-      return createErrorResponse('File is required', 400)
+      return createResponse(res, { error: 'No file provided' }, 400);
     }
 
     // Validate file type and size
-    const allowedTypes = {
-      'images': ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-      'videos': ['video/mp4', 'video/webm', 'video/quicktime'],
-      'documents': ['application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-      'private': ['application/json', 'text/plain']
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
+    const maxSize = 50 * 1024 * 1024; // 50MB
+
+    if (!allowedTypes.includes(file.type)) {
+      return createResponse(res, { error: 'Invalid file type' }, 400);
     }
 
-    const maxSizes = {
-      'images': 10 * 1024 * 1024, // 10MB
-      'videos': 100 * 1024 * 1024, // 100MB
-      'documents': 50 * 1024 * 1024, // 50MB
-      'private': 10 * 1024 * 1024 // 10MB
+    if (file.size > maxSize) {
+      return createResponse(res, { error: 'File too large' }, 400);
     }
 
-    if (!allowedTypes[bucket]?.includes(file.type)) {
-      return createErrorResponse(`File type ${file.type} not allowed for bucket ${bucket}`, 400)
-    }
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const fileExtension = file.name.split('.').pop();
+    const fileName = `${timestamp}_${randomString}.${fileExtension}`;
+    const filePath = `${folder}/${fileName}`;
 
-    if (file.size > maxSizes[bucket]) {
-      return createErrorResponse(`File size ${file.size} exceeds maximum ${maxSizes[bucket]} bytes for bucket ${bucket}`, 400)
-    }
-
-    // Convert file to buffer
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabaseAdmin.storage
+    // Upload file to Supabase Storage
+    const { data, error } = await supabase.storage
       .from(bucket)
-      .upload(path, buffer, {
-        contentType: file.type,
+      .upload(filePath, file, {
+        cacheControl: '3600',
         upsert: false
-      })
+      });
 
     if (error) {
-      throw new Error(`Storage upload error: ${error.message}`)
+      console.error('Upload error:', error);
+      return createResponse(res, { error: 'Failed to upload file' }, 500);
     }
 
     // Get public URL
-    const { data: { publicUrl } } = supabaseAdmin.storage
+    const { data: urlData } = supabase.storage
       .from(bucket)
-      .getPublicUrl(data.path)
+      .getPublicUrl(filePath);
 
-    return createSuccessResponse({
-      file_url: publicUrl,
-      path: data.path,
-      bucket,
-      size: file.size,
-      type: file.type
-    }, 'File uploaded successfully')
+    // Save file metadata to database
+    const { data: fileRecord, error: dbError } = await supabase
+      .from('image_library_items')
+      .insert({
+        url: urlData.publicUrl,
+        alt_text: file.name,
+        source: 'upload',
+        tags: [],
+        user_name: user.email
+      })
+      .select()
+      .single();
+
+    if (dbError) {
+      console.error('Database error:', dbError);
+      // Don't fail the upload if database insert fails
+    }
+
+    return createResponse(res, {
+      success: true,
+      url: urlData.publicUrl,
+      path: filePath,
+      fileName: fileName,
+      fileId: fileRecord?.id,
+      bucket: bucket
+    });
 
   } catch (error) {
-    console.error('File upload error:', error)
-    return createErrorResponse(error.message || 'Internal server error', 500)
+    console.error('Upload error:', error);
+    return createResponse(res, { error: 'Internal server error' }, 500);
   }
 }

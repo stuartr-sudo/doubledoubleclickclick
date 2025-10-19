@@ -38,8 +38,56 @@ export const fileUploadSchema = z.object({
   metadata: z.record(z.any()).optional()
 })
 
-// Validation helper
-export const validateRequest = (schema, data) => {
+// Validation helper for request validation
+export const validateRequest = async (req, options = {}) => {
+  const { requiredAuth = false, allowedMethods = ['GET', 'POST', 'PUT', 'DELETE'] } = options;
+
+  // Check method
+  if (!allowedMethods.includes(req.method)) {
+    return { success: false, error: { error: 'Method not allowed' }, status: 405 };
+  }
+
+  // Check authentication if required
+  if (requiredAuth) {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      
+      const supabaseUrl = process.env.VITE_SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (!supabaseUrl || !supabaseServiceKey) {
+        return { success: false, error: { error: 'Server configuration error' }, status: 500 };
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      // Get authorization header
+      const authHeader = req.headers.authorization || req.headers.Authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return { success: false, error: { error: 'Missing or invalid authorization header' }, status: 401 };
+      }
+
+      const token = authHeader.substring(7);
+      
+      // Verify the JWT token
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      
+      if (error || !user) {
+        return { success: false, error: { error: 'Invalid or expired token' }, status: 401 };
+      }
+
+      return { success: true, user };
+    } catch (error) {
+      console.error('Auth validation error:', error);
+      return { success: false, error: { error: 'Authentication failed' }, status: 401 };
+    }
+  }
+
+  return { success: true };
+}
+
+// Validation helper for schema validation
+export const validateSchema = (schema, data) => {
   try {
     return schema.parse(data)
   } catch (error) {

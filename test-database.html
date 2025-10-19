@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Supabase Database</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Test Supabase Database Connection</h1>
+    <div id="status">Loading...</div>
+    <div id="results"></div>
+    
+    <script>
+        const supabaseUrl = 'https://uscmvlfleccbctuvhhcj.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzY212bGZsZWNjYmN0dXZoaGNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2NzY5MDYsImV4cCI6MjA1MDI1MjkwNn0.Ll2qVfVqVqVqVqVqVqVqVqVqVqVqVqVqVqVqVqVqVqV'
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+        
+        async function testDatabase() {
+            document.getElementById('status').innerHTML = 'Testing database connection...'
+            
+            try {
+                // Test 1: Check if user_profiles table exists
+                const { data: profiles, error: profilesError } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .limit(1)
+                
+                if (profilesError) {
+                    document.getElementById('results').innerHTML = 
+                        '<h2>❌ user_profiles table does not exist or has issues</h2>' +
+                        '<p>Error: ' + profilesError.message + '</p>' +
+                        '<p><strong>Action needed:</strong> Run the SQL script to create the user_profiles table</p>'
+                } else {
+                    document.getElementById('results').innerHTML = 
+                        '<h2>✅ user_profiles table exists and is accessible</h2>' +
+                        '<p>Found ' + profiles.length + ' profile(s)</p>'
+                }
+                
+                // Test 2: Try to create a test record (will fail if RLS is working)
+                const { data: testData, error: testError } = await supabase
+                    .from('user_profiles')
+                    .insert({
+                        id: 'test-id-123',
+                        user_name: 'test_user',
+                        full_name: 'Test User'
+                    })
+                
+                if (testError) {
+                    document.getElementById('results').innerHTML += 
+                        '<p>✅ RLS is working (insert blocked as expected)</p>'
+                } else {
+                    document.getElementById('results').innerHTML += 
+                        '<p>⚠️ RLS might not be working (insert succeeded)</p>'
+                }
+                
+            } catch (error) {
+                document.getElementById('results').innerHTML = 
+                    '<h2>❌ Database connection failed</h2>' +
+                    '<p>Error: ' + error.message + '</p>'
+            }
+        }
+        
+        testDatabase()
+    </script>
+</body>
+</html>

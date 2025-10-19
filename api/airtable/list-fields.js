@@ -1,77 +1,81 @@
-import { verifyAuth } from '../utils/auth.js'
-import { createSuccessResponse, createErrorResponse, handleCors } from '../utils/response.js'
-import { supabaseAdmin } from '../utils/auth.js'
+import { createClient } from '@supabase/supabase-js';
+import { validateRequest } from '../utils/validation.js';
+import { createResponse } from '../utils/response.js';
 
-export default async function handler(request) {
-  // Handle CORS preflight
-  const corsResponse = handleCors(request)
-  if (corsResponse) return corsResponse
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (request.method !== 'POST') {
-    return createErrorResponse('Method not allowed', 405)
-  }
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing Supabase configuration');
+}
 
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+export default async function handler(req, res) {
   try {
-    // Verify authentication
-    const user = await verifyAuth(request)
-    
-    // Parse request body
-    const { tableId } = await request.json()
+    const { method } = req;
 
-    if (!tableId) {
-      return createErrorResponse('tableId is required', 400)
+    // Validate request
+    const validation = await validateRequest(req, {
+      requiredAuth: true,
+      allowedMethods: ['GET']
+    });
+
+    if (!validation.success) {
+      return createResponse(res, validation.error, 401);
     }
 
-    // Get Airtable credentials for the user
-    const { data: credentials, error: credError } = await supabaseAdmin
+    const { user } = validation;
+    const { baseId, tableName } = req.query;
+
+    if (!baseId || !tableName) {
+      return createResponse(res, { error: 'baseId and tableName are required' }, 400);
+    }
+
+    // Get user's Airtable credentials
+    const { data: credentials } = await supabase
       .from('integration_credentials')
-      .select('credential_data')
-      .eq('user_name', user.user_name)
+      .select('*')
+      .eq('user_id', user.id)
       .eq('integration_type', 'airtable')
-      .eq('is_active', true)
-      .single()
+      .single();
 
-    if (credError || !credentials) {
-      return createErrorResponse('Airtable credentials not found', 404)
+    if (!credentials) {
+      return createResponse(res, { error: 'Airtable credentials not found' }, 404);
     }
 
-    const airtableApiKey = credentials.credential_data.api_key
-    const airtableBaseId = credentials.credential_data.base_id
+    const airtableApiKey = credentials.credential_data.airtable_api_key;
+    const airtableBaseId = baseId || credentials.credential_data.airtable_base_id;
 
     if (!airtableApiKey || !airtableBaseId) {
-      return createErrorResponse('Invalid Airtable credentials', 400)
+      return createResponse(res, { error: 'Airtable API key or Base ID not configured' }, 400);
     }
 
-    // Get table schema from Airtable
-    const url = `https://api.airtable.com/v0/meta/bases/${airtableBaseId}/tables`
-    
-    const response = await fetch(url, {
+    // Fetch table schema from Airtable
+    const response = await fetch(`https://api.airtable.com/v0/meta/bases/${airtableBaseId}/tables`, {
       headers: {
         'Authorization': `Bearer ${airtableApiKey}`,
         'Content-Type': 'application/json'
       }
-    })
+    });
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Airtable API error: ${response.status} - ${error}`)
+      const errorData = await response.text();
+      console.error('Airtable API error:', errorData);
+      return createResponse(res, { error: 'Failed to fetch Airtable table schema' }, 500);
     }
 
-    const data = await response.json()
-    const table = data.tables?.find(t => t.id === tableId || t.name === tableId)
+    const data = await response.json();
+    const table = data.tables.find(t => t.name === tableName);
     
     if (!table) {
-      return createErrorResponse(`Table ${tableId} not found`, 404)
+      return createResponse(res, { error: 'Table not found' }, 404);
     }
 
-    return createSuccessResponse({
-      tableId: table.id,
-      tableName: table.name,
-      fields: table.fields || []
-    }, 'Table fields retrieved successfully')
+    return createResponse(res, { fields: table.fields });
 
   } catch (error) {
-    console.error('Airtable list fields error:', error)
-    return createErrorResponse(error.message || 'Internal server error', 500)
+    console.error('List fields error:', error);
+    return createResponse(res, { error: 'Failed to list fields' }, 500);
   }
 }

@@ -1,0 +1,52 @@
+# Vercel Pro Plan Environment Variables
+# Copy this to .env.local for local development
+# Add these to Vercel dashboard for production
+
+# Supabase Configuration
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Airtable Configuration
+AIRTABLE_API_KEY=your-airtable-api-key
+AIRTABLE_BASE_ID=your-airtable-base-id
+
+# OpenAI Configuration
+OPENAI_API_KEY=your-openai-api-key
+
+# Anthropic Configuration
+ANTHROPIC_API_KEY=your-anthropic-api-key
+
+# Stripe Configuration
+STRIPE_SECRET_KEY=your-stripe-secret-key
+STRIPE_PUBLISHABLE_KEY=your-stripe-publishable-key
+
+# Email Configuration
+RESEND_API_KEY=your-resend-api-key
+SENDGRID_API_KEY=your-sendgrid-api-key
+
+# Social Media APIs
+YOUTUBE_API_KEY=your-youtube-api-key
+TIKTOK_ACCESS_TOKEN=your-tiktok-access-token
+
+# AI Services
+FAL_KEY=your-fal-key
+ELEVENLABS_API_KEY=your-elevenlabs-api-key
+
+# Monitoring & Analytics
+VERCEL_ANALYTICS_ID=your-vercel-analytics-id
+SENTRY_DSN=your-sentry-dsn
+
+# Custom Domain (Pro Plan Feature)
+CUSTOM_DOMAIN=your-domain.com
+
+# Performance Monitoring
+WEB_VITALS_API_KEY=your-web-vitals-api-key
+
+# Security
+JWT_SECRET=your-jwt-secret
+ENCRYPTION_KEY=your-encryption-key
+
+# Feature Flags (Pro Plan Feature)
+FEATURE_FLAGS_ENABLED=true
+PREVIEW_DEPLOYMENTS=true

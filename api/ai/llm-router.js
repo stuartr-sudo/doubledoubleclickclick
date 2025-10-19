@@ -1,162 +1,139 @@
-import { verifyAuth } from '../utils/auth.js'
-import { createSuccessResponse, createErrorResponse, handleCors } from '../utils/response.js'
-import { supabaseAdmin } from '../utils/auth.js'
+import { createClient } from '@supabase/supabase-js';
+import { validateRequest } from '../utils/validation.js';
+import { createResponse } from '../utils/response.js';
 
-export default async function handler(request) {
-  // Handle CORS preflight
-  const corsResponse = handleCors(request)
-  if (corsResponse) return corsResponse
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (request.method !== 'POST') {
-    return createErrorResponse('Method not allowed', 405)
-  }
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing Supabase configuration');
+}
 
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+export default async function handler(req, res) {
   try {
-    // Verify authentication
-    const user = await verifyAuth(request)
-    
-    // Parse request body
-    const { 
-      prompt, 
-      model = 'gpt-4', 
-      max_tokens = 1000, 
-      temperature = 0.7,
-      system_prompt,
-      messages,
-      streaming = false
-    } = await request.json()
+    const { method } = req;
 
-    if (!prompt && !messages) {
-      return createErrorResponse('prompt or messages are required', 400)
+    // Validate request
+    const validation = await validateRequest(req, {
+      requiredAuth: true,
+      allowedMethods: ['POST']
+    });
+
+    if (!validation.success) {
+      return createResponse(res, validation.error, 401);
     }
 
-    // Check and consume tokens
-    const tokenCost = Math.ceil((prompt?.length || 0) / 100) || 1
-    const { data: hasTokens, error: tokenError } = await supabaseAdmin
-      .rpc('check_and_consume_tokens', {
-        feature_name: 'llm_router',
-        token_cost: tokenCost
-      })
+    const { user } = validation;
+    const { prompt, model = 'gpt-4', maxTokens = 1000, temperature = 0.7 } = req.body;
 
-    if (tokenError || !hasTokens) {
-      return createErrorResponse('Insufficient tokens', 402)
+    if (!prompt) {
+      return createResponse(res, { error: 'Prompt is required' }, 400);
     }
 
-    let result
+    // Check user token balance
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('token_balance')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile || profile.token_balance < 1) {
+      return createResponse(res, { error: 'Insufficient tokens' }, 402);
+    }
 
     // Route to appropriate LLM provider
-    if (model.includes('gpt')) {
-      result = await callOpenAI({ prompt, model, max_tokens, temperature, system_prompt, messages, streaming })
-    } else if (model.includes('claude')) {
-      result = await callAnthropic({ prompt, model, max_tokens, temperature, system_prompt, messages, streaming })
+    let response;
+    let tokenCost = 1;
+
+    if (model.includes('gpt') || model.includes('openai')) {
+      response = await callOpenAI(prompt, model, maxTokens, temperature);
+      tokenCost = Math.ceil(maxTokens / 100); // Rough token cost calculation
+    } else if (model.includes('claude') || model.includes('anthropic')) {
+      response = await callAnthropic(prompt, model, maxTokens, temperature);
+      tokenCost = Math.ceil(maxTokens / 100);
     } else {
-      return createErrorResponse(`Unsupported model: ${model}`, 400)
+      return createResponse(res, { error: 'Unsupported model' }, 400);
     }
 
-    return createSuccessResponse(result, 'LLM response generated successfully')
+    // Deduct tokens from user balance
+    await supabase
+      .from('user_profiles')
+      .update({ 
+        token_balance: Math.max(0, profile.token_balance - tokenCost)
+      })
+      .eq('id', user.id);
+
+    return createResponse(res, {
+      response: response,
+      tokensUsed: tokenCost,
+      model: model
+    });
 
   } catch (error) {
-    console.error('LLM router error:', error)
-    return createErrorResponse(error.message || 'Internal server error', 500)
+    console.error('LLM Router error:', error);
+    return createResponse(res, { error: 'Internal server error' }, 500);
   }
 }
 
-async function callOpenAI({ prompt, model, max_tokens, temperature, system_prompt, messages, streaming }) {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    throw new Error('OpenAI API key not configured')
-  }
-
-  const openaiMessages = []
+async function callOpenAI(prompt, model, maxTokens, temperature) {
+  const openaiApiKey = process.env.OPENAI_API_KEY;
   
-  if (system_prompt) {
-    openaiMessages.push({ role: 'system', content: system_prompt })
-  }
-  
-  if (messages && Array.isArray(messages)) {
-    openaiMessages.push(...messages)
-  } else if (prompt) {
-    openaiMessages.push({ role: 'user', content: prompt })
+  if (!openaiApiKey) {
+    throw new Error('OpenAI API key not configured');
   }
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${openaiApiKey}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model,
-      messages: openaiMessages,
-      max_tokens,
-      temperature,
-      stream: streaming
+      model: model,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: maxTokens,
+      temperature: temperature
     })
-  })
+  });
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
+    const errorData = await response.text();
+    throw new Error(`OpenAI API error: ${errorData}`);
   }
 
-  if (streaming) {
-    return { streaming: true, response }
-  }
-
-  const data = await response.json()
-  return {
-    content: data.choices[0]?.message?.content || '',
-    model: data.model,
-    usage: data.usage,
-    finish_reason: data.choices[0]?.finish_reason
-  }
+  const data = await response.json();
+  return data.choices[0].message.content;
 }
 
-async function callAnthropic({ prompt, model, max_tokens, temperature, system_prompt, messages, streaming }) {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    throw new Error('Anthropic API key not configured')
-  }
-
-  let anthropicMessages = []
+async function callAnthropic(prompt, model, maxTokens, temperature) {
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
   
-  if (messages && Array.isArray(messages)) {
-    anthropicMessages = messages.filter(msg => msg.role !== 'system')
-  } else if (prompt) {
-    anthropicMessages = [{ role: 'user', content: prompt }]
-  }
-
-  const requestBody = {
-    model,
-    max_tokens,
-    temperature,
-    messages: anthropicMessages
-  }
-
-  if (system_prompt) {
-    requestBody.system = system_prompt
+  if (!anthropicApiKey) {
+    throw new Error('Anthropic API key not configured');
   }
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
+      'x-api-key': anthropicApiKey,
       'Content-Type': 'application/json',
       'anthropic-version': '2023-06-01'
     },
-    body: JSON.stringify(requestBody)
-  })
+    body: JSON.stringify({
+      model: model,
+      max_tokens: maxTokens,
+      temperature: temperature,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(`Anthropic API error: ${error.error?.message || 'Unknown error'}`)
+    const errorData = await response.text();
+    throw new Error(`Anthropic API error: ${errorData}`);
   }
 
-  const data = await response.json()
-  return {
-    content: data.content[0]?.text || '',
-    model: data.model,
-    usage: data.usage,
-    stop_reason: data.stop_reason
-  }
+  const data = await response.json();
+  return data.content[0].text;
 }
