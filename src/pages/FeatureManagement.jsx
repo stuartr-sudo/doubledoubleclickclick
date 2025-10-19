@@ -94,7 +94,7 @@ export default function FeatureManagement() {
 
     try {
       await FeatureFlag.update(flag.id, { required_plan_keys: newPlanKeys });
-      toast.success(`Updated required plans for '${flag.name}'.`);
+      toast.success(`Updated required plans for '${flag.flag_name || flag.name}'.`);
     } catch (error) {
       toast.error("Failed to update plans.");
       setFlags(originalFlags);
