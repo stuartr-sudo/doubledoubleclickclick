@@ -1,7 +1,7 @@
 import { makeAuthenticatedRequest } from './supabaseClient'
 
 // Helper function to call Vercel API functions
-const callVercelFunction = async (endpoint, data = {}) => {
+export const callVercelFunction = async (endpoint, data = {}) => {
   const response = await makeAuthenticatedRequest(`/api${endpoint}`, {
     method: 'POST',
     body: JSON.stringify(data)
