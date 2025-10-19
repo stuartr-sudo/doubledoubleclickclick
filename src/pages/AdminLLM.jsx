@@ -162,7 +162,7 @@ export default function AdminLLM() {
                     size="sm"
                     onClick={() => {
                       toast.message("To change API keys, open Dashboard → Settings → Environment Variables and update " + p.env);
-                      window.open("https://app.base44.io/dashboard/settings/environment", "_blank");
+                      window.open("https://app.app.io/dashboard/settings/environment", "_blank");
                     }}
                     className="gap-2"
                   >

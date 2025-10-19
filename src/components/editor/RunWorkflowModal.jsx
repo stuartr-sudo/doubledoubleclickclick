@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CheckCircle2, Loader2, Play, AlertCircle, Crown, User as UserIcon, Sparkles, ChevronRight } from "lucide-react";
@@ -124,7 +124,7 @@ export default function RunWorkflowModal({
       setLoadingWorkflows(true); // Start loading
       try {
         // Only fetch default workflows
-        const defaults = await base44.entities.EditorWorkflow.filter({ is_default: true }, "-updated_date", 200).catch(() => []);
+        const defaults = await app.entities.EditorWorkflow.filter({ is_default: true }, "-updated_date", 200).catch(() => []);
 
         if (active) {
           setWorkflows(defaults || []); // Set to 'workflows' state
@@ -150,7 +150,7 @@ export default function RunWorkflowModal({
     if (!runId) return;
     let cancelled = false;
     const interval = setInterval(async () => {
-      const arr = await base44.entities.WorkflowRunStatus.filter({ id: runId }).catch(() => []);
+      const arr = await app.entities.WorkflowRunStatus.filter({ id: runId }).catch(() => []);
       if (cancelled) return;
       const row = arr && arr[0];
       if (row) {
@@ -322,7 +322,7 @@ export default function RunWorkflowModal({
 
     const pushStatus = async (partial) => {
       try {
-        await base44.entities.WorkflowRunStatus.update(runId, partial);
+        await app.entities.WorkflowRunStatus.update(runId, partial);
         console.log("🔥 FLASH: Status updated:", partial.progress_message || partial.status);
       } catch (e) {
         console.error("🔥 FLASH: Failed to update status:", e);
@@ -353,7 +353,7 @@ export default function RunWorkflowModal({
       try {
         if (type === "links + references" || type === "links_references" || type === "cite_sources") {
           console.log("🔥 FLASH: Calling generateExternalReferences function");
-          const { data } = await base44.functions.invoke("generateExternalReferences", { html: current });
+          const { data } = await app.functions.invoke("generateExternalReferences", { html: current });
           console.log("🔥 FLASH: generateExternalReferences completed");
           if (data?.updated_html) {
             current = data.updated_html;
@@ -547,7 +547,7 @@ export default function RunWorkflowModal({
   const runFlashClientInBackground = async () => {
     console.log("🔥 FLASH: Starting background workflow for", itemType, itemId);
     try {
-      const newRun = await base44.entities.WorkflowRunStatus.create({
+      const newRun = await app.entities.WorkflowRunStatus.create({
         workflow_id: selectedWorkflow.id,
         status: "pending",
         total_steps: selectedWorkflow?.workflow_steps?.length || 0,
@@ -602,9 +602,9 @@ export default function RunWorkflowModal({
           console.log("🔥 FLASH: Updating database with", updateData.flash_status);
 
           if (itemType === "post") {
-            await base44.entities.BlogPost.update(itemId, updateData);
+            await app.entities.BlogPost.update(itemId, updateData);
           } else if (itemType === "webhook") {
-            await base44.entities.WebhookReceived.update(itemId, updateData);
+            await app.entities.WebhookReceived.update(itemId, updateData);
           }
 
           console.log("🔥 FLASH: Database updated successfully");
@@ -617,9 +617,9 @@ export default function RunWorkflowModal({
       if (itemId && itemType) {
         try {
           if (itemType === "post") {
-            await base44.entities.BlogPost.update(itemId, { flash_status: "failed" });
+            await app.entities.BlogPost.update(itemId, { flash_status: "failed" });
           } else if (itemType === "webhook") {
-            await base44.entities.WebhookReceived.update(itemId, { flash_status: "failed" });
+            await app.entities.WebhookReceived.update(itemId, { flash_status: "failed" });
           }
           console.log("🔥 FLASH: Status updated to failed");
         } catch (updateErr) {
@@ -648,12 +648,12 @@ export default function RunWorkflowModal({
     if (itemId && itemType) {
       try {
         if (itemType === "post") {
-          await base44.entities.BlogPost.update(itemId, {
+          await app.entities.BlogPost.update(itemId, {
             flash_status: "running",
             flash_workflow_id: selectedWorkflow.id
           });
         } else if (itemType === "webhook") {
-          await base44.entities.WebhookReceived.update(itemId, {
+          await app.entities.WebhookReceived.update(itemId, {
             flash_status: "running",
             flash_workflow_id: selectedWorkflow.id
           });
@@ -678,7 +678,7 @@ export default function RunWorkflowModal({
 
     // Normal flow with progress modal
     try {
-      const newRun = await base44.entities.WorkflowRunStatus.create({
+      const newRun = await app.entities.WorkflowRunStatus.create({
         workflow_id: selectedWorkflow.id,
         status: "pending",
         total_steps: selectedWorkflow?.workflow_steps?.length || 0,
@@ -710,9 +710,9 @@ export default function RunWorkflowModal({
             };
 
             if (itemType === "post") {
-              await base44.entities.BlogPost.update(itemId, updateData);
+              await app.entities.BlogPost.update(itemId, updateData);
             } else if (itemType === "webhook") {
-              await base44.entities.WebhookReceived.update(itemId, updateData);
+              await app.entities.WebhookReceived.update(itemId, updateData);
             }
           } catch (err) {
             console.error("Failed to update flash completion status:", err);
@@ -753,9 +753,9 @@ export default function RunWorkflowModal({
       if (itemId && itemType) {
         try {
           if (itemType === "post") {
-            await base44.entities.BlogPost.update(itemId, { flash_status: "failed" });
+            await app.entities.BlogPost.update(itemId, { flash_status: "failed" });
           } else if (itemType === "webhook") {
-            await base44.entities.WebhookReceived.update(itemId, { flash_status: "failed" });
+            await app.entities.WebhookReceived.update(itemId, { flash_status: "failed" });
           }
         } catch (updateErr) {
           console.error("Failed to update flash failure status:", updateErr);

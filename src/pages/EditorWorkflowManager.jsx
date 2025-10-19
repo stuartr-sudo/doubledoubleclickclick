@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,7 +62,7 @@ export default function EditorWorkflowManager() {
 
   const checkUserRole = async () => {
     try {
-      const user = await base44.auth.me();
+      const user = await app.auth.me();
       setCurrentUser(user);
       setIsSuperadmin(!!user?.is_superadmin || user?.role === 'admin');
     } catch (err) {
@@ -74,7 +74,7 @@ export default function EditorWorkflowManager() {
   const loadWorkflows = async () => {
     setLoading(true);
     try {
-      const data = await base44.entities.EditorWorkflow.list("-updated_date", 100);
+      const data = await app.entities.EditorWorkflow.list("-updated_date", 100);
       setWorkflows(data || []);
     } catch (err) {
       console.error("Failed to load workflows:", err);
@@ -149,10 +149,10 @@ export default function EditorWorkflowManager() {
       }
 
       if (editingWorkflow) {
-        await base44.entities.EditorWorkflow.update(editingWorkflow.id, payload);
+        await app.entities.EditorWorkflow.update(editingWorkflow.id, payload);
         toast.success("Workflow updated successfully");
       } else {
-        await base44.entities.EditorWorkflow.create(payload);
+        await app.entities.EditorWorkflow.create(payload);
         toast.success("Workflow created successfully");
       }
 
@@ -168,7 +168,7 @@ export default function EditorWorkflowManager() {
     if (!confirm("Are you sure you want to delete this workflow?")) return;
 
     try {
-      await base44.entities.EditorWorkflow.delete(id);
+      await app.entities.EditorWorkflow.delete(id);
       toast.success("Workflow deleted successfully");
       loadWorkflows();
     } catch (err) {

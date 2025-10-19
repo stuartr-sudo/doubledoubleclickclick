@@ -6,7 +6,7 @@ import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 
 const InternalLinkerButton = React.forwardRef(({ html, userName, onApply, disabled }, ref) => {
   const { enabled } = useFeatureFlag("auto-link", { defaultEnabled: false });
@@ -37,7 +37,7 @@ const InternalLinkerButton = React.forwardRef(({ html, userName, onApply, disabl
 
     try {
       // Call the backend function which handles the internal linking logic
-      const response = await base44.functions.invoke('executeInternalLinker', {
+      const response = await app.functions.invoke('executeInternalLinker', {
         html: html,
         user_name: userName || "",
         max_links: 10

@@ -28,7 +28,7 @@ import VideoModal from "@/components/common/VideoModal";
 import { WorkspaceProvider, WorkspaceContext } from "@/components/providers/WorkspaceProvider";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import usePageTutorial from '@/components/hooks/usePageTutorial';
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import { Username } from "@/api/entities";
 import { Sitemap } from "@/api/entities";
 import { TemplateProvider } from '@/components/providers/TemplateProvider'; // Added TemplateProvider
@@ -408,12 +408,12 @@ function LayoutContent({ children, currentPageName }) {
 
     // CHANGED: Always call backend function to guarantee uniqueness + RLS-safe creation
     try {
-      const res = await base44.functions.invoke("autoAssignUsername", {
+      const res = await app.functions.invoke("autoAssignUsername", {
         preferred_user_name: candidate,
         display_name: currentUser.full_name || candidate
       });
       const uniqueName = res?.data?.username || candidate;
-      const updated = await base44.auth.updateMe({ assigned_usernames: [uniqueName] });
+      const updated = await app.auth.updateMe({ assigned_usernames: [uniqueName] });
       return updated;
     } catch (_e) {
       // If the backend function fails for any reason, return the original user
@@ -439,7 +439,7 @@ function LayoutContent({ children, currentPageName }) {
 
     // seed only if not yet seeded and balance is not positive
     if (!alreadySeeded && (!Number.isFinite(numericBalance) || numericBalance <= 0)) {
-      const updated = await base44.auth.updateMe({
+      const updated = await app.auth.updateMe({
         token_balance: 20,
         processed_stripe_payments: [...processed, marker],
       });

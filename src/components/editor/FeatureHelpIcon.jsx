@@ -2,7 +2,7 @@
 import React from "react";
 import { HelpCircle, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import VideoModal from "@/components/common/VideoModal";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
@@ -21,7 +21,7 @@ export default function FeatureHelpIcon({
     const load = async () => {
       try {
         // Fetch FeatureFlag by name to get tutorial URLs (if any)
-        const flags = await base44.entities.FeatureFlag.filter({ name: featureFlagName });
+        const flags = await app.entities.FeatureFlag.filter({ name: featureFlagName });
         const flag = Array.isArray(flags) ? flags[0] : null;
         if (!mounted) return;
         const loom = flag?.loom_tutorial_url;

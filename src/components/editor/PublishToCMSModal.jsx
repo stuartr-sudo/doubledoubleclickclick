@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import { Loader2, Plus, Trash2, Settings, ExternalLink, Video, RefreshCw, Edit, Globe } from "lucide-react";
 import { toast } from "sonner";
 import VideoModal from "@/components/common/VideoModal";
@@ -167,7 +167,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
   const loadHelpVideo = async () => {
     try {
-      const settings = await base44.entities.AppSettings.list();
+      const settings = await app.entities.AppSettings.list();
       const videoSetting = settings.find(s => s.key === "shopify_setup_video");
       if (videoSetting?.value) {
         setHelpVideoUrl(videoSetting.value);
@@ -180,7 +180,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
   // NEW: loadCurrentUser function using useCallback for stability in dependencies
   const loadCurrentUser = useCallback(async () => {
     try {
-      const user = await base44.auth.me();
+      const user = await app.auth.me();
       setCurrentUser(user);
     } catch (error) {
       console.error("Error loading current user:", error);
@@ -245,7 +245,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         let determinedUsername = targetUsername;
         if (postId) {
           try {
-            const posts = await base44.entities.BlogPost.filter({ id: postId });
+            const posts = await app.entities.BlogPost.filter({ id: postId });
             if (posts && posts.length > 0 && posts[0].user_name && assignedUsernames.includes(posts[0].user_name)) {
               determinedUsername = posts[0].user_name;
             }
@@ -254,7 +254,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
           }
         } else if (webhookId) {
           try {
-            const webhooks = await base44.entities.WebhookReceived.filter({ id: webhookId });
+            const webhooks = await app.entities.WebhookReceived.filter({ id: webhookId });
             if (webhooks && webhooks.length > 0 && webhooks[0].user_name && assignedUsernames.includes(webhooks[0].user_name)) {
               determinedUsername = webhooks[0].user_name;
             }
@@ -280,7 +280,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     setSelectedBlogId("");
 
     try {
-      const { data } = await base44.functions.invoke('fetchShopifyBlogs', {
+      const { data } = await app.functions.invoke('fetchShopifyBlogs', {
         access_token: form.access_token,
         store_domain: form.site_domain
       });
@@ -386,11 +386,11 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
       if (editingCredential) {
         // Update existing credential
-        await base44.entities.IntegrationCredential.update(editingCredential.id, credentialData);
+        await app.entities.IntegrationCredential.update(editingCredential.id, credentialData);
         toast.success("Credential updated successfully");
       } else {
         // Create new credential
-        await base44.entities.IntegrationCredential.create(credentialData);
+        await app.entities.IntegrationCredential.create(credentialData);
         toast.success("Credential added successfully");
       }
 
@@ -439,7 +439,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
 
     setLoading(true);
     try {
-      await base44.entities.IntegrationCredential.delete(id);
+      await app.entities.IntegrationCredential.delete(id);
 
       // NEW: Invalidate cache and reload from provider
       invalidateCache();
@@ -510,7 +510,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
         removedBytes: html.length - cleanedHtml.length
       });
 
-      const { data } = await base44.functions.invoke('securePublish', payload);
+      const { data } = await app.functions.invoke('securePublish', payload);
 
       if (data?.success || data?.ok) {
         toast.success(`Published to ${credential.name}`);

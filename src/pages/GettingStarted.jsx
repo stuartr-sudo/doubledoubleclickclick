@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, Globe, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import { Sitemap } from "@/api/entities";
 import { BrandGuidelines } from "@/api/entities";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
@@ -156,7 +156,7 @@ export default function GettingStarted() {
         console.log('[Background] Fetching sitemap for:', domain);
         
         try {
-          const { data } = await base44.functions.invoke('getSitemapPages', {
+          const { data } = await app.functions.invoke('getSitemapPages', {
             url: `https://${domain}`,
             limit: 200
           });
@@ -204,7 +204,7 @@ Return a JSON object with these fields:
   "target_market": "description of target audience"
 }`;
 
-          const guidelinesData = await base44.integrations.Core.InvokeLLM({
+          const guidelinesData = await app.integrations.Core.InvokeLLM({
             prompt,
             add_context_from_internet: true,
             response_json_schema: {
@@ -270,7 +270,7 @@ Return a JSON object with these fields:
 
       // Try scrapeWithFirecrawl first
       try {
-        const response = await base44.functions.invoke('scrapeWithFirecrawl', { url: url });
+        const response = await app.functions.invoke('scrapeWithFirecrawl', { url: url });
         data = response.data;
         console.log('[GettingStarted] scrapeWithFirecrawl response:', JSON.stringify(data, null, 2));
       } catch (firecrawlError) {
@@ -279,7 +279,7 @@ Return a JSON object with these fields:
         
         // Fallback to extractWebsiteContent
         try {
-          const response = await base44.functions.invoke('extractWebsiteContent', { url: url });
+          const response = await app.functions.invoke('extractWebsiteContent', { url: url });
           data = response.data;
           console.log('[GettingStarted] extractWebsiteContent response:', JSON.stringify(data, null, 2));
         } catch (extractError) {
@@ -315,7 +315,7 @@ Return a JSON object with these fields:
       });
 
       const currentCompleted = user?.completed_tutorial_ids || [];
-      await base44.auth.updateMe({
+      await app.auth.updateMe({
         completed_tutorial_ids: Array.from(new Set([...currentCompleted, "getting_started_scrape"]))
       });
 
@@ -373,7 +373,7 @@ Return a JSON object with these fields:
 
     setFetchingPages(true);
     try {
-      const { data } = await base44.functions.invoke('getSitemapPages', {
+      const { data } = await app.functions.invoke('getSitemapPages', {
         url: siteUrl,
         limit: 200
       });

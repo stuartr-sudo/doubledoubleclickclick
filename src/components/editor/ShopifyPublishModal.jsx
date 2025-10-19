@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import {
   Dialog,
   DialogContent,
@@ -54,7 +54,7 @@ export default function ShopifyPublishModal({
 
       if (postId) {
         try {
-          const posts = await base44.entities.BlogPost.filter({ id: postId });
+          const posts = await app.entities.BlogPost.filter({ id: postId });
           if (posts && posts.length > 0) {
             setCurrentPost(posts[0]);
           }
@@ -121,7 +121,7 @@ export default function ShopifyPublishModal({
 
     setIsPublishing(true);
     try {
-      const { data } = await base44.functions.invoke('publishToShopifyEnhanced', {
+      const { data } = await app.functions.invoke('publishToShopifyEnhanced', {
         credentialId: selectedCredential,
         title: title.trim(),
         html: html,

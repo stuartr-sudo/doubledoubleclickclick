@@ -16,7 +16,7 @@ import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { AppSettings } from "@/api/entities";
 import { agentSDK } from "@/agents";
 import { User } from "@/api/entities";
-import { base44 } from "@/api/base44Client"; // Added import
+import { base44 } from "@/api/appClient"; // Added import
 
 const COUNTRY_OPTIONS = [
   { label: "Algeria", value: "2012" }, { label: "Angola", value: "2024" }, { label: "Azerbaijan", value: "2031" },
@@ -471,7 +471,7 @@ export default function TopicsOnboardingModal({
         const lsKey = `firecrawl_onboarding_${username}`;
         if (localStorage.getItem(lsKey) !== '1') {
           try {
-            await base44.functions.invoke('notifyFirecrawlWebsite', {
+            await app.functions.invoke('notifyFirecrawlWebsite', {
               username: username,
               website_url: website || ""
             });

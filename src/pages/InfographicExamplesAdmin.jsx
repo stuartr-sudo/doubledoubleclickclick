@@ -1,5 +1,5 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,9 +38,9 @@ export default function InfographicExamplesAdmin() {
   const load = async () => {
     setLoading(true);
     try {
-      const user = await base44.auth.me();
+      const user = await app.auth.me();
       setMe(user || null);
-      const rows = await base44.entities.InfographicVisualTypeExample.list();
+      const rows = await app.entities.InfographicVisualTypeExample.list();
       setExamples(rows || []);
     } finally {
       setLoading(false);
@@ -63,7 +63,7 @@ export default function InfographicExamplesAdmin() {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await app.integrations.Core.UploadFile({ file });
       setForm((f) => ({ ...f, image_url: file_url }));
     } finally {
       setUploading(false);
@@ -75,14 +75,14 @@ export default function InfographicExamplesAdmin() {
     setSaving(true);
     try {
       if (editingId) {
-        await base44.entities.InfographicVisualTypeExample.update(editingId, form);
+        await app.entities.InfographicVisualTypeExample.update(editingId, form);
       } else {
         // upsert by visual_type_key
-        const existing = await base44.entities.InfographicVisualTypeExample.filter({ visual_type_key: form.visual_type_key }, "-created_date", 1);
+        const existing = await app.entities.InfographicVisualTypeExample.filter({ visual_type_key: form.visual_type_key }, "-created_date", 1);
         if (existing && existing.length > 0) {
-          await base44.entities.InfographicVisualTypeExample.update(existing[0].id, form);
+          await app.entities.InfographicVisualTypeExample.update(existing[0].id, form);
         } else {
-          await base44.entities.InfographicVisualTypeExample.create(form);
+          await app.entities.InfographicVisualTypeExample.create(form);
         }
       }
       await load();
@@ -103,7 +103,7 @@ export default function InfographicExamplesAdmin() {
   };
 
   const handleDelete = async (row) => {
-    await base44.entities.InfographicVisualTypeExample.delete(row.id);
+    await app.entities.InfographicVisualTypeExample.delete(row.id);
     await load();
     if (editingId === row.id) resetForm();
   };

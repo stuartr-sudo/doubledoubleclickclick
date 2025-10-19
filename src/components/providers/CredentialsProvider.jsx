@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { base44 } from '@/api/appClient';
 import { toast } from 'sonner';
 
 const CredentialsContext = createContext(null);
@@ -46,7 +46,7 @@ export const CredentialsProvider = ({ children }) => {
       // Get user once and cache
       if (!userRef.current) {
         try {
-          userRef.current = await base44.auth.me();
+          userRef.current = await app.auth.me();
         } catch (e) {
           console.error('Failed to load user:', e);
           return [];
@@ -63,7 +63,7 @@ export const CredentialsProvider = ({ children }) => {
       }
 
       // Fetch ALL credentials at once (no filter to avoid multiple queries)
-      const allCreds = await base44.entities.IntegrationCredential.list('-updated_date', 100);
+      const allCreds = await app.entities.IntegrationCredential.list('-updated_date', 100);
       
       // Filter client-side by assigned usernames
       const userCreds = (allCreds || []).filter(cred => 

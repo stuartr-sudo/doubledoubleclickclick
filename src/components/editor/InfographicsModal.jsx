@@ -19,7 +19,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Image as ImageIcon, Loader2 } from "lucide-react"; // Renamed Image to ImageIcon
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 
 const STYLES = [
   { id: 'CDQPRVVJCSTPRBBCD5Q6AWR', name: 'Vibrant Strokes', category: 'Colorful', preview_image_url: 'https://cdn.napkin.io/napkin-ai/images/style-previews/vibrant_strokes.png' },
@@ -165,7 +165,7 @@ export default function InfographicsModal({ isOpen, onClose, selectedText, artic
     const loadExamples = async () => {
       if (!isOpen) return;
       try {
-        const rows = await base44.entities.InfographicVisualTypeExample.list();
+        const rows = await app.entities.InfographicVisualTypeExample.list();
         const map = {};
         (rows || []).forEach((r) => {
           if (r.is_active !== false && r.visual_type_key && r.image_url) {

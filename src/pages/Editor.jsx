@@ -8,7 +8,7 @@ import { User } from "@/api/entities";
 import { ImageLibraryItem } from "@/api/entities";
 import { GeneratedVideo } from "@/api/entities";
 import { ImagineerJob } from "@/api/entities"; // Ensure ImagineerJob is imported as it's used
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -3830,7 +3830,7 @@ ${content}
                 const cleanedHtml = cleanHtmlForPublish(content);
                 const plainText = cleanedHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
-                const { data } = await securePublish({ // Changed from base44.functions.invoke to direct securePublish call
+                const { data } = await securePublish({ // Changed from app.functions.invoke to direct securePublish call
                   provider: credential.provider,
                   credentialId: credential.id,
                   title: title,

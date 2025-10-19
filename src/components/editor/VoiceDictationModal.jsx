@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Mic, Square, Copy, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/appClient";
 import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import { User } from "@/api/entities";
@@ -193,13 +193,13 @@ export default function VoiceDictationModal({ isOpen, onClose, onInsert }) {
 
       console.log('Audio file created:', audioFile.name, audioFile.size, audioFile.type);
 
-      const uploadResult = await base44.integrations.Core.UploadFile({
+      const uploadResult = await app.integrations.Core.UploadFile({
         file: audioFile
       });
 
       console.log('Audio uploaded:', uploadResult.file_url);
 
-      const { data } = await base44.functions.invoke('transcribeAudio', {
+      const { data } = await app.functions.invoke('transcribeAudio', {
         file_url: uploadResult.file_url
       });
 
