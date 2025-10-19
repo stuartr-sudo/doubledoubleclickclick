@@ -133,7 +133,7 @@ export default function LiveHtmlPreview({
 
         // Add global drag state and helpers
         var __dragState = { id: null, overEl: null, pos: 'before' };
-        var __dropSelector = 'img, .b44-faq, .b44-faq-block, [data-b44-type], .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, p, div, section, article, h1, h2, h3, h4, h5, h6, li';
+        var __dropSelector = 'img, [data-b44-type], .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, p, div, section, article, h1, h2, h3, h4, h5, h6, li';
         function clearDropClasses(){
           try {
             document.querySelectorAll('.b44-drop-before, .b44-drop-after').forEach(function(n){
@@ -344,7 +344,6 @@ export default function LiveHtmlPreview({
           if (!el) return 'block';
           const c = (el.className || '').toString().toLowerCase();
           if (c.includes('b44-faq')) return 'faq';
-          if (c.includes('b44-faq-block')) return 'faq'; // Added for specific FAQ block class
           if (c.includes('b44-tldr')) return 'tldr';
           if (c.includes('b44-promoted-product')) return 'product';
           if (c.includes('b44-audio-inline')) return 'audio';
@@ -358,7 +357,7 @@ export default function LiveHtmlPreview({
         // This is a global listener, specific clicks will override.
         document.addEventListener('click', function(e){
           try {
-            const sel = '.b44-faq, .b44-faq-block, .b44-tldr, .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, [data-b44-type]';
+            const sel = '.b44-faq, .b44-tldr, .b44-promoted-product, .b44-audio-inline, blockquote.tiktok-embed, .youtube-video-container, [data-b44-type]';
             const block = e.target && e.target.closest && e.target.closest(sel);
             if (!block) return;
             ensureFeatureDataAttrs(block); // Ensure it's properly tagged if it wasn't already
@@ -493,13 +492,6 @@ export default function LiveHtmlPreview({
             el.style.maxWidth = '100%';
           });
 
-          const faqs = document.querySelectorAll('.b44-faq, .b44-faq-block'); // Added .b44-faq-block
-          faqs.forEach(function(faq){
-            if (!faq.dataset.b44Id) { faq.dataset.b44Id = String(nextId++); }
-            faq.style.cursor = 'pointer';
-            markDraggable(faq);
-          });
-
           // NEW: after products exist in DOM, render their shadow content
           setupShadowBlocks(document);
 
@@ -538,9 +530,6 @@ export default function LiveHtmlPreview({
             document.querySelectorAll('.b44-faq').forEach(function(el){
               ensureFeatureDataAttrs(el, 'faq');
             });
-            document.querySelectorAll('.b44-faq-block').forEach(function(el){ // Added for specific FAQ block class
-              ensureFeatureDataAttrs(el, 'faq');
-            });
             document.querySelectorAll('.b44-tldr').forEach(function(el){
               ensureFeatureDataAttrs(el, 'tldr');
             });
@@ -558,10 +547,10 @@ export default function LiveHtmlPreview({
               (m.addedNodes || []).forEach(function(n){
                 if (!n || n.nodeType !== 1) return;
                 // Check if the added node itself matches
-                if (n.matches && (n.matches('.b44-faq, .b44-faq-block, .b44-tldr, .b44-references') || n.matches('[data-b44-type]'))) { // Added .b44-faq-block
+                if (n.matches && (n.matches('.b44-faq, .b44-tldr, .b44-references') || n.matches('[data-b44-type]'))) {
                   ensureFeatureDataAttrs(n);
                 } else if (n.querySelectorAll) {
-                  n.querySelectorAll('.b44-faq, .b44-faq-block, .b44-tldr, .b44-references, [data-b44-type]').forEach(function(el){ // Added .b44-faq-block
+                  n.querySelectorAll('.b44-faq, .b44-tldr, .b44-references, [data-b44-type]').forEach(function(el){
                     ensureFeatureDataAttrs(el);
                   });
                 }
@@ -918,7 +907,7 @@ export default function LiveHtmlPreview({
             if (!target) return;
             // NEW: Do not apply width/margin for images with data-infographic="true"
             if (target.matches('img[data-infographic="true"]')) {
-              // Skip width/align changes for infographics, they are full-width
+              // Skip width/margin changes for infographics, they are full-width
               // Still allow outline/selection behavior
             } else {
               if (typeof width === 'number') {
@@ -1053,7 +1042,7 @@ export default function LiveHtmlPreview({
           let handledSelection = false;
 
           // UPDATED: FAQ block selection that preserves toggle clicks (label/checkbox)
-          const faqBlock = t && t.closest && t.closest('[data-b44-type="faq"], .b44-faq-block'); // Added .b44-faq-block
+          const faqBlock = t && t.closest && t.closest('[data-b44-type="faq"]');
           if (faqBlock) {
             // Detect if the click is on a functional toggle (label[for] or the checkbox itself)
             let isToggle = false;
@@ -1153,7 +1142,7 @@ export default function LiveHtmlPreview({
             try {
               const sel = document.getSelection();
               const anchorEl = sel && sel.anchorNode ? (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement) : null;
-              const protectedAncestor = anchorEl && anchorEl.closest ? anchorEl.closest('[data-b44-type], .b44-faq-block') : null; // Added .b44-faq-block
+              const protectedAncestor = anchorEl && anchorEl.closest ? anchorEl.closest('[data-b44-type]') : null;
 
               if (protectedAncestor) {
                 // If attempting to delete a child inside the protected block, select the block instead
@@ -1297,7 +1286,7 @@ export default function LiveHtmlPreview({
                // Protect children: if the target is inside a protected block, select the container instead
                const target = document.querySelector('[data-b44-id="' + String(d.id) + '"]');
                if (target) {
-                 const container = target.closest('[data-b44-type], .b44-faq-block'); // Added .b44-faq-block
+                 const container = target.closest('[data-b44-type]');
                  if (container && target !== container) {
                    selectGeneric(container, container.dataset.b44Type || 'block');
                    return;
