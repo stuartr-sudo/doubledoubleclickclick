@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { checkAndConsumeTokens } from '@/api/functions';
+import { User } from '@/api/entities';
 import { toast } from 'sonner';
 
 export function useTokenConsumption() {
@@ -9,35 +10,33 @@ export function useTokenConsumption() {
   const consumeTokensForFeature = useCallback(async (featureKey, costOverride = null) => {
     setIsCheckingTokens(true);
     try {
-      const { data } = await checkAndConsumeTokens({
-        feature_key: featureKey,
-        cost_override: costOverride
+      const user = await User.me();
+      if (!user) {
+        toast.error('You must be logged in');
+        return { success: false, error: 'Not authenticated' };
+      }
+
+      const result = await checkAndConsumeTokens({
+        userId: user.id,
+        featureName: featureKey
       });
 
-      if (data.ok) {
+      if (result.success) {
         // Immediately dispatch the event to update the UI
-        if (typeof data.balance === 'number') {
+        if (typeof result.remainingBalance === 'number') {
           window.dispatchEvent(new CustomEvent('tokenBalanceUpdated', { 
             detail: { 
-              newBalance: data.balance, 
-              consumed: data.consumed || 1,
+              newBalance: result.remainingBalance, 
+              consumed: result.tokensConsumed || 1,
               featureUsed: featureKey 
             }
           }));
         }
-        return { success: true, consumed: data.consumed, balance: data.balance };
+        return { success: true, consumed: result.tokensConsumed, balance: result.remainingBalance };
       } else {
-        // Handle various error cases
-        if (data.code === 'INSUFFICIENT_TOKENS') {
-          toast.error(`Insufficient tokens. Required: ${data.required || 1}, Available: ${data.balance || 0}`);
-        } else if (data.code === 'DISABLED') {
-          toast.error('This feature is disabled for your account');
-        } else if (data.code === 'COMING_SOON') {
-          toast.error('This feature is coming soon');
-        } else {
-          toast.error(data.error || 'Token consumption failed');
-        }
-        return { success: false, error: data.error, code: data.code };
+        // Handle error from our API
+        toast.error(result.error || 'Token consumption failed');
+        return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error consuming tokens:', error);
@@ -49,22 +48,25 @@ export function useTokenConsumption() {
   }, []);
 
   // NEW: non-blocking token check that runs in background
-  const consumeTokensOptimistic = useCallback((featureKey, costOverride = null) => {
+  const consumeTokensOptimistic = useCallback(async (featureKey, costOverride = null) => {
     // fire-and-forget; do not set isCheckingTokens to avoid UI spinners
     try {
+      const user = await User.me();
+      if (!user) return;
+
       checkAndConsumeTokens({
-        feature_key: featureKey,
-        cost_override: costOverride
+        userId: user.id,
+        featureName: featureKey
       })
-      .then(({ data }) => {
-        if (data?.ok && typeof data.balance === 'number') {
+      .then((result) => {
+        if (result?.success && typeof result.remainingBalance === 'number') {
           window.dispatchEvent(new CustomEvent('tokenBalanceUpdated', { 
-            detail: { newBalance: data.balance, consumed: data.consumed || 1, featureUsed: featureKey }
+            detail: { newBalance: result.remainingBalance, consumed: result.tokensConsumed || 1, featureUsed: featureKey }
           }));
         } else {
           // Quietly notify listeners; callers can choose to react (e.g., revert UI) without spamming toasts
           window.dispatchEvent(new CustomEvent('tokenConsumptionFailed', { 
-            detail: { featureKey, code: data?.code, error: data?.error, balance: data?.balance }
+            detail: { featureKey, error: result?.error, balance: result?.remainingBalance }
           }));
         }
       })
