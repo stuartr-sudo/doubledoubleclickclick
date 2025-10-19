@@ -487,15 +487,8 @@ Content: """${text}"""`,
         //   return;
         // }
 
-        try {
-          // TODO: Replace agentSDK functionality with Supabase conversation management
-          toast.error("Schema generation is temporarily disabled during migration.");
-        } catch (e) {
-          console.error("Schema generation failed:", e);
-          toast.error(e?.message || "Failed to generate schema.");
-        } finally {
-          setIsGeneratingSchema(false);
-        }
+        // TODO: Replace agentSDK functionality with Supabase conversation management
+        toast.error("Schema generation is temporarily disabled during migration.");
   };
 
   return (
