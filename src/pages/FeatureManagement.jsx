@@ -63,11 +63,11 @@ export default function FeatureManagement() {
   const handleToggleGlobal = async (flag, checked) => {
     // Optimistic UI update
     const originalFlags = flags;
-    setFlags(flags.map((f) => f.id === flag.id ? { ...f, enabled_globally: checked } : f));
+    setFlags(flags.map((f) => f.id === flag.id ? { ...f, is_enabled: checked } : f));
 
     try {
-      await FeatureFlag.update(flag.id, { enabled_globally: checked });
-      toast.success(`'${flag.name}' is now globally ${checked ? 'enabled' : 'disabled'}.`);
+      await FeatureFlag.update(flag.id, { is_enabled: checked });
+      toast.success(`'${flag.flag_name || flag.name}' is now globally ${checked ? 'enabled' : 'disabled'}.`);
     } catch (error) {
       toast.error("Failed to update flag.");
       setFlags(originalFlags); // Revert on error
@@ -81,7 +81,7 @@ export default function FeatureManagement() {
 
     try {
       await FeatureFlag.update(flag.id, { is_coming_soon: checked });
-      toast.success(`'${flag.name}' marked as ${checked ? 'coming soon' : 'active'}.`);
+      toast.success(`'${flag.flag_name || flag.name}' marked as ${checked ? 'coming soon' : 'active'}.`);
     } catch (error) {
       toast.error("Failed to update flag.");
       setFlags(originalFlags); // Revert on error
@@ -112,7 +112,7 @@ export default function FeatureManagement() {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     return (
-      flag.name.toLowerCase().includes(query) ||
+      (flag.flag_name || flag.name || '').toLowerCase().includes(query) ||
       flag.description && flag.description.toLowerCase().includes(query));
 
   });
@@ -157,7 +157,7 @@ export default function FeatureManagement() {
             filteredFlags.map((flag) =>
             <div key={flag.id} className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
                   <div className="lg:col-span-1">
-                    <div className="font-semibold text-slate-800 break-words">{flag.name}</div>
+                    <div className="font-semibold text-slate-800 break-words">{flag.flag_name || flag.name}</div>
                     <p className="text-sm text-slate-500 break-words">{flag.description || 'No description'}</p>
                   </div>
 
@@ -175,7 +175,7 @@ export default function FeatureManagement() {
                       <div className="flex items-center">
                         <input
                       type="checkbox"
-                      checked={!!flag.enabled_globally}
+                      checked={!!flag.is_enabled}
                       onChange={(e) => handleToggleGlobal(flag, e.target.checked)}
                       className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       id={`global-${flag.id}`} />
