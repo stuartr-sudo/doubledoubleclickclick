@@ -1,15 +1,4 @@
 {
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 30
-    },
-    "api/ai/**/*.js": {
-      "maxDuration": 60
-    },
-    "api/webhooks/**/*.js": {
-      "maxDuration": 15
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
