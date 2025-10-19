@@ -482,10 +482,10 @@ Content: """${text}"""`,
         }
       }
 
-      if (!schemaJson || schemaJson.length < 10) {
-        toast.error("Agent didn't return a valid schema. Please try again.");
-        return;
-      }
+        // if (!schemaJson || schemaJson.length < 10) {
+        //   toast.error("Agent didn't return a valid schema. Please try again.");
+        //   return;
+        // }
 
       let parsedSchema;
       try {
