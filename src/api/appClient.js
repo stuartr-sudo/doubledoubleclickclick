@@ -10,6 +10,19 @@ export const app = {
       });
       if (!res.ok) throw new Error(`Function ${functionName} failed`);
       return res.json();
+    },
+    checkAndConsumeTokens: async (data) => {
+      const { userId, featureName } = data;
+      const res = await fetch('/api/tokens/check-and-consume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, featureName })
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Token consumption failed');
+      }
+      return result;
     }
   },
   auth: {
