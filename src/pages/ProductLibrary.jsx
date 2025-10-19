@@ -15,7 +15,7 @@ import { extractProductMeta } from "@/api/functions";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import { motion, AnimatePresence } from "framer-motion";
-import { agentSDK } from "@/agents";
+// import { agentSDK } from "@/agents"; // TODO: Replace with Supabase conversation management
 import {
   AlertDialog,
   AlertDialogAction,
@@ -192,64 +192,19 @@ export default function ProductLibrary() {
         setSummarizingContent(true);
         
         try {
-          const conversation = await agentSDK.createConversation({
-            agent_name: "product_summarizer",
-            metadata: { purpose: "Summarize product page content", productUrl }
-          });
+          // TODO: Replace agentSDK functionality with Supabase conversation management
+          // const conversation = await agentSDK.createConversation({
+          //   agent_name: "product_summarizer",
+          //   metadata: { purpose: "Summarize product page content", productUrl }
+          // });
 
-          await agentSDK.addMessage(conversation, {
-            role: "user",
-            content: `Please create a 300-word summary of this product:\n\nTitle: ${productPageData.title}\n\nDescription: ${description.substring(0, 5000)}`
-          });
+          // await agentSDK.addMessage(conversation, {
+          //   role: "user",
+          //   content: `Please create a 300-word summary of this product:\n\nTitle: ${productPageData.title}\n\nDescription: ${description.substring(0, 5000)}`
+          // });
 
-          const summary = await new Promise((resolve, reject) => {
-            let resolved = false;
-            const timeout = setTimeout(() => {
-              if (!resolved) {
-                reject(new Error("AI Agent took too long to respond"));
-              }
-            }, 90000);
-
-            let pollCount = 0;
-            const pollInterval = setInterval(async () => {
-              if (resolved) {
-                clearInterval(pollInterval);
-                return;
-              }
-              
-              pollCount++;
-              try {
-                const updatedConv = await agentSDK.getConversation(conversation.id);
-                const lastMsg = updatedConv.messages[updatedConv.messages.length - 1];
-                
-                if (lastMsg?.role === "assistant" && lastMsg?.content) {
-                  if (lastMsg.is_complete === true || lastMsg.content.length > 200) {
-                    resolved = true;
-                    clearTimeout(timeout);
-                    clearInterval(pollInterval);
-                    unsubscribe();
-                    resolve(lastMsg.content);
-                  }
-                }
-              } catch (pollError) {
-                console.error("Polling error:", pollError);
-              }
-            }, 3000);
-
-            const unsubscribe = agentSDK.subscribeToConversation(conversation.id, (data) => {
-              if (resolved) return;
-              const lastMessage = data.messages[data.messages.length - 1];
-              if (lastMessage?.role === "assistant" && lastMessage?.content) {
-                if (lastMessage.is_complete === true || lastMessage.content.length > 200) {
-                  resolved = true;
-                  clearTimeout(timeout);
-                  clearInterval(pollInterval);
-                  unsubscribe();
-                  resolve(lastMessage.content);
-                }
-              }
-            });
-          });
+          // TODO: Replace agentSDK functionality with Supabase conversation management
+          const summary = description; // Use description as fallback
 
           const newProductData = { 
             title: productPageData.title, 
