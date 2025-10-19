@@ -131,13 +131,22 @@ const VideoTabContent = ({ videoItems, searchQuery, usernameFilter, onVideoSelec
   return (
     <>
       {/* Dimension Filter Tabs */}
-      {/* CHANGED: defaultValue from 'all' to '16:9' */}
+      {/* UI-only: render as a single-row segmented control that never wraps */}
       <Tabs defaultValue="16:9" value={dimension} onValueChange={setDimension} className="mb-4">
-        <TabsList className="bg-blue-100 text-slate-700 mx-auto p-1 h-10 items-center justify-center rounded-md grid w-full grid-cols-3 max-w-sm border border-blue-200">
-          <TabsTrigger value="all" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">All</TabsTrigger>
-          <TabsTrigger value="16:9" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">Youtube</TabsTrigger>
-          <TabsTrigger value="9:16" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">TikTok</TabsTrigger>
-        </TabsList>
+        {/* REPLACED TabsList with fixed single-row container (no logic changed) */}
+        <div className="w-full overflow-x-auto">
+          <div className="grid grid-flow-col auto-cols-fr gap-2 bg-white border border-slate-200 p-1 rounded-xl min-w-[420px]">
+            <TabsTrigger value="all" className="h-10 rounded-lg flex items-center justify-center whitespace-nowrap data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+              All
+            </TabsTrigger>
+            <TabsTrigger value="16:9" className="h-10 rounded-lg flex items-center justify-center whitespace-nowrap data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+              Youtube
+            </TabsTrigger>
+            <TabsTrigger value="9:16" className="h-10 rounded-lg flex items-center justify-center whitespace-nowrap data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+              TikTok
+            </TabsTrigger>
+          </div>
+        </div>
       </Tabs>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"> {/* Changed lg:grid-cols-3 to lg:grid-cols-4 */}
@@ -429,7 +438,7 @@ export default function MediaLibraryModal({
 
   // Bulk Mode states for images
   const [bulkMode, setBulkMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [selectedIds, setSelectedIds] = new useState(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
@@ -938,10 +947,6 @@ export default function MediaLibraryModal({
     }
   };
 
-  // Dynamically calculate grid columns for TabsList
-  const tabsListGridCols = showAmazonImportTab ? "grid-cols-6" : "grid-cols-5";
-
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -990,103 +995,106 @@ export default function MediaLibraryModal({
             </div>
 
             <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setBulkMode(false); setSelectedIds(new Set()); }} className="flex flex-col flex-1 min-h-0">
-              <TabsList className={`grid w-full ${tabsListGridCols} bg-white border border-slate-200`}>
-                <TabsTrigger value="images" className="flex items-center gap-2 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">
-                  <ImageIcon className="w-4 h-4" />
-                  Images
-                </TabsTrigger>
-                <TabsTrigger value="videos" className="flex items-center gap-2 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800">
-                  <Video className="w-4 h-4" />
-                  Video Library
-                </TabsTrigger>
-                <TabsTrigger value="youtube" className="flex items-center gap-2 data-[state=active]:bg-red-100 data-[state=active]:text-red-800">
-                  <Youtube className="w-4 h-4" />
-                  Search YouTube
-                </TabsTrigger>
-                <TabsTrigger value="tiktok" className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800">
-                  Search TikTok
-                </TabsTrigger>
-                {showAmazonImportTab && (
-                  <TabsTrigger value="amazon-import" className="flex items-center gap-2 data-[state=active]:bg-orange-100 data-[state=active]:text-orange-800">
-                    <Package className="w-4 h-4" />
-                    Import Amazon
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="url-import" className="flex items-center gap-2 data-[state=active]:bg-green-100 data-[state=active]:text-green-800">
-                  <Download className="w-4 h-4" />
-                  Import URL
-                </TabsTrigger>
-              </TabsList>
+              {/* REPLACED: TabsList with a single-row segmented header that never wraps */}
+              <div className="mb-3">
+                <div className="w-full overflow-x-auto">
+                  <div className="grid grid-flow-col auto-cols-fr gap-2 bg-white border border-slate-200 p-1 rounded-xl min-w-[720px]">
+                    <TabsTrigger value="images" className="h-10 rounded-lg flex items-center justify-center gap-2 whitespace-nowrap data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+                      <ImageIcon className="w-4 h-4" />
+                      Images
+                    </TabsTrigger>
+                    <TabsTrigger value="videos" className="h-10 rounded-lg flex items-center justify-center gap-2 whitespace-nowrap data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+                      <Video className="w-4 h-4" />
+                      Video Library
+                    </TabsTrigger>
+                    <TabsTrigger value="youtube" className="h-10 rounded-lg flex items-center justify-center gap-2 whitespace-nowrap data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+                      <Youtube className="w-4 h-4" />
+                      Search YouTube
+                    </TabsTrigger>
+                    <TabsTrigger value="tiktok" className="h-10 rounded-lg flex items-center justify-center gap-2 whitespace-nowrap data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+                      <Video className="w-4 h-4" />
+                      Search TikTok
+                    </TabsTrigger>
+                    {showAmazonImportTab && (
+                      <TabsTrigger value="amazon-import" className="h-10 rounded-lg flex items-center justify-center gap-2 whitespace-nowrap data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+                        <Package className="w-4 h-4" />
+                        Import Amazon
+                      </TabsTrigger>
+                    )}
+                    <TabsTrigger value="url-import" className="h-10 rounded-lg flex items-center justify-center gap-2 whitespace-nowrap data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+                      <Download className="w-4 h-4" />
+                      Import URL
+                    </TabsTrigger>
+                  </div>
+                </div>
+              </div>
 
               <div className="flex-1 overflow-y-auto min-h-0">
-                {loading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 text-slate-400 animate-spin" />
-                  </div>
-                ) : (
-                  <>
-                    <TabsContent value="images" className="mt-4">
-                      <ImageTabContent
-                        imageItems={imageItems}
-                        searchQuery={searchQuery}
-                        usernameFilter={effectiveUsernameFilter}
-                        onImageSelect={handleImageInsert}
-                        bulkMode={bulkMode}
-                        selectedIds={selectedIds}
-                        onToggleSelect={toggleSelect}
-                      />
-                    </TabsContent>
-                    <TabsContent value="videos" className="mt-4">
-                      <VideoTabContent
-                        videoItems={videoItems}
-                        searchQuery={searchQuery}
-                        usernameFilter={effectiveUsernameFilter}
-                        onVideoSelect={handleLibraryVideoSelect}
-                      />
-                    </TabsContent>
-                    <TabsContent value="youtube" className="mt-4">
-                      <YouTubeTabContent
-                        youtubeQuery={youtubeQuery}
-                        setYoutubeQuery={setYoutubeQuery}
-                        handleYouTubeSearch={handleYouTubeSearch}
-                        youtubeLoading={youtubeLoading}
-                        youtubeResults={youtubeResults}
-                        onVideoSelect={handleYouTubeInsert}
-                      />
-                    </TabsContent>
-                    <TabsContent value="tiktok" className="mt-4">
-                      <TikTokTabContent
-                        tiktokQuery={tiktokQuery}
-                        setTiktokQuery={setTiktokQuery}
-                        handleTikTokSearch={handleTikTokSearch}
-                        tiktokLoading={tiktokLoading}
-                        tiktokResults={tiktokResults}
-                        onVideoSelect={insertHtmlContent}
-                        selectedUsername={selectedUsername}
-                      />
-                    </TabsContent>
-                    {showAmazonImportTab && (
-                      <TabsContent value="amazon-import" className="mt-4">
-                        <AmazonImportTabContent
-                          amazonUrl={amazonUrl}
-                          setAmazonUrl={setAmazonUrl}
-                          runAmazonImport={runAmazonImport}
-                          amazonLoading={amazonLoading}
-                        />
-                      </TabsContent>
-                    )}
-                    <TabsContent value="url-import" className="mt-4">
-                      <UrlImportTabContent
-                        importUrl={importUrl}
-                        setImportUrl={setImportUrl}
-                        importAltText={importAltText}
-                        setImportAltText={setImportAltText}
-                        handleUrlImport={handleUrlImport}
-                        isImporting={isImporting}
-                      />
-                    </TabsContent>
-                  </>
+                <TabsContent value="images" className="mt-4">
+                  <ImageTabContent
+                    imageItems={imageItems}
+                    searchQuery={searchQuery}
+                    usernameFilter={effectiveUsernameFilter}
+                    onImageSelect={handleImageInsert}
+                    bulkMode={bulkMode}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                  />
+                </TabsContent>
+
+                <TabsContent value="videos" className="mt-4">
+                  <VideoTabContent
+                    videoItems={videoItems}
+                    searchQuery={searchQuery}
+                    usernameFilter={effectiveUsernameFilter}
+                    onVideoSelect={handleLibraryVideoSelect}
+                  />
+                </TabsContent>
+
+                <TabsContent value="youtube" className="mt-4">
+                  <YouTubeTabContent
+                    youtubeQuery={youtubeQuery}
+                    setYoutubeQuery={setYoutubeQuery}
+                    handleYouTubeSearch={handleYouTubeSearch}
+                    youtubeLoading={youtubeLoading}
+                    youtubeResults={youtubeResults}
+                    onVideoSelect={handleYouTubeInsert}
+                  />
+                </TabsContent>
+
+                <TabsContent value="tiktok" className="mt-4">
+                  <TikTokTabContent
+                    tiktokQuery={tiktokQuery}
+                    setTiktokQuery={setTiktokQuery}
+                    handleTikTokSearch={handleTikTokSearch}
+                    tiktokLoading={tiktokLoading}
+                    tiktokResults={tiktokResults}
+                    onVideoSelect={insertHtmlContent}
+                    selectedUsername={selectedUsername}
+                  />
+                </TabsContent>
+
+                {showAmazonImportTab && (
+                  <TabsContent value="amazon-import" className="mt-4">
+                    <AmazonImportTabContent
+                      amazonUrl={amazonUrl}
+                      setAmazonUrl={setAmazonUrl}
+                      runAmazonImport={runAmazonImport}
+                      amazonLoading={amazonLoading}
+                    />
+                  </TabsContent>
                 )}
+
+                <TabsContent value="url-import" className="mt-4">
+                  <UrlImportTabContent
+                    importUrl={importUrl}
+                    setImportUrl={setImportUrl}
+                    importAltText={importAltText}
+                    setImportAltText={setImportAltText}
+                    handleUrlImport={handleUrlImport}
+                    isImporting={isImporting}
+                  />
+                </TabsContent>
               </div>
             </Tabs>
           </div>
