@@ -262,7 +262,7 @@ const PAGES = {
     
     ImageLibrary: ImageLibrary,
     
-    post-payment: PostPayment,
+    "post-payment": PostPayment,
     
     PricingFaqManager: PricingFaqManager,
     
