@@ -1,5 +1,16 @@
 // Firecrawl Map API endpoint - gets all URLs from a website
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  // Handle CORS
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
   try {
     const { url, limit = 200 } = req.body;
     

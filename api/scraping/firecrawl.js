@@ -1,57 +1,64 @@
-import { validateRequest, validateSchema } from '../utils/validation';
-import { sendResponse } from '../utils/response';
-import { getSupabaseClient } from '../utils/supabase';
-import Firecrawl from '@mendable/firecrawl-js';
-
 export default async function handler(req, res) {
-  if (!validateRequest(req, res, 'POST')) {
-    return;
+  // Handle CORS
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(200).end();
   }
 
-  const schema = {
-    type: 'object',
-    properties: {
-      url: { type: 'string', format: 'url' },
-      params: {
-        type: 'object',
-        properties: {
-          pageOptions: { type: 'object' },
-          extractorOptions: { type: 'object' },
-          timeout: { type: 'number' },
-          returnOnlyMainContent: { type: 'boolean' },
-          waitFor: { type: 'number' },
-          country: { type: 'string' },
-          proxy: { type: 'string' },
-        },
-        additionalProperties: true,
-      },
-    },
-    required: ['url'],
-    additionalProperties: false,
-  };
-
-  if (!validateSchema(req, res, schema)) {
-    return;
-  }
-
-  const { url, params } = req.body;
-  const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
-
-  if (!firecrawlApiKey) {
-    return sendResponse(res, 500, { success: false, error: 'Firecrawl API key not configured.' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
   try {
-    const firecrawl = new Firecrawl({ apiKey: firecrawlApiKey });
-    const result = await firecrawl.scrapeUrl(url, params);
+    const { url, params = {} } = req.body;
 
-    if (result && result.success) {
-      return sendResponse(res, 200, { success: true, data: result.data });
-    } else {
-      return sendResponse(res, 500, { success: false, error: result?.error || 'Failed to scrape URL with Firecrawl.' });
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL is required' });
     }
+
+    const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
+    if (!firecrawlApiKey) {
+      return res.status(500).json({ success: false, error: 'Firecrawl API key not configured' });
+    }
+
+    // Call Firecrawl API directly
+    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${firecrawlApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: url,
+        formats: ['markdown', 'html'],
+        onlyMainContent: true,
+        ...params
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Firecrawl API error:', response.status, errorText);
+      return res.status(500).json({ 
+        success: false, 
+        error: `Firecrawl API error: ${response.status}` 
+      });
+    }
+
+    const data = await response.json();
+    
+    return res.status(200).json({
+      success: true,
+      data: data
+    });
+
   } catch (error) {
     console.error('Firecrawl scraping error:', error);
-    return sendResponse(res, 500, { success: false, error: error.message || 'Internal server error during Firecrawl scraping.' });
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
   }
 }

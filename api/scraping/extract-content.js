@@ -1,61 +1,81 @@
-import { validateRequest, validateSchema } from '../utils/validation';
-import { sendResponse } from '../utils/response';
-import { getSupabaseClient } from '../utils/supabase';
-import Firecrawl from '@mendable/firecrawl-js';
-
 export default async function handler(req, res) {
-  if (!validateRequest(req, res, 'POST')) {
-    return;
+  // Handle CORS
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(200).end();
   }
 
-  const schema = {
-    type: 'object',
-    properties: {
-      url: { type: 'string', format: 'url' },
-      params: {
-        type: 'object',
-        properties: {
-          pageOptions: { type: 'object' },
-          extractorOptions: { type: 'object' },
-          timeout: { type: 'number' },
-          returnOnlyMainContent: { type: 'boolean' },
-          waitFor: { type: 'number' },
-          country: { type: 'string' },
-          proxy: { type: 'string' },
-        },
-        additionalProperties: true,
-      },
-    },
-    required: ['url'],
-    additionalProperties: false,
-  };
-
-  if (!validateSchema(req, res, schema)) {
-    return;
-  }
-
-  const { url, params } = req.body;
-  const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
-
-  if (!firecrawlApiKey) {
-    return sendResponse(res, 500, { success: false, error: 'Firecrawl API key not configured.' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
   try {
-    const firecrawl = new Firecrawl({ apiKey: firecrawlApiKey });
-    const result = await firecrawl.scrapeUrl(url, params);
+    const { url, params = {} } = req.body;
 
-    if (result && result.success) {
-      return sendResponse(res, 200, { success: true, data: result.data });
-    } else {
-      // Fallback if Firecrawl fails or returns no data
-      console.warn(`Firecrawl scrape failed for ${url}: ${result?.error || 'Unknown error'}. Attempting fallback.`);
-      // Implement a simpler fetch or another scraping method here if needed
-      // For now, we'll just return the Firecrawl error
-      return sendResponse(res, 500, { success: false, error: result?.error || 'Failed to extract content using Firecrawl and no fallback available.' });
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL is required' });
     }
+
+    const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
+    if (!firecrawlApiKey) {
+      return res.status(500).json({ success: false, error: 'Firecrawl API key not configured' });
+    }
+
+    // Try Firecrawl first
+    try {
+      const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${firecrawlApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: url,
+          formats: ['markdown', 'html'],
+          onlyMainContent: true,
+          ...params
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return res.status(200).json({
+          success: true,
+          data: data
+        });
+      }
+    } catch (firecrawlError) {
+      console.warn('Firecrawl failed, trying fallback:', firecrawlError.message);
+    }
+
+    // Fallback: Simple fetch
+    const fallbackResponse = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    if (!fallbackResponse.ok) {
+      throw new Error(`Failed to fetch URL: ${fallbackResponse.status}`);
+    }
+
+    const html = await fallbackResponse.text();
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        html: html,
+        markdown: html // Basic fallback
+      }
+    });
+
   } catch (error) {
-    console.error('Extract website content error:', error);
-    return sendResponse(res, 500, { success: false, error: error.message || 'Internal server error during content extraction.' });
+    console.error('Extract content error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
   }
 }
