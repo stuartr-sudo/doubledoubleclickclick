@@ -219,7 +219,7 @@ export default function UserManagement() {
     setIsLoading(false);
   };
 
-  const isAdmin = !!(currentUser && currentUser.role === "admin");
+  const isAdmin = !!(currentUser && (currentUser.role === "admin" || currentUser.role === "superadmin" || currentUser.is_superadmin));
 
   const usernameOptions = useMemo(() => {
     return (usernames || [])
