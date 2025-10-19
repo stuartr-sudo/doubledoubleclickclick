@@ -28,7 +28,7 @@ import VideoModal from "@/components/common/VideoModal";
 import { WorkspaceProvider, WorkspaceContext } from "@/components/providers/WorkspaceProvider";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import usePageTutorial from '@/components/hooks/usePageTutorial';
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/hooks/useAuth";
 import { Username } from "@/api/entities";
 import { Sitemap } from "@/api/entities";
 import { TemplateProvider } from '@/components/providers/TemplateProvider'; // Added TemplateProvider
@@ -351,8 +351,7 @@ const retry = async (fn, retries = 3, delay = 500) => {
 function LayoutContent({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState(undefined); // undefined: not checked, null: logged out
-  const [isUserLoading, setIsUserLoading] = useState(true);
+  const { user, loading: isUserLoading, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -380,73 +379,10 @@ function LayoutContent({ children, currentPageName }) {
     return Number.isFinite(n) ? n : 0;
   };
 
-  // NEW: helper to ensure a username exists for current user
-  const ensureUsernameAssigned = async (currentUser) => {
-    if (!currentUser) return currentUser;
-    if (Array.isArray(currentUser.assigned_usernames) && currentUser.assigned_usernames.length > 0) {
-      return currentUser;
-    }
-
-    // CHANGED: Build candidate from full_name (not random). Fallback to email local part.
-    const baseFromFullName = (currentUser.full_name || "")
-      .toString()
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "")
-      .slice(0, 24);
-
-    const emailLocal = ((currentUser.email || "user").split("@")[0] || "user")
-      .toString()
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "")
-      .slice(0, 24);
-
-    const candidate = baseFromFullName || emailLocal || "user";
-
-    // CHANGED: Always call backend function to guarantee uniqueness + RLS-safe creation
-    try {
-      const res = await base44.functions.invoke("autoAssignUsername", {
-        preferred_user_name: candidate,
-        display_name: currentUser.full_name || candidate
-      });
-      const uniqueName = res?.data?.username || candidate;
-      const updated = await base44.auth.updateMe({ assigned_usernames: [uniqueName] });
-      return updated;
-    } catch (_e) {
-      // If the backend function fails for any reason, return the original user
-      // We don't want to block the user from logging in just because username assignment failed.
-      console.error("Failed to auto-assign username:", _e);
-      return currentUser;
-    }
-  };
-
-  // NEW: helper to ensure token_balance is persisted (20 on first login) – idempotent
-  const ensureWelcomeTokens = async (currentUser) => {
-    if (!currentUser) return currentUser;
-    const marker = "welcome_seeded_20";
-    const processed = Array.isArray(currentUser.processed_stripe_payments)
-      ? currentUser.processed_stripe_payments
-      : [];
-    const alreadySeeded = processed.includes(marker);
-
-    const numericBalance =
-      currentUser.token_balance === undefined || currentUser.token_balance === null
-        ? NaN
-        : Number(currentUser.token_balance);
-
-    // seed only if not yet seeded and balance is not positive
-    if (!alreadySeeded && (!Number.isFinite(numericBalance) || numericBalance <= 0)) {
-      const updated = await base44.auth.updateMe({
-        token_balance: 20,
-        processed_stripe_payments: [...processed, marker],
-      });
-      return updated;
-    }
-    return currentUser;
-  };
+  // Update superadmin status when user changes
+  useEffect(() => {
+    setIsSuperadmin(!!user?.is_superadmin);
+  }, [user]);
 
   // Prevent Editor remounts while publishing (blocks pushState/replaceState to Editor)
   useEffect(() => {
@@ -560,94 +496,66 @@ function LayoutContent({ children, currentPageName }) {
     }
   }, [location.search, navigate]);
 
-  // Fetch user only once when the layout mounts for the first time.
-  // User session persists across page navigations.
+  // Handle onboarding redirection logic
   useEffect(() => {
-    const fetchUserAndRedirect = async () => {
-      setIsUserLoading(true);
-      setIsRedirecting(false);
-      setNavReady(false); // Reset nav ready state
-      try {
-        // MODIFIED: Use the new retry helper to make the user fetch more robust
-        const fetchedUser = await retry(() => User.me());
-        setUser(fetchedUser);
-        setIsSuperadmin(!!fetchedUser?.is_superadmin);
+    if (!user || isUserLoading) return;
 
-        // --- UPDATED ONBOARDING REDIRECTION LOGIC ---
-        const hasCompletedWelcome = fetchedUser.completed_tutorial_ids?.includes("welcome_onboarding");
-        const hasCompletedGettingStarted = fetchedUser.completed_tutorial_ids?.includes("getting_started_scrape");
+    setIsRedirecting(false);
+    setNavReady(false); // Reset nav ready state
 
-        // Define pages that are exceptions to the redirection rules
-        const redirectExceptions = ['post-payment', 'AccountSettings', 'Contact', 'Affiliate'];
+    try {
+      // --- UPDATED ONBOARDING REDIRECTION LOGIC ---
+      const hasCompletedWelcome = user.completed_tutorial_ids?.includes("welcome_onboarding");
+      const hasCompletedGettingStarted = user.completed_tutorial_ids?.includes("getting_started_scrape");
 
-        if (!redirectExceptions.includes(currentPageName)) {
-          // NEW SCENARIO: User hasn't completed welcome → Welcome page
-          if (!hasCompletedWelcome && currentPageName !== 'Welcome') {
-            setIsRedirecting(true);
-            navigate(createPageUrl('Welcome'));
-            return;
-          }
-          
-          // NEW SCENARIO: User completed welcome but not getting started → GettingStarted page
-          if (hasCompletedWelcome && !hasCompletedGettingStarted && currentPageName !== 'GettingStarted') {
-            setIsRedirecting(true);
-            navigate(createPageUrl('GettingStarted'));
-            return;
-          }
+      // Define pages that are exceptions to the redirection rules
+      const redirectExceptions = ['post-payment', 'AccountSettings', 'Contact', 'Affiliate'];
+
+      if (!redirectExceptions.includes(currentPageName)) {
+        // NEW SCENARIO: User hasn't completed welcome → Welcome page
+        if (!hasCompletedWelcome && currentPageName !== 'Welcome') {
+          setIsRedirecting(true);
+          navigate(createPageUrl('Welcome'));
+          return;
         }
         
-        // Scenario: Fully onboarded user tries to access Welcome or GettingStarted → redirect to Dashboard
-        if (hasCompletedWelcome && hasCompletedGettingStarted) {
-          if (currentPageName === 'Welcome' || currentPageName === 'GettingStarted') {
-            setIsRedirecting(true);
-            navigate(createPageUrl('Dashboard'));
-            return;
-          }
+        // NEW SCENARIO: User completed welcome but not getting started → GettingStarted page
+        if (hasCompletedWelcome && !hasCompletedGettingStarted && currentPageName !== 'GettingStarted') {
+          setIsRedirecting(true);
+          navigate(createPageUrl('GettingStarted'));
+          return;
         }
-
-        // If we reach here, no redirect is needed, so navigation can be shown
-        setNavReady(true);
-
-      } catch (err) { // This will now catch the error only after all retries have failed
-        console.error("Failed to fetch user information after multiple attempts:", err);
-        setUser(null);
-        setIsSuperadmin(false);
-        setNavReady(true); // Show navigation even for logged-out state
-      } finally {
-        setIsUserLoading(false);
-        // Do NOT set setIsRedirecting(false) here, as it might happen before the navigate fully takes effect.
-        // The new page component will handle its own loading state.
       }
-    };
-    fetchUserAndRedirect();
-  }, [location.pathname, navigate, currentPageName]);
-
-  // NEW: Self-heal effect right after user is fetched – fixes race where username/tokens not set yet
-  React.useEffect(() => {
-    let cancelled = false;
-    const runFixes = async () => {
-      if (!user) return;
-
-      // 1) Ensure a brand username exists
-      let u = await ensureUsernameAssigned(user);
-      // 2) Ensure real token balance is persisted (20) for first-time accounts
-      u = await ensureWelcomeTokens(u);
-
-      if (!cancelled && u && u.id === user.id) {
-        // Update in-memory user so header/Token Top Up reflect the true balance immediately
-        setUser(u);
-        // Notify listeners that rely on token balance/usernames
-        try {
-          window.dispatchEvent(new CustomEvent("userUpdated", { detail: { user: u } }));
-          if (typeof u.token_balance === "number") {
-            window.dispatchEvent(new CustomEvent("tokenBalanceUpdated", { detail: { newBalance: u.token_balance } }));
-          }
-        } catch (_) {}
+      
+      // Scenario: Fully onboarded user tries to access Welcome or GettingStarted → redirect to Dashboard
+      if (hasCompletedWelcome && hasCompletedGettingStarted) {
+        if (currentPageName === 'Welcome' || currentPageName === 'GettingStarted') {
+          setIsRedirecting(true);
+          navigate(createPageUrl('Dashboard'));
+          return;
+        }
       }
-    };
-    runFixes();
-    return () => { cancelled = true; };
-  }, [user?.id]);
+
+      // If we reach here, no redirect is needed, so navigation can be shown
+      setNavReady(true);
+
+    } catch (err) {
+      console.error("Error in onboarding redirection:", err);
+      setNavReady(true); // Show navigation even on error
+    }
+  }, [user, currentPageName, navigate]);
+
+  // Notify listeners when user changes
+  useEffect(() => {
+    if (user) {
+      try {
+        window.dispatchEvent(new CustomEvent("userUpdated", { detail: { user } }));
+        if (typeof user.token_balance === "number") {
+          window.dispatchEvent(new CustomEvent("tokenBalanceUpdated", { detail: { newBalance: user.token_balance } }));
+        }
+      } catch (_) {}
+    }
+  }, [user]);
 
   // Removed: Firecrawl webhook notifier effect (was causing duplicate sends)
   // Webhook is now called ONLY from TopicsOnboardingModal.handleComplete
@@ -697,7 +605,7 @@ function LayoutContent({ children, currentPageName }) {
   });
 
   const handleLogout = async () => {
-    await User.logout();
+    await signOut();
     window.location.href = '/';
   };
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/hooks/useAuth';
+import { IntegrationCredential } from '@/api/entities';
 import { toast } from 'sonner';
 
 const CredentialsContext = createContext(null);
@@ -8,11 +9,11 @@ const CredentialsContext = createContext(null);
 const CACHE_DURATION = 5 * 60 * 1000;
 
 export const CredentialsProvider = ({ children }) => {
+  const { user } = useAuth();
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(false);
   const cacheTimestamp = useRef(0);
   const loadingRef = useRef(false);
-  const userRef = useRef(null);
 
   const loadCredentials = useCallback(async (forceRefresh = false) => {
     // Check if cache is still valid
@@ -43,32 +44,16 @@ export const CredentialsProvider = ({ children }) => {
     setLoading(true);
 
     try {
-      // Get user once and cache
-      if (!userRef.current) {
-        try {
-          userRef.current = await base44.auth.me();
-        } catch (e) {
-          console.error('Failed to load user:', e);
-          return [];
-        }
-      }
-
-      const user = userRef.current;
-      const assignedUsernames = Array.isArray(user?.assigned_usernames) ? user.assigned_usernames : [];
-      
-      if (assignedUsernames.length === 0) {
+      if (!user?.assigned_usernames || user.assigned_usernames.length === 0) {
         setCredentials([]);
         cacheTimestamp.current = Date.now();
         return [];
       }
 
-      // Fetch ALL credentials at once (no filter to avoid multiple queries)
-      const allCreds = await base44.entities.IntegrationCredential.list('-updated_date', 100);
-      
-      // Filter client-side by assigned usernames
-      const userCreds = (allCreds || []).filter(cred => 
-        cred.user_name && assignedUsernames.includes(cred.user_name)
-      );
+      // Fetch credentials from Supabase
+      const userCreds = await IntegrationCredential.filter({
+        user_name: user.user_name
+      });
       
       setCredentials(userCreds);
       cacheTimestamp.current = Date.now();
@@ -76,20 +61,13 @@ export const CredentialsProvider = ({ children }) => {
       
     } catch (error) {
       console.error('Failed to load credentials:', error);
-      
-      if (error?.response?.status === 429) {
-        console.warn('Rate limit hit - using cached credentials');
-        // Return cached credentials even if expired
-        return credentials;
-      } else {
-        toast.error('Failed to load credentials');
-        return [];
-      }
+      toast.error('Failed to load credentials');
+      return [];
     } finally {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [credentials]);
+  }, [user, credentials]);
 
   const getCredentialsByProvider = useCallback((provider) => {
     return credentials.filter(c => c.provider === provider);
@@ -99,6 +77,16 @@ export const CredentialsProvider = ({ children }) => {
     cacheTimestamp.current = 0;
     setCredentials([]);
   }, []);
+
+  // Load credentials when user changes
+  useEffect(() => {
+    if (user) {
+      loadCredentials(true); // Force refresh when user changes
+    } else {
+      setCredentials([]);
+      cacheTimestamp.current = 0;
+    }
+  }, [user, loadCredentials]);
 
   const value = {
     credentials,
