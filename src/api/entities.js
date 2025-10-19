@@ -221,3 +221,6 @@ export const BrandSpecifications = createEntityWrapper('BrandSpecifications')
 
 // Export User from auth hook for backwards compatibility
 export { User } from '../hooks/useAuth.js'
+
+// Export createEntityWrapper for individual entity files
+export { createEntityWrapper }
