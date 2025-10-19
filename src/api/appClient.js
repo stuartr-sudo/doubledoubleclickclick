@@ -88,7 +88,74 @@ export const app = {
         }
       };
     }
-  })
+  }),
+  integrations: {
+    Core: {
+      InvokeLLM: async (data) => {
+        const res = await fetch('/api/ai/llm-router', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('LLM invocation failed');
+        return res.json();
+      },
+      SendEmail: async (data) => {
+        const res = await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Email send failed');
+        return res.json();
+      },
+      UploadFile: async (data) => {
+        const res = await fetch('/api/media/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Upload failed');
+        return res.json();
+      },
+      GenerateImage: async (data) => {
+        const res = await fetch('/api/media/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Image generation failed');
+        return res.json();
+      },
+      ExtractDataFromUploadedFile: async (data) => {
+        const res = await fetch('/api/media/extract-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Data extraction failed');
+        return res.json();
+      },
+      CreateFileSignedUrl: async (data) => {
+        const res = await fetch('/api/media/create-signed-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Signed URL creation failed');
+        return res.json();
+      },
+      UploadPrivateFile: async (data) => {
+        const res = await fetch('/api/media/upload-private', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Private upload failed');
+        return res.json();
+      }
+    }
+  }
 };
 
 // Alias for legacy code still importing 'base44'
