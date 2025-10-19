@@ -32,17 +32,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // 2. Superadmins bypass token consumption
-    if (userProfile.is_superadmin) {
-      return res.json({
-        success: true,
-        message: 'Superadmin: no tokens consumed',
-        remainingBalance: userProfile.token_balance,
-        bypassedCharge: true
-      });
-    }
-
-    // 3. Get the feature flag and its token cost
+    // 2. Get the feature flag and its token cost
     const { data: featureFlag, error: flagError } = await supabase
       .from('feature_flags')
       .select('flag_name, is_enabled, token_cost, required_plan_keys, user_overrides, is_coming_soon')
@@ -53,23 +43,24 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Feature flag not found' });
     }
 
-    // 4. Check if feature is enabled
+    // 3. Check if feature is enabled
     if (!featureFlag.is_enabled) {
       return res.status(403).json({ error: 'Feature is disabled' });
     }
 
-    // 5. Check if feature is coming soon
+    // 4. Check if feature is coming soon
     if (featureFlag.is_coming_soon) {
       return res.status(403).json({ error: 'Feature is coming soon' });
     }
 
-    // 6. Check user-specific overrides
+    // 5. Check user-specific overrides
     const userOverrides = featureFlag.user_overrides || {};
     if (typeof userOverrides[userId] === 'boolean' && !userOverrides[userId]) {
       return res.status(403).json({ error: 'Feature disabled for this user' });
     }
 
-    // 7. Check plan requirements
+    // 6. Check plan requirements (superadmins can bypass plan restrictions)
+    if (!userProfile.is_superadmin) {
     const requiredPlans = featureFlag.required_plan_keys || [];
     if (Array.isArray(requiredPlans) && requiredPlans.length > 0) {
       if (!userProfile.plan_price_id) {
@@ -86,11 +77,12 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Insufficient plan for this feature' });
       }
     }
+    }
 
-    // 8. Get token cost (default to 1 if not set)
+    // 7. Get token cost (default to 1 if not set)
     const tokenCost = parseFloat(featureFlag.token_cost) || 1;
 
-    // 9. Check if user has enough tokens
+    // 8. Check if user has enough tokens
     const currentBalance = parseFloat(userProfile.token_balance) || 0;
     if (currentBalance < tokenCost) {
       return res.status(402).json({
@@ -100,7 +92,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 10. Deduct tokens from user's balance
+    // 9. Deduct tokens from user's balance
     const newBalance = currentBalance - tokenCost;
     const { error: updateError } = await supabase
       .from('user_profiles')
@@ -112,7 +104,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to update token balance' });
     }
 
-    // 11. Log the transaction (optional - create analytics_events entry)
+    // 10. Log the transaction (optional - create analytics_events entry)
     await supabase
       .from('analytics_events')
       .insert({
@@ -126,7 +118,7 @@ export default async function handler(req, res) {
         }
       });
 
-    // 12. Return success
+    // 11. Return success
     return res.json({
       success: true,
       tokensConsumed: tokenCost,
