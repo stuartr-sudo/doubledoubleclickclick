@@ -16,7 +16,7 @@ import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { AppSettings } from "@/api/entities";
 import { agentSDK } from "@/agents";
 import { User } from "@/api/entities";
-import { base44 } from "@/api/appClient"; // Added import
+import app from "@/api/appClient";
 
 const COUNTRY_OPTIONS = [
   { label: "Algeria", value: "2012" }, { label: "Angola", value: "2024" }, { label: "Azerbaijan", value: "2031" },
@@ -252,7 +252,7 @@ export default function TopicsOnboardingModal({
       console.log('Fetching website content from:', sanitized);
       
       // Use getSitemapPages to get a snapshot of the site structure
-      const sitemapResponse = await base44.functions.getSitemapPages({ url: sanitized, limit: 50 });
+      const sitemapResponse = await app.functions.getSitemapPages({ url: sanitized, limit: 50 });
       console.log('Sitemap response:', sitemapResponse);
 
       if (sitemapResponse?.success && sitemapResponse?.pages?.length > 0) {
@@ -273,7 +273,7 @@ Produce a JSON object with:
 Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
 
         // Call the new LLM router
-        const llmResponse = await base44.integrations.Core.InvokeLLM({
+        const llmResponse = await app.integrations.Core.InvokeLLM({
           prompt,
           response_json_schema: {
             type: "object",
@@ -493,7 +493,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
       if (website) {
         try {
           console.log('[Sitemap] Fetching pages for:', website);
-          const sitemapData = await base44.functions.getSitemapPages({ url: website, limit: 200 });
+          const sitemapData = await app.functions.getSitemapPages({ url: website, limit: 200 });
           
           if (sitemapData?.success && sitemapData?.pages) {
             // Store sitemap in database
@@ -527,7 +527,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         timestamp = new Date().toISOString(); // Assign value to timestamp
         completedMap[username] = timestamp;
 
-        await base44.auth.updateMe({ 
+        await app.auth.updateMe({ 
           topics_onboarding_completed_at: JSON.stringify(completedMap),
           topics: Array.from(new Set([username, ...(me.topics || [])])) // Update topics field for the user
         });
@@ -545,7 +545,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
             const urlObj = new URL(website);
             const domain = urlObj.hostname.replace(/^www\./i, '');
             
-            await base44.functions.notifyFirecrawlWebsite({
+            await app.functions.notifyFirecrawlWebsite({
               user_name: username,
               site_url: website,
               domain: domain

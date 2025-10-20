@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
-import { base44 } from '@/api/appClient';
+import app from '@/api/appClient';
 import { toast } from 'sonner';
 
 const CredentialsContext = createContext(null);

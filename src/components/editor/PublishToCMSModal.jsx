@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from "@/api/appClient";
+import app from "@/api/appClient";
 import { Loader2, Plus, Trash2, Settings, ExternalLink, Video, RefreshCw, Edit, Globe } from "lucide-react";
 import { toast } from "sonner";
 import VideoModal from "@/components/common/VideoModal";

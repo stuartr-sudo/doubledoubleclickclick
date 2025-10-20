@@ -28,7 +28,7 @@ import VideoModal from "@/components/common/VideoModal";
 import { WorkspaceProvider, WorkspaceContext } from "@/components/providers/WorkspaceProvider";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import usePageTutorial from '@/components/hooks/usePageTutorial';
-import { base44 } from "@/api/appClient";
+import app from "@/api/appClient";
 import { Username } from "@/api/entities";
 import { Sitemap } from "@/api/entities";
 import { TemplateProvider } from '@/components/providers/TemplateProvider'; // Added TemplateProvider

@@ -19,7 +19,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Image as ImageIcon, Loader2 } from "lucide-react"; // Renamed Image to ImageIcon
-import { base44 } from "@/api/appClient";
+import app from "@/api/appClient";
 
 const STYLES = [
   { id: 'CDQPRVVJCSTPRBBCD5Q6AWR', name: 'Vibrant Strokes', category: 'Colorful', preview_image_url: 'https://cdn.napkin.io/napkin-ai/images/style-previews/vibrant_strokes.png' },

@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Mic, Square, Copy, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/appClient";
+import app from "@/api/appClient";
 import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import { User } from "@/api/entities";

@@ -1,5 +1,5 @@
 import React from "react";
-import { base44 } from "@/api/appClient";
+import app from "@/api/appClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, Globe, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/appClient";
+import app from "@/api/appClient";
 import { Sitemap } from "@/api/entities";
 import { BrandGuidelines } from "@/api/entities";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";

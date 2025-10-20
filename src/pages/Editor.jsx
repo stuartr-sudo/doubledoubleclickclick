@@ -8,7 +8,7 @@ import { User } from "@/api/entities";
 import { ImageLibraryItem } from "@/api/entities";
 import { GeneratedVideo } from "@/api/entities";
 import { ImagineerJob } from "@/api/entities"; // Ensure ImagineerJob is imported as it's used
-import { base44 } from "@/api/appClient";
+import app from "@/api/appClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

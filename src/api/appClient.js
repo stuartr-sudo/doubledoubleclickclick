@@ -197,9 +197,8 @@ const app = {
   }
 };
 
-// Export both app and base44 for compatibility
+// Export app as both named and default export
 export { app };
-export const base44 = app;
 export default app;
 
 
