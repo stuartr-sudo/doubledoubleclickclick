@@ -14,7 +14,7 @@ import { AppSettings } from "@/api/entities";
 import { agentSDK } from "@/agents";
 import app from "@/api/appClient";
 import { supabase } from "@/lib/supabase";
-import { LANGUAGE_TO_RECORD_ID } from "@/lib/airtable-id-maps";
+import { LANGUAGE_TO_RECORD_ID, COUNTRY_TO_RECORD_ID } from "@/lib/airtable-id-maps";
 
 const COUNTRY_OPTIONS = [
   { label: "Algeria", value: "2012" }, { label: "Angola", value: "2024" }, { label: "Azerbaijan", value: "2031" },
@@ -452,6 +452,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
       const countryLabel = COUNTRY_OPTIONS.find(o => o?.value === geo)?.label || geo || "";
       const languageLabel = LANGUAGE_OPTIONS.find(o => o?.value === lang)?.label || lang || "";
       const languageRecordId = LANGUAGE_TO_RECORD_ID[languageLabel];
+      const countryRecordId = COUNTRY_TO_RECORD_ID[countryLabel];
 
       // Submit to Company Information table using env var
       const fieldsPayload = {
@@ -464,6 +465,12 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         fieldsPayload["Language"] = [languageRecordId];
       } else {
         console.warn(`[Onboarding] No record ID found for language: ${languageLabel}. Skipping field.`);
+      }
+
+      if (countryRecordId) {
+        fieldsPayload["Geographic Location"] = [countryRecordId];
+      } else {
+        console.warn(`[Onboarding] No record ID found for country: ${countryLabel}. Skipping field.`);
       }
 
       console.log('[Onboarding] Submitting to Company Information:', fieldsPayload);
