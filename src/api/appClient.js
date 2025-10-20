@@ -64,10 +64,15 @@ const app = {
   },
   entities: new Proxy({}, {
     get: (target, entityName) => {
-      const tableName = entityName
+      let tableName = entityName
         .replace(/([A-Z])/g, '_$1')
         .toLowerCase()
-        .replace(/^_/, '') + 's';
+        .replace(/^_/, '');
+      
+      // Only add 's' if it doesn't already end with 's'
+      if (!tableName.endsWith('s')) {
+        tableName += 's';
+      }
       
       return {
         filter: async (filters = {}) => {
