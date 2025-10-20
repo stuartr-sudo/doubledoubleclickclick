@@ -23,6 +23,22 @@ const app = {
         throw new Error(result.error || 'Token consumption failed');
       }
       return result;
+    },
+    getSitemapPages: async (data) => {
+      const res = await fetch('/api/sitemap/get-sitemap-pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    notifyFirecrawlWebsite: async (data) => {
+      const res = await fetch('/api/webhooks/notify-firecrawl-website', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
     }
   },
   auth: {

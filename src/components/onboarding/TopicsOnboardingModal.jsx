@@ -250,19 +250,63 @@ export default function TopicsOnboardingModal({
     setGeneratingTargetMarket(true);
     try {
       console.log('Fetching website content from:', sanitized);
-      const response = await extractWebsiteContent({ url: sanitized });
-      console.log('Website content response:', response);
+      
+      // Use getSitemapPages to get a snapshot of the site structure
+      const sitemapResponse = await base44.functions.getSitemapPages({ url: sanitized, limit: 50 });
+      console.log('Sitemap response:', sitemapResponse);
 
-      const websiteData = response?.data;
-      if (websiteData?.success && websiteData?.text) {
-        const prompt = `Based on this website content, write a concise 2-3 sentence description of the target market:\n\n${websiteData.text.substring(0, 3000)}`;
-        const { InvokeLLM } = await import("@/api/integrations");
-        const llmResponse = await InvokeLLM({ prompt });
-        setTargetMarket(llmResponse || "");
-        toast.success("Target market generated");
+      if (sitemapResponse?.success && sitemapResponse?.pages?.length > 0) {
+        // Build a context from the sitemap
+        const pagesList = sitemapResponse.pages.slice(0, 10).map(p => `- ${p.title || p.url}`).join('\n');
+        const prompt = `You are a content strategist. Based on the website at ${sanitized} and the following page titles:
+${pagesList}
+
+Produce a JSON object with:
+{
+  "target_market": "A concise 2-3 sentence description of the target market for this business",
+  "topics": [
+    {"keyword": "relevant keyword 1", "topic": "topic category 1"},
+    {"keyword": "relevant keyword 2", "topic": "topic category 2"}
+  ]
+}
+
+Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
+
+        // Call the new LLM router
+        const llmResponse = await base44.integrations.Core.InvokeLLM({
+          prompt,
+          response_json_schema: {
+            type: "object",
+            properties: {
+              target_market: { type: "string" },
+              topics: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    keyword: { type: "string" },
+                    topic: { type: "string" }
+                  },
+                  required: ["keyword"]
+                }
+              }
+            },
+            required: ["target_market"]
+          }
+        });
+        
+        console.log('LLM response:', llmResponse);
+
+        if (llmResponse?.success && llmResponse?.result) {
+          const data = llmResponse.result;
+          setTargetMarket(data.target_market || "");
+          toast.success("Target market generated from website");
+        } else {
+          throw new Error(llmResponse?.error || 'LLM returned no result');
+        }
       } else {
-        console.error('Failed to extract website content:', websiteData);
-        toast.error("Could not extract website content. Please enter manually.");
+        console.error('Failed to fetch sitemap:', sitemapResponse);
+        toast.error("Could not access website. Please enter manually.");
       }
     } catch (error) {
       console.error('Error generating target market:', error);
@@ -445,7 +489,30 @@ export default function TopicsOnboardingModal({
         });
       }
 
-      // Store timestamp for countdown timer and update user topics
+      // STEP 1: Fetch sitemap and store in Sitemap entity
+      if (website) {
+        try {
+          console.log('[Sitemap] Fetching pages for:', website);
+          const sitemapData = await base44.functions.getSitemapPages({ url: website, limit: 200 });
+          
+          if (sitemapData?.success && sitemapData?.pages) {
+            // Store sitemap in database
+            const { Sitemap } = await import("@/api/entities");
+            await Sitemap.create({
+              domain: sitemapData.base || new URL(website).hostname.replace(/^www\./i, ''),
+              pages: sitemapData.pages,
+              user_name: username,
+              total_pages: sitemapData.total || sitemapData.pages.length
+            });
+            console.log('[Sitemap] Stored', sitemapData.pages.length, 'pages for', username);
+          }
+        } catch (sitemapError) {
+          console.error('[Sitemap] Failed to fetch or store sitemap:', sitemapError);
+          // Don't block onboarding if sitemap fails
+        }
+      }
+
+      // STEP 2: Store timestamp for countdown timer and update user topics
       const me = await User.me().catch(() => null);
       let timestamp = null; // Declare timestamp here
       if (me && username) { // Ensure username is present before storing
@@ -460,26 +527,31 @@ export default function TopicsOnboardingModal({
         timestamp = new Date().toISOString(); // Assign value to timestamp
         completedMap[username] = timestamp;
 
-        await User.updateMyUserData({ 
+        await base44.auth.updateMe({ 
           topics_onboarding_completed_at: JSON.stringify(completedMap),
           topics: Array.from(new Set([username, ...(me.topics || [])])) // Update topics field for the user
         });
+
+        // Dispatch event for UI updates
+        window.dispatchEvent(new CustomEvent('userUpdated', { detail: { user: { ...me, topics_onboarding_completed_at: completedMap } } }));
+        window.dispatchEvent(new CustomEvent('tokenBalanceUpdated', { detail: { newBalance: me.token_balance } }));
       }
 
-      // CRITICAL: Send Firecrawl webhook once per username (no timestamp in key)
-      if (username && website) { // Ensure all necessary data is available
+      // STEP 3: Send Firecrawl webhook once per username (CRITICAL: only called here)
+      if (username && website) {
         const lsKey = `firecrawl_onboarding_${username}`;
         if (localStorage.getItem(lsKey) !== '1') {
           try {
-            await app.functions.invoke('notifyFirecrawlWebsite', {
-              username: username,
-              website_url: website || ""
+            const urlObj = new URL(website);
+            const domain = urlObj.hostname.replace(/^www\./i, '');
+            
+            await base44.functions.notifyFirecrawlWebsite({
+              user_name: username,
+              site_url: website,
+              domain: domain
             });
             localStorage.setItem(lsKey, '1');
-            console.log('[Firecrawl] Webhook sent successfully:', { 
-              username: username, 
-              website_url: website 
-            });
+            console.log('[Firecrawl] Webhook sent successfully:', { user_name: username, site_url: website, domain });
           } catch (e) {
             console.error('[Firecrawl] Webhook failed:', e?.message || e);
             // Don't block onboarding completion if webhook fails
