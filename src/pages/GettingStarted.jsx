@@ -12,6 +12,7 @@ import app from "@/api/appClient";
 import { Sitemap } from "@/api/entities";
 import { BrandGuidelines } from "@/api/entities";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
+import { useNavigate } from "react-router-dom";
 
 export default function GettingStarted() {
   const [user, setUser] = useState(null);
@@ -29,6 +30,7 @@ export default function GettingStarted() {
   // New state for MagicOrbLoader
   const [importing, setImporting] = useState(false);
   const [importEta, setImportEta] = useState(60);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadUser();
@@ -47,14 +49,14 @@ export default function GettingStarted() {
       setUser(currentUser);
 
       if (currentUser?.completed_tutorial_ids?.includes('getting_started_scrape')) {
-        window.location.href = createPageUrl('Dashboard');
+        navigate(createPageUrl('Dashboard'));
         return;
       }
 
       setLoading(false);
     } catch (error) {
       console.error("Error loading user:", error);
-      window.location.href = createPageUrl('Home');
+      navigate(createPageUrl('Home'));
     }
   };
 
@@ -265,44 +267,22 @@ Return a JSON object with these fields:
     try {
       console.log('[GettingStarted] Attempting to scrape:', url);
       
-      let data = null;
-      let lastError = null;
-
-      // Try scrapeWithFirecrawl first
-      try {
-        const response = await app.functions.invoke('scrapeWithFirecrawl', { url: url });
-        data = response.data;
-        console.log('[GettingStarted] scrapeWithFirecrawl response:', JSON.stringify(data, null, 2));
-      } catch (firecrawlError) {
-        console.warn('[GettingStarted] scrapeWithFirecrawl failed:', firecrawlError.message, 'Trying extractWebsiteContent...');
-        lastError = firecrawlError;
-        
-        // Fallback to extractWebsiteContent
-        try {
-          const response = await app.functions.invoke('extractWebsiteContent', { url: url });
-          data = response.data;
-          console.log('[GettingStarted] extractWebsiteContent response:', JSON.stringify(data, null, 2));
-        } catch (extractError) {
-          console.error('[GettingStarted] Both scraping methods failed:', extractError.message);
-          lastError = extractError;
-          data = null; // Ensure data is null if both fail
-        }
-      }
-
-      if (!data) {
-        throw new Error(lastError?.message || 'Failed to extract content from URL');
+      const response = await app.functions.extractWebsiteContent({ url: url });
+      
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to extract content from URL');
       }
 
       // Use helper functions for consistent content and title extraction
-      const htmlContent = coerceToHtml(data, url);
-      const postTitle = deriveTitle(data, url);
+      const htmlContent = coerceToHtml(response, url);
+      const postTitle = deriveTitle(response, url);
 
       console.log('[GettingStarted] Extracted title:', postTitle);
       console.log('[GettingStarted] HTML content found:', !!htmlContent, 'Length:', htmlContent?.length || 0);
 
       if (!htmlContent || htmlContent.trim().length === 0) {
-        console.error('[GettingStarted] No content found after processing. Available payload fields:', Object.keys(data || {}));
-        throw new Error(`No content found. Response had these fields: ${Object.keys(data || {}).join(', ')}`);
+        console.error('[GettingStarted] No content found after processing. Available payload fields:', Object.keys(response || {}));
+        throw new Error(`No content found. Response had these fields: ${Object.keys(response || {}).join(', ')}`);
       }
 
       const username = user?.assigned_usernames?.[0] || "";
@@ -329,7 +309,7 @@ Return a JSON object with these fields:
       toast.success("Blog post imported successfully! Opening in editor...");
 
       setTimeout(() => {
-        window.location.href = createPageUrl(`Editor?post=${newPost.id}`);
+        navigate(createPageUrl(`Editor?post=${newPost.id}`));
       }, 600);
     } catch (err) {
       console.error("[GettingStarted] Scraping error:", err);
