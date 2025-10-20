@@ -1,6 +1,6 @@
 import { supabase, getCurrentUser } from '@/lib/supabase';
 
-// App client v1.2 - Force rebuild for Topics onboarding
+// App client v1.3 - Force rebuild to clear Vercel queue
 const app = {
   functions: {
     invoke: async (functionName, data) => {
