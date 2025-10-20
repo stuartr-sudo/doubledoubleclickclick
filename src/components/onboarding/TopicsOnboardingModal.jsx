@@ -14,6 +14,7 @@ import { AppSettings } from "@/api/entities";
 import { agentSDK } from "@/agents";
 import app from "@/api/appClient";
 import { supabase } from "@/lib/supabase";
+import { LANGUAGE_TO_RECORD_ID } from "@/lib/airtable-id-maps";
 
 const COUNTRY_OPTIONS = [
   { label: "Algeria", value: "2012" }, { label: "Angola", value: "2024" }, { label: "Azerbaijan", value: "2031" },
@@ -450,6 +451,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
     try {
       const countryLabel = COUNTRY_OPTIONS.find(o => o?.value === geo)?.label || geo || "";
       const languageLabel = LANGUAGE_OPTIONS.find(o => o?.value === lang)?.label || lang || "";
+      const languageRecordId = LANGUAGE_TO_RECORD_ID[languageLabel];
 
       // Submit to Company Information table using env var
       const fieldsPayload = {
@@ -457,6 +459,12 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         "Client Website": website,
         "Username": username || "",
       };
+
+      if (languageRecordId) {
+        fieldsPayload["Language"] = [languageRecordId];
+      } else {
+        console.warn(`[Onboarding] No record ID found for language: ${languageLabel}. Skipping field.`);
+      }
 
       console.log('[Onboarding] Submitting to Company Information:', fieldsPayload);
       const companyInfoResult = await app.functions.airtableCreateRecord({
