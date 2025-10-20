@@ -7,10 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Loader2, Globe, MapPin, Languages, Target, Package, CheckCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { airtableCreateRecord } from "@/api/functions";
 import { airtableUpdateRecord } from "@/api/functions";
 import { extractWebsiteContent } from "@/api/functions";
-import { amazonProduct } from "@/api/functions";
 import { toast } from "sonner";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { AppSettings } from "@/api/entities";
@@ -354,7 +352,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
 
       if (isAmazonUrl) {
         console.log('Scraping Amazon product from:', sanitized);
-        const { data: amazonData } = await amazonProduct({ url: sanitized });
+        const amazonData = await app.functions.amazonProduct({ url: sanitized });
 
         if (!amazonData?.success) {
           if (amazonData?.error && amazonData.error.includes("exceeded the MONTHLY quota")) {
@@ -459,7 +457,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
       };
 
       console.log('Submitting to Company Information:', fieldsPayload);
-      await airtableCreateRecord({
+      await app.functions.airtableCreateRecord({
         tableId: resolvedCompanyInfoTable,
         fields: fieldsPayload
       });
@@ -469,7 +467,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         const resolvedTargetMarketTable = isValidTblId(targetMarketTableId) ? targetMarketTableId : "Target Market";
 
         console.log('Submitting to Target Market table:', resolvedTargetMarketTable);
-        await airtableCreateRecord({
+        await app.functions.airtableCreateRecord({
           tableId: resolvedTargetMarketTable,
           fields: {
             "Target Market Name": targetMarketName.trim(), // Use the user-provided name
@@ -484,7 +482,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         const resolvedProductTable = isValidTblId(companyProductsTableId) ? companyProductsTableId : "Company Products";
 
         console.log('Submitting to Company Product table:', resolvedProductTable);
-        await airtableCreateRecord({
+        await app.functions.airtableCreateRecord({
           tableId: resolvedProductTable,
           fields: {
             "Page Name": productData.cleanName || productData.title || "",
