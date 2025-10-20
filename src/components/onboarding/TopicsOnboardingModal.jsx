@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { AppSettings } from "@/api/entities";
 import { agentSDK } from "@/agents";
-import { User } from "@/api/entities";
 import app from "@/api/appClient";
 
 const COUNTRY_OPTIONS = [
@@ -518,7 +517,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
       }
 
       // STEP 2: Store timestamp for countdown timer and update user topics
-      const me = await User.me().catch(() => null);
+      const me = await app.auth.me().catch(() => null);
       let timestamp = null; // Declare timestamp here
       if (me && username) { // Ensure username is present before storing
         const raw = me.topics_onboarding_completed_at;
