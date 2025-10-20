@@ -14,8 +14,11 @@ export default function useAskAiFeatures() {
           // Ensure token_cost is always a number, handle decimals
           const tokenCost = typeof flag.token_cost === 'number' ? flag.token_cost : parseFloat(flag.token_cost) || 0;
           
-          acc[flag.name] = {
-            enabled: flag.enabled_globally,
+          // Use flag_name (database column) or fallback to name
+          const flagName = flag.flag_name || flag.name;
+          
+          acc[flagName] = {
+            enabled: flag.is_enabled !== undefined ? flag.is_enabled : flag.enabled_globally,
             isComingSoon: flag.is_coming_soon,
             youtube_tutorial_url: flag.youtube_tutorial_url,
             loom_tutorial_url: flag.loom_tutorial_url,
