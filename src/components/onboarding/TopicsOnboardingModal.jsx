@@ -8,7 +8,6 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Loader2, Globe, MapPin, Languages, Target, Package, CheckCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { airtableUpdateRecord } from "@/api/functions";
-import { extractWebsiteContent } from "@/api/functions";
 import { toast } from "sonner";
 import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { AppSettings } from "@/api/entities";
@@ -382,16 +381,16 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
 
       } else {
         console.log('Scraping generic product from:', sanitized);
-        const response = await extractWebsiteContent({ url: sanitized });
+        const response = await app.functions.extractWebsiteContent({ url: sanitized, maxAge: 0 });
         const productPageData = response?.data;
 
-        if (!productPageData?.success || !productPageData?.text) {
+        if (!response?.success || !response?.text) {
           toast.error("Could not extract product information from the URL.");
           return; // Early exit, still in finally
         }
 
-        productTitle = toCleanString(productPageData.title || "", 200);
-        productRawContent = toCleanString(productPageData.text || "", 12000);
+        productTitle = toCleanString(response.title || "", 200);
+        productRawContent = toCleanString(response.text || "", 12000);
         cleanName = generateCleanProductName(productTitle || "Untitled Product");
         // No image extraction for generic pages for now
       }
@@ -508,6 +507,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
           if (sitemapData?.success && sitemapData?.pages) {
             // Store sitemap in database
             const { Sitemap } = await import("@/api/entities");
+            // Insert without forcing SELECT to satisfy RLS
             await Sitemap.create({
               domain: sitemapData.base || new URL(website).hostname.replace(/^www\./i, ''),
               pages: sitemapData.pages,
