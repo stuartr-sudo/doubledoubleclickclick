@@ -40,23 +40,23 @@ export default async function handler(req, res) {
       .single();
 
     if (flagError || !featureFlag) {
-      return res.status(404).json({ error: 'Feature flag not found' });
+      return res.status(200).json({ ok: false, code: 'MISSING_FEATURE_KEY', error: 'Feature flag not found' });
     }
 
     // 3. Check if feature is enabled
     if (!featureFlag.is_enabled) {
-      return res.status(403).json({ error: 'Feature is disabled' });
+      return res.status(200).json({ ok: false, code: 'DISABLED', error: 'Feature is disabled' });
     }
 
     // 4. Check if feature is coming soon
     if (featureFlag.is_coming_soon) {
-      return res.status(403).json({ error: 'Feature is coming soon' });
+      return res.status(200).json({ ok: false, code: 'COMING_SOON', error: 'Feature is coming soon' });
     }
 
     // 5. Check user-specific overrides
     const userOverrides = featureFlag.user_overrides || {};
     if (typeof userOverrides[userId] === 'boolean' && !userOverrides[userId]) {
-      return res.status(403).json({ error: 'Feature disabled for this user' });
+      return res.status(200).json({ ok: false, code: 'DISABLED', error: 'Feature disabled for this user' });
     }
 
     // 6. Check plan requirements (superadmins can bypass plan restrictions)
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     const requiredPlans = featureFlag.required_plan_keys || [];
     if (Array.isArray(requiredPlans) && requiredPlans.length > 0) {
       if (!userProfile.plan_price_id) {
-        return res.status(403).json({ error: 'Plan required for this feature' });
+        return res.status(200).json({ ok: false, code: 'DISABLED', error: 'Plan required for this feature' });
       }
 
       const { data: userProduct } = await supabase
@@ -74,7 +74,7 @@ export default async function handler(req, res) {
         .single();
 
       if (!userProduct || !requiredPlans.includes(userProduct.plan_key)) {
-        return res.status(403).json({ error: 'Insufficient plan for this feature' });
+        return res.status(200).json({ ok: false, code: 'DISABLED', error: 'Insufficient plan for this feature' });
       }
     }
     }
@@ -85,7 +85,9 @@ export default async function handler(req, res) {
     // 8. Check if user has enough tokens
     const currentBalance = parseFloat(userProfile.token_balance) || 0;
     if (currentBalance < tokenCost) {
-      return res.status(402).json({
+      return res.status(200).json({
+        ok: false,
+        code: 'INSUFFICIENT_TOKENS',
         error: 'Insufficient tokens',
         required: tokenCost,
         available: currentBalance
@@ -118,12 +120,12 @@ export default async function handler(req, res) {
         }
       });
 
-    // 11. Return success
-    return res.json({
-      success: true,
-      tokensConsumed: tokenCost,
-      remainingBalance: newBalance,
-      featureName
+    // 11. Return success with ok:true format
+    return res.status(200).json({
+      ok: true,
+      consumed: tokenCost,
+      balance: newBalance,
+      feature_key: featureName
     });
 
   } catch (error) {

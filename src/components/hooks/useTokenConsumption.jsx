@@ -21,22 +21,31 @@ export function useTokenConsumption() {
         featureName: featureKey
       });
 
-      if (result.success) {
+      // API always returns 200 with ok:true/false
+      if (result.ok) {
         // Immediately dispatch the event to update the UI
-        if (typeof result.remainingBalance === 'number') {
+        if (typeof result.balance === 'number') {
           window.dispatchEvent(new CustomEvent('tokenBalanceUpdated', { 
             detail: { 
-              newBalance: result.remainingBalance, 
-              consumed: result.tokensConsumed || 1,
+              newBalance: result.balance, 
+              consumed: result.consumed || 1,
               featureUsed: featureKey 
             }
           }));
         }
-        return { success: true, consumed: result.tokensConsumed, balance: result.remainingBalance };
+        return { success: true, consumed: result.consumed, balance: result.balance };
       } else {
-        // Handle error from our API
-        toast.error(result.error || 'Token consumption failed');
-        return { success: false, error: result.error };
+        // Handle business logic errors (INSUFFICIENT_TOKENS, DISABLED, COMING_SOON, etc.)
+        const errorMessages = {
+          INSUFFICIENT_TOKENS: `Insufficient tokens. Required: ${result.required}, Available: ${result.available}`,
+          DISABLED: 'This feature is currently disabled',
+          COMING_SOON: 'This feature is coming soon',
+          RATE_LIMIT: 'Rate limit exceeded. Please try again later',
+          MISSING_FEATURE_KEY: 'Feature not found'
+        };
+        const message = errorMessages[result.code] || result.error || 'Token consumption failed';
+        toast.error(message);
+        return { success: false, error: result.error, code: result.code };
       }
     } catch (error) {
       console.error('Error consuming tokens:', error);
@@ -59,14 +68,14 @@ export function useTokenConsumption() {
         featureName: featureKey
       })
       .then((result) => {
-        if (result?.success && typeof result.remainingBalance === 'number') {
+        if (result?.ok && typeof result.balance === 'number') {
           window.dispatchEvent(new CustomEvent('tokenBalanceUpdated', { 
-            detail: { newBalance: result.remainingBalance, consumed: result.tokensConsumed || 1, featureUsed: featureKey }
+            detail: { newBalance: result.balance, consumed: result.consumed || 1, featureUsed: featureKey }
           }));
         } else {
           // Quietly notify listeners; callers can choose to react (e.g., revert UI) without spamming toasts
           window.dispatchEvent(new CustomEvent('tokenConsumptionFailed', { 
-            detail: { featureKey, error: result?.error, balance: result?.remainingBalance }
+            detail: { featureKey, error: result?.error, balance: result?.balance, code: result?.code }
           }));
         }
       })
