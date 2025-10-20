@@ -302,6 +302,11 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         if (llmResponse?.success && llmResponse?.result) {
           const data = llmResponse.result;
           setTargetMarket(data.target_market || "");
+          // Auto-fill target market name with a short summary
+          if (data.target_market) {
+            const shortName = data.target_market.split('.')[0].substring(0, 50);
+            setTargetMarketName(shortName);
+          }
           toast.success("Target market generated from website");
         } else {
           throw new Error(llmResponse?.error || 'LLM returned no result');

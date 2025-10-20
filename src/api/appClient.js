@@ -39,6 +39,22 @@ const app = {
         body: JSON.stringify(data)
       });
       return res.json();
+    },
+    amazonProduct: async (data) => {
+      const res = await fetch('/api/products/amazon-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    airtableCreateRecord: async (data) => {
+      const res = await fetch('/api/airtable/create-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
     }
   },
   auth: {
