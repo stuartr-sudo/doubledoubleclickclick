@@ -179,9 +179,9 @@ export default function TopicsOnboardingModal({
     const loadVideo = async () => {
       try {
         const settings = await AppSettings.list();
-        const videoSetting = settings.find(s => s.key === "topics_onboarding_video");
-        if (videoSetting?.value) {
-          setVideoEmbedCode(videoSetting.value);
+        const videoSetting = settings.find(s => s.setting_name === "topics_onboarding_video");
+        if (videoSetting?.setting_value) {
+          setVideoEmbedCode(videoSetting.setting_value);
         }
       } catch (error) {
         console.error("Error loading video:", error);

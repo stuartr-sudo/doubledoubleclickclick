@@ -200,5 +200,6 @@ const app = {
 // Export both app and base44 for compatibility
 export { app };
 export const base44 = app;
+export default app;
 
 
