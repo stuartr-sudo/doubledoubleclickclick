@@ -8,28 +8,37 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AppProductForm({ initial = {}, onSubmit, onCancel, submitting }) {
-  const [form, setForm] = React.useState({
-    name: "",
-    description: "",
-    display_price: "",
-    stripe_price_id: "",
-    is_recurring: false,
-    image_url: "",
-    category: "",
-    sort_order: 0,
-    is_active: true,
-    tokens_granted: 0,
-    plan_key: "growth",
-    billing_interval: "month",
-    annual_price_per_month: "",
-    token_packs: [],
-    ...initial,
-    // Computed fields that need special handling after spread
-    features_text: Array.isArray(initial?.features) ? initial.features.join("\n") : (initial?.features_text || ""),
-    is_best_value: !!initial?.is_best_value,
-    best_value_bg_color: initial?.best_value_bg_color || "",
-    best_value_border_color: initial?.best_value_border_color || "",
-    token_packs: Array.isArray(initial?.token_packs) ? initial.token_packs : []
+  const [form, setForm] = React.useState(() => {
+    // Set defaults first
+    const defaults = {
+      name: "",
+      description: "",
+      display_price: "",
+      stripe_price_id: "",
+      is_recurring: false,
+      image_url: "",
+      category: "",
+      sort_order: 0,
+      is_active: true,
+      tokens_granted: 0,
+      plan_key: "growth",
+      billing_interval: "month",
+      annual_price_per_month: "",
+      token_packs: []
+    };
+    
+    // Merge with initial values
+    const merged = { ...defaults, ...initial };
+    
+    // Apply computed fields that need special handling
+    return {
+      ...merged,
+      features_text: Array.isArray(initial?.features) ? initial.features.join("\n") : (initial?.features_text || ""),
+      is_best_value: !!initial?.is_best_value,
+      best_value_bg_color: initial?.best_value_bg_color || "",
+      best_value_border_color: initial?.best_value_border_color || "",
+      token_packs: Array.isArray(initial?.token_packs) ? initial.token_packs : []
+    };
   });
 
   const update = (k, v) => setForm((s) => ({ ...s, [k]: v }));
