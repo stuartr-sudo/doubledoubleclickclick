@@ -1,6 +1,6 @@
 import { supabase, getCurrentUser } from '@/lib/supabase';
 
-export const app = {
+const app = {
   functions: {
     invoke: async (functionName, data) => {
       const res = await fetch(`/api/${functionName}`, {
