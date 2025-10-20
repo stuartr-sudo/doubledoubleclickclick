@@ -33,7 +33,7 @@ export default function VoiceDictationModal({ isOpen, onClose, onInsert }) {
   const MAX_SECONDS = 90;
 
   const { consumeTokensForFeature, isCheckingTokens } = useTokenConsumption();
-  const { enabled: voiceAiEnabled, isLoading: featureFlagLoading } = useFeatureFlag('voice-ai', {
+  const { enabled: voiceAiEnabled, isLoading: featureFlagLoading } = useFeatureFlag('voice_ai', {
     currentUser,
     defaultEnabled: false
   });
@@ -90,7 +90,7 @@ export default function VoiceDictationModal({ isOpen, onClose, onInsert }) {
     }
 
     // Check and consume tokens BEFORE starting recording
-    const tokenResult = await consumeTokensForFeature('voice-ai');
+    const tokenResult = await consumeTokensForFeature('voice_ai');
     if (!tokenResult.success) {
       setError(tokenResult.error || 'Insufficient tokens to use Voice AI.');
       return;
