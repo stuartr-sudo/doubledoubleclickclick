@@ -10,15 +10,25 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { tableId, fields } = req.body || {};
-    if (!tableId || !fields || typeof fields !== 'object') {
-      return res.status(200).json({ success: false, error: 'Missing tableId or fields' });
+    const { tableId, tableIdEnvVar, fields } = req.body || {};
+    
+    // Resolve table ID: either direct tableId or from environment variable
+    let resolvedTableId = tableId;
+    if (tableIdEnvVar && process.env[tableIdEnvVar]) {
+      resolvedTableId = process.env[tableIdEnvVar];
+      console.log(`[Airtable] Using table ID from ${tableIdEnvVar}:`, resolvedTableId);
+    }
+    
+    if (!resolvedTableId || !fields || typeof fields !== 'object') {
+      return res.status(200).json({ success: false, error: 'Missing tableId/tableIdEnvVar or fields' });
     }
     if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
       return res.status(200).json({ success: false, error: 'Airtable not configured' });
     }
 
-    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableId)}`;
+    console.log(`[Airtable] Creating record in table ${resolvedTableId} with fields:`, Object.keys(fields));
+    
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(resolvedTableId)}`;
     const atRes = await fetch(url, {
       method: 'POST',
       headers: {
@@ -30,9 +40,10 @@ export default async function handler(req, res) {
     const data = await atRes.json();
     if (!atRes.ok) {
       console.error('[Airtable] Create failed:', data);
-      return res.status(200).json({ success: false, error: data?.error?.message || 'Airtable error' });
+      return res.status(200).json({ success: false, error: data?.error?.message || 'Airtable error', details: data });
     }
 
+    console.log('[Airtable] Record created successfully');
     const record = data?.records?.[0] || null;
     return res.status(200).json({ success: true, record });
   } catch (error) {

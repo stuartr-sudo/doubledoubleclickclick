@@ -448,24 +448,28 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
 
     setSaving(true);
     try {
-      const resolvedCompanyInfoTable = isValidTblId(companyInfoTableId) ? companyInfoTableId : "Company Information";
       const countryLabel = COUNTRY_OPTIONS.find(o => o?.value === geo)?.label || geo || "";
       const languageLabel = LANGUAGE_OPTIONS.find(o => o?.value === lang)?.label || lang || "";
 
-      // Submit to Company Information table
+      // Submit to Company Information table using env var
       const fieldsPayload = {
-        "Client Website": website,
-        "Username": username || "",
         "Client Namespace": username || "",
         "Geographic Location": countryLabel,
-        "Language": languageLabel
+        "Language": languageLabel,
+        "Client Website": website,
+        "Username": username || ""
       };
 
-      console.log('Submitting to Company Information:', fieldsPayload);
-      await app.functions.airtableCreateRecord({
-        tableId: resolvedCompanyInfoTable,
+      console.log('[Onboarding] Submitting to Company Information:', fieldsPayload);
+      const companyInfoResult = await app.functions.airtableCreateRecord({
+        tableIdEnvVar: "AIRTABLE_COMPANY_INFORMATION_TABLE_ID",
         fields: fieldsPayload
       });
+      
+      if (!companyInfoResult?.success) {
+        console.error('[Onboarding] Company Info failed:', companyInfoResult?.error);
+        throw new Error(companyInfoResult?.error || 'Failed to submit company information');
+      }
 
       // Submit to Target Market table - USE USER-PROVIDED NAME
       if (targetMarket.trim() && targetMarketName.trim()) {
@@ -482,17 +486,20 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         });
       }
 
-      // Submit to Company Product table
+      // Submit to Company Product table using env var
       if (productUrl.trim()) {
-        const resolvedProductTable = isValidTblId(companyProductsTableId) ? companyProductsTableId : "Company Products";
-
-        console.log('Submitting to Company Product table:', resolvedProductTable);
-        await app.functions.airtableCreateRecord({
-          tableId: resolvedProductTable,
+        console.log('[Onboarding] Submitting to Company Products table');
+        const productResult = await app.functions.airtableCreateRecord({
+          tableIdEnvVar: "AIRTABLE_COMPANY_PRODUCT_TABLE_ID",
           fields: {
             "Page Content": productData.content || ""
           }
         });
+        
+        if (!productResult?.success) {
+          console.error('[Onboarding] Company Products failed:', productResult?.error);
+          throw new Error(productResult?.error || 'Failed to submit product information');
+        }
       }
 
       // STEP 1: Fetch sitemap and store in Sitemap entity
