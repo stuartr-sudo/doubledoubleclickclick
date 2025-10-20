@@ -13,6 +13,7 @@ import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
 import { AppSettings } from "@/api/entities";
 import { agentSDK } from "@/agents";
 import app from "@/api/appClient";
+import { supabase } from "@/lib/supabase";
 
 const COUNTRY_OPTIONS = [
   { label: "Algeria", value: "2012" }, { label: "Angola", value: "2024" }, { label: "Azerbaijan", value: "2031" },
@@ -504,17 +505,20 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
           console.log('[Sitemap] Fetching pages for:', website);
           const sitemapData = await app.functions.getSitemapPages({ url: website, limit: 200 });
           
-          if (sitemapData?.success && sitemapData?.pages) {
-            // Store sitemap in database
-            const { Sitemap } = await import("@/api/entities");
-            // Insert without forcing SELECT to satisfy RLS
-            await Sitemap.create({
+          if (sitemapData?.success && Array.isArray(sitemapData.pages) && sitemapData.pages.length) {
+            // Store sitemap in database without SELECT to avoid RLS read issues
+            const payload = {
               domain: sitemapData.base || new URL(website).hostname.replace(/^www\./i, ''),
               pages: sitemapData.pages,
               user_name: username,
               total_pages: sitemapData.total || sitemapData.pages.length
-            });
-            console.log('[Sitemap] Stored', sitemapData.pages.length, 'pages for', username);
+            };
+            const { error: insertErr } = await supabase.from('sitemaps').insert(payload);
+            if (insertErr) {
+              console.warn('[Sitemap] Insert failed (non-blocking):', insertErr?.message || insertErr);
+            } else {
+              console.log('[Sitemap] Stored', sitemapData.pages.length, 'pages for', username);
+            }
           }
         } catch (sitemapError) {
           console.error('[Sitemap] Failed to fetch or store sitemap:', sitemapError);
