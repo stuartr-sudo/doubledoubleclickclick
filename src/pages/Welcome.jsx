@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { createPageUrl } from "@/utils";
+import { useNavigate } from "react-router-dom";
 
 export default function Welcome() {
   const [user, setUser] = useState(null);
@@ -18,6 +19,7 @@ export default function Welcome() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [welcomeVideoUrl, setWelcomeVideoUrl] = useState("");
   const [videoWatched, setVideoWatched] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadUser();
@@ -72,7 +74,7 @@ export default function Welcome() {
       // Check if user has already completed onboarding
       if (currentUser?.completed_tutorial_ids?.includes('welcome_onboarding')) {
         // Redirect to dashboard if already onboarded
-        window.location.href = createPageUrl('Dashboard');
+        navigate(createPageUrl('Dashboard'));
         return;
       }
 
@@ -80,7 +82,7 @@ export default function Welcome() {
     } catch (error) {
       console.error("Error loading user:", error);
       // If no user, redirect to home
-      window.location.href = createPageUrl('Home');
+      navigate(createPageUrl('Home'));
     }
   };
 
@@ -107,11 +109,11 @@ export default function Welcome() {
       if (user) {
         const currentCompleted = user.completed_tutorial_ids || [];
         const updatedCompleted = Array.from(new Set([...currentCompleted, "welcome_onboarding"]));
-        await User.updateMyUserData({ completed_tutorial_ids: updatedCompleted });
+        await User.updateMe({ completed_tutorial_ids: updatedCompleted });
       }
       toast.success("Welcome complete! Let's get you started.");
       // Redirect to GettingStarted instead of Dashboard
-      window.location.href = createPageUrl('GettingStarted');
+      navigate(createPageUrl('GettingStarted'));
     } catch (error) {
       console.error("Failed to save onboarding progress:", error);
       toast.error("There was an issue saving your progress. Please try again.");
@@ -130,9 +132,9 @@ export default function Welcome() {
           "welcome_onboarding",
           "getting_started_scrape"
         ]));
-        await User.updateMyUserData({ completed_tutorial_ids: updatedCompleted });
+        await User.updateMe({ completed_tutorial_ids: updatedCompleted });
       }
-      window.location.href = createPageUrl('Dashboard');
+      navigate(createPageUrl('Dashboard'));
     } catch (error) {
       console.error("Failed to skip onboarding:", error);
       toast.error("There was an issue. Please try again.");
