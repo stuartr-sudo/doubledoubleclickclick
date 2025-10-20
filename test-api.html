@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Endpoint Tests</h1>
+    <button onclick="testSitemap()">Test Sitemap API</button>
+    <button onclick="testLLM()">Test LLM API</button>
+    <pre id="output"></pre>
+
+    <script>
+        async function testSitemap() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing sitemap API...';
+            
+            try {
+                const res = await fetch('/api/sitemap/get-sitemap-pages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: 'https://example.com', limit: 10 })
+                });
+                const data = await res.json();
+                output.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testLLM() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing LLM API...';
+            
+            try {
+                const res = await fetch('/api/ai/llm-router', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: 'Say hello in JSON',
+                        response_json_schema: {
+                            type: 'object',
+                            properties: {
+                                message: { type: 'string' }
+                            }
+                        }
+                    })
+                });
+                const data = await res.json();
+                output.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
+
