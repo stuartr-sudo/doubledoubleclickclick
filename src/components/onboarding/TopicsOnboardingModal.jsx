@@ -383,18 +383,31 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
 
       } else {
         console.log('Scraping generic product from:', sanitized);
-        const response = await app.functions.extractWebsiteContent({ url: sanitized, maxAge: 0 });
-        const productPageData = response?.data;
-
+        const response = await app.functions.extractWebsiteContent({ url: sanitized, maxAge: 0 }); // Use app.functions
+        
         if (!response?.success || !response?.text) {
           toast.error("Could not extract product information from the URL.");
-          return; // Early exit, still in finally
+          setIsScrapingProduct(false);
+          return;
         }
 
         productTitle = toCleanString(response.title || "", 200);
         productRawContent = toCleanString(response.text || "", 12000);
         cleanName = generateCleanProductName(productTitle || "Untitled Product");
         // No image extraction for generic pages for now
+        
+        setScrapedProductDisplay({
+          title: productTitle,
+          description: productRawContent.substring(0, 300) + (productRawContent.length > 300 ? "..." : ""),
+          image: null
+        });
+
+        // CRITICAL FIX: Set productData state for submission
+        setProductData({
+          title: productTitle,
+          content: productRawContent,
+          cleanName: cleanName
+        });
       }
 
       // If another scrape was initiated while we were fetching content, abort this one
