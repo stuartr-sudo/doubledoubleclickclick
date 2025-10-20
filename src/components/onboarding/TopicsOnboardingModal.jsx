@@ -351,6 +351,12 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
 
       if (isAmazonUrl) {
         console.log('Scraping Amazon product from:', sanitized);
+        console.log('[DEBUG] app:', app);
+        console.log('[DEBUG] app.functions:', app?.functions);
+        console.log('[DEBUG] app.functions.amazonProduct:', app?.functions?.amazonProduct);
+        if (!app || !app.functions || !app.functions.amazonProduct) {
+          throw new Error('app.functions.amazonProduct is not available');
+        }
         const amazonData = await app.functions.amazonProduct({ url: sanitized });
 
         if (!amazonData?.success) {
