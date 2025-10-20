@@ -56,6 +56,15 @@ const app = {
         body: JSON.stringify(data)
       });
       return res.json();
+    },
+    // Generic website extractor via Firecrawl v2
+    extractWebsiteContent: async (data) => {
+      const res = await fetch('/api/scrape/extract-website-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
     }
   },
   auth: {
@@ -160,15 +169,7 @@ const app = {
         if (!res.ok) throw new Error('LLM invocation failed');
         return res.json();
       },
-      // Generic website extractor via Firecrawl v2
-      extractWebsiteContent: async (data) => {
-        const res = await fetch('/api/scrape/extract-website-content', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        return res.json();
-      },
+      
       SendEmail: async (data) => {
         const res = await fetch('/api/email/send', {
           method: 'POST',
