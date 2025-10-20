@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     const urlObj = new URL(normalizedUrl);
     const base = urlObj.hostname.replace(/^www\./i, '');
 
-    // Call Firecrawl /map endpoint
+    // Call Firecrawl /map endpoint (v1 API)
     const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/map', {
       method: 'POST',
       headers: {
@@ -49,10 +49,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        url: normalizedUrl,
-        limit: limit,
-        includeSubdomains: false,
-        search: null
+        url: normalizedUrl
       })
     });
 
@@ -68,11 +65,11 @@ export default async function handler(req, res) {
     }
 
     // Extract URLs from Firecrawl response
-    // Firecrawl /map returns { links: [...] }
-    const links = data.links || [];
+    // Firecrawl v1 /map returns { success, links: [...] }
+    const links = data.links || data.data || [];
 
     // Transform to our format: { url, title }
-    const pages = links.map((link) => {
+    const pages = links.slice(0, limit).map((link) => {
       if (typeof link === 'string') {
         return { url: link, title: link };
       }
@@ -86,7 +83,7 @@ export default async function handler(req, res) {
       success: true,
       base,
       total: pages.length,
-      pages: pages.slice(0, limit)
+      pages
     });
 
   } catch (error) {
