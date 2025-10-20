@@ -18,23 +18,18 @@ export default function AppProductForm({ initial = {}, onSubmit, onCancel, submi
     category: "",
     sort_order: 0,
     is_active: true,
-    features_text: "",
     tokens_granted: 0,
-    is_best_value: false,
-    best_value_bg_color: "",
-    best_value_border_color: "",
-    // NEW FIELDS
-    plan_key: initial?.plan_key || "growth",
-    billing_interval: initial?.billing_interval || "month",
-    annual_price_per_month: initial?.annual_price_per_month || "",
-    // NEW
-    token_packs: Array.isArray(initial?.token_packs) ? initial.token_packs : [],
-    // End NEW FIELDS
+    plan_key: "growth",
+    billing_interval: "month",
+    annual_price_per_month: "",
+    token_packs: [],
     ...initial,
+    // Computed fields that need special handling after spread
     features_text: Array.isArray(initial?.features) ? initial.features.join("\n") : (initial?.features_text || ""),
     is_best_value: !!initial?.is_best_value,
     best_value_bg_color: initial?.best_value_bg_color || "",
-    best_value_border_color: initial?.best_value_border_color || ""
+    best_value_border_color: initial?.best_value_border_color || "",
+    token_packs: Array.isArray(initial?.token_packs) ? initial.token_packs : []
   });
 
   const update = (k, v) => setForm((s) => ({ ...s, [k]: v }));
