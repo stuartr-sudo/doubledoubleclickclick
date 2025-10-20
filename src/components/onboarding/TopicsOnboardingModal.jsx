@@ -505,7 +505,9 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         const productResult = await app.functions.airtableCreateRecord({
           tableIdEnvVar: "AIRTABLE_COMPANY_PRODUCT_TABLE_ID",
           fields: {
-            "Page Content": productData.content || ""
+            "Page Name": productData.cleanName || productData.title || "Untitled Product",
+            "Page Content": productData.content || "",
+            "URL": productUrl,
           }
         });
         
