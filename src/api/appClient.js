@@ -33,14 +33,22 @@ const app = {
       });
       return res.json();
     },
-    notifyFirecrawlWebsite: async (data) => {
-      const res = await fetch('/api/webhooks/notify-firecrawl-website', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      return res.json();
-    },
+        notifyFirecrawlWebsite: async (data) => {
+          const res = await fetch('/api/webhooks/notify-firecrawl-website', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          return res.json();
+        },
+        createSitemap: async (data) => {
+          const res = await fetch('/api/sitemap/create-sitemap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          return res.json();
+        },
     amazonProduct: async (data) => {
       const res = await fetch('/api/products/amazon-product', {
         method: 'POST',

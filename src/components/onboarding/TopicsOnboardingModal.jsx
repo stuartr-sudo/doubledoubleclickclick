@@ -502,18 +502,18 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
           const sitemapData = await app.functions.getSitemapPages({ url: website, limit: 200 });
           
           if (sitemapData?.success && Array.isArray(sitemapData.pages) && sitemapData.pages.length) {
-            // Store sitemap in database without SELECT to avoid RLS read issues
-            const payload = {
+            // Store sitemap via API endpoint
+            const sitemapResult = await app.functions.createSitemap({
               domain: sitemapData.base || new URL(website).hostname.replace(/^www\./i, ''),
               pages: sitemapData.pages,
               user_name: username,
               total_pages: sitemapData.total || sitemapData.pages.length
-            };
-            const { error: insertErr } = await supabase.from('sitemaps').insert(payload);
-            if (insertErr) {
-              console.warn('[Sitemap] Insert failed (non-blocking):', insertErr?.message || insertErr);
-            } else {
+            });
+            
+            if (sitemapResult?.success) {
               console.log('[Sitemap] Stored', sitemapData.pages.length, 'pages for', username);
+            } else {
+              console.warn('[Sitemap] Insert failed (non-blocking):', sitemapResult?.error);
             }
           }
         } catch (sitemapError) {
