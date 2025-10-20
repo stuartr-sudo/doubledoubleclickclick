@@ -176,7 +176,8 @@ export const app = {
   }
 };
 
-// Alias for legacy code still importing 'base44'
+// Export both app and base44 for compatibility
+export { app };
 export const base44 = app;
 
 
