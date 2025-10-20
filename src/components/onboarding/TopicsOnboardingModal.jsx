@@ -147,9 +147,9 @@ export default function TopicsOnboardingModal({
   onClose,
   username,
   onCompleted,
-  companyInfoTableId,
+  companyInfoTableId = "tblNHw1PDDsIo1Gbi",
   targetMarketTableId,
-  companyProductsTableId,
+  companyProductsTableId = "tblafbTZlVJekh2Dz",
   usersTableId = "Users"
 }) {
   const [step, setStep] = React.useState(1);
