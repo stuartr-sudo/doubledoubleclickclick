@@ -1,6 +1,6 @@
 import { supabase, getCurrentUser } from '@/lib/supabase';
 
-// App client v1.3 - Force rebuild to clear Vercel queue
+// App client v1.4 - Added Stripe integration
 const app = {
   functions: {
     invoke: async (functionName, data) => {
@@ -10,6 +10,45 @@ const app = {
         body: JSON.stringify(data || {})
       });
       if (!res.ok) throw new Error(`Function ${functionName} failed`);
+      return res.json();
+    },
+    // Stripe functions
+    createCheckoutSession: async (data) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Checkout session creation failed');
+      return res.json();
+    },
+    verifyPayment: async (data) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/stripe/verify-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    createCustomerPortalSession: async (data = {}) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/stripe/create-customer-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Customer portal session creation failed');
       return res.json();
     },
     checkAndConsumeTokens: async (data) => {
