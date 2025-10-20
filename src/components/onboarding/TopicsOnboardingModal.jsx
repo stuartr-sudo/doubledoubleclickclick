@@ -490,11 +490,7 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         await app.functions.airtableCreateRecord({
           tableId: resolvedProductTable,
           fields: {
-            "Page Name": productData.cleanName || productData.title || "",
-            "Page Content": productData.content || "",
-            "URL": productUrl,
-            "client_username": username || "",
-            "Status": "Add to Pinecone" // Automatically set Status field
+            "Page Content": productData.content || ""
           }
         });
       }
