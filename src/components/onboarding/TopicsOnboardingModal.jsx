@@ -287,11 +287,13 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
                     keyword: { type: "string" },
                     topic: { type: "string" }
                   },
-                  required: ["keyword"]
+                  required: ["keyword"],
+                  additionalProperties: false
                 }
               }
             },
-            required: ["target_market"]
+            required: ["target_market"],
+            additionalProperties: false
           }
         });
         
