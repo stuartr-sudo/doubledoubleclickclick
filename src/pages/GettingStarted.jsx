@@ -353,7 +353,7 @@ Return a JSON object with these fields:
 
     setFetchingPages(true);
     try {
-      const { data } = await app.functions.invoke('getSitemapPages', {
+      const data = await app.functions.getSitemapPages({
         url: siteUrl,
         limit: 200
       });
