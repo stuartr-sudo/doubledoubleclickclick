@@ -1,5 +1,6 @@
 import { supabase, getCurrentUser } from '@/lib/supabase';
 
+// App client v1.1 - Topics onboarding fixes
 const app = {
   functions: {
     invoke: async (functionName, data) => {

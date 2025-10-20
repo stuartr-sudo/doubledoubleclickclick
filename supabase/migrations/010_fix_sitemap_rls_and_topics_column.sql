@@ -15,5 +15,15 @@ BEGIN
     ) THEN
         ALTER TABLE public.user_profiles ADD COLUMN topics text[] DEFAULT '{}';
     END IF;
+    
+    -- Add topics_onboarding_completed_at column
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_profiles' 
+        AND column_name = 'topics_onboarding_completed_at'
+    ) THEN
+        ALTER TABLE public.user_profiles ADD COLUMN topics_onboarding_completed_at jsonb DEFAULT '{}'::jsonb;
+    END IF;
 END $$;
 
