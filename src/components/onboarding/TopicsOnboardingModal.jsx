@@ -454,9 +454,10 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
       // Submit to Company Information table using env var
       const fieldsPayload = {
         "Client Namespace": username || "",
-        "Geographic Location": countryLabel,
-        "Language": languageLabel,
+        "Geographic Location": [countryLabel],
+        "Language": [languageLabel],
         "Client Website": website,
+        "Username": username || "",
       };
 
       console.log('[Onboarding] Submitting to Company Information:', fieldsPayload);
