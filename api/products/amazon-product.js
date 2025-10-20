@@ -35,8 +35,8 @@ export default async function handler(req, res) {
 
     console.log('[amazonProduct] Scraping product:', url);
 
-    // Call Firecrawl /scrape endpoint
-    const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+    // Call Firecrawl v2 /scrape endpoint
+    const firecrawlResponse = await fetch('https://api.firecrawl.dev/v2/scrape', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
@@ -48,19 +48,19 @@ export default async function handler(req, res) {
       })
     });
 
-    const data = await firecrawlResponse.json();
+    const result = await firecrawlResponse.json();
 
-    if (!firecrawlResponse.ok) {
-      console.error('Firecrawl /scrape error:', data);
+    if (!firecrawlResponse.ok || !result.success) {
+      console.error('Firecrawl /scrape error:', result);
       return res.status(200).json({
         success: false,
-        error: data.error || 'Firecrawl scrape failed'
+        error: result.error || 'Firecrawl scrape failed'
       });
     }
 
-    // Extract content from Firecrawl response
-    const markdown = data.data?.markdown || data.markdown || '';
-    const metadata = data.data?.metadata || data.metadata || {};
+    // Extract content from Firecrawl v2 response
+    const markdown = result.data?.markdown || '';
+    const metadata = result.data?.metadata || {};
     const title = metadata.title || metadata.ogTitle || 'Untitled Product';
     const description = metadata.description || metadata.ogDescription || markdown.substring(0, 200);
     const imageUrl = metadata.ogImage || '';
