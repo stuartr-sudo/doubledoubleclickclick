@@ -457,7 +457,6 @@ Focus on commercial relevance and SEO value. Return ONLY valid JSON.`;
         "Geographic Location": countryLabel,
         "Language": languageLabel,
         "Client Website": website,
-        "Username": username || ""
       };
 
       console.log('[Onboarding] Submitting to Company Information:', fieldsPayload);
