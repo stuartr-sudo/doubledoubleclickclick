@@ -159,28 +159,42 @@ export default function DrawingModal({ open, onClose, onInsert }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] h-[90vh] p-0 overflow-hidden">
-        <DialogHeader className="px-6 py-4 border-b">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] h-[90vh] p-0 overflow-hidden flex flex-col">
+        <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
           <DialogTitle>Draw & Sketch</DialogTitle>
           <p className="text-sm text-muted-foreground">
             Create diagrams, sketches, or brainstorm ideas on an infinite canvas
           </p>
         </DialogHeader>
 
-        {/* Tldraw Canvas */}
-        <div className="flex-1 w-full h-full min-h-0" style={{ height: 'calc(90vh - 140px)' }}>
-          <Tldraw
-            onMount={handleMount}
-            inferDarkMode
-            hideUi={false}
-            components={{
-              // Remove share panel for cleaner UI
-              SharePanel: null,
+        {/* Tldraw Canvas - Absolute positioning required for Tldraw v4 */}
+        <div 
+          className="flex-1 w-full relative overflow-hidden" 
+          style={{ 
+            minHeight: '400px',
+          }}
+        >
+          <div 
+            style={{ 
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
             }}
-          />
+          >
+            <Tldraw
+              onMount={handleMount}
+              inferDarkMode
+              hideUi={false}
+              components={{
+                // Remove share panel for cleaner UI
+                SharePanel: null,
+              }}
+            />
+          </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t flex justify-between items-center">
+        <DialogFooter className="px-6 py-4 border-t flex justify-between items-center flex-shrink-0">
           <div className="flex gap-2">
             <Button
               type="button"
