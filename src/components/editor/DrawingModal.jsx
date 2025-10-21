@@ -40,6 +40,7 @@ export default function DrawingModal({ open, onClose, onInsert }) {
   const [saving, setSaving] = useState(false);
   const [editor, setEditor] = useState(null);
   const [sessionKey, setSessionKey] = useState(null);
+  const SESSION_KEY_STORAGE = 'sewo_current_drawing_key';
 
   // Get current user
   useEffect(() => {
@@ -53,10 +54,23 @@ export default function DrawingModal({ open, onClose, onInsert }) {
     }
   }, [open]);
 
-  // Create a fresh persistence key for every new open → guarantees blank canvas per session
+  // Create or reuse a persistence key per open. Reuse across unexpected remounts,
+  // but clear when the modal is explicitly closed so a new session starts blank.
   useEffect(() => {
     if (open) {
-      setSessionKey(`sewo-drawing-${Date.now()}`);
+      try {
+        const existing = localStorage.getItem(SESSION_KEY_STORAGE);
+        if (existing) {
+          setSessionKey(existing);
+        } else {
+          const fresh = `sewo-drawing-${Date.now()}`;
+          localStorage.setItem(SESSION_KEY_STORAGE, fresh);
+          setSessionKey(fresh);
+        }
+      } catch (_) {
+        // Fallback if localStorage unavailable
+        setSessionKey(`sewo-drawing-${Date.now()}`);
+      }
     } else {
       setSessionKey(null);
     }
@@ -215,6 +229,12 @@ export default function DrawingModal({ open, onClose, onInsert }) {
   // Only render when open and we have a session key
   if (!open || !sessionKey) return null;
 
+  // Close handler clears the persisted key so the next open starts blank
+  const handleClose = () => {
+    try { localStorage.removeItem(SESSION_KEY_STORAGE); } catch (_) {}
+    onClose();
+  };
+
   // MINIMAL TEST: Just Tldraw with no wrapper at all
   return ReactDOM.createPortal(
     <div 
@@ -230,7 +250,7 @@ export default function DrawingModal({ open, onClose, onInsert }) {
     >
       {/* Simple close button */}
       <button 
-        onClick={onClose}
+        onClick={handleClose}
         style={{
           position: 'absolute',
           top: '20px',
