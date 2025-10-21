@@ -106,17 +106,33 @@ export default function Welcome() {
   const handleFinishOnboarding = async () => {
     setIsSubmitting(true);
     try {
+      console.log('Starting onboarding completion...', { user });
+      
       if (user) {
         const currentCompleted = user.completed_tutorial_ids || [];
         const updatedCompleted = Array.from(new Set([...currentCompleted, "welcome_onboarding"]));
-        await User.updateMe({ completed_tutorial_ids: updatedCompleted });
+        
+        console.log('Attempting to update user with:', { completed_tutorial_ids: updatedCompleted });
+        
+        const updatedUser = await User.updateMe({ completed_tutorial_ids: updatedCompleted });
+        
+        console.log('Update successful:', updatedUser);
       }
+      
       toast.success("Welcome complete! Let's get you started.");
-      // Redirect to GettingStarted instead of Dashboard
+      
+      // Redirect to GettingStarted
+      console.log('Navigating to GettingStarted...');
       navigate(createPageUrl('GettingStarted'));
     } catch (error) {
       console.error("Failed to save onboarding progress:", error);
-      toast.error("There was an issue saving your progress. Please try again.");
+      console.error("Error details:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      toast.error(`There was an issue: ${error.message}. Please try again.`);
       setIsSubmitting(false);
     }
   };
