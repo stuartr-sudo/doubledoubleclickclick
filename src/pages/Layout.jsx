@@ -28,6 +28,7 @@ import VideoModal from "@/components/common/VideoModal";
 import { WorkspaceProvider, WorkspaceContext } from "@/components/providers/WorkspaceProvider";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import usePageTutorial from '@/components/hooks/usePageTutorial';
+import PageLoader from '@/components/common/PageLoader';
 import app from "@/api/appClient";
 import { Username } from "@/api/entities";
 import { Sitemap } from "@/api/entities";
@@ -652,14 +653,7 @@ function LayoutContent({ children, currentPageName }) {
 
   // Show loading screen during user authentication or redirects
   if (isUserLoading || isRedirecting) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-pulse mx-auto mb-4"></div>
-          <p className="text-slate-600 text-lg font-medium">Loading your workspace...</p>
-        </div>
-      </div>);
-
+    return <PageLoader message="Loading..." />;
   }
 
   return (
