@@ -39,6 +39,7 @@ export default function DrawingModal({ open, onClose, onInsert }) {
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [editor, setEditor] = useState(null);
+  const [sessionKey, setSessionKey] = useState(null);
 
   // Get current user
   useEffect(() => {
@@ -49,6 +50,15 @@ export default function DrawingModal({ open, onClose, onInsert }) {
   useEffect(() => {
     if (open) {
       console.log('🎨 DrawingModal opened');
+    }
+  }, [open]);
+
+  // Create a fresh persistence key for every new open → guarantees blank canvas per session
+  useEffect(() => {
+    if (open) {
+      setSessionKey(`sewo-drawing-${Date.now()}`);
+    } else {
+      setSessionKey(null);
     }
   }, [open]);
 
@@ -202,8 +212,8 @@ export default function DrawingModal({ open, onClose, onInsert }) {
     }
   };
 
-  // Only render when open
-  if (!open) return null;
+  // Only render when open and we have a session key
+  if (!open || !sessionKey) return null;
 
   // MINIMAL TEST: Just Tldraw with no wrapper at all
   return ReactDOM.createPortal(
@@ -242,7 +252,7 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         key="tldraw-direct"
         onMount={handleMount}
         hideUi={false}
-        persistenceKey="sewo-drawing-modal"
+        persistenceKey={sessionKey}
       />
     </div>,
     document.body
