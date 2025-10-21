@@ -247,6 +247,8 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         zIndex: 9999,
         backgroundColor: 'white',
       }}
+      onMouseEnter={() => { try { window.__drawingOpen = true; } catch(_) {} }}
+      onMouseLeave={() => { try { window.__drawingOpen = false; } catch(_) {} }}
     >
       {/* Simple close button */}
       <button 

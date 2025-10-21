@@ -1118,6 +1118,7 @@ export default function Editor() {
     if (!pendingAudioJobs.length) return;
 
     const interval = setInterval(async () => {
+      if (typeof window !== 'undefined' && window.__drawingOpen) return; // pause while drawing modal open
       const updates = await Promise.all(pendingAudioJobs.map(async (j) => {
         try {
           const attempts = (j.attempts || 0) + 1;
@@ -1209,6 +1210,7 @@ export default function Editor() {
     if (!backgroundJobs.length) return;
 
     const interval = setInterval(async () => {
+      if (typeof window !== 'undefined' && window.__drawingOpen) return; // pause while drawing modal open
       let jobsChanged = false;
       const updatedJobs = await Promise.all(
         backgroundJobs.map(async (job) => {
@@ -1343,6 +1345,7 @@ export default function Editor() {
     }
 
     const interval = setInterval(async () => {
+      if (typeof window !== 'undefined' && window.__drawingOpen) return; // pause while drawing modal open
       const updates = await Promise.all(pendingInfographicJobs.map(async (job) => {
         if (job.done) return job; // If the job is already marked as done, no need to re-call the API.
 
