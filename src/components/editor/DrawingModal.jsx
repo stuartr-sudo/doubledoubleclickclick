@@ -10,12 +10,23 @@ import { toast } from 'sonner';
 
 // CSS override to ensure Tldraw works in modal
 const tldrawContainerStyle = `
+  .tldraw-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
   .tldraw-container * {
     pointer-events: auto !important;
   }
   .tldraw__editor {
     pointer-events: auto !important;
     touch-action: none !important;
+  }
+  .tl-container {
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    inset: 0 !important;
   }
 `;
 
@@ -33,8 +44,17 @@ export default function DrawingModal({ open, onClose, onInsert }) {
     getCurrentUser().then(setUser).catch(console.error);
   }, []);
 
+  // Debug logging
+  useEffect(() => {
+    if (open) {
+      console.log('🎨 DrawingModal opened');
+    }
+  }, [open]);
+
   // Handle editor mount
   const handleMount = useCallback((mountedEditor) => {
+    console.log('✅ Tldraw editor mounted:', mountedEditor);
+    console.log('Editor API available:', !!mountedEditor?.getCurrentPageShapes);
     setEditor(mountedEditor);
   }, []);
 
@@ -168,6 +188,9 @@ export default function DrawingModal({ open, onClose, onInsert }) {
     }
   };
 
+  // Only render Tldraw when dialog is open (fixes initialization issues)
+  if (!open) return null;
+
   return (
     <>
       {/* Inject CSS to fix pointer events */}
@@ -182,34 +205,27 @@ export default function DrawingModal({ open, onClose, onInsert }) {
             </p>
           </DialogHeader>
 
-          {/* Tldraw Canvas - Absolute positioning required for Tldraw v4 */}
+          {/* Tldraw Canvas - Fixed dimensions for proper initialization */}
           <div 
-            className="flex-1 w-full relative overflow-hidden tldraw-container" 
+            className="flex-1 w-full tldraw-container" 
             style={{ 
-              minHeight: '400px',
+              position: 'relative',
+              overflow: 'hidden',
+              minHeight: '500px',
+              height: 'calc(90vh - 180px)',
             }}
           >
-            <div 
-              style={{ 
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
+            <Tldraw
+              onMount={handleMount}
+              inferDarkMode={false}
+              hideUi={false}
+              components={{
+                SharePanel: null,
               }}
-            >
-              <Tldraw
-                onMount={handleMount}
-                inferDarkMode
-                hideUi={false}
-                components={{
-                  // Remove share panel for cleaner UI
-                  SharePanel: null,
-                }}
-              />
-            </div>
+            />
           </div>
 
-        <DialogFooter className="px-6 py-4 border-t flex justify-between items-center flex-shrink-0">
+          <DialogFooter className="px-6 py-4 border-t flex justify-between items-center flex-shrink-0">
           <div className="flex gap-2">
             <Button
               type="button"
