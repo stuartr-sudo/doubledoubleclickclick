@@ -8,14 +8,14 @@ import { Loader2 } from 'lucide-react';
 export default function PageLoader({ message = "Loading..." }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-purple-50/30 to-blue-50/30">
-      <div className="relative">
-        {/* Animated gradient orb */}
-        <div className="absolute inset-0 blur-3xl opacity-30 animate-pulse">
-          <div className="w-32 h-32 rounded-full bg-gradient-to-r from-purple-600 to-blue-600"></div>
+      <div className="relative flex items-center justify-center w-32 h-32">
+        {/* Animated gradient orb - perfectly centered */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-32 h-32 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 blur-3xl opacity-40 animate-pulse"></div>
         </div>
         
-        {/* Spinner */}
-        <div className="relative">
+        {/* Spinner - perfectly centered on top of glow */}
+        <div className="relative z-10">
           <Loader2 className="h-12 w-12 text-purple-600 animate-spin" />
         </div>
       </div>
