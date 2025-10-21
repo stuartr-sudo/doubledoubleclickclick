@@ -68,13 +68,19 @@ export default function ShopifyPublishModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    console.log('ShopifyPublishModal - Loading credentials:', {
+    // Load credentials only once when modal opens
+    loadCredentials();
+  }, [isOpen, loadCredentials]);
+
+  // Separate effect for auto-selecting credential (runs when credentials change)
+  useEffect(() => {
+    if (!isOpen || !credentials) return;
+
+    console.log('ShopifyPublishModal - Auto-selecting credential:', {
       username,
       defaultCredentialId,
       credentialsCount: credentials.length
     });
-
-    loadCredentials(); // Load from cache
 
     // Auto-select credential
     if (defaultCredentialId && credentials.some((c) => c.id === defaultCredentialId)) {
@@ -92,7 +98,7 @@ export default function ShopifyPublishModal({
       console.log('No credentials available');
       setSelectedCredential("");
     }
-  }, [isOpen, username, defaultCredentialId, credentials, loadCredentials]);
+  }, [isOpen, username, defaultCredentialId, credentials?.length]);
 
   useEffect(() => {
     if (isOpen && initialFeaturedImageUrl) {
@@ -191,13 +197,8 @@ export default function ShopifyPublishModal({
   // CRITICAL FIX: Button should be enabled if we have a selected credential AND a title
   const canPublish = Boolean(selectedCredential && title && title.trim());
 
-  console.log('ShopifyPublishModal render:', {
-    selectedCredential,
-    credentialsCount: credentials.length,
-    showConnectionSelector,
-    canPublish,
-    isPublishing
-  });
+  // Debug log removed to prevent console spam
+  // (was causing 1000+ logs when combined with render loop)
 
   return (
     <>
