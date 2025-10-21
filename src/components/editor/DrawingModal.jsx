@@ -8,6 +8,17 @@ import { supabase, getCurrentUser } from '@/lib/supabase';
 import app from '@/api/appClient';
 import { toast } from 'sonner';
 
+// CSS override to ensure Tldraw works in modal
+const tldrawContainerStyle = `
+  .tldraw-container * {
+    pointer-events: auto !important;
+  }
+  .tldraw__editor {
+    pointer-events: auto !important;
+    touch-action: none !important;
+  }
+`;
+
 /**
  * DrawingModal - Infinite canvas drawing tool using Tldraw
  * Allows users to sketch, draw, and brainstorm visually within the editor
@@ -158,41 +169,45 @@ export default function DrawingModal({ open, onClose, onInsert }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] h-[90vh] p-0 overflow-hidden flex flex-col">
-        <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
-          <DialogTitle>Draw & Sketch</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Create diagrams, sketches, or brainstorm ideas on an infinite canvas
-          </p>
-        </DialogHeader>
+    <>
+      {/* Inject CSS to fix pointer events */}
+      <style>{tldrawContainerStyle}</style>
+      
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+            <DialogTitle>Draw & Sketch</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Create diagrams, sketches, or brainstorm ideas on an infinite canvas
+            </p>
+          </DialogHeader>
 
-        {/* Tldraw Canvas - Absolute positioning required for Tldraw v4 */}
-        <div 
-          className="flex-1 w-full relative overflow-hidden" 
-          style={{ 
-            minHeight: '400px',
-          }}
-        >
+          {/* Tldraw Canvas - Absolute positioning required for Tldraw v4 */}
           <div 
+            className="flex-1 w-full relative overflow-hidden tldraw-container" 
             style={{ 
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
+              minHeight: '400px',
             }}
           >
-            <Tldraw
-              onMount={handleMount}
-              inferDarkMode
-              hideUi={false}
-              components={{
-                // Remove share panel for cleaner UI
-                SharePanel: null,
+            <div 
+              style={{ 
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
               }}
-            />
+            >
+              <Tldraw
+                onMount={handleMount}
+                inferDarkMode
+                hideUi={false}
+                components={{
+                  // Remove share panel for cleaner UI
+                  SharePanel: null,
+                }}
+              />
+            </div>
           </div>
-        </div>
 
         <DialogFooter className="px-6 py-4 border-t flex justify-between items-center flex-shrink-0">
           <div className="flex gap-2">
@@ -223,9 +238,10 @@ export default function DrawingModal({ open, onClose, onInsert }) {
               )}
             </Button>
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
