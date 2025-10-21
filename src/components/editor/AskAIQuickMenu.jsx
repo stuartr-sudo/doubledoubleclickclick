@@ -366,6 +366,15 @@ export default function AskAIQuickMenu({ x, y, onPick, onClose }) {
     {
       title: 'MEDIA & LIBRARIES',
       actions: [
+        features.ai_drawing && {
+          id: 'drawing',
+          label: 'Drawing',
+          actionType: 'media',
+          isComingSoon: features.ai_drawing?.isComingSoon || false,
+          youtube_tutorial_url: features.ai_drawing?.youtube_tutorial_url,
+          loom_tutorial_url: features.ai_drawing?.loom_tutorial_url,
+          tokenCost: features.ai_drawing?.token_cost || 0
+        },
         features.ai_generate_image && {
           id: 'generate-image',
           label: 'Generate Image',

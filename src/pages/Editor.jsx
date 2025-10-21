@@ -90,6 +90,7 @@ import { agentSDK } from "@/agents";
 import ImagineerModal from "../components/editor/ImagineerModal";
 import { initiateImagineerGeneration } from "@/api/functions";
 import VoiceDictationModal from '../components/editor/VoiceDictationModal';
+import DrawingModal from '../components/editor/DrawingModal';
 
 function EditorErrorBoundary({ children }) {
   const [error, React_useState_null] = React.useState(null);
@@ -201,6 +202,7 @@ export default function Editor() {
   const imagineerJobsRef = useRef(new Set());
 
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showDrawingModal, setShowDrawingModal] = useState(false);
 
   // NEW: State for InternalLinker Modal (this is for the modal, not the headless trigger)
   const [showInternalLinker, setShowInternalLinker] = useState(false);
@@ -1808,6 +1810,15 @@ Current Title: ${title}`;
     toast.success('Transcription inserted');
   };
 
+  const handleDrawingInsert = (imageUrl) => {
+    if (!imageUrl) return;
+    
+    const html = `<img src="${imageUrl}" alt="Hand-drawn sketch" style="max-width: 100%; height: auto; margin: 20px 0;" />`;
+    insertContentAtPoint({ html, mode: isTextSelected ? 'after-selection' : 'at-caret' });
+    setShowDrawingModal(false);
+    toast.success('Drawing inserted into editor');
+  };
+
   const resolveExistingPostId = useCallback(async () => {
     if (currentPost && currentPost.id) return currentPost.id;
 
@@ -2212,6 +2223,10 @@ Current Title: ${title}`;
 
       case "voice":
         setShowVoiceModal(true);
+        return;
+
+      case "drawing":
+        setShowDrawingModal(true);
         return;
 
       case "brand-it":
@@ -4308,6 +4323,12 @@ ${content}
               isOpen={showVoiceModal}
               onClose={() => setShowVoiceModal(false)}
               onInsert={handleVoiceInsert}
+            />
+
+            <DrawingModal
+              open={showDrawingModal}
+              onClose={() => setShowDrawingModal(false)}
+              onInsert={handleDrawingInsert}
             />
           </div>
         </div>
