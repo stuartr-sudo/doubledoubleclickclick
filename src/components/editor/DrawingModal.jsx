@@ -58,6 +58,8 @@ export default function DrawingModal({ open, onClose, onInsert }) {
   // but clear when the modal is explicitly closed so a new session starts blank.
   useEffect(() => {
     if (open) {
+      // Signal editor to pause background jobs while drawing is open
+      try { window.__drawingOpen = true; } catch (_) {}
       try {
         const existing = localStorage.getItem(SESSION_KEY_STORAGE);
         if (existing) {
@@ -74,6 +76,9 @@ export default function DrawingModal({ open, onClose, onInsert }) {
     } else {
       setSessionKey(null);
     }
+    return () => {
+      try { window.__drawingOpen = false; } catch (_) {}
+    };
   }, [open]);
 
   // Handle editor mount
