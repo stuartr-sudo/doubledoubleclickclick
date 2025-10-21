@@ -5,13 +5,15 @@ import { User } from "@/api/entities";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Search, Settings, Check, Loader2, Plus } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Search, Settings, Check, Plus, Zap } from "lucide-react";
 import FeatureEndpointForm from "@/components/features/FeatureEndpointForm";
 import { toast } from "sonner";
 import MiniMultiSelect from '@/components/common/MiniMultiSelect';
+import PageLoader, { SectionLoader } from '@/components/common/PageLoader';
+import EmptyState, { SearchEmptyState } from '@/components/common/EmptyState';
+import ModernCard from '@/components/common/ModernCard';
+import { GradientButton, OutlineButton } from '@/components/ui/modern-button';
 
 export default function FeatureManagement() {
   const [flags, setFlags] = useState([]);
@@ -119,94 +121,138 @@ export default function FeatureManagement() {
 
 
   if (loading) {
-    return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+    return <PageLoader message="Loading feature flags..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/20 to-blue-50/20 p-8">
+      <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+        {/* Modern header with gradient title */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Feature Flag Management</h1>
-            <p className="text-slate-600">Control feature visibility for users and plans.</p>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Feature Management
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Control feature visibility and access for different user plans
+            </p>
           </div>
           <div className="flex items-center gap-3">
-            {/* NEW: Search input */}
+            {/* Modern search with purple accent */}
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-purple-400" />
               <Input
                 placeholder="Search features..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-64 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500" />
-
+                className="pl-10 w-64 border-purple-500/20 focus:border-purple-500 focus:ring-purple-500/20" 
+              />
             </div>
-            <Button onClick={handleCreate} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              <Plus className="w-4 h-4 mr-2" /> Add Feature
-            </Button>
+            <GradientButton onClick={handleCreate} icon={Plus}>
+              Add Feature
+            </GradientButton>
           </div>
         </div>
 
-        <div className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden">
-          <div className="divide-y divide-slate-200">
-            {filteredFlags.length === 0 && !loading ?
-            <div className="p-4 text-center text-slate-500">
-                {searchQuery ? `No features found matching "${searchQuery}"` : "No feature flags found."}
-              </div> :
-
-            filteredFlags.map((flag) =>
-            <div key={flag.id} className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+        {/* Modern card container */}
+        <ModernCard variant="default" hover={false} className="overflow-hidden">
+          <div className="divide-y divide-gray-200 dark:divide-gray-800">
+            {filteredFlags.length === 0 && !loading ? (
+              searchQuery ? (
+                <SearchEmptyState 
+                  query={searchQuery} 
+                  onClear={() => setSearchQuery('')}
+                />
+              ) : (
+                <EmptyState
+                  icon={Zap}
+                  title="No feature flags yet"
+                  description="Create your first feature flag to control feature access"
+                  actionLabel="Create Feature"
+                  onAction={handleCreate}
+                />
+              )
+            ) : (
+              filteredFlags.map((flag) => (
+                <div 
+                  key={flag.id} 
+                  className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center hover:bg-purple-50/50 dark:hover:bg-purple-950/10 transition-colors"
+                >
+                  {/* Feature info */}
                   <div className="lg:col-span-1">
-                    <div className="font-semibold text-slate-800 break-words">{flag.flag_name || flag.name}</div>
-                    <p className="text-sm text-slate-500 break-words">{flag.description || 'No description'}</p>
+                    <div className="font-semibold text-gray-900 dark:text-white break-words flex items-center gap-2">
+                      {flag.flag_name || flag.name}
+                      {flag.is_enabled && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 break-words mt-1">
+                      {flag.description || 'No description'}
+                    </p>
                   </div>
 
+                  {/* Plan selector */}
                   <div className="lg:col-span-1">
                     <MiniMultiSelect
-                  placeholder="No plan restriction"
-                  options={planOptions}
-                  value={flag.required_plan_keys || []}
-                  onChange={(keys) => handlePlanChange(flag, keys)} />
-
+                      placeholder="All plans"
+                      options={planOptions}
+                      value={flag.required_plan_keys || []}
+                      onChange={(keys) => handlePlanChange(flag, keys)}
+                    />
                   </div>
 
+                  {/* Toggles and action */}
                   <div className="flex flex-wrap items-center gap-4 lg:col-span-2 justify-between">
                     <div className="flex items-center space-x-4">
+                      {/* Enabled toggle */}
                       <div className="flex items-center">
-                        <input
-                      type="checkbox"
-                      checked={!!flag.is_enabled}
-                      onChange={(e) => handleToggleGlobal(flag, e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      id={`global-${flag.id}`} />
-
-                        <label htmlFor={`global-${flag.id}`} className="ml-2 block text-sm text-slate-700">
-                          Enabled Globally
+                        <Switch
+                          checked={!!flag.is_enabled}
+                          onCheckedChange={(checked) => handleToggleGlobal(flag, checked)}
+                          id={`global-${flag.id}`}
+                          className="data-[state=checked]:bg-purple-600"
+                        />
+                        <label 
+                          htmlFor={`global-${flag.id}`} 
+                          className="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Enabled
                         </label>
                       </div>
+                      
+                      {/* Coming soon toggle */}
                       <div className="flex items-center">
-                        <input
-                      type="checkbox"
-                      checked={!!flag.is_coming_soon}
-                      onChange={(e) => handleToggleComingSoon(flag, e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                      id={`soon-${flag.id}`} />
-
-                        <label htmlFor={`soon-${flag.id}`} className="ml-2 block text-sm text-slate-700">
+                        <Switch
+                          checked={!!flag.is_coming_soon}
+                          onCheckedChange={(checked) => handleToggleComingSoon(flag, checked)}
+                          id={`soon-${flag.id}`}
+                          className="data-[state=checked]:bg-amber-600"
+                        />
+                        <label 
+                          htmlFor={`soon-${flag.id}`} 
+                          className="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
                           Coming Soon
                         </label>
                       </div>
                     </div>
 
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(flag)} className="bg-background text-slate-700 px-3 text-sm font-medium inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground h-9 rounded-md border-slate-300 hover:bg-slate-50">
+                    {/* Configure button */}
+                    <OutlineButton 
+                      size="sm" 
+                      onClick={() => handleEdit(flag)}
+                      icon={Settings}
+                    >
                       Configure
-                    </Button>
+                    </OutlineButton>
                   </div>
                 </div>
-            )
-            }
+              ))
+            )}
           </div>
-        </div>
+        </ModernCard>
 
         {/* When rendering the token_cost input field, update it to: */}
         <div>
@@ -232,3 +278,4 @@ export default function FeatureManagement() {
     </div>);
 
 }
+
