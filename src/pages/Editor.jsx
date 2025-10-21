@@ -1813,14 +1813,18 @@ Current Title: ${title}`;
     toast.success('Transcription inserted');
   };
 
-  const handleDrawingInsert = (imageUrl) => {
+  const handleDrawingClose = useCallback(() => {
+    setShowDrawingModal(false);
+  }, []);
+
+  const handleDrawingInsert = useCallback((imageUrl) => {
     if (!imageUrl) return;
     
     const html = `<img src="${imageUrl}" alt="Hand-drawn sketch" style="max-width: 100%; height: auto; margin: 20px 0;" />`;
     insertContentAtPoint({ html, mode: isTextSelected ? 'after-selection' : 'at-caret' });
     setShowDrawingModal(false);
     toast.success('Drawing inserted into editor');
-  };
+  }, [insertContentAtPoint, isTextSelected]);
 
   const resolveExistingPostId = useCallback(async () => {
     if (currentPost && currentPost.id) return currentPost.id;
@@ -4346,7 +4350,7 @@ ${content}
 
             <DrawingModal
               open={showDrawingModal}
-              onClose={() => setShowDrawingModal(false)}
+              onClose={handleDrawingClose}
               onInsert={handleDrawingInsert}
             />
           </div>
