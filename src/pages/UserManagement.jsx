@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import PageLoader from "@/components/common/PageLoader";
 import MiniMultiSelect from "@/components/common/MiniMultiSelect";
 import { Loader2, Users, Shield, Plus, Copy, RefreshCw, Trash2, Clock, CheckCircle } from "lucide-react";
 import { createPageUrl } from "@/utils";
@@ -665,11 +666,7 @@ export default function UserManagement() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-      </div>);
-
+    return <PageLoader message="Loading users..." />;
   }
 
   if (!isAdmin) {

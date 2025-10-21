@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Play, Loader2, Settings, Coins } from "lucide-react";
 import { toast } from "sonner";
+import { SectionLoader } from "@/components/common/PageLoader";
 
 const STEP_OPTIONS = [
   { value: "html_cleanup", label: "Clean HTML" },
@@ -240,9 +241,7 @@ export default function EditorWorkflowManager() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-        </div>
+        <SectionLoader message="Loading workflows..." />
       ) : displayedWorkflows.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-slate-500">

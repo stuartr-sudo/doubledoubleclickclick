@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, Globe, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import PageLoader from "@/components/common/PageLoader";
 import { createPageUrl } from "@/utils";
 import app from "@/api/appClient";
 import { Sitemap } from "@/api/entities";
@@ -398,14 +399,7 @@ Return a JSON object with these fields:
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading..." />;
   }
 
   return (

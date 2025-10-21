@@ -77,6 +77,7 @@ import InternalLinkerButton from "../components/editor/InternalLinkerButton";
 import LinksAndReferencesButton from "../components/editor/LinksAndReferencesButton";
 import AutoScanButton from "../components/editor/AutoScanButton";
 import MagicOrbLoader from "@/components/common/MagicOrbLoader";
+import PageLoader from "@/components/common/PageLoader";
 import FloatingPublishButton from "../components/editor/FloatingPublishButton";
 
 import { generateNapkinInfographic } from "@/api/functions";
@@ -3705,14 +3706,7 @@ ${content}
   const showPublishOptions = useMemo(() => publishCredentials.length > 0, [publishCredentials]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-950 via-gray-900 to-slate-900">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-          <p className="text-white/70">Preparing a fresh editor...</p>
-        </div>
-      </div>);
-
+    return <PageLoader message="Loading editor..." />;
   }
 
   return (
