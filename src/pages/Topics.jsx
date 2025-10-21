@@ -1677,14 +1677,6 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
     return n.toLocaleString();
   };
 
-  const isComplete = (fields) => {
-    const tm = fields?.["Target Market"] || [];
-    const ppKey = getLinkedProductFieldName(fields);
-    const pp = fields?.[ppKey] || [];
-    return Array.isArray(tm) && tm.length > 0 &&
-    Array.isArray(pp) && pp.length > 0;
-  };
-
   const scrollRef = React.useRef(null);
   React.useEffect(() => {
     const el = scrollRef.current;
