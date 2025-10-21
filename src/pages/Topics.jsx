@@ -1118,6 +1118,7 @@ export default function TopicsPage() {
   };
 
   const filteredKeywordRows = React.useMemo(() => {
+    if (!Array.isArray(keywordRows)) return [];
     let rows = [...keywordRows];
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -1136,6 +1137,7 @@ export default function TopicsPage() {
   }, [keywordRows, searchQuery, showSelectedOnly, showCompleteOnly, showManualOnly]);
 
   const filteredFaqRows = React.useMemo(() => {
+    if (!Array.isArray(faqRows)) return [];
     let rows = [...faqRows];
 
     if (faqKeywordFilter) {
@@ -1223,6 +1225,22 @@ export default function TopicsPage() {
 
     if (error) {
       return <div className="text-center py-12 text-red-600">{error}</div>;
+    }
+
+    // Show empty state if no keywords and no FAQs
+    if (keywordRows.length === 0 && faqRows.length === 0 && !loadingData) {
+      return (
+        <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+          <Tag className="w-12 h-12 mx-auto mb-4 text-slate-400" />
+          <h3 className="text-xl font-semibold text-slate-900 mb-2">No Keywords Yet</h3>
+          <p className="text-slate-600 mb-4">
+            Start by adding keywords to track content topics for {selectedUsername}.
+          </p>
+          <p className="text-sm text-slate-500">
+            Keywords will appear here once they're synced from Airtable or added manually.
+          </p>
+        </div>
+      );
     }
 
     return (
