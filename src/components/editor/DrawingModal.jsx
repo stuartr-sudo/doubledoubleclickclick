@@ -242,6 +242,7 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         key="tldraw-direct"
         onMount={handleMount}
         hideUi={false}
+        persistenceKey="sewo-drawing-modal"
       />
     </div>,
     document.body
