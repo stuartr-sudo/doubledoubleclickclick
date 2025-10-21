@@ -117,5 +117,8 @@ export const BrandSpecifications = app.entities.BrandSpecifications;
 
 
 
-// auth sdk:
-export const User = app.auth;
+// User entity (combines auth methods + entity CRUD for user_profiles)
+export const User = {
+  ...app.auth,  // Auth methods (me, updateMe, logout, etc.)
+  ...app.entities.UserProfile,  // Entity CRUD methods (list, filter, findById, create, update, delete)
+};
