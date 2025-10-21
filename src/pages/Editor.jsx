@@ -4344,13 +4344,11 @@ ${content}
               onInsert={handleVoiceInsert}
             />
 
-            {useMemo(() => (
-              <DrawingModal
-                open={showDrawingModal}
-                onClose={() => setShowDrawingModal(false)}
-                onInsert={handleDrawingInsert}
-              />
-            ), [showDrawingModal])}
+            <DrawingModal
+              open={showDrawingModal}
+              onClose={() => setShowDrawingModal(false)}
+              onInsert={handleDrawingInsert}
+            />
           </div>
         </div>
 
