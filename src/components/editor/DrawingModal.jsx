@@ -192,96 +192,45 @@ export default function DrawingModal({ open, onClose, onInsert }) {
   // Only render when open
   if (!open) return null;
 
+  // MINIMAL TEST: Just Tldraw with no wrapper at all
   return ReactDOM.createPortal(
-    <>
-      {/* Inject CSS */}
-      <style>{tldrawContainerStyle}</style>
-      
-      {/* Fullscreen overlay - NO Dialog wrapper */}
-      <div 
-        className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center"
-        onClick={(e) => {
-          // Close on backdrop click
-          if (e.target === e.currentTarget) onClose();
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999,
+        backgroundColor: 'white',
+      }}
+    >
+      {/* Simple close button */}
+      <button 
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          zIndex: 10000,
+          padding: '10px',
+          background: 'red',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer'
         }}
       >
-        <div 
-          className="bg-white rounded-lg shadow-2xl flex flex-col"
-          style={{
-            width: '95vw',
-            height: '90vh',
-            maxWidth: '95vw',
-            maxHeight: '90vh',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="px-6 py-4 border-b flex-shrink-0 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Draw & Sketch</h2>
-              <p className="text-sm text-gray-600">
-                Create diagrams, sketches, or brainstorm ideas on an infinite canvas
-              </p>
-            </div>
-            <button 
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full"
-              disabled={saving}
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+        CLOSE
+      </button>
 
-          {/* Tldraw Canvas */}
-          <div 
-            className="tldraw-container flex-1"
-            style={{ 
-              width: '100%',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <Tldraw
-              key="tldraw-instance"
-              onMount={handleMount}
-              hideUi={false}
-              components={{
-                SharePanel: null,
-              }}
-            />
-          </div>
-
-          {/* Footer */}
-          <div className="px-6 py-4 border-t flex justify-between items-center flex-shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleExportPNG}
-              disabled={saving || !editor}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export PNG
-            </Button>
-
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveAndInsert} disabled={saving || !editor}>
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Insert Drawing'
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>,
+      {/* Tldraw with NO wrapper - direct render */}
+      <Tldraw
+        key="tldraw-direct"
+        onMount={handleMount}
+        hideUi={false}
+      />
+    </div>,
     document.body
   );
 }
