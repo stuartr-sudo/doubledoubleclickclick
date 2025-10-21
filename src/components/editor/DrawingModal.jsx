@@ -56,6 +56,19 @@ export default function DrawingModal({ open, onClose, onInsert }) {
   const handleMount = useCallback((mountedEditor) => {
     console.log('✅ Tldraw editor mounted:', mountedEditor);
     console.log('Editor API available:', !!mountedEditor?.getCurrentPageShapes);
+    try {
+      // Prefer starting in draw mode to make interaction obvious
+      if (mountedEditor?.setCurrentTool) {
+        mountedEditor.setCurrentTool('draw');
+      }
+      // Try to focus canvas for immediate pointer events
+      const container = mountedEditor?.getContainer?.();
+      if (container && typeof container.focus === 'function') {
+        container.focus();
+      }
+    } catch (e) {
+      console.warn('Tldraw mount tweaks failed (non-fatal):', e);
+    }
     setEditor(mountedEditor);
   }, []);
 
