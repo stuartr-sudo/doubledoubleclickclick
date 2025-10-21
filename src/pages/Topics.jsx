@@ -274,85 +274,12 @@ export default function TopicsPage() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }, []);
 
+  // DISABLED: Countdown timer was causing production build issues
   useEffect(() => {
-    if (!selectedUsername || !currentUser) {
-      setOnboardingCompletionTime(null);
-      setOnboardingTimeRemaining(0);
-      return;
-    }
-
-    try {
-      const raw = currentUser?.topics_onboarding_completed_at;
-      
-      // If no onboarding data, skip countdown
-      if (!raw) {
-        setOnboardingCompletionTime(null);
-        setOnboardingTimeRemaining(0);
-        return;
-      }
-
-      let completedMap = {};
-      if (typeof raw === 'string' && raw.trim()) {
-        try {
-          completedMap = JSON.parse(raw);
-        } catch (e) {
-          console.warn('Failed to parse topics_onboarding_completed_at:', e);
-          completedMap = {};
-        }
-      } else if (raw && typeof raw === 'object') {
-        completedMap = raw;
-      }
-
-      const completionTimeStr = completedMap?.[selectedUsername];
-
-      if (completionTimeStr) {
-        const completionMs = new Date(completionTimeStr).getTime();
-        
-        // Validate date
-        if (isNaN(completionMs)) {
-          console.warn('Invalid completion time:', completionTimeStr);
-          setOnboardingCompletionTime(null);
-          setOnboardingTimeRemaining(0);
-          return;
-        }
-
-        const now = Date.now();
-        const fifteenMinutesMs = 15 * 60 * 1000;
-        const remaining = Math.max(0, fifteenMinutesMs - (now - completionMs));
-
-        setOnboardingCompletionTime(completionTimeStr);
-        setOnboardingTimeRemaining(remaining);
-
-        if (remaining > 0) {
-          const interval = setInterval(() => {
-            const newNow = Date.now();
-            const newRemaining = Math.max(0, fifteenMinutesMs - (newNow - completionMs));
-            setOnboardingTimeRemaining(newRemaining);
-
-            if (newRemaining <= 0) {
-              clearInterval(interval);
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('topicsRefreshRequested'));
-              }
-            }
-          }, 1000);
-
-          return () => clearInterval(interval);
-        } else {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('topicsRefreshRequested'));
-          }
-        }
-      } else {
-        setOnboardingCompletionTime(null);
-        setOnboardingTimeRemaining(0);
-      }
-    } catch (error) {
-      console.error('Error parsing onboarding completion time:', error);
-      setOnboardingCompletionTime(null);
-      setOnboardingTimeRemaining(0);
-    }
-  }, [selectedUsername, currentUser?.id, currentUser?.topics_onboarding_completed_at]);
+    // Always set to 0 to skip countdown entirely
+    setOnboardingCompletionTime(null);
+    setOnboardingTimeRemaining(0);
+  }, [selectedUsername, currentUser?.id]);
 
   useEffect(() => {
     const getInitialData = async () => {
@@ -1211,25 +1138,8 @@ export default function TopicsPage() {
 
     }
 
-    if (onboardingTimeRemaining > 0) {
-      return (
-        <div className="flex items-center justify-center min-h-[500px]">
-          <div className="text-center bg-white rounded-2xl border-2 border-slate-200 p-12 shadow-lg max-w-md">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center animate-pulse">
-              <Clock className="w-10 h-10 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-3">Processing Your Topics</h2>
-            <p className="text-slate-600 mb-8">
-              Our AI is analyzing your keywords and preparing personalized recommendations.
-            </p>
-            <div className="text-6xl font-bold text-indigo-600 mb-2">
-              {formatTimeRemaining(onboardingTimeRemaining)}
-            </div>
-            <div className="text-sm text-slate-500">time remaining</div>
-          </div>
-        </div>);
-
-    }
+    // Countdown timer disabled - was causing production build issues
+    // if (onboardingTimeRemaining > 0) { ... }
 
     if (useWorkspaceScoping && isInitialDataLoadSuppressed.current) {
       return (
