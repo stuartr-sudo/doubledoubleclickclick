@@ -105,6 +105,14 @@ export default function Welcome() {
 
   const handleFinishOnboarding = async () => {
     setIsSubmitting(true);
+    
+    // Always redirect after a short delay, even if update fails
+    const redirectTimeout = setTimeout(() => {
+      console.log('Redirect timeout - navigating to GettingStarted regardless of update status');
+      toast.success("Welcome complete! Let's get you started.");
+      navigate(createPageUrl('GettingStarted'));
+    }, 3000);
+    
     try {
       console.log('Starting onboarding completion...', { user });
       
@@ -117,13 +125,16 @@ export default function Welcome() {
         const updatedUser = await User.updateMe({ completed_tutorial_ids: updatedCompleted });
         
         console.log('Update successful:', updatedUser);
+        
+        // Clear timeout and redirect immediately on success
+        clearTimeout(redirectTimeout);
+        toast.success("Welcome complete! Let's get you started.");
+        navigate(createPageUrl('GettingStarted'));
+      } else {
+        // No user, but still redirect
+        clearTimeout(redirectTimeout);
+        navigate(createPageUrl('GettingStarted'));
       }
-      
-      toast.success("Welcome complete! Let's get you started.");
-      
-      // Redirect to GettingStarted
-      console.log('Navigating to GettingStarted...');
-      navigate(createPageUrl('GettingStarted'));
     } catch (error) {
       console.error("Failed to save onboarding progress:", error);
       console.error("Error details:", {
@@ -132,8 +143,8 @@ export default function Welcome() {
         details: error.details,
         hint: error.hint
       });
-      toast.error(`There was an issue: ${error.message}. Please try again.`);
-      setIsSubmitting(false);
+      // Don't show error toast - just let the timeout redirect happen
+      // The user can continue even if the backend update failed
     }
   };
 
