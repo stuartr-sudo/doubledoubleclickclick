@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Tldraw, exportToBlob, useEditor } from 'tldraw';
+import { Tldraw, exportAs } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -45,10 +45,9 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         return;
       }
 
-      // Export to PNG blob
+      // Export to PNG blob using tldraw v4 API
       const shapeIds = allShapes.map((shape) => shape.id);
-      const blob = await exportToBlob({
-        editor,
+      const blob = await editor.exportToBlob({
         ids: shapeIds,
         format: 'png',
         opts: {
@@ -131,8 +130,7 @@ export default function DrawingModal({ open, onClose, onInsert }) {
       }
 
       const shapeIds = allShapes.map((shape) => shape.id);
-      const blob = await exportToBlob({
-        editor,
+      const blob = await editor.exportToBlob({
         ids: shapeIds,
         format: 'png',
         opts: { background: true, padding: 32, scale: 2 },
