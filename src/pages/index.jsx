@@ -150,6 +150,8 @@ import Login from "./Login";
 
 import TokenTest from "./TokenTest";
 
+import UIShowcase from "./UIShowcase";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -301,6 +303,8 @@ const PAGES = {
     GettingStarted: GettingStarted,
     
     TokenTest: TokenTest,
+    
+    UIShowcase: UIShowcase,
     
 }
 
