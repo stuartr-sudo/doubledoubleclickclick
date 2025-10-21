@@ -2057,6 +2057,12 @@ Current Title: ${title}`;
     // AND a user is logged in
     if ((!content && !title) || !currentUser) return;
 
+    // CRITICAL: Skip auto-save if drawing modal is open (prevents canvas wipes)
+    if (window.__drawingOpen) {
+      console.log('⏸️ Auto-save paused: drawing modal is open');
+      return;
+    }
+
     // Clear existing timer
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
@@ -2064,6 +2070,11 @@ Current Title: ${title}`;
     
     // Set new timer for 5 seconds after user stops typing
     autoSaveTimerRef.current = setTimeout(() => {
+      // Double-check drawing modal isn't open before executing
+      if (window.__drawingOpen) {
+        console.log('⏸️ Auto-save cancelled: drawing modal opened during timer');
+        return;
+      }
       if (autoSaveRef.current) {
         autoSaveRef.current();
       }
@@ -2078,6 +2089,11 @@ Current Title: ${title}`;
 
   // Helper to trigger auto-save
   const triggerAutoSave = useCallback(() => {
+    // Skip if drawing modal is open
+    if (window.__drawingOpen) {
+      console.log('⏸️ Manual auto-save skipped: drawing modal is open');
+      return;
+    }
     setTimeout(() => {
       if (autoSaveRef.current) {
         autoSaveRef.current();
