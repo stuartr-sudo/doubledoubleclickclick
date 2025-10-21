@@ -122,6 +122,13 @@ export default function EditorWorkflowManager() {
       return;
     }
 
+    // Validate that all steps have a type selected
+    const invalidStep = form.workflow_steps.find((step, index) => !step.type || step.type.trim() === "");
+    if (invalidStep) {
+      toast.error("All workflow steps must have a type selected");
+      return;
+    }
+
     try {
       const payload = {
         name: form.name.trim(),
