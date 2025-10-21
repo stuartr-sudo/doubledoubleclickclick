@@ -49,7 +49,7 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
 
   useEffect(() => {
     if (isOpen) {
-      setName(flag?.name || "");
+      setName(flag?.flag_name || flag?.name || "");  // Try flag_name first, fallback to name
       setDescription(flag?.description || "");
       setTokenCost(flag?.token_cost || 1);
       setYoutubeUrl(flag?.youtube_tutorial_url || "");
@@ -79,7 +79,7 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
     setIsSaving(true);
     try {
       const payload = {
-        name,
+        flag_name: name,  // Use flag_name instead of name
         description,
         token_cost: Number(tokenCost) || 0,
         youtube_tutorial_url: youtubeUrl || null,
@@ -109,7 +109,7 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
       }
 
       onSave(savedFlag);
-      toast.success(`Feature '${savedFlag.name}' saved.`);
+      toast.success(`Feature '${savedFlag.flag_name || savedFlag.name}' saved.`);
       onClose();
     } catch (error) {
       toast.error(error?.message || "Failed to save feature.");
@@ -129,7 +129,7 @@ export default function FeatureEndpointForm({ isOpen, onClose, flag, onSave }) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl bg-white border-slate-200">
         <DialogHeader>
-          <DialogTitle>{flag ? `Configure: ${flag.name}` : "Create New Feature"}</DialogTitle>
+          <DialogTitle>{flag ? `Configure: ${flag.flag_name || flag.name}` : "Create New Feature"}</DialogTitle>
           <DialogDescription>
             Define the feature's properties and how it should be executed.
           </DialogDescription>

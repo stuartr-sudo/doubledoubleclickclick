@@ -51,11 +51,11 @@ export default function FeatureManagement() {
     if (editingFlag) {
       // Update existing flag
       setFlags(flags.map((f) => f.id === savedFlag.id ? savedFlag : f));
-      toast.success(`Feature '${savedFlag.name}' updated.`);
+      toast.success(`Feature '${savedFlag.flag_name || savedFlag.name}' updated.`);
     } else {
       // Add new flag to the top
       setFlags([savedFlag, ...flags]);
-      toast.success(`Feature '${savedFlag.name}' created.`);
+      toast.success(`Feature '${savedFlag.flag_name || savedFlag.name}' created.`);
     }
     setIsModalOpen(false);
   };
