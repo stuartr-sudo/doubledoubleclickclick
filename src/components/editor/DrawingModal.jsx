@@ -1,11 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Tldraw, exportToBlob, useEditor } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, Download, X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase, getCurrentUser } from '@/lib/supabase';
 import app from '@/api/appClient';
 import { toast } from 'sonner';
 
@@ -14,9 +13,14 @@ import { toast } from 'sonner';
  * Allows users to sketch, draw, and brainstorm visually within the editor
  */
 export default function DrawingModal({ open, onClose, onInsert }) {
-  const { user } = useAuth();
+  const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [editor, setEditor] = useState(null);
+
+  // Get current user
+  useEffect(() => {
+    getCurrentUser().then(setUser).catch(console.error);
+  }, []);
 
   // Handle editor mount
   const handleMount = useCallback((mountedEditor) => {
