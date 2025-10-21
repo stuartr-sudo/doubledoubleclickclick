@@ -197,64 +197,77 @@ export default function DrawingModal({ open, onClose, onInsert }) {
       <style>{tldrawContainerStyle}</style>
       
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] h-[90vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
-            <DialogTitle>Draw & Sketch</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Create diagrams, sketches, or brainstorm ideas on an infinite canvas
-            </p>
-          </DialogHeader>
+        <DialogContent 
+          className="p-0 overflow-hidden"
+          style={{
+            width: '95vw',
+            height: '90vh',
+            maxWidth: '95vw',
+            maxHeight: '90vh',
+          }}
+        >
+          <div className="flex flex-col h-full">
+            <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+              <DialogTitle>Draw & Sketch</DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Create diagrams, sketches, or brainstorm ideas on an infinite canvas
+              </p>
+            </DialogHeader>
 
-          {/* Tldraw Canvas - Fixed dimensions for proper initialization */}
-          <div 
-            className="flex-1 w-full tldraw-container" 
-            style={{ 
-              position: 'relative',
-              overflow: 'hidden',
-              minHeight: '500px',
-              height: 'calc(90vh - 180px)',
-            }}
-          >
-            <Tldraw
-              onMount={handleMount}
-              inferDarkMode={false}
-              hideUi={false}
-              components={{
-                SharePanel: null,
+            {/* Tldraw Canvas - MUST have explicit pixel height */}
+            <div 
+              className="tldraw-container" 
+              style={{ 
+                width: '100%',
+                height: '600px',
+                position: 'relative',
+                overflow: 'hidden',
+                flex: '1 1 auto',
               }}
-            />
-          </div>
-
-          <DialogFooter className="px-6 py-4 border-t flex justify-between items-center flex-shrink-0">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleExportPNG}
-              disabled={saving || !editor}
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export PNG
-            </Button>
-          </div>
-
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button onClick={handleSaveAndInsert} disabled={saving || !editor}>
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Insert Drawing'
+              {open && (
+                <Tldraw
+                  key="tldraw-instance"
+                  onMount={handleMount}
+                  hideUi={false}
+                  components={{
+                    SharePanel: null,
+                  }}
+                />
               )}
-            </Button>
+            </div>
+
+            <DialogFooter className="px-6 py-4 border-t flex justify-between items-center flex-shrink-0">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExportPNG}
+                  disabled={saving || !editor}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export PNG
+                </Button>
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveAndInsert} disabled={saving || !editor}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Insert Drawing'
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
           </div>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
