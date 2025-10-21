@@ -9,12 +9,14 @@ import app from '@/api/appClient';
 import { toast } from 'sonner';
 
 /**
- * DrawingModal - Ultra-minimal version to isolate the issue
+ * DrawingModal - Completely isolated from Editor
+ * No shared state, no background process interactions
  */
 export default function DrawingModal({ open, onClose, onInsert }) {
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [editor, setEditor] = useState(null);
+  const [shapesCount, setShapesCount] = useState(0);
 
   // Get user once
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function DrawingModal({ open, onClose, onInsert }) {
     }
   }, [open]);
 
-  // Pause ALL background processes
+  // Set flag to pause background processes
   useEffect(() => {
     if (open) {
       window.__drawingOpen = true;
@@ -35,7 +37,28 @@ export default function DrawingModal({ open, onClose, onInsert }) {
     };
   }, [open]);
 
-  // Minimal mount handler
+  // Monitor shapes count for debugging
+  useEffect(() => {
+    if (!editor || !open) return;
+
+    const interval = setInterval(() => {
+      const shapes = editor.getCurrentPageShapes();
+      const count = shapes.length;
+      
+      if (count !== shapesCount) {
+        console.log('🔍 Shapes count changed:', shapesCount, '→', count);
+        setShapesCount(count);
+        
+        if (count === 0 && shapesCount > 0) {
+          console.error('🚨 SHAPES WERE WIPED! Previous count was:', shapesCount);
+        }
+      }
+    }, 500); // Check every 500ms for faster detection
+
+    return () => clearInterval(interval);
+  }, [editor, open, shapesCount]);
+
+  // Mount handler
   const handleMount = useCallback((mountedEditor) => {
     console.log('✅ Tldraw mounted successfully');
     setEditor(mountedEditor);
@@ -49,20 +72,6 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         console.warn('Could not set draw tool:', e);
       }
     }, 100);
-
-    // Debug: Monitor for any changes to the editor
-    const checkInterval = setInterval(() => {
-      const shapes = mountedEditor?.getCurrentPageShapes?.() || [];
-      console.log('🔍 Current shapes count:', shapes.length);
-      
-      // If shapes disappear unexpectedly, log it
-      if (shapes.length === 0 && editor && editor.getCurrentPageShapes().length > 0) {
-        console.error('🚨 SHAPES DISAPPEARED! This should not happen!');
-      }
-    }, 1000);
-
-    // Clean up interval when editor changes
-    return () => clearInterval(checkInterval);
   }, []);
 
   // Save function
@@ -152,7 +161,7 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         flexDirection: 'column',
       }}
     >
-      {/* Simple header */}
+      {/* Header with debug info */}
       <div
         style={{
           height: '60px',
@@ -164,9 +173,14 @@ export default function DrawingModal({ open, onClose, onInsert }) {
           flexShrink: 0,
         }}
       >
-        <h2 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-          ✏️ Draw & Sketch
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <h2 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: 0 }}>
+            ✏️ Draw & Sketch
+          </h2>
+          <div style={{ color: 'white', fontSize: '14px', opacity: 0.8 }}>
+            Shapes: {shapesCount}
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <Button
             onClick={handleSaveAndInsert}
@@ -201,7 +215,7 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         </div>
       </div>
 
-      {/* Tldraw - absolutely minimal setup */}
+      {/* Tldraw */}
       <div
         style={{
           flex: 1,
