@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Tldraw } from 'tldraw';
 import 'tldraw/tldraw.css';
@@ -9,57 +9,63 @@ import app from '@/api/appClient';
 import { toast } from 'sonner';
 
 /**
- * DrawingModal - Infinite canvas drawing tool using Tldraw
- * Completely fresh canvas on every open, no persistence to avoid conflicts
+ * DrawingModal - Ultra-minimal version to isolate the issue
  */
 export default function DrawingModal({ open, onClose, onInsert }) {
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [editor, setEditor] = useState(null);
-  
-  // Generate stable unique key per modal open - never reuse
-  const instanceKey = useRef(null);
-  if (open && !instanceKey.current) {
-    instanceKey.current = `sewo-drawing-${Date.now()}-${Math.random()}`;
-  }
-  if (!open && instanceKey.current) {
-    instanceKey.current = null;
-  }
 
-  // Get current user once
+  // Get user once
   useEffect(() => {
-    getCurrentUser().then(setUser).catch(console.error);
-  }, []);
+    if (open) {
+      getCurrentUser().then(setUser).catch(() => setUser(null));
+    }
+  }, [open]);
 
-  // Signal to editor to pause background jobs
+  // Pause ALL background processes
   useEffect(() => {
     if (open) {
       window.__drawingOpen = true;
-      console.log('🎨 Drawing opened, pausing editor jobs');
+      console.log('🎨 Drawing opened - pausing ALL background processes');
     }
     return () => {
       window.__drawingOpen = false;
-      console.log('🎨 Drawing closed, resuming editor jobs');
+      console.log('🎨 Drawing closed - resuming background processes');
     };
   }, [open]);
 
-  // Handle editor mount
+  // Minimal mount handler
   const handleMount = useCallback((mountedEditor) => {
-    console.log('✅ Tldraw mounted');
+    console.log('✅ Tldraw mounted successfully');
     setEditor(mountedEditor);
-    // Set to draw tool immediately
+    
+    // Set draw tool after editor is ready
     setTimeout(() => {
       try {
-        if (mountedEditor?.setCurrentTool) {
-          mountedEditor.setCurrentTool('draw');
-        }
+        mountedEditor?.setCurrentTool?.('draw');
+        console.log('🎯 Set to draw tool');
       } catch (e) {
         console.warn('Could not set draw tool:', e);
       }
     }, 100);
+
+    // Debug: Monitor for any changes to the editor
+    const checkInterval = setInterval(() => {
+      const shapes = mountedEditor?.getCurrentPageShapes?.() || [];
+      console.log('🔍 Current shapes count:', shapes.length);
+      
+      // If shapes disappear unexpectedly, log it
+      if (shapes.length === 0 && editor && editor.getCurrentPageShapes().length > 0) {
+        console.error('🚨 SHAPES DISAPPEARED! This should not happen!');
+      }
+    }, 1000);
+
+    // Clean up interval when editor changes
+    return () => clearInterval(checkInterval);
   }, []);
 
-  // Save and insert drawing
+  // Save function
   const handleSaveAndInsert = async () => {
     if (!editor) {
       toast.error('Drawing editor not ready');
@@ -81,16 +87,10 @@ export default function DrawingModal({ open, onClose, onInsert }) {
       const blob = await editor.exportToBlob({
         ids: shapeIds,
         format: 'png',
-        opts: {
-          background: true,
-          padding: 32,
-          scale: 2,
-        },
+        opts: { background: true, padding: 32, scale: 2 },
       });
 
-      if (!blob) {
-        throw new Error('Failed to export drawing');
-      }
+      if (!blob) throw new Error('Failed to export drawing');
 
       // Upload to Supabase
       const timestamp = Date.now();
@@ -99,22 +99,14 @@ export default function DrawingModal({ open, onClose, onInsert }) {
 
       const { error: uploadError } = await supabase.storage
         .from('media')
-        .upload(filePath, blob, {
-          contentType: 'image/png',
-          cacheControl: '3600',
-          upsert: false,
-        });
+        .upload(filePath, blob, { contentType: 'image/png', cacheControl: '3600', upsert: false });
 
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
       const publicUrl = urlData?.publicUrl;
 
-      if (!publicUrl) {
-        throw new Error('Failed to get public URL');
-      }
+      if (!publicUrl) throw new Error('Failed to get public URL');
 
       // Save to library (non-critical)
       try {
@@ -132,7 +124,6 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         console.warn('Failed to save to image library:', err);
       }
 
-      // Insert and close
       onInsert(publicUrl);
       toast.success('Drawing inserted!');
       onClose();
@@ -161,20 +152,16 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         flexDirection: 'column',
       }}
     >
-      {/* Header with controls */}
+      {/* Simple header */}
       <div
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
           height: '60px',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 20px',
-          zIndex: 10000,
+          flexShrink: 0,
         }}
       >
         <h2 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: 0 }}>
@@ -214,25 +201,18 @@ export default function DrawingModal({ open, onClose, onInsert }) {
         </div>
       </div>
 
-      {/* Tldraw canvas - takes full space below header */}
+      {/* Tldraw - absolutely minimal setup */}
       <div
         style={{
-          position: 'absolute',
-          top: '60px',
-          left: 0,
-          right: 0,
-          bottom: 0,
+          flex: 1,
+          position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {instanceKey.current && (
-          <Tldraw
-            key={instanceKey.current}
-            onMount={handleMount}
-            hideUi={false}
-            autoFocus
-          />
-        )}
+        <Tldraw
+          onMount={handleMount}
+          hideUi={false}
+        />
       </div>
     </div>,
     document.body
