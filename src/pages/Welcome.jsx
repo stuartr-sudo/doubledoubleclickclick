@@ -106,13 +106,6 @@ export default function Welcome() {
   const handleFinishOnboarding = async () => {
     setIsSubmitting(true);
     
-    // Always redirect after a short delay, even if update fails
-    const redirectTimeout = setTimeout(() => {
-      console.log('Redirect timeout - navigating to GettingStarted regardless of update status');
-      toast.success("Welcome complete! Let's get you started.");
-      navigate(createPageUrl('GettingStarted'));
-    }, 3000);
-    
     try {
       console.log('Starting onboarding completion...', { user });
       
@@ -126,14 +119,19 @@ export default function Welcome() {
         
         console.log('Update successful:', updatedUser);
         
-        // Clear timeout and redirect immediately on success
-        clearTimeout(redirectTimeout);
+        // Dispatch event to notify Layout that user was updated
+        window.dispatchEvent(new CustomEvent("userUpdated", { detail: { user: updatedUser } }));
+        
         toast.success("Welcome complete! Let's get you started.");
-        navigate(createPageUrl('GettingStarted'));
+        
+        // Use window.location instead of navigate to force a full page reload
+        // This ensures Layout fetches the updated user
+        console.log('Redirecting to GettingStarted with full reload...');
+        window.location.href = createPageUrl('GettingStarted');
       } else {
         // No user, but still redirect
-        clearTimeout(redirectTimeout);
-        navigate(createPageUrl('GettingStarted'));
+        console.log('No user found, redirecting anyway...');
+        window.location.href = createPageUrl('GettingStarted');
       }
     } catch (error) {
       console.error("Failed to save onboarding progress:", error);
@@ -143,8 +141,11 @@ export default function Welcome() {
         details: error.details,
         hint: error.hint
       });
-      // Don't show error toast - just let the timeout redirect happen
-      // The user can continue even if the backend update failed
+      
+      // Even if update fails, try to proceed anyway
+      console.log('Update failed, but redirecting to allow user to continue...');
+      toast.info("Continuing to next step...");
+      window.location.href = createPageUrl('GettingStarted');
     }
   };
 
