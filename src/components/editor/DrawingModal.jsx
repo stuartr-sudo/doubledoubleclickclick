@@ -11,8 +11,9 @@ import { toast } from 'sonner';
 /**
  * DrawingModal - Completely isolated from Editor
  * No shared state, no background process interactions
+ * Memoized to prevent unnecessary re-renders from parent
  */
-export default function DrawingModal({ open, onClose, onInsert }) {
+const DrawingModal = React.memo(function DrawingModal({ open, onClose, onInsert }) {
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [editor, setEditor] = useState(null);
@@ -245,4 +246,6 @@ export default function DrawingModal({ open, onClose, onInsert }) {
     </div>,
     document.body
   );
-}
+});
+
+export default DrawingModal;
