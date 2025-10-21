@@ -274,12 +274,76 @@ export default function TopicsPage() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }, []);
 
-  // DISABLED: Countdown timer was causing production build issues
+  // Countdown timer - simplified to avoid production build issues
   useEffect(() => {
-    // Always set to 0 to skip countdown entirely
-    setOnboardingCompletionTime(null);
-    setOnboardingTimeRemaining(0);
-  }, [selectedUsername, currentUser?.id]);
+    if (!selectedUsername || !currentUser) {
+      setOnboardingCompletionTime(null);
+      setOnboardingTimeRemaining(0);
+      return;
+    }
+
+    // Safely parse topics_onboarding_completed_at
+    let completedMap = {};
+    const raw = currentUser?.topics_onboarding_completed_at;
+    
+    if (!raw) {
+      setOnboardingCompletionTime(null);
+      setOnboardingTimeRemaining(0);
+      return;
+    }
+
+    if (typeof raw === 'string' && raw.trim()) {
+      try {
+        completedMap = JSON.parse(raw);
+      } catch {
+        setOnboardingCompletionTime(null);
+        setOnboardingTimeRemaining(0);
+        return;
+      }
+    } else if (raw && typeof raw === 'object') {
+      completedMap = raw;
+    }
+
+    const completionTimeStr = completedMap[selectedUsername];
+    if (!completionTimeStr) {
+      setOnboardingCompletionTime(null);
+      setOnboardingTimeRemaining(0);
+      return;
+    }
+
+    // Calculate remaining time
+    const completionMs = new Date(completionTimeStr).getTime();
+    if (isNaN(completionMs)) {
+      setOnboardingCompletionTime(null);
+      setOnboardingTimeRemaining(0);
+      return;
+    }
+
+    const now = Date.now();
+    const fifteenMinutes = 15 * 60 * 1000;
+    const elapsed = now - completionMs;
+    const remaining = Math.max(0, fifteenMinutes - elapsed);
+
+    setOnboardingCompletionTime(completionTimeStr);
+    setOnboardingTimeRemaining(remaining);
+
+    // Only set up interval if there's time remaining
+    if (remaining > 0) {
+      const timer = setInterval(() => {
+        const currentNow = Date.now();
+        const currentElapsed = currentNow - completionMs;
+        const currentRemaining = Math.max(0, fifteenMinutes - currentElapsed);
+        
+        setOnboardingTimeRemaining(currentRemaining);
+        
+        if (currentRemaining <= 0) {
+          clearInterval(timer);
+        }
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [selectedUsername, currentUser]);
 
   useEffect(() => {
     const getInitialData = async () => {
@@ -1138,8 +1202,25 @@ export default function TopicsPage() {
 
     }
 
-    // Countdown timer disabled - was causing production build issues
-    // if (onboardingTimeRemaining > 0) { ... }
+    if (onboardingTimeRemaining > 0) {
+      return (
+        <div className="flex items-center justify-center min-h-[500px]">
+          <div className="text-center bg-white rounded-2xl border-2 border-slate-200 p-12 shadow-lg max-w-md">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center animate-pulse">
+              <Clock className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">Processing Your Topics</h2>
+            <p className="text-slate-600 mb-8">
+              Our AI is analyzing your keywords and preparing personalized recommendations.
+            </p>
+            <div className="text-6xl font-bold text-indigo-600 mb-2">
+              {formatTimeRemaining(onboardingTimeRemaining)}
+            </div>
+            <div className="text-sm text-slate-500">time remaining</div>
+          </div>
+        </div>
+      );
+    }
 
     if (useWorkspaceScoping && isInitialDataLoadSuppressed.current) {
       return (
