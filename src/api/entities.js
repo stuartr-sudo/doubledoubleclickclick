@@ -118,6 +118,7 @@ export const BrandSpecifications = app.entities.BrandSpecifications;
 
 
 // User entity (combines auth methods + entity CRUD for user_profiles)
+// This allows User.list() to fetch all user profiles from the database
 export const User = {
   ...app.auth,  // Auth methods (me, updateMe, logout, etc.)
   ...app.entities.UserProfile,  // Entity CRUD methods (list, filter, findById, create, update, delete)
