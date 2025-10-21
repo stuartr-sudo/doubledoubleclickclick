@@ -282,12 +282,21 @@ export default function TopicsPage() {
     }
 
     try {
-      const raw = currentUser.topics_onboarding_completed_at;
+      const raw = currentUser?.topics_onboarding_completed_at;
+      
+      // If no onboarding data, skip countdown
+      if (!raw) {
+        setOnboardingCompletionTime(null);
+        setOnboardingTimeRemaining(0);
+        return;
+      }
+
       let completedMap = {};
       if (typeof raw === 'string' && raw.trim()) {
         try {
           completedMap = JSON.parse(raw);
-        } catch {
+        } catch (e) {
+          console.warn('Failed to parse topics_onboarding_completed_at:', e);
           completedMap = {};
         }
       } else if (raw && typeof raw === 'object') {
@@ -298,6 +307,15 @@ export default function TopicsPage() {
 
       if (completionTimeStr) {
         const completionMs = new Date(completionTimeStr).getTime();
+        
+        // Validate date
+        if (isNaN(completionMs)) {
+          console.warn('Invalid completion time:', completionTimeStr);
+          setOnboardingCompletionTime(null);
+          setOnboardingTimeRemaining(0);
+          return;
+        }
+
         const now = Date.now();
         const fifteenMinutesMs = 15 * 60 * 1000;
         const remaining = Math.max(0, fifteenMinutesMs - (now - completionMs));
@@ -313,13 +331,17 @@ export default function TopicsPage() {
 
             if (newRemaining <= 0) {
               clearInterval(interval);
-              window.dispatchEvent(new CustomEvent('topicsRefreshRequested'));
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('topicsRefreshRequested'));
+              }
             }
           }, 1000);
 
           return () => clearInterval(interval);
         } else {
-          window.dispatchEvent(new CustomEvent('topicsRefreshRequested'));
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('topicsRefreshRequested'));
+          }
         }
       } else {
         setOnboardingCompletionTime(null);
@@ -519,12 +541,17 @@ export default function TopicsPage() {
       }
 
       const manualSet = getManualKwSet();
-      const processedKeywords = (keywords || []).map((r) =>
-      manualSet.has(r.id) ? { ...r, __manualAdded: true } : r
+      
+      // Ensure keywords and faqs are arrays
+      const safeKeywords = Array.isArray(keywords) ? keywords : [];
+      const safeFaqs = Array.isArray(faqs) ? faqs : [];
+      
+      const processedKeywords = safeKeywords.map((r) =>
+        manualSet.has(r.id) ? { ...r, __manualAdded: true } : r
       );
 
       setKeywordRows(processedKeywords);
-      setFaqRows(faqs);
+      setFaqRows(safeFaqs);
       setOptions({
         tm: tmArr.map((r) => ({ value: r.id, label: getLabel(r.fields, "targetMarket") })),
         bc: bcArr.map((r) => ({ value: r.id, label: getLabel(r.fields, "blogCategories") })),
