@@ -592,32 +592,28 @@ Before diving into React, you should have:
 
 1. Visit [nodejs.org](https://nodejs.org)
 2. Download and install the LTS version
-3. Verify installation: `node --version` and `npm --version`
+3. Verify installation: \`node --version\` and \`npm --version\`
 
 ### Create a New React App
 
-```bash
+Run these commands in your terminal:
 npx create-react-app my-react-app
 cd my-react-app
 npm start
-```
 
 ### Alternative: Using Vite
 
-```bash
+Run these commands in your terminal:
 npm create vite@latest my-react-app -- --template react
 cd my-react-app
 npm install
 npm run dev
-```
 
 ## Understanding JSX
 
 JSX (JavaScript XML) allows you to write HTML-like syntax in JavaScript:
 
-```jsx
 const element = <h1>Hello, World!</h1>;
-```
 
 ### JSX Rules
 
@@ -626,8 +622,7 @@ const element = <h1>Hello, World!</h1>;
 3. **Close all tags** properly
 4. **Use className** instead of class
 
-```jsx
-// ✅ Correct
+Example of correct JSX:
 const element = (
   <div className="container">
     <h1>Hello World</h1>
@@ -635,20 +630,19 @@ const element = (
   </div>
 );
 
-// ❌ Incorrect
+Example of incorrect JSX:
 const element = (
   <div class="container">
     <h1>Hello World</h1>
     <p>This is a paragraph</p>
   </div>
 );
-```
 
 ## Components
 
 ### Functional Components
 
-```jsx
+
 function Welcome(props) {
   return <h1>Hello, {props.name}!</h1>;
 }
@@ -657,23 +651,23 @@ function Welcome(props) {
 const Welcome = (props) => {
   return <h1>Hello, {props.name}!</h1>;
 };
-```
+
 
 ### Class Components
 
-```jsx
+
 class Welcome extends React.Component {
   render() {
     return <h1>Hello, {this.props.name}!</h1>;
   }
 }
-```
+
 
 ## Props
 
 Props (properties) are how you pass data from parent to child components:
 
-```jsx
+
 function UserCard(props) {
   return (
     <div className="user-card">
@@ -686,7 +680,7 @@ function UserCard(props) {
 
 // Usage
 <UserCard name="John Doe" email="john@example.com" age={25} />
-```
+
 
 ## State
 
@@ -694,7 +688,7 @@ State allows components to manage their own data:
 
 ### Using useState Hook
 
-```jsx
+
 import React, { useState } from 'react';
 
 function Counter() {
@@ -709,11 +703,11 @@ function Counter() {
     </div>
   );
 }
-```
+
 
 ### Using State in Class Components
 
-```jsx
+
 class Counter extends React.Component {
   constructor(props) {
     super(props);
@@ -735,11 +729,11 @@ class Counter extends React.Component {
     );
   }
 }
-```
+
 
 ## Event Handling
 
-```jsx
+
 function Button() {
   const handleClick = () => {
     alert('Button clicked!');
@@ -751,11 +745,11 @@ function Button() {
     </button>
   );
 }
-```
+
 
 ## Conditional Rendering
 
-```jsx
+
 function Greeting({ isLoggedIn }) {
   if (isLoggedIn) {
     return <h1>Welcome back!</h1>;
@@ -771,11 +765,11 @@ function Greeting({ isLoggedIn }) {
     </div>
   );
 }
-```
+
 
 ## Lists and Keys
 
-```jsx
+
 function TodoList({ todos }) {
   return (
     <ul>
@@ -787,13 +781,13 @@ function TodoList({ todos }) {
     </ul>
   );
 }
-```
+
 
 ## Forms
 
 ### Controlled Components
 
-```jsx
+
 function ContactForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -821,13 +815,13 @@ function ContactForm() {
     </form>
   );
 }
-```
+
 
 ## Lifecycle Methods and useEffect
 
 ### useEffect Hook
 
-```jsx
+
 import React, { useState, useEffect } from 'react';
 
 function DataFetcher() {
@@ -846,13 +840,13 @@ function DataFetcher() {
   if (loading) return <div>Loading...</div>;
   return <div>{data}</div>;
 }
-```
+
 
 ## Best Practices
 
 ### Component Organization
 
-```
+
 src/
   components/
     Button/
@@ -867,7 +861,7 @@ src/
     Home.jsx
     About.jsx
   App.jsx
-```
+
 
 ### Naming Conventions
 
@@ -878,7 +872,7 @@ src/
 
 ### Code Structure
 
-```jsx
+
 // 1. Imports
 import React, { useState, useEffect } from 'react';
 import './Component.css';
@@ -908,7 +902,7 @@ function MyComponent({ prop1, prop2 }) {
 
 // 7. Export
 export default MyComponent;
-```
+
 
 ## Common Mistakes to Avoid
 
