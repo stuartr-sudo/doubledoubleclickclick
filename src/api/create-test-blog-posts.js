@@ -46,9 +46,7 @@ While AI can generate content efficiently, the human element remains crucial. Th
     category: "Technology",
     seo_title: "AI Content Creation: The Future of Digital Marketing",
     seo_description: "Discover how AI is transforming content creation and what it means for marketers and content creators.",
-    featured_image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=400&fit=crop",
-    author: "AI Content Team",
-    reading_time: "5 min read"
+    featured_image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=400&fit=crop"
   },
   {
     title: "10 Essential SEO Strategies for 2024",
@@ -158,9 +156,7 @@ SEO in 2024 requires a holistic approach combining technical optimization, conte
     category: "Marketing",
     seo_title: "10 Essential SEO Strategies for 2024: Complete Guide",
     seo_description: "Master the latest SEO strategies for 2024. Learn about Core Web Vitals, E-A-T, voice search, and more.",
-    featured_image: "https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=800&h=400&fit=crop",
-    author: "SEO Expert",
-    reading_time: "8 min read"
+    featured_image: "https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=800&h=400&fit=crop"
   },
   {
     title: "Building a Successful Content Marketing Strategy",
@@ -341,9 +337,7 @@ A successful content marketing strategy requires careful planning, consistent ex
     category: "Marketing",
     seo_title: "Complete Guide to Content Marketing Strategy in 2024",
     seo_description: "Learn how to build a successful content marketing strategy that drives results for your business.",
-    featured_image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop",
-    author: "Marketing Team",
-    reading_time: "12 min read"
+    featured_image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop"
   },
   {
     title: "The Psychology of Color in Web Design",
@@ -554,9 +548,7 @@ Color psychology in web design is a powerful tool that can significantly impact 
     category: "Design",
     seo_title: "Color Psychology in Web Design: Complete Guide 2024",
     seo_description: "Learn how to use color psychology in web design to improve user experience and conversion rates.",
-    featured_image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop",
-    author: "Design Team",
-    reading_time: "10 min read"
+    featured_image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop"
   },
   {
     title: "Getting Started with React: A Beginner's Guide",
@@ -963,9 +955,7 @@ Happy coding! 🚀
     category: "Development",
     seo_title: "React Tutorial for Beginners: Complete Guide 2024",
     seo_description: "Learn React from scratch with this comprehensive beginner's guide. Build your first React app today!",
-    featured_image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=400&fit=crop",
-    author: "Development Team",
-    reading_time: "15 min read"
+    featured_image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=400&fit=crop"
   }
 ];
 
