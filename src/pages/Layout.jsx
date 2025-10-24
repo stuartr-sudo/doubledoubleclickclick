@@ -111,7 +111,7 @@ const navStructure = [
   { name: "API Docs", href: "MidjourneyApiDocs", icon: BookOpen, featureFlag: "show_api_docs_link" },
   { name: "LLM Settings", href: "AdminLLM", icon: Sparkles, featureFlag: "show_llm_settings_link" },
   { name: "SEO Setup", href: "AdminSEO", icon: Settings, featureFlag: "show_admin_seo_link" },
-  { name: "Test Data", href: "AdminTestData", icon: Database, featureFlag: "show_admin_test_data_link" },
+  { name: "Test Data", href: "AdminTestData", icon: Database },
   { name: "Endpoints", href: "FaqEndpointAdmin", icon: Settings, featureFlag: "show_endpoints_link" },
   { name: "Educational Videos", href: "Educational", icon: Video, requireSuperAdmin: true },
   { name: "WordPress Logs", href: "WordPressPublishLogs", icon: FileText, requireSuperAdmin: true },
