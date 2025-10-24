@@ -7,7 +7,7 @@ import { getCurrentUser } from '../lib/supabase.js';
 const testBlogPosts = [
   {
     title: "The Future of AI in Content Creation",
-    content: `
+    html: `
 # The Future of AI in Content Creation
 
 Artificial Intelligence is revolutionizing how we create content. From automated writing tools to intelligent content optimization, AI is becoming an indispensable part of the content creation process.
@@ -43,7 +43,6 @@ While AI can generate content efficiently, the human element remains crucial. Th
     `,
     status: "published",
     tags: ["AI", "Content Creation", "Technology", "Future"],
-    category: "Technology",
     seo_title: "AI Content Creation: The Future of Digital Marketing",
     seo_description: "Discover how AI is transforming content creation and what it means for marketers and content creators.",
     featured_image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=400&fit=crop"
@@ -153,7 +152,6 @@ SEO in 2024 requires a holistic approach combining technical optimization, conte
     `,
     status: "draft",
     tags: ["SEO", "Digital Marketing", "Search Optimization", "2024"],
-    category: "Marketing",
     seo_title: "10 Essential SEO Strategies for 2024: Complete Guide",
     seo_description: "Master the latest SEO strategies for 2024. Learn about Core Web Vitals, E-A-T, voice search, and more.",
     featured_image: "https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=800&h=400&fit=crop"
@@ -334,7 +332,6 @@ A successful content marketing strategy requires careful planning, consistent ex
     `,
     status: "published",
     tags: ["Content Marketing", "Strategy", "Digital Marketing", "Business"],
-    category: "Marketing",
     seo_title: "Complete Guide to Content Marketing Strategy in 2024",
     seo_description: "Learn how to build a successful content marketing strategy that drives results for your business.",
     featured_image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop"
@@ -545,7 +542,6 @@ Color psychology in web design is a powerful tool that can significantly impact 
     `,
     status: "draft",
     tags: ["Web Design", "Color Psychology", "UX Design", "Design"],
-    category: "Design",
     seo_title: "Color Psychology in Web Design: Complete Guide 2024",
     seo_description: "Learn how to use color psychology in web design to improve user experience and conversion rates.",
     featured_image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop"
@@ -952,7 +948,6 @@ Happy coding! 🚀
     `,
     status: "published",
     tags: ["React", "JavaScript", "Web Development", "Tutorial"],
-    category: "Development",
     seo_title: "React Tutorial for Beginners: Complete Guide 2024",
     seo_description: "Learn React from scratch with this comprehensive beginner's guide. Build your first React app today!",
     featured_image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=400&fit=crop"
@@ -972,12 +967,19 @@ export async function createTestBlogPosts() {
     const createdPosts = [];
     
     for (const postData of testBlogPosts) {
+      // Only include fields that definitely exist in the database
       const blogPost = {
-        ...postData,
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        title: postData.title,
+        html: postData.content || postData.html,
+        status: postData.status,
+        user_id: user.id
       };
+      
+      // Only add optional fields if they exist in postData
+      if (postData.tags) blogPost.tags = postData.tags;
+      if (postData.featured_image) blogPost.featured_image = postData.featured_image;
+      if (postData.seo_title) blogPost.seo_title = postData.seo_title;
+      if (postData.seo_description) blogPost.seo_description = postData.seo_description;
       
       const createdPost = await BlogPost.create(blogPost);
       createdPosts.push(createdPost);
