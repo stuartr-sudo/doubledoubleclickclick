@@ -29,7 +29,7 @@ const cleanHtmlForPublish = (html) => {
   cleaned = cleaned.replace(/\s+draggable=["'](?:true|false)["']/gi, '');
   cleaned = cleaned.replace(/\s+contenteditable=["'](?:true|false)["']/gi, '');
 
-  // Remove Base44 classes
+  // Remove legacy classes
   cleaned = cleaned.replace(/class=(["'])([^"']*)\1/gi, (match, quote, classes) => {
     const kept = classes.split(/\s+/).filter(c => c && !c.startsWith('b44-'));
     return kept.length ? `class=${quote}${kept.join(' ')}${quote}` : '';
@@ -98,7 +98,7 @@ export default function PublishToCMSModal({ isOpen, onClose, title, html }) {
     if (alreadyHasIsland) return rawHtml;
 
     const css = `
-/* Base44 HTML‑Island (scoped) */
+/* DoubleClick HTML‑Island (scoped) */
 .ls-article,.ls-article *{box-sizing:border-box}
 .ls-article{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;

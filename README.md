@@ -1,8 +1,14 @@
-# Base44 App
+# DoubleClick Platform
 
+A comprehensive AI-powered content creation and publishing platform built with React, Vite, and Supabase.
 
-This app was created automatically by Base44.
-It's a Vite+React app that communicates with the Base44 API.
+## Features
+
+- AI-powered content generation
+- Multi-platform publishing
+- Brand management
+- Analytics and insights
+- Workflow automation
 
 ## Running the app
 
@@ -17,4 +23,13 @@ npm run dev
 npm run build
 ```
 
-For more information and support, please contact Base44 support at app@base44.com.
+## Tech Stack
+
+- **Frontend**: React 18, Vite, Tailwind CSS, Radix UI
+- **Backend**: Supabase (PostgreSQL, Auth, Storage)
+- **Functions**: Vercel Serverless Functions
+- **AI Integration**: OpenAI, Anthropic, and other AI providers
+
+## Support
+
+For technical support and questions, please contact the development team.

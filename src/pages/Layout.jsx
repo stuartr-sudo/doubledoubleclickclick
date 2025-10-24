@@ -675,7 +675,7 @@ function LayoutContent({ children, currentPageName }) {
             {/* Logo */}
             <div className="flex-shrink-0">
               <Link to={createPageUrl('Dashboard')} className="flex items-center">
-                <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/689715479cd170f6c2aa04f2/d056b0101_logo.png" alt="Logo" className="w-10 h-10 rounded-full" />
+                <img src="/logo.svg" alt="DoubleClick Logo" className="w-10 h-10 rounded-full" />
               </Link>
             </div>
 

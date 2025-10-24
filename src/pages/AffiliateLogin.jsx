@@ -78,7 +78,7 @@ export default function AffiliateLogin() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <Link to={createPageUrl('Home')} className="flex items-center">
-              <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/689715479cd170f6c2aa04f2/d056b0101_logo.png" alt="Logo" className="w-8 h-8 rounded-full mr-3" />
+              <img src="/logo.svg" alt="DoubleClick Logo" className="w-8 h-8 rounded-full mr-3" />
               <span className="text-xl font-bold text-slate-900">DoubleClick</span>
             </Link>
             <Link to={createPageUrl('AffiliateSignup')}>

@@ -1873,7 +1873,7 @@ Current Title: ${title}`;
     cleaned = cleaned.replace(/\s+on\w+=["'][^"']*["']/gi, '');
     cleaned = cleaned.replace(/\s+on\w+='[^']*'/gi, '');
 
-    // Remove Base44 classes while preserving others
+    // Remove legacy classes while preserving others
     cleaned = cleaned.replace(/class=(["'])([^"']*)\1/gi, (match, quote, classes) => {
       const kept = classes.split(/\s+/).filter(c => c && !c.startsWith('b44-'));
       return kept.length ? `class=${quote}${kept.join(' ')}${quote}` : '';
