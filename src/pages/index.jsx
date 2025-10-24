@@ -90,6 +90,8 @@ import AdminLLM from "./AdminLLM";
 
 import AdminSEO from "./AdminSEO";
 
+import AdminTestData from "./AdminTestData";
+
 import AccountSettings from "./AccountSettings";
 
 import TiktokAIGenerator from "./TiktokAIGenerator";
@@ -245,7 +247,9 @@ const PAGES = {
     AdminLLM: AdminLLM,
     
     AdminSEO: AdminSEO,
-    
+
+    AdminTestData: AdminTestData,
+
     AccountSettings: AccountSettings,
     
     TiktokAIGenerator: TiktokAIGenerator,
@@ -431,7 +435,9 @@ function PagesContent() {
                 <Route path="/AdminLLM" element={<AdminLLM />} />
                 
                 <Route path="/AdminSEO" element={<AdminSEO />} />
-                
+
+                <Route path="/AdminTestData" element={<AdminTestData />} />
+
                 <Route path="/AccountSettings" element={<AccountSettings />} />
                 
                 <Route path="/TiktokAIGenerator" element={<TiktokAIGenerator />} />
