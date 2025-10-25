@@ -20,7 +20,7 @@ function getLinkedProductFieldName(fieldsObj) {
 }
 
 const FAQ_HEADERS = ["Keyword", "Flash Template", "Target Market", "Promoted Product"];
-const FAQ_LAYOUT = "3fr 180px 1fr 1fr";
+const FAQ_LAYOUT = "3fr minmax(160px, 200px) minmax(140px, 1fr) minmax(140px, 1fr)";
 
 export default function GroupedFaqTable({ rows = [], tableId, options, handleUpdate, onDeleteRow, writtenByKeyword }) {
   const [expanded, setExpanded] = React.useState({});
@@ -261,16 +261,16 @@ export default function GroupedFaqTable({ rows = [], tableId, options, handleUpd
                           <Select
                             value={fields["Flash Template"] || "None"}
                             onValueChange={(value) => handleUpdate(tableId, row.id, "Flash Template", value)}>
-                            <SelectTrigger className="w-[160px] h-7 text-xs">
-                              <SelectValue placeholder="None" />
+                            <SelectTrigger className="h-7 text-xs bg-white border-slate-300 hover:bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+                              <SelectValue placeholder="Select template..." />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="None">None</SelectItem>
-                              <SelectItem value="Product Review">Product Review</SelectItem>
-                              <SelectItem value="How-To Guide">How-To Guide</SelectItem>
-                              <SelectItem value="Listicle">Listicle</SelectItem>
-                              <SelectItem value="Educational">Educational</SelectItem>
-                              <SelectItem value="News & Blog">News & Blog</SelectItem>
+                            <SelectContent className="bg-white border border-slate-200">
+                              <SelectItem value="None" className="text-xs hover:bg-slate-100">None</SelectItem>
+                              <SelectItem value="Product Review" className="text-xs hover:bg-slate-100">📦 Product Review</SelectItem>
+                              <SelectItem value="How-To Guide" className="text-xs hover:bg-slate-100">🛠️ How-To Guide</SelectItem>
+                              <SelectItem value="Listicle" className="text-xs hover:bg-slate-100">📝 Listicle</SelectItem>
+                              <SelectItem value="Educational" className="text-xs hover:bg-slate-100">🎓 Educational</SelectItem>
+                              <SelectItem value="News & Blog" className="text-xs hover:bg-slate-100">📰 News & Blog</SelectItem>
                             </SelectContent>
                           </Select> :
                           header === "Target Market" ?
