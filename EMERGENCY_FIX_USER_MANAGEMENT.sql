@@ -87,14 +87,18 @@ ORDER BY policyname;
 -- 7. Show a test query that User.list() would execute
 SELECT COUNT(*) as total_users FROM public.user_profiles;
 
-RAISE NOTICE '';
-RAISE NOTICE '========================================';
-RAISE NOTICE 'EMERGENCY FIX APPLIED';
-RAISE NOTICE '========================================';
-RAISE NOTICE 'If you still cannot see users:';
-RAISE NOTICE '1. Check browser console for errors';
-RAISE NOTICE '2. Verify you are logged in as superadmin';
-RAISE NOTICE '3. Try logging out and back in';
-RAISE NOTICE '4. Check if RLS needs to be temporarily disabled';
-RAISE NOTICE '========================================';
+-- 8. Final success message
+DO $$
+BEGIN
+    RAISE NOTICE '';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE 'EMERGENCY FIX APPLIED';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE 'If you still cannot see users:';
+    RAISE NOTICE '1. Check browser console for errors';
+    RAISE NOTICE '2. Verify you are logged in as superadmin';
+    RAISE NOTICE '3. Try logging out and back in';
+    RAISE NOTICE '4. Check if RLS needs to be temporarily disabled';
+    RAISE NOTICE '========================================';
+END $$;
 
