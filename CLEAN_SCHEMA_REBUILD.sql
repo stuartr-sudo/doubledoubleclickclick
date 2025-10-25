@@ -932,7 +932,10 @@ SELECT
     id,
     email,
     full_name,
-    role::user_role,
+    CASE 
+        WHEN role IN ('user', 'admin', 'superadmin') THEN role::user_role
+        ELSE 'user'::user_role
+    END as role,
     is_superadmin,
     assigned_usernames,
     completed_tutorial_ids,
