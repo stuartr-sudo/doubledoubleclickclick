@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onboarding Flow - Visual Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1a202c;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+        }
+        
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .flow-section {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .flow-box {
+            flex: 1;
+            background: #f7fafc;
+            border: 3px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 30px;
+            position: relative;
+        }
+        
+        .flow-box.broken {
+            border-color: #fc8181;
+            background: #fff5f5;
+        }
+        
+        .flow-box.fixed {
+            border-color: #68d391;
+            background: #f0fff4;
+        }
+        
+        .flow-label {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .flow-label.broken {
+            background: #fc8181;
+            color: white;
+        }
+        
+        .flow-label.fixed {
+            background: #68d391;
+            color: white;
+        }
+        
+        .flow-step {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #4299e1;
+        }
+        
+        .flow-step.error {
+            border-left-color: #f56565;
+        }
+        
+        .flow-step.success {
+            border-left-color: #48bb78;
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #4299e1;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .step-number.error {
+            background: #f56565;
+        }
+        
+        .step-number.success {
+            background: #48bb78;
+        }
+        
+        .arrow {
+            text-align: center;
+            font-size: 2rem;
+            color: #cbd5e0;
+        }
+        
+        .arrow.broken {
+            color: #fc8181;
+        }
+        
+        .arrow.fixed {
+            color: #68d391;
+        }
+        
+        .fix-box {
+            background: #edf2f7;
+            border: 2px solid #4299e1;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 40px 0;
+        }
+        
+        .fix-box h2 {
+            color: #2c5282;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .fix-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .fix-step {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #48bb78;
+        }
+        
+        .fix-step h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .fix-step p {
+            color: #4a5568;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        code {
+            background: #2d3748;
+            color: #68d391;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .database-view {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        
+        .db-missing {
+            color: #fc8181;
+            font-weight: bold;
+        }
+        
+        .db-present {
+            color: #68d391;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Onboarding Flow Fix</h1>
+        
+        <!-- Problem Flow -->
+        <h2 style="color: #e53e3e; margin-bottom: 20px;">❌ Before Fix (Broken Flow)</h2>
+        <div class="flow-container">
+            <div class="flow-box broken">
+                <div class="flow-label broken">BROKEN</div>
+                <h3 style="margin-bottom: 15px;">Current Behavior</h3>
+                
+                <div class="flow-step">
+                    <span class="step-number">1</span>
+                    <strong>User Signs Up/Logs In</strong>
+                    <div style="margin-left: 40px; color: #4a5568; margin-top: 5px;">
+                        User sees Welcome page ✓
+                    </div>
+                </div>
+                
+                <div class="flow-step">
+                    <span class="step-number">2</span>
+                    <strong>Watches Video & Agrees to Guidelines</strong>
+                    <div style="margin-left: 40px; color: #4a5568; margin-top: 5px;">
+                        Clicks "I Understand - Start Using DoubleClick" ✓
+                    </div>
+                </div>
+                
+                <div class="flow-step error">
+                    <span class="step-number error">3</span>
+                    <strong>❌ Database Update FAILS</strong>
+                    <div style="margin-left: 40px; color: #c53030; margin-top: 5px;">
+                        Error: Column 'completed_tutorial_ids' doesn't exist<br>
+                        User stuck on Welcome page or redirect fails
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Database Schema -->
+        <div class="fix-box" style="border-color: #e53e3e; background: #fff5f5;">
+            <h2 style="color: #c53030;">
+                🗄️ Database Schema Issue
+            </h2>
+            <div class="database-view">
+<pre>user_profiles table (CURRENT):
+├── id
+├── email
+├── full_name
+├── role
+├── is_superadmin
+├── assigned_usernames
+├── topics
+<span class="db-missing">├── ❌ completed_tutorial_ids  (MISSING!)</span>
+<span class="db-missing">├── ❌ token_balance           (MISSING!)</span>
+<span class="db-missing">└── ❌ plan_price_id           (MISSING!)</span>
+
+App tries to save:
+completed_tutorial_ids = ["welcome_onboarding"]
+                          ↓
+                     💥 ERROR 💥
+           Column doesn't exist!</pre>
+            </div>
+        </div>
+        
+        <!-- Solution Flow -->
+        <h2 style="color: #38a169; margin: 40px 0 20px;">✅ After Fix (Working Flow)</h2>
+        <div class="flow-container">
+            <div class="flow-box fixed">
+                <div class="flow-label fixed">FIXED</div>
+                <h3 style="margin-bottom: 15px;">Expected Behavior</h3>
+                
+                <div class="flow-step success">
+                    <span class="step-number success">1</span>
+                    <strong>User Signs Up/Logs In</strong>
+                    <div style="margin-left: 40px; color: #2f855a; margin-top: 5px;">
+                        Sees Welcome page ✓
+                    </div>
+                </div>
+                
+                <div class="flow-step success">
+                    <span class="step-number success">2</span>
+                    <strong>Completes Welcome</strong>
+                    <div style="margin-left: 40px; color: #2f855a; margin-top: 5px;">
+                        Database saves: completed_tutorial_ids = ["welcome_onboarding"] ✓
+                    </div>
+                </div>
+                
+                <div class="flow-step success">
+                    <span class="step-number success">3</span>
+                    <strong>Redirects to Getting Started</strong>
+                    <div style="margin-left: 40px; color: #2f855a; margin-top: 5px;">
+                        User can import their first blog post ✓
+                    </div>
+                </div>
+                
+                <div class="flow-step success">
+                    <span class="step-number success">4</span>
+                    <strong>Completes Getting Started</strong>
+                    <div style="margin-left: 40px; color: #2f855a; margin-top: 5px;">
+                        Database updates: completed_tutorial_ids = ["welcome_onboarding", "getting_started_scrape"] ✓
+                    </div>
+                </div>
+                
+                <div class="flow-step success">
+                    <span class="step-number success">5</span>
+                    <strong>Redirects to Dashboard</strong>
+                    <div style="margin-left: 40px; color: #2f855a; margin-top: 5px;">
+                        User can now use the full platform ✓
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fixed Database Schema -->
+        <div class="fix-box">
+            <h2>🗄️ Fixed Database Schema</h2>
+            <div class="database-view">
+<pre>user_profiles table (AFTER FIX):
+├── id
+├── email
+├── full_name
+├── role
+├── is_superadmin
+├── assigned_usernames
+<span class="db-present">├── ✓ completed_tutorial_ids  JSONB DEFAULT '[]'</span>
+<span class="db-present">├── ✓ token_balance           NUMERIC DEFAULT 20</span>
+<span class="db-present">└── ✓ plan_price_id           TEXT</span>
+
+App saves successfully:
+completed_tutorial_ids = ["welcome_onboarding"]
+                          ↓
+                     ✅ SUCCESS ✅
+              Progress tracked!</pre>
+            </div>
+        </div>
+        
+        <!-- The Fix -->
+        <div class="fix-box">
+            <h2>🔧 How to Apply the Fix</h2>
+            <div class="fix-steps">
+                <div class="fix-step">
+                    <h3>Step 1: Open Supabase</h3>
+                    <p>Go to your Supabase project dashboard</p>
+                </div>
+                
+                <div class="fix-step">
+                    <h3>Step 2: SQL Editor</h3>
+                    <p>Navigate to SQL Editor in the left sidebar</p>
+                </div>
+                
+                <div class="fix-step">
+                    <h3>Step 3: Run Fix</h3>
+                    <p>Open <code>FIX_ONBOARDING.sql</code> and click "Run"</p>
+                </div>
+                
+                <div class="fix-step">
+                    <h3>Step 4: Verify</h3>
+                    <p>Check that the columns were added successfully</p>
+                </div>
+                
+                <div class="fix-step">
+                    <h3>Step 5: Test</h3>
+                    <p>Create a test account and go through onboarding</p>
+                </div>
+                
+                <div class="fix-step">
+                    <h3>Step 6: Celebrate! 🎉</h3>
+                    <p>Onboarding flow now works perfectly</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Testing Section -->
+        <div class="fix-box" style="background: #f7fafc;">
+            <h2 style="color: #2d3748;">🧪 Testing After Fix</h2>
+            <ol style="color: #4a5568; line-height: 2; padding-left: 20px; margin-top: 15px;">
+                <li>Create a new test user account (or use incognito mode)</li>
+                <li>Log in → Should see <strong>Welcome page</strong></li>
+                <li>Watch video and click "I've Watched the Video"</li>
+                <li>Check agreement box and click "I Understand - Start Using DoubleClick"</li>
+                <li><strong>✅ Should automatically redirect to Getting Started</strong></li>
+                <li>Import any blog post URL</li>
+                <li><strong>✅ Should automatically redirect to Dashboard</strong></li>
+                <li>Log out and log back in → <strong>✅ Should skip to Dashboard</strong></li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>
+
