@@ -13,6 +13,17 @@ export default function FlashButton({ item, onStatusChange }) {
   const isCompleted = flashStatus === "completed";
   const isFailed = flashStatus === "failed";
 
+  // Helper: Count words in HTML content
+  const countWords = (html) => {
+    if (!html) return 0;
+    // Strip HTML tags and count words
+    const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return text.split(' ').filter(word => word.length > 0).length;
+  };
+
+  const wordCount = countWords(item.content);
+  const MIN_WORD_COUNT = 400;
+
 const getButtonClass = () => {
   if (isRunning) return "bg-gradient-to-b from-blue-600 to-blue-800 hover:from-blue-600 hover:to-blue-800 text-white cursor-not-allowed";
   if (isCompleted) return "bg-gradient-to-b from-emerald-400 to-green-500 hover:from-emerald-400 hover:to-green-500 text-white cursor-not-allowed";
@@ -24,11 +35,25 @@ const getButtonClass = () => {
 
   const handleClick = (e) => {
     e.stopPropagation();
-    if (item.flash_status === "completed") return;
+    
+    // Validation 1: Already completed
+    if (item.flash_status === "completed") {
+      toast.error("This article has already been flashed and cannot be re-flashed");
+      return;
+    }
+    
+    // Validation 2: Empty content
     if (!item.content || item.content.trim() === "") {
       toast.error("Cannot flash: Article content is empty");
       return;
     }
+    
+    // Validation 3: Minimum word count
+    if (wordCount < MIN_WORD_COUNT) {
+      toast.error(`Cannot flash: Article must be at least ${MIN_WORD_COUNT} words (currently ${wordCount} words)`);
+      return;
+    }
+    
     setShowModal(true);
   };
 
@@ -95,21 +120,34 @@ const getButtonClass = () => {
     return <Zap className="w-3.5 h-3.5" />;
   };
 
+  // Format flashed_at timestamp for tooltip
+  const getTooltipText = () => {
+    if (isCompleted && item.flashed_at) {
+      const flashedDate = new Date(item.flashed_at);
+      return `Flashed on ${flashedDate.toLocaleDateString()} at ${flashedDate.toLocaleTimeString()}`;
+    }
+    if (isCompleted) {
+      return "Already flashed (cannot re-flash)";
+    }
+    if (isRunning) {
+      return "Flash in progress...";
+    }
+    if (isFailed) {
+      return "Flash failed - click to retry";
+    }
+    if (wordCount < MIN_WORD_COUNT) {
+      return `Content too short (${wordCount}/${MIN_WORD_COUNT} words)`;
+    }
+    return "Run flash workflow";
+  };
+
   return (
     <>
       <button
         onClick={handleClick}
         disabled={item.flash_status === "running" || item.flash_status === "completed"}
         className={buttonClass}
-        title={
-          item.flash_status === "completed" 
-            ? "Already flashed" 
-            : item.flash_status === "running"
-            ? "Flash in progress"
-            : item.flash_status === "failed"
-            ? "Flash failed - click to retry"
-            : "Run flash workflow"
-        }
+        title={getTooltipText()}
       >
         {renderIcon()}
       </button>
