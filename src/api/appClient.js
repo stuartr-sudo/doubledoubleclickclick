@@ -360,7 +360,17 @@ const app = {
     get: (target, functionName) => {
       // Return a function that calls the serverless API endpoint
       return async (body = {}) => {
-        const endpoint = `/api/${functionName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}`;
+        // Map function names to their actual API paths
+        const functionRoutes = {
+          'airtableSync': '/api/airtable/sync',
+          'airtableListFields': '/api/airtable/list-fields',
+          'airtableCreateRecord': '/api/airtable/create-record',
+          'airtableDeleteRecord': '/api/airtable/delete-record',
+          'callPromptWebhook': '/api/webhooks/notify-firecrawl-website'
+        };
+        
+        const endpoint = functionRoutes[functionName] || 
+          `/api/${functionName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}`;
         
         const res = await fetch(endpoint, {
           method: 'POST',
