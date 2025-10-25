@@ -34,31 +34,66 @@ END $$;
 
 -- Create temporary backup table for your user profile
 DO $$
+DECLARE
+    usernames_type TEXT;
+    tutorial_ids_type TEXT;
 BEGIN
     -- Try to backup existing user_profiles if table exists
     IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'user_profiles') THEN
-        CREATE TEMP TABLE user_backup AS
-        SELECT 
-            id,
-            email,
-            full_name,
-            COALESCE(role::TEXT, 'user') as role,
-            COALESCE(is_superadmin, false) as is_superadmin,
-            -- Convert JSONB arrays to TEXT arrays
-            CASE 
-                WHEN assigned_usernames IS NOT NULL THEN 
-                    ARRAY(SELECT jsonb_array_elements_text(assigned_usernames))
-                ELSE ARRAY[]::TEXT[]
-            END as assigned_usernames,
-            CASE 
-                WHEN completed_tutorial_ids IS NOT NULL THEN 
-                    ARRAY(SELECT jsonb_array_elements_text(completed_tutorial_ids))
-                ELSE ARRAY[]::TEXT[]
-            END as completed_tutorial_ids,
-            COALESCE(token_balance, 20) as token_balance,
-            created_at
-        FROM public.user_profiles
-        WHERE is_superadmin = true OR role::TEXT IN ('admin', 'superadmin');
+        -- Detect the data type of assigned_usernames
+        SELECT data_type INTO usernames_type
+        FROM information_schema.columns
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_profiles' 
+        AND column_name = 'assigned_usernames';
+        
+        -- Detect the data type of completed_tutorial_ids
+        SELECT data_type INTO tutorial_ids_type
+        FROM information_schema.columns
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_profiles' 
+        AND column_name = 'completed_tutorial_ids';
+        
+        -- Handle both JSONB and TEXT[] types
+        IF usernames_type = 'jsonb' THEN
+            -- Old schema with JSONB
+            CREATE TEMP TABLE user_backup AS
+            SELECT 
+                id,
+                email,
+                full_name,
+                COALESCE(role::TEXT, 'user') as role,
+                COALESCE(is_superadmin, false) as is_superadmin,
+                CASE 
+                    WHEN assigned_usernames IS NOT NULL THEN 
+                        ARRAY(SELECT jsonb_array_elements_text(assigned_usernames))
+                    ELSE ARRAY[]::TEXT[]
+                END as assigned_usernames,
+                CASE 
+                    WHEN completed_tutorial_ids IS NOT NULL THEN 
+                        ARRAY(SELECT jsonb_array_elements_text(completed_tutorial_ids))
+                    ELSE ARRAY[]::TEXT[]
+                END as completed_tutorial_ids,
+                COALESCE(token_balance, 20) as token_balance,
+                created_at
+            FROM public.user_profiles
+            WHERE is_superadmin = true OR role::TEXT IN ('admin', 'superadmin');
+        ELSE
+            -- New schema with TEXT[]
+            CREATE TEMP TABLE user_backup AS
+            SELECT 
+                id,
+                email,
+                full_name,
+                COALESCE(role::TEXT, 'user') as role,
+                COALESCE(is_superadmin, false) as is_superadmin,
+                COALESCE(assigned_usernames, ARRAY[]::TEXT[]) as assigned_usernames,
+                COALESCE(completed_tutorial_ids, ARRAY[]::TEXT[]) as completed_tutorial_ids,
+                COALESCE(token_balance, 20) as token_balance,
+                created_at
+            FROM public.user_profiles
+            WHERE is_superadmin = true OR role::TEXT IN ('admin', 'superadmin');
+        END IF;
     ELSE
         -- Create empty backup table if no user_profiles exists
         CREATE TEMP TABLE user_backup (
