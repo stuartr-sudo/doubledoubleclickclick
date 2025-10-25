@@ -162,12 +162,72 @@ const app = {
         .toLowerCase()
         .replace(/^_/, '');
       
-      // Special case mapping for irregular plurals or already-plural tables
+      // Complete table name mapping to match actual Supabase schema
+      // This prevents auto-pluralization issues
       const tableNameOverrides = {
-        'webhook_received': 'webhook_received', // Already singular in DB
-        'user_profile': 'user_profiles',
+        // Irregular or already-plural tables
+        'webhook_received': 'webhook_received',
+        'airtable_sync_cache': 'airtable_sync_cache',
+        'analytics_events': 'analytics_events',
+        
+        // Standard pluralization (explicit for clarity)
+        'affiliate_pack': 'affiliate_packs',
+        'affiliate': 'affiliates',
+        'amazon_product_video': 'amazon_product_videos',
+        'app_product': 'app_products',
+        'app_setting': 'app_settings',
+        'available_page': 'available_pages',
+        'blog_category': 'blog_categories',
         'blog_post': 'blog_posts',
-        'username': 'usernames'
+        'brand_guideline': 'brand_guidelines',
+        'brand_specification': 'brand_specifications',
+        'call_to_action': 'call_to_actions',
+        'captured_email': 'captured_emails',
+        'contact_message': 'contact_messages',
+        'content_endpoint': 'content_endpoints',
+        'content_variant': 'content_variants',
+        'crm_credential': 'crm_credentials',
+        'custom_content_template': 'custom_content_templates',
+        'dashboard_banner': 'dashboard_banners',
+        'editor_workflow': 'editor_workflows',
+        'email_capture_form': 'email_capture_forms',
+        'feature_flag': 'feature_flags',
+        'generated_video': 'generated_videos',
+        'image_library_item': 'image_library_items',
+        'imagineer_job': 'imagineer_jobs',
+        'infographic_visual_type_example': 'infographic_visual_type_examples',
+        'integration_credential': 'integration_credentials',
+        'invoice': 'invoices',
+        'json2_video_template': 'json2video_templates',
+        'landing_page_content': 'landing_page_content',
+        'llm_model_label': 'llm_model_labels',
+        'llm_setting': 'llm_settings',
+        'onboarding_step': 'onboarding_steps',
+        'onboarding_wizard': 'onboarding_wizards',
+        'page_option': 'page_options',
+        'page_style': 'page_styles',
+        'pricing_faq': 'pricing_faqs',
+        'product_style_template': 'product_style_templates',
+        'promoted_product': 'promoted_products',
+        'sales_page_content': 'sales_page_content',
+        'scheduled_post': 'scheduled_posts',
+        'service_item': 'service_items',
+        'shopify_publish_log': 'shopify_publish_logs',
+        'sitemap': 'sitemaps',
+        'testimonial': 'testimonials',
+        'tik_tok_video': 'tiktok_videos',
+        'tutorial_video': 'tutorial_videos',
+        'user_profile': 'user_profiles',
+        'username': 'usernames',
+        'video_project': 'video_projects',
+        'video_scene': 'video_scenes',
+        'waitlist_entry': 'waitlist_entries',
+        'web_page': 'web_pages',
+        'webhook_payload_template': 'webhook_payload_templates',
+        'wordpress_publish_log': 'wordpress_publish_logs',
+        'workflow_run_status': 'workflow_run_status',
+        'writing_style': 'writing_styles',
+        'you_tube_video': 'youtube_videos'
       };
       
       if (tableNameOverrides[tableName]) {
