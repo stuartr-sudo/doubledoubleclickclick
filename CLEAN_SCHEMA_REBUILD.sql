@@ -33,26 +33,49 @@ BEGIN
 END $$;
 
 -- Create temporary backup table for your user profile
-CREATE TEMP TABLE IF NOT EXISTS user_backup AS
-SELECT 
-    id,
-    email,
-    full_name,
-    role,
-    is_superadmin,
-    assigned_usernames,
-    completed_tutorial_ids,
-    token_balance,
-    created_at
-FROM public.user_profiles
-WHERE is_superadmin = true OR role IN ('admin', 'superadmin');
+DO $$
+BEGIN
+    -- Try to backup existing user_profiles if table exists
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'user_profiles') THEN
+        CREATE TEMP TABLE user_backup AS
+        SELECT 
+            id,
+            email,
+            full_name,
+            COALESCE(role::TEXT, 'user') as role,
+            COALESCE(is_superadmin, false) as is_superadmin,
+            COALESCE(assigned_usernames, ARRAY[]::TEXT[]) as assigned_usernames,
+            COALESCE(completed_tutorial_ids, ARRAY[]::TEXT[]) as completed_tutorial_ids,
+            COALESCE(token_balance, 20) as token_balance,
+            created_at
+        FROM public.user_profiles
+        WHERE is_superadmin = true OR role::TEXT IN ('admin', 'superadmin');
+    ELSE
+        -- Create empty backup table if no user_profiles exists
+        CREATE TEMP TABLE user_backup (
+            id UUID,
+            email TEXT,
+            full_name TEXT,
+            role TEXT,
+            is_superadmin BOOLEAN,
+            assigned_usernames TEXT[],
+            completed_tutorial_ids TEXT[],
+            token_balance INTEGER,
+            created_at TIMESTAMPTZ
+        );
+    END IF;
+END $$;
 
 DO $$
 DECLARE
     backup_count INTEGER;
 BEGIN
-    SELECT COUNT(*) INTO backup_count FROM user_backup;
-    RAISE NOTICE '✅ Backed up % admin user(s)', backup_count;
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'pg_temp' AND tablename LIKE 'user_backup%') THEN
+        SELECT COUNT(*) INTO backup_count FROM user_backup;
+        RAISE NOTICE '✅ Backed up % admin user(s)', backup_count;
+    ELSE
+        RAISE NOTICE '⚠️  No existing user_profiles table found - starting fresh';
+    END IF;
 END $$;
 
 -- ============================================================================
