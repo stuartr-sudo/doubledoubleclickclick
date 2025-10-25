@@ -110,6 +110,7 @@ const navStructure = [
   { name: "App Products", href: "AppProductManager", icon: ShoppingBag, featureFlag: "show_app_product_manager_link" },
   { name: "API Docs", href: "MidjourneyApiDocs", icon: BookOpen, featureFlag: "show_api_docs_link" },
   { name: "LLM Settings", href: "AdminLLM", icon: Sparkles, featureFlag: "show_llm_settings_link" },
+  { name: "LLM Configuration", href: "AdminLLMSettings", icon: Bot },
   { name: "SEO Setup", href: "AdminSEO", icon: Settings, featureFlag: "show_admin_seo_link" },
   { name: "Test Data", href: "AdminTestData", icon: Database },
   { name: "Endpoints", href: "FaqEndpointAdmin", icon: Settings, featureFlag: "show_endpoints_link" },

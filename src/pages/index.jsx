@@ -92,6 +92,8 @@ import AdminSEO from "./AdminSEO";
 
 import AdminTestData from "./AdminTestData";
 
+import AdminLLMSettings from "./AdminLLMSettings";
+
 import AccountSettings from "./AccountSettings";
 
 import TiktokAIGenerator from "./TiktokAIGenerator";
@@ -249,7 +251,9 @@ const PAGES = {
     AdminSEO: AdminSEO,
 
     AdminTestData: AdminTestData,
-
+    
+    AdminLLMSettings: AdminLLMSettings,
+    
     AccountSettings: AccountSettings,
     
     TiktokAIGenerator: TiktokAIGenerator,

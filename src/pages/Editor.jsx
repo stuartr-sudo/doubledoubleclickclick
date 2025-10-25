@@ -1641,63 +1641,36 @@ export default function Editor() {
 
     setIsRewritingTitle(true);
     try {
-      const conversation = await agentSDK.createConversation({
-        agent_name: "seo_title_rewriter",
-      });
-
-      if (!conversation?.id) {
-        throw new Error("Could not start a conversation with the AI agent.");
+      // Get auth token from Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error("Authentication required. Please log in.");
       }
 
-      const truncatedContent = (content || "").substring(0, 15000);
-      const prompt = `Rewrite the blog post title to be highly optimized for SEO while remaining natural and compelling.
-Constraints:
-- Under 60 characters
-- Include the primary keyword if it appears in the content or title
-- No quotes or emojis
-- Title Case
-
-Article Content (may be empty if not provided):
-${truncatedContent || "(no article body provided, use semantic rewriting based on the current title only)"}
-
-Current Title: ${title}`;
-
-      await agentSDK.addMessage(conversation, {
-        role: "user",
-        content: prompt,
+      // Call serverless API endpoint with admin-configured settings
+      const response = await fetch('/api/ai/rewrite-title', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          title: title || "Untitled",
+          content: content || ""
+        })
       });
 
-      const pollTimeout = 90000;
-      const pollInterval = 2000;
-      const startTime = Date.now();
+      const data = await response.json();
 
-      let newTitle = "";
-      let attempts = 0;
-      const maxAttempts = Math.ceil(pollTimeout / pollInterval);
-
-      while (Date.now() - startTime < pollTimeout && attempts < maxAttempts) {
-        attempts++;
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
-
-        const updatedConversation = await agentSDK.getConversation(conversation.id);
-        const lastMessage = updatedConversation?.messages?.[updatedConversation.messages.length - 1];
-
-        if (lastMessage?.role === 'assistant' && (lastMessage.is_complete === true || lastMessage.content)) {
-          let contentStr = lastMessage.content || "";
-          newTitle = contentStr
-            .replace(/^["']|["']$/g, "")
-            .replace(/^\*\*|\*\*$/g, "")
-            .replace(/^#+\s*/, "")
-            .replace(/\n+/g, " ")
-            .trim();
-
-          if (newTitle && newTitle.length > 5) break;
-        }
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}`);
       }
 
-      if (newTitle && newTitle.length > 5) {
-        setTitle(newTitle);
-        toast.success("AI successfully rewrote the title!");
+      if (data.success && data.newTitle) {
+        setTitle(data.newTitle);
+        console.log(`✅ Title rewritten using ${data.model} (${data.tokensUsed} tokens)`);
+        toast.success("Title optimized for SEO!");
       } else {
         throw new Error("AI did not generate a valid title. Please try again.");
       }
