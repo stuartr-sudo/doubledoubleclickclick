@@ -96,6 +96,8 @@ import AdminLLMSettings from "./AdminLLMSettings";
 
 import AccountSettings from "./AccountSettings";
 
+import DebugUsernames from "./DebugUsernames";
+
 import TiktokAIGenerator from "./TiktokAIGenerator";
 
 import YoutubeAIGenerator from "./YoutubeAIGenerator";
@@ -255,6 +257,8 @@ const PAGES = {
     AdminLLMSettings: AdminLLMSettings,
     
     AccountSettings: AccountSettings,
+    
+    DebugUsernames: DebugUsernames,
     
     TiktokAIGenerator: TiktokAIGenerator,
     
@@ -443,6 +447,8 @@ function PagesContent() {
                 <Route path="/AdminTestData" element={<AdminTestData />} />
 
                 <Route path="/AccountSettings" element={<AccountSettings />} />
+                
+                <Route path="/DebugUsernames" element={<DebugUsernames />} />
                 
                 <Route path="/TiktokAIGenerator" element={<TiktokAIGenerator />} />
                 
