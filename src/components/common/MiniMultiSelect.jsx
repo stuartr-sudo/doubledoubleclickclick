@@ -40,7 +40,7 @@ export default function MiniMultiSelect({ options = [], value = [], onChange, pl
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between bg-white border-slate-300 text-slate-900 hover:bg-slate-50 focus:ring-2 focus:ring-indigo-500",
+            "w-full justify-between !bg-white !border-slate-300 !text-slate-900 !hover:bg-slate-50 !focus:ring-2 !focus:ring-indigo-500",
             triggerSizeClass
           )}>
 
@@ -49,22 +49,22 @@ export default function MiniMultiSelect({ options = [], value = [], onChange, pl
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="z-[100] w-[--radix-popover-trigger-width] min-w-[260px] max-w-[calc(100vw-2rem)] p-2 bg-white text-slate-900 border border-slate-200 shadow-xl max-h-[60vh] overflow-hidden"
+        className="z-[100] w-[--radix-popover-trigger-width] min-w-[260px] max-w-[calc(100vw-2rem)] p-2 !bg-white !text-slate-900 !border !border-slate-200 shadow-xl max-h-[60vh] overflow-hidden"
         align="start">
 
-        <Command className="bg-white text-slate-900">
+        <Command className="!bg-white !text-slate-900">
           <CommandInput
             placeholder="Search..."
-            className="placeholder:text-slate-400 text-slate-900" />
+            className="placeholder:!text-slate-400 !text-slate-900" />
 
-          <CommandList className="bg-white text-slate-900 max-h-[50vh] sm:max-h-64 overflow-auto">
-            <CommandEmpty className="text-slate-500 px-2 py-2">No results found.</CommandEmpty>
-            <CommandGroup className="bg-white px-1">
+          <CommandList className="!bg-white !text-slate-900 max-h-[50vh] sm:max-h-64 overflow-auto">
+            <CommandEmpty className="!text-slate-500 px-2 py-2">No results found.</CommandEmpty>
+            <CommandGroup className="!bg-white px-1">
               {(options || []).map((option) =>
               <CommandItem
                 key={option.value} // Use option.value as key
                 value={option.value} // Set value for command item search
-                className="relative flex cursor-default select-none items-center text-sm outline-none my-1 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 hover:bg-slate-100 data-[highlighted]:bg-slate-100 whitespace-normal"
+                className="relative flex cursor-default select-none items-center text-sm outline-none my-1 px-3 py-2 rounded-lg !border !border-slate-200 !bg-white !text-slate-900 hover:!bg-slate-100 data-[highlighted]:!bg-slate-100 whitespace-normal"
 
                 onSelect={(currentValue) => {
                   const newSelection = new Set(value); // Use Set for efficient add/delete
