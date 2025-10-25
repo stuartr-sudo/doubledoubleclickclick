@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 function getLinkedProductFieldName(fieldsObj) {
   const keys = Object.keys(fieldsObj || {});
@@ -18,8 +19,8 @@ function getLinkedProductFieldName(fieldsObj) {
 
 }
 
-const FAQ_HEADERS = ["Keyword", "Target Market", "Promoted Product"];
-const FAQ_LAYOUT = "3fr 1fr 1fr"; // Changed from "3fr 1.5fr 1.5fr" to "3fr 1fr 1fr"
+const FAQ_HEADERS = ["Keyword", "Flash Template", "Target Market", "Promoted Product"];
+const FAQ_LAYOUT = "3fr 180px 1fr 1fr";
 
 export default function GroupedFaqTable({ rows = [], tableId, options, handleUpdate, onDeleteRow, writtenByKeyword }) {
   const [expanded, setExpanded] = React.useState({});
@@ -256,6 +257,22 @@ export default function GroupedFaqTable({ rows = [], tableId, options, handleUpd
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
                                 </div> :
+                          header === "Flash Template" ?
+                          <Select
+                            value={fields["Flash Template"] || "None"}
+                            onValueChange={(value) => handleUpdate(tableId, row.id, "Flash Template", value)}>
+                            <SelectTrigger className="w-[160px] h-7 text-xs">
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="None">None</SelectItem>
+                              <SelectItem value="Product Review">Product Review</SelectItem>
+                              <SelectItem value="How-To Guide">How-To Guide</SelectItem>
+                              <SelectItem value="Listicle">Listicle</SelectItem>
+                              <SelectItem value="Educational">Educational</SelectItem>
+                              <SelectItem value="News & Blog">News & Blog</SelectItem>
+                            </SelectContent>
+                          </Select> :
                           header === "Target Market" ?
                           <MiniMultiSelect
                             options={options.tm}
