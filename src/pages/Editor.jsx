@@ -2042,15 +2042,40 @@ Current Title: ${title}`;
     resolveExistingPostId, retryAttemptsRef
   ]);
 
+  // Helper to check if any content-manipulating modal is open
+  const isAnyContentModalOpen = useCallback(() => {
+    return showImageLibrary || 
+           showVideoGenerator || 
+           showVideoLibrary || 
+           showMediaLibrary ||
+           showProductSelector || 
+           showProductFromUrl ||
+           showCalloutGenerator ||
+           showTldrGenerator ||
+           showCtaSelector ||
+           showEmailCaptureSelector ||
+           showTestimonialLibrary ||
+           showInfographics ||
+           showImagineer ||
+           showAudioModal ||
+           showAmazonImport ||
+           showFaqGenerator;
+  }, [
+    showImageLibrary, showVideoGenerator, showVideoLibrary, showMediaLibrary,
+    showProductSelector, showProductFromUrl, showCalloutGenerator, showTldrGenerator,
+    showCtaSelector, showEmailCaptureSelector, showTestimonialLibrary,
+    showInfographics, showImagineer, showAudioModal, showAmazonImport, showFaqGenerator
+  ]);
+
   // Debounced auto-save on content/title change
   useEffect(() => {
     // Only auto-save if there's actual data to save (content or title is not empty)
     // AND a user is logged in
     if ((!content && !title) || !currentUser) return;
 
-    // CRITICAL: Skip auto-save if drawing modal is open (prevents canvas wipes)
-    if (window.__drawingOpen) {
-      console.log('⏸️ Auto-save paused: drawing modal is open');
+    // CRITICAL: Skip auto-save if any content-manipulating modal is open
+    if (isAnyContentModalOpen()) {
+      console.log('⏸️ Auto-save paused: content modal is open');
       return;
     }
 
@@ -2061,28 +2086,28 @@ Current Title: ${title}`;
     
     // Set new timer for 5 seconds after user stops typing
     autoSaveTimerRef.current = setTimeout(() => {
-      // Double-check drawing modal isn't open before executing
-      if (window.__drawingOpen) {
-        console.log('⏸️ Auto-save cancelled: drawing modal opened during timer');
+      // Double-check no content modal is open before executing
+      if (isAnyContentModalOpen()) {
+        console.log('⏸️ Auto-save cancelled: modal opened during timer');
         return;
       }
       if (autoSaveRef.current) {
         autoSaveRef.current();
       }
-    }, 5000); // Changed from 3000 to 5000
+    }, 5000); // 5 second debounce
     
     return () => {
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [content, title, currentUser]);
+  }, [content, title, currentUser, isAnyContentModalOpen]);
 
   // Helper to trigger auto-save
   const triggerAutoSave = useCallback(() => {
-    // Skip if drawing modal is open
-    if (window.__drawingOpen) {
-      console.log('⏸️ Manual auto-save skipped: drawing modal is open');
+    // Skip if any content modal is open
+    if (isAnyContentModalOpen()) {
+      console.log('⏸️ Manual auto-save skipped: content modal is open');
       return;
     }
     setTimeout(() => {
@@ -2090,7 +2115,7 @@ Current Title: ${title}`;
         autoSaveRef.current();
       }
     }, 1000);
-  }, [autoSaveRef]);
+  }, [autoSaveRef, isAnyContentModalOpen]);
 
   // NEW: Handler for the hidden InternalLinkerButton's onApply
   const handleApplyInternalLinks = useCallback((updatedHtml) => {
