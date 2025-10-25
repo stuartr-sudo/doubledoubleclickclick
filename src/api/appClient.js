@@ -104,6 +104,38 @@ const app = {
       });
       return res.json();
     },
+    airtableListRecords: async (data) => {
+      const res = await fetch('/api/airtable/list-records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    airtableUpdateRecord: async (data) => {
+      const res = await fetch('/api/airtable/update-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    airtableDeleteRecord: async (data) => {
+      const res = await fetch('/api/airtable/delete-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    extractProductMeta: async (data) => {
+      const res = await fetch('/api/products/extract-product-meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
     // Generic website extractor via Firecrawl v2
     extractWebsiteContent: async (data) => {
       const res = await fetch('/api/scrape/extract-website-content', {
