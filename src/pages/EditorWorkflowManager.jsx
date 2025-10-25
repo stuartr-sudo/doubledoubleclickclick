@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import app from "@/api/appClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Play, Loader2, Settings, Coins } from "lucide-react";
+import { Plus, Edit, Trash2, Play, Loader2, Settings, Coins, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { SectionLoader } from "@/components/common/PageLoader";
 
@@ -40,6 +41,7 @@ const STEP_OPTIONS = [
 ];
 
 export default function EditorWorkflowManager() {
+  const navigate = useNavigate();
   const [workflows, setWorkflows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -65,10 +67,18 @@ export default function EditorWorkflowManager() {
     try {
       const user = await app.auth.me();
       setCurrentUser(user);
-      setIsSuperadmin(!!user?.is_superadmin || user?.role === 'admin');
+      const isAdmin = !!user?.is_superadmin || user?.role === 'admin' || user?.role === 'superadmin';
+      setIsSuperadmin(isAdmin);
+      
+      // Redirect non-admins to Dashboard
+      if (!isAdmin) {
+        toast.error("Access denied. Flash Workflow Builder is admin-only.");
+        navigate("/Dashboard");
+      }
     } catch (err) {
       console.error("Failed to check user role:", err);
       setIsSuperadmin(false);
+      navigate("/Dashboard");
     }
   };
 
@@ -222,6 +232,26 @@ export default function EditorWorkflowManager() {
         (currentUser?.assigned_usernames || []).includes(w.user_name)
       );
 
+  // Access denied UI - show if user loaded and is not admin
+  if (!loading && currentUser && !isSuperadmin) {
+    return (
+      <div className="container mx-auto py-12 px-4 max-w-2xl">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <ShieldAlert className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Access Required</h2>
+            <p className="text-slate-600 mb-6">
+              Flash Workflow Builder is restricted to administrators only. You can still use pre-built Flash workflows from the Content page.
+            </p>
+            <Button onClick={() => navigate("/Dashboard")} className="bg-indigo-600 hover:bg-indigo-700">
+              Return to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="flex items-center justify-between mb-8">
@@ -238,14 +268,6 @@ export default function EditorWorkflowManager() {
           </Button>
         )}
       </div>
-
-      {!isSuperadmin && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>Note:</strong> Only admins can create workflows. You can use available workflows from the Editor.
-          </p>
-        </div>
-      )}
 
       {loading ? (
         <SectionLoader message="Loading workflows..." />
