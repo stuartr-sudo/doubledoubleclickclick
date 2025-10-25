@@ -1275,7 +1275,8 @@ export default function TopicsPage() {
               layout={KEYWORD_MAP_LAYOUT}
               loadingQuestions={loadingQuestions}
               handleViewQuestions={guardedHandleViewQuestions}
-              writtenByKeyword={writtenByKeyword} />
+              writtenByKeyword={writtenByKeyword}
+              isComplete={isComplete} />
 
 
           </TabsContent>
@@ -1624,7 +1625,7 @@ export default function TopicsPage() {
 }
 
 // --- Reusable DataTable Component (for Keyword Map) ---
-const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, density = "comfortable", onDeleteRow, loadingQuestions, handleViewQuestions, writtenByKeyword }) => {
+const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, density = "comfortable", onDeleteRow, loadingQuestions, handleViewQuestions, writtenByKeyword, isComplete }) => {
   const [svSort, setSvSort] = React.useState(null);
 
   const toggleSvSort = () => {
