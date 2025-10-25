@@ -66,6 +66,7 @@ DECLARE
     test_user_id UUID;
     test_usernames TEXT[];
     post_count INTEGER;
+    r RECORD;
 BEGIN
     -- Get the user ID for stuartr@doubleclick.work
     SELECT id, assigned_usernames INTO test_user_id, test_usernames
