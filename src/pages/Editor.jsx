@@ -9,6 +9,7 @@ import { ImageLibraryItem } from "@/api/entities";
 import { GeneratedVideo } from "@/api/entities";
 import { ImagineerJob } from "@/api/entities"; // Ensure ImagineerJob is imported as it's used
 import app from "@/api/appClient";
+import { supabase } from "@/lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
