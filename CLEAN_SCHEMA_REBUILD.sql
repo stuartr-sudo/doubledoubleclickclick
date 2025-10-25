@@ -44,8 +44,17 @@ BEGIN
             full_name,
             COALESCE(role::TEXT, 'user') as role,
             COALESCE(is_superadmin, false) as is_superadmin,
-            COALESCE(assigned_usernames, ARRAY[]::TEXT[]) as assigned_usernames,
-            COALESCE(completed_tutorial_ids, ARRAY[]::TEXT[]) as completed_tutorial_ids,
+            -- Convert JSONB arrays to TEXT arrays
+            CASE 
+                WHEN assigned_usernames IS NOT NULL THEN 
+                    ARRAY(SELECT jsonb_array_elements_text(assigned_usernames))
+                ELSE ARRAY[]::TEXT[]
+            END as assigned_usernames,
+            CASE 
+                WHEN completed_tutorial_ids IS NOT NULL THEN 
+                    ARRAY(SELECT jsonb_array_elements_text(completed_tutorial_ids))
+                ELSE ARRAY[]::TEXT[]
+            END as completed_tutorial_ids,
             COALESCE(token_balance, 20) as token_balance,
             created_at
         FROM public.user_profiles
