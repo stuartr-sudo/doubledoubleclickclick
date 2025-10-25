@@ -1,67 +1,85 @@
-# Setting Up Airtable Environment Variables in Vercel
+# 🔧 Airtable Environment Variables Setup
 
 ## Required Environment Variables
 
-You need to add these to Vercel for the Topics page to fetch Keywords and FAQs from Airtable:
-
-### 1. Airtable API Key
-- **Variable Name**: `VITE_AIRTABLE_API_KEY` or `AIRTABLE_API_KEY`
-- **Value**: Your Airtable Personal Access Token
-- **Where to find**: https://airtable.com/create/tokens
-
-### 2. Airtable Base ID
-- **Variable Name**: `VITE_AIRTABLE_BASE_ID` or `AIRTABLE_BASE_ID`
-- **Value**: Your Airtable Base ID (starts with `app...`)
-- **Where to find**: In your Airtable URL: `https://airtable.com/appXXXXXXXXXXXXXX/...`
-
-### 3. Airtable Table IDs (Optional - if you want to override)
-- **Keyword Map Table**: `VITE_AIRTABLE_KEYWORD_TABLE_ID`
-- **FAQ Table**: `VITE_AIRTABLE_FAQ_TABLE_ID`
-
----
-
-## How to Add to Vercel
-
-### Method 1: Vercel Dashboard (Easiest)
-
-1. Go to https://vercel.com/dashboard
-2. Select your **DoubleClick** project
-3. Click **Settings** tab
-4. Click **Environment Variables** in left sidebar
-5. For each variable:
-   - Click **Add New**
-   - Enter the **Key** (e.g., `VITE_AIRTABLE_API_KEY`)
-   - Enter the **Value** (your actual API key)
-   - Select **Production**, **Preview**, and **Development**
-   - Click **Save**
-6. After adding all variables, **redeploy** your app
-
-### Method 2: Vercel CLI (Advanced)
+Your Vercel deployment needs these environment variables:
 
 ```bash
-# Login to Vercel
-vercel login
-
-# Link your project
-cd /path/to/doubleclicker-1-new
-vercel link
-
-# Add environment variables
-vercel env add VITE_AIRTABLE_API_KEY
-# Paste your API key when prompted
-
-vercel env add VITE_AIRTABLE_BASE_ID
-# Paste your Base ID when prompted
-
-# Redeploy
-vercel --prod
+AIRTABLE_API_KEY=your_airtable_api_key_here
+AIRTABLE_BASE_ID=your_airtable_base_id_here
 ```
 
----
+## How to Add Them to Vercel
 
-## Current Table IDs in Code
+1. Go to https://vercel.com/dashboard
+2. Select your project (`doubleclicker-1-new` or similar)
+3. Click **Settings** tab
+4. Click **Environment Variables** in the left sidebar
+5. Add each variable:
+   - Key: `AIRTABLE_API_KEY`
+   - Value: Your Airtable personal access token
+   - Environment: Select **Production**, **Preview**, and **Development**
+   - Click **Save**
+6. Repeat for `AIRTABLE_BASE_ID`
 
-Looking at your `Topics.jsx`, these are currently hardcoded:
+## How to Get These Values
+
+### AIRTABLE_API_KEY
+1. Go to https://airtable.com/create/tokens
+2. Create a new personal access token
+3. Grant it access to your base
+4. Copy the token
+
+### AIRTABLE_BASE_ID
+1. Open your Airtable base in browser
+2. Look at the URL: `https://airtable.com/appXXXXXXXXXXXXXX/...`
+3. The part starting with `app` is your base ID (e.g., `appAbC123dEf456`)
+
+## After Adding Variables
+
+1. **Redeploy your app**:
+   - Go to Vercel dashboard
+   - Click **Deployments** tab
+   - Click the 3 dots next to your latest deployment
+   - Click **Redeploy**
+   
+   OR
+   
+   - Make a small change to your code and push to GitHub
+
+2. **Test in browser console**:
+```javascript
+// Open DevTools Console
+// Select "keppi" from the dropdown
+// Check Network tab for /api/airtable/sync requests
+// Look for the response - should show your Airtable records
+```
+
+## Troubleshooting
+
+### "Missing Airtable environment variables" error in logs
+- ❌ Variables not set in Vercel
+- ❌ Variables set but not redeployed
+- ✅ Add variables and redeploy
+
+### "401 Unauthorized" or "403 Forbidden"
+- ❌ API key is invalid or expired
+- ❌ API token doesn't have access to the base
+- ✅ Create a new token with proper permissions
+
+### "404 Not Found" on table
+- ❌ Table ID is wrong in Topics.jsx (lines 41-48)
+- ✅ Update TABLE_IDS to match your actual Airtable table IDs
+
+### No data loads when selecting "keppi"
+- ❌ No records in Airtable with `Username = "keppi"`
+- ✅ Check your Airtable and ensure:
+  - Keyword Map table has a "Username" field
+  - Records exist with Username = "keppi"
+  - FAQs table has a "Username" field
+  - FAQs linked to keywords with Username = "keppi"
+
+## Current TABLE_IDS in Code
 
 ```javascript
 const TABLE_IDS = {
@@ -74,29 +92,31 @@ const TABLE_IDS = {
 };
 ```
 
-**Should I:**
-1. ✅ Keep these hardcoded (they're table IDs, not sensitive)
-2. ✅ Move them to env vars for flexibility
+**Make sure these match your actual Airtable table IDs!**
 
----
+To find your table IDs:
+1. Open your base in Airtable
+2. Click a table
+3. Look at the URL: `https://airtable.com/appXXX/tblYYYYYY/...`
+4. The `tblYYYYYY` part is the table ID
 
-## What's Already Set Up?
+## Quick Test
 
-Let me check your current Airtable integration...
+Once variables are set and redeployed, run this in your browser console:
 
-Your app uses `airtableSync()` function which should already be reading from env vars.
+```javascript
+// Test the API endpoint
+fetch('/api/airtable/sync', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    action: 'listAll',
+    tableId: 'tblDR9SmoK8wEYmnA',
+    filterByFormula: "{Username} = 'keppi'"
+  })
+})
+.then(r => r.json())
+.then(data => console.log('Airtable Response:', data));
+```
 
-**Next Step**: Tell me if you want me to:
-1. Just document what env vars to add in Vercel
-2. Update the code to read table IDs from env vars too
-3. Check if Airtable credentials are already set
-
----
-
-## Security Note
-
-✅ **API Keys & Base IDs**: MUST be env vars (secret)  
-✅ **Table IDs**: Can be hardcoded (not sensitive - they're just references)
-
-**Recommendation**: Keep table IDs in code, only move API key and Base ID to env vars.
-
+If it returns `success: true` with records, you're all set! 🎉
