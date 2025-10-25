@@ -46,10 +46,13 @@ BEGIN
         AND table_name = 'usernames' 
         AND column_name = 'user_name'
     ) THEN
+        -- Add as nullable first
         ALTER TABLE public.usernames 
-        ADD COLUMN user_name TEXT NOT NULL;
+        ADD COLUMN user_name TEXT;
         
         RAISE NOTICE 'Added user_name column';
+    ELSE
+        RAISE NOTICE 'user_name column already exists';
     END IF;
 END $$;
 
