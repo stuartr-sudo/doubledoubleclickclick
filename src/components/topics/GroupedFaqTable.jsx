@@ -261,16 +261,16 @@ export default function GroupedFaqTable({ rows = [], tableId, options, handleUpd
                           <Select
                             value={fields["Flash Template"] || "None"}
                             onValueChange={(value) => handleUpdate(tableId, row.id, "Flash Template", value)}>
-                            <SelectTrigger className="h-7 text-xs bg-white border-slate-300 hover:bg-slate-50 focus:ring-2 focus:ring-indigo-500">
+                            <SelectTrigger className="w-full justify-between bg-white border-slate-300 text-slate-900 hover:bg-slate-50 focus:ring-2 focus:ring-indigo-500 h-8 text-sm px-3">
                               <SelectValue placeholder="Select template..." />
                             </SelectTrigger>
-                            <SelectContent className="bg-white border border-slate-200">
-                              <SelectItem value="None" className="text-xs hover:bg-slate-100">None</SelectItem>
-                              <SelectItem value="Product Review" className="text-xs hover:bg-slate-100">📦 Product Review</SelectItem>
-                              <SelectItem value="How-To Guide" className="text-xs hover:bg-slate-100">🛠️ How-To Guide</SelectItem>
-                              <SelectItem value="Listicle" className="text-xs hover:bg-slate-100">📝 Listicle</SelectItem>
-                              <SelectItem value="Educational" className="text-xs hover:bg-slate-100">🎓 Educational</SelectItem>
-                              <SelectItem value="News & Blog" className="text-xs hover:bg-slate-100">📰 News & Blog</SelectItem>
+                            <SelectContent className="bg-white border border-slate-200 text-slate-900">
+                              <SelectItem value="None" className="text-sm hover:bg-slate-100">None</SelectItem>
+                              <SelectItem value="Product Review" className="text-sm hover:bg-slate-100">Product Review</SelectItem>
+                              <SelectItem value="How-To Guide" className="text-sm hover:bg-slate-100">How-To Guide</SelectItem>
+                              <SelectItem value="Listicle" className="text-sm hover:bg-slate-100">Listicle</SelectItem>
+                              <SelectItem value="Educational" className="text-sm hover:bg-slate-100">Educational</SelectItem>
+                              <SelectItem value="News & Blog" className="text-sm hover:bg-slate-100">News & Blog</SelectItem>
                             </SelectContent>
                           </Select> :
                           header === "Target Market" ?
