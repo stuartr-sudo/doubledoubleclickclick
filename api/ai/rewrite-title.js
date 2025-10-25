@@ -104,8 +104,9 @@ export default async function handler(req, res) {
       .replace(/\n+/g, ' ')         // Remove newlines
       .trim();
 
-    // Track usage (fire and forget)
+    // Track usage (fire and forget - don't block response)
     supabase.rpc('track_llm_usage', { setting_id: settings.id })
+      .then(() => {})
       .catch(err => console.error('Failed to track usage:', err));
 
     // Return the new title
