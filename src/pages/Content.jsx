@@ -426,6 +426,12 @@ export default function Content() {// Renamed from ContentPage as per original f
 
   // Update filtered items with sorting
   const filtered = useMemo(() => {
+    console.log("🔍 FILTERING:", {
+      selectedUsername,
+      totalItems: items.length,
+      itemUserNames: items.map(it => it.user_name)
+    });
+    
     let result = items.filter((it) => {
       const byUser = selectedUsername === "all" ? true : it.user_name === selectedUsername;
       const byStatus = statusFilter === "all" ? true : it.status === statusFilter;
@@ -441,8 +447,14 @@ export default function Content() {// Renamed from ContentPage as per original f
         }
       }
 
-      return byUser && byStatus && byQuery;
+      const passes = byUser && byStatus && byQuery;
+      if (!passes && selectedUsername !== "all") {
+        console.log("❌ Item filtered out:", it.title, "user_name:", it.user_name, "byUser:", byUser);
+      }
+      return passes;
     });
+    
+    console.log("✅ Filtered result:", result.length, "items");
 
     // Apply countdown sorting if enabled
     if (sortByCountdown) {
