@@ -64,8 +64,7 @@ export default function MiniMultiSelect({ options = [], value = [], onChange, pl
               <CommandItem
                 key={option.value} // Use option.value as key
                 value={option.value} // Set value for command item search
-                className="relative flex cursor-default select-none items-center text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected='true']:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 my-1 px-3 py-2 rounded-lg border border-slate-600/30 bg-emerald-50/60 text-slate-900 hover:bg-emerald-100 data-[highlighted]:bg-emerald-100 whitespace-normal"
-
+                className="relative flex cursor-default select-none items-center text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected='true']:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 my-1 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 hover:bg-slate-100 data-[highlighted]:bg-slate-100 whitespace-normal"
 
 
 
