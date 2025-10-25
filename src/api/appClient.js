@@ -355,7 +355,28 @@ const app = {
         return res.json();
       }
     }
-  }
+  },
+  functions: new Proxy({}, {
+    get: (target, functionName) => {
+      // Return a function that calls the serverless API endpoint
+      return async (body = {}) => {
+        const endpoint = `/api/${functionName.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')}`;
+        
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: 'Request failed' }));
+          throw new Error(error.error || `HTTP ${res.status}`);
+        }
+        
+        return res.json();
+      };
+    }
+  })
 };
 
 // Export app as both named and default export
