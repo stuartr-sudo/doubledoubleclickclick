@@ -310,7 +310,7 @@ export default function AdminLLMSettings() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   User Prompt Template
                   <span className="ml-2 text-xs text-gray-500">
-                    (Use {{'{'}variable{'}'}} for placeholders)
+                    (Use {'{'}{'{'} variable {'}'} {'}'} for placeholders)
                   </span>
                 </label>
                 {isEditing ? (
