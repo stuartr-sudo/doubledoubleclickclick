@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Zap, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import RunWorkflowModal from "../editor/RunWorkflowModal";
+import FlashTemplateModal from "./FlashTemplateModal";
 import { BlogPost } from "@/api/entities";
 import { WebhookReceived } from "@/api/entities";
 import { toast } from 'sonner';
@@ -61,28 +61,10 @@ const getButtonClass = () => {
     setShowModal(false);
   };
 
-  const handleWorkflowStart = () => {
-    onStatusChange && onStatusChange(item.id, item.type, "running");
-    setShowModal(false);
-  };
-
-  const handleApply = async (updatedHtml, seoData, schemaData) => {
+  const handleTemplateSelect = async (template) => {
     try {
-      const updateData = { content: updatedHtml };
-      if (seoData) {
-        Object.assign(updateData, {
-          meta_title: seoData.meta_title,
-          slug: seoData.slug,
-          meta_description: seoData.meta_description,
-          focus_keyword: seoData.focus_keyword,
-          featured_image: seoData.featured_image,
-          tags: seoData.tags,
-          excerpt: seoData.excerpt
-        });
-      }
-      if (schemaData) {
-        updateData.generated_llm_schema = schemaData;
-      }
+      // Update the item with the selected Flash Template
+      const updateData = { flash_template: template };
       
       if (item.type === "post") {
         await BlogPost.update(item.id, updateData);
@@ -90,19 +72,21 @@ const getButtonClass = () => {
         await WebhookReceived.update(item.id, updateData);
       }
       
-      onStatusChange && onStatusChange(item.id, item.type, "completed");
       setShowModal(false);
-      toast.success("Flash workflow completed and saved!");
+      
+      if (template === "None") {
+        toast.success("Flash template removed.");
+      } else {
+        toast.success(`Flash template set to: ${template}`);
+      }
     } catch (err) {
-      console.error("Failed to save flashed content:", err);
+      console.error("Failed to save flash template:", err);
       
       if (err?.response?.status === 429) {
         toast.error("Rate limit exceeded. Please wait a moment and try again.");
       } else {
-        toast.error("Flash completed but failed to save changes");
+        toast.error("Failed to save flash template");
       }
-      
-      onStatusChange && onStatusChange(item.id, item.type, "failed");
     }
   };
 
@@ -153,16 +137,11 @@ const getButtonClass = () => {
       </button>
 
       {showModal && (
-        <RunWorkflowModal
+        <FlashTemplateModal
           isOpen={showModal}
           onClose={handleModalClose}
-          currentHtml={item.content || ""}
-          onApply={handleApply}
-          onWorkflowStart={handleWorkflowStart}
-          userName={item.user_name}
-          itemId={item.id}
-          itemType={item.type}
-          backgroundMode={true}
+          onSelect={handleTemplateSelect}
+          currentTemplate={item.flash_template || "None"}
         />
       )}
     </>
