@@ -132,6 +132,11 @@ END $$;
 -- ENUMS
 -- ============================================================================
 
+-- Drop existing ENUMs if they exist
+DROP TYPE IF EXISTS content_status CASCADE;
+DROP TYPE IF EXISTS flash_status CASCADE;
+DROP TYPE IF EXISTS user_role CASCADE;
+
 CREATE TYPE content_status AS ENUM ('draft', 'published', 'archived', 'scheduled');
 CREATE TYPE flash_status AS ENUM ('idle', 'running', 'completed', 'failed');
 CREATE TYPE user_role AS ENUM ('user', 'admin', 'superadmin');
