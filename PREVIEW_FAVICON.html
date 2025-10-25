@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoubleClick Favicon Preview</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 60px;
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1a202c;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 50px;
+            font-size: 1.1rem;
+        }
+        
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .preview-item {
+            text-align: center;
+        }
+        
+        .icon-container {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+        }
+        
+        .icon-container.dark {
+            background: #2d3748;
+        }
+        
+        .icon-label {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .icon-size {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+        
+        .features {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+        
+        .features h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .feature-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .feature-list li {
+            padding: 12px 12px 12px 40px;
+            background: white;
+            border-radius: 8px;
+            position: relative;
+            color: #4a5568;
+        }
+        
+        .feature-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 12px;
+            color: #48bb78;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .note {
+            background: #edf2f7;
+            border-left: 4px solid #4299e1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        
+        .note h3 {
+            color: #2c5282;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .note p {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+        
+        .note code {
+            background: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #2c5282;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 DoubleClick Favicon</h1>
+        <p class="subtitle">Custom double-click icon with animated indicators</p>
+        
+        <div class="preview-grid">
+            <div class="preview-item">
+                <div class="icon-container">
+                    <img src="/favicon.svg" width="64" height="64" alt="64x64">
+                </div>
+                <div class="icon-label">Large (64x64)</div>
+                <div class="icon-size">Tab icons, bookmarks</div>
+            </div>
+            
+            <div class="preview-item">
+                <div class="icon-container">
+                    <img src="/favicon.svg" width="32" height="32" alt="32x32">
+                </div>
+                <div class="icon-label">Standard (32x32)</div>
+                <div class="icon-size">Browser tabs</div>
+            </div>
+            
+            <div class="preview-item">
+                <div class="icon-container">
+                    <img src="/favicon.svg" width="16" height="16" alt="16x16">
+                </div>
+                <div class="icon-label">Small (16x16)</div>
+                <div class="icon-size">Favicon standard</div>
+            </div>
+            
+            <div class="preview-item">
+                <div class="icon-container dark">
+                    <img src="/favicon.svg" width="64" height="64" alt="64x64 dark">
+                </div>
+                <div class="icon-label">Dark Background</div>
+                <div class="icon-size">How it looks on dark</div>
+            </div>
+        </div>
+        
+        <div class="features">
+            <h2>✨ Features</h2>
+            <ul class="feature-list">
+                <li>Two overlapping cursors showing "double click"</li>
+                <li>Blue to purple gradient background</li>
+                <li>Animated click indicator rings</li>
+                <li>SVG format (scales perfectly)</li>
+                <li>Professional and memorable</li>
+                <li>Works on light and dark backgrounds</li>
+            </ul>
+        </div>
+        
+        <div class="note">
+            <h3>📋 How to Use</h3>
+            <p>
+                <strong>The favicon is already set up!</strong> Your <code>index.html</code> references 
+                <code>/favicon.svg</code> which will automatically use this new design. 
+                Once deployed, you'll see it in your browser tab, bookmarks, and when you share links.
+            </p>
+        </div>
+        
+        <div class="note" style="margin-top: 20px;">
+            <h3>🔧 User Management Fix</h3>
+            <p>
+                <strong>To fix the user management issue:</strong><br>
+                1. Open Supabase Dashboard → SQL Editor<br>
+                2. Run <code>FIX_USER_PROFILES.sql</code><br>
+                3. This will create the <code>user_profiles</code> table and auto-sync all auth users<br>
+                4. Future signups will automatically create profiles
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+
