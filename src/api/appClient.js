@@ -162,8 +162,18 @@ const app = {
         .toLowerCase()
         .replace(/^_/, '');
       
-      // Only add 's' if it doesn't already end with 's'
-      if (!tableName.endsWith('s')) {
+      // Special case mapping for irregular plurals or already-plural tables
+      const tableNameOverrides = {
+        'webhook_received': 'webhook_received', // Already singular in DB
+        'user_profile': 'user_profiles',
+        'blog_post': 'blog_posts',
+        'username': 'usernames'
+      };
+      
+      if (tableNameOverrides[tableName]) {
+        tableName = tableNameOverrides[tableName];
+      } else if (!tableName.endsWith('s')) {
+        // Only add 's' if it doesn't already end with 's'
         tableName += 's';
       }
       
