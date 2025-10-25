@@ -959,6 +959,13 @@ export async function createTestBlogPosts() {
       throw new Error('User not authenticated');
     }
     
+    // Get the first assigned username or use a default
+    const assignedUsernames = user.assigned_usernames || [];
+    const username = assignedUsernames.length > 0 ? assignedUsernames[0] : (user.email || 'admin');
+    
+    console.log(`Creating test posts for username: ${username}`);
+    console.log(`Available usernames:`, assignedUsernames);
+    
     const createdPosts = [];
     
     for (const postData of testBlogPosts) {
@@ -967,7 +974,7 @@ export async function createTestBlogPosts() {
         title: postData.title,
         content: postData.content,
         status: postData.status,
-        user_name: user.email || user.full_name || 'admin'
+        user_name: username // Use assigned username
       };
       
       // Add optional fields with correct column names
@@ -977,7 +984,7 @@ export async function createTestBlogPosts() {
       
       const createdPost = await BlogPost.create(blogPost);
       createdPosts.push(createdPost);
-      console.log(`✅ Created blog post: "${createdPost.title}"`);
+      console.log(`✅ Created blog post: "${createdPost.title}" for username: ${username}`);
     }
     
     console.log(`🎉 Successfully created ${createdPosts.length} test blog posts`);
