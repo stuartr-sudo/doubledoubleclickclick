@@ -517,37 +517,9 @@ function LayoutContent({ children, currentPageName }) {
         setUser(fetchedUser);
         setIsSuperadmin(!!fetchedUser?.is_superadmin);
 
-        // --- UPDATED ONBOARDING REDIRECTION LOGIC ---
-        const hasCompletedWelcome = fetchedUser.completed_tutorial_ids?.includes("welcome_onboarding");
-        const hasCompletedGettingStarted = fetchedUser.completed_tutorial_ids?.includes("getting_started_scrape");
-
-        // Define pages that are exceptions to the redirection rules
-        const redirectExceptions = ['post-payment', 'AccountSettings', 'Contact', 'Affiliate'];
-
-        if (!redirectExceptions.includes(currentPageName)) {
-          // NEW SCENARIO: User hasn't completed welcome → Welcome page
-          if (!hasCompletedWelcome && currentPageName !== 'Welcome') {
-            setIsRedirecting(true);
-            navigate(createPageUrl('Welcome'));
-            return;
-          }
-          
-          // NEW SCENARIO: User completed welcome but not getting started → GettingStarted page
-          if (hasCompletedWelcome && !hasCompletedGettingStarted && currentPageName !== 'GettingStarted') {
-            setIsRedirecting(true);
-            navigate(createPageUrl('GettingStarted'));
-            return;
-          }
-        }
-        
-        // Scenario: Fully onboarded user tries to access Welcome or GettingStarted → redirect to Dashboard
-        if (hasCompletedWelcome && hasCompletedGettingStarted) {
-          if (currentPageName === 'Welcome' || currentPageName === 'GettingStarted') {
-            setIsRedirecting(true);
-            navigate(createPageUrl('Dashboard'));
-            return;
-          }
-        }
+        // --- ONBOARDING DISABLED ---
+        // No more forced onboarding flow
+        // Users go directly to Dashboard after login
 
         // If we reach here, no redirect is needed, so navigation can be shown
         setNavReady(true);
