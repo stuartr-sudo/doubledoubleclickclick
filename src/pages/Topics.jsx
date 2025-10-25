@@ -35,6 +35,7 @@ import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
 import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal";
 import { callPromptWebhook } from "@/api/functions";
 import app from "@/api/appClient";
+import { useFlashAutoTrigger } from "@/components/hooks/useFlashAutoTrigger";
 
 // --- Configuration ---
 const TABLE_IDS = {
@@ -210,6 +211,9 @@ export default function TopicsPage() {
   const [checkingTopicsGate, setCheckingTopicsGate] = React.useState(true);
   const [topicsGateSatisfied, setTopicsGateSatisfied] = React.useState(true);
   const [showOnboarding, setShowOnboarding] = React.useState(false);
+
+  // Enable Flash Auto-Trigger: watches keywordRows for new content + Flash Template
+  useFlashAutoTrigger(keywordRows, selectedUsername);
 
   const [onboardingCompletionTime, setOnboardingCompletionTime] = useState(null);
   const [onboardingTimeRemaining, setOnboardingTimeRemaining] = useState(0);
