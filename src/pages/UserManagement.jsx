@@ -201,7 +201,10 @@ export default function UserManagement() {
       const me = await User.me();
       setCurrentUser(me);
 
-      if (me.role === "admin") {
+      // Check if user is admin OR superadmin
+      const isAdminUser = me.role === "admin" || me.role === "superadmin" || me.is_superadmin;
+      
+      if (isAdminUser) {
         const [allUsers, allUsernames, creds, crm] = await Promise.all([
           User.list(),
           Username.list("-created_date").catch(() => []),
@@ -213,9 +216,13 @@ export default function UserManagement() {
         setUsernames(allUsernames);
         setIntegrationCreds(creds);
         setCrmCreds(crm);
+      } else {
+        console.warn("User is not an admin. Role:", me.role, "is_superadmin:", me.is_superadmin);
+        toast.error("You must be an admin to access user management.");
       }
     } catch (e) {
-      toast.error("You must be logged in to manage users.");
+      console.error("Error loading user management data:", e);
+      toast.error("Failed to load user management data. Please check console for details.");
     }
     setIsLoading(false);
   };
