@@ -197,7 +197,7 @@ export default function TopicsPage() {
 
   const selectedUsername = useWorkspaceScoping ? globalUsername : localSelectedUsername;
 
-  const isInitialDataLoadSuppressed = useRef(true);
+  const isInitialDataLoadSuppressed = useRef(false);
 
   const [loadingQuestions, setLoadingQuestions] = useState({});
 
