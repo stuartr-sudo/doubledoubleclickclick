@@ -55,8 +55,12 @@ BEGIN
         AND column_name = 'completed_tutorial_ids';
         
         -- Handle both JSONB and TEXT[] types
-        IF usernames_type = 'jsonb' THEN
+        RAISE NOTICE 'Detected assigned_usernames type: %', usernames_type;
+        RAISE NOTICE 'Detected completed_tutorial_ids type: %', tutorial_ids_type;
+        
+        IF usernames_type = 'jsonb' OR usernames_type LIKE '%json%' THEN
             -- Old schema with JSONB
+            RAISE NOTICE 'Using JSONB conversion path';
             CREATE TEMP TABLE user_backup AS
             SELECT 
                 id,
@@ -78,8 +82,9 @@ BEGIN
                 created_at
             FROM public.user_profiles
             WHERE is_superadmin = true OR role::TEXT IN ('admin', 'superadmin');
-        ELSE
+        ELSIF usernames_type = 'ARRAY' OR usernames_type LIKE '%text[]%' THEN
             -- New schema with TEXT[]
+            RAISE NOTICE 'Using TEXT[] path';
             CREATE TEMP TABLE user_backup AS
             SELECT 
                 id,
@@ -89,6 +94,22 @@ BEGIN
                 COALESCE(is_superadmin, false) as is_superadmin,
                 COALESCE(assigned_usernames, ARRAY[]::TEXT[]) as assigned_usernames,
                 COALESCE(completed_tutorial_ids, ARRAY[]::TEXT[]) as completed_tutorial_ids,
+                COALESCE(token_balance, 20) as token_balance,
+                created_at
+            FROM public.user_profiles
+            WHERE is_superadmin = true OR role::TEXT IN ('admin', 'superadmin');
+        ELSE
+            -- Fallback: try to handle dynamically
+            RAISE NOTICE 'Using dynamic fallback (type: %)', usernames_type;
+            CREATE TEMP TABLE user_backup AS
+            SELECT 
+                id,
+                email,
+                full_name,
+                COALESCE(role::TEXT, 'user') as role,
+                COALESCE(is_superadmin, false) as is_superadmin,
+                COALESCE(assigned_usernames::TEXT[], ARRAY[]::TEXT[]) as assigned_usernames,
+                COALESCE(completed_tutorial_ids::TEXT[], ARRAY[]::TEXT[]) as completed_tutorial_ids,
                 COALESCE(token_balance, 20) as token_balance,
                 created_at
             FROM public.user_profiles
