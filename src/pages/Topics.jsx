@@ -208,9 +208,9 @@ export default function TopicsPage() {
 
   const isFetchingRef = useRef(false);
 
-  const [checkingTopicsGate, setCheckingTopicsGate] = React.useState(true);
-  const [topicsGateSatisfied, setTopicsGateSatisfied] = React.useState(true);
-  const [showOnboarding, setShowOnboarding] = React.useState(false);
+  const [checkingTopicsGate, setCheckingTopicsGate] = React.useState(false); // DISABLED
+  const [topicsGateSatisfied, setTopicsGateSatisfied] = React.useState(true); // ALWAYS TRUE
+  const [showOnboarding, setShowOnboarding] = React.useState(false); // NEVER SHOW
 
   // Enable Flash Auto-Trigger: watches keywordRows for new content + Flash Template
   useFlashAutoTrigger(keywordRows, selectedUsername);
@@ -385,39 +385,12 @@ export default function TopicsPage() {
     getInitialData();
   }, [useWorkspaceScoping, globalUsernames]);
 
+  // DISABLED: Topics onboarding modal completely removed
   React.useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const me = await User.me().catch(() => null);
-        const uname = selectedUsername || null;
-
-        if (!me || !uname) {
-          if (isMounted) {
-            setTopicsGateSatisfied(true);
-            setShowOnboarding(false);
-            setCheckingTopicsGate(false);
-          }
-          return;
-        }
-
-        const doneForThis = Array.isArray(me.topics) && me.topics.includes(uname);
-
-        if (isMounted) {
-          setTopicsGateSatisfied(doneForThis);
-          setShowOnboarding(!doneForThis);
-          setCheckingTopicsGate(false);
-        }
-      } catch (e) {
-        console.error("Error checking topics gate:", e);
-        if (isMounted) {
-          setTopicsGateSatisfied(true);
-          setShowOnboarding(false);
-          setCheckingTopicsGate(false);
-        }
-      }
-    })();
-    return () => {isMounted = false;};
+    // Always satisfied, never show onboarding
+    setTopicsGateSatisfied(true);
+    setShowOnboarding(false);
+    setCheckingTopicsGate(false);
   }, [selectedUsername]);
 
   useEffect(() => {
