@@ -106,12 +106,13 @@ BEGIN
     RAISE NOTICE '';
     
     -- Show posts
-    FOR r IN 
+    FOR r IN (
         SELECT id, title, user_name, status, created_date
         FROM public.blog_posts
         WHERE user_name = 'devstuartr'
         ORDER BY created_date DESC
         LIMIT 10
+    )
     LOOP
         RAISE NOTICE '- % (%) - %', r.title, r.status, r.user_name;
     END LOOP;
@@ -130,12 +131,13 @@ BEGIN
     RAISE NOTICE 'Posts matching assigned_usernames: %', post_count;
     RAISE NOTICE '';
     
-    FOR r IN 
+    FOR r IN (
         SELECT user_name, COUNT(*) as count
         FROM public.blog_posts
         WHERE user_name = ANY(test_usernames)
         GROUP BY user_name
         ORDER BY count DESC
+    )
     LOOP
         RAISE NOTICE '  %: % posts', r.user_name, r.count;
     END LOOP;
