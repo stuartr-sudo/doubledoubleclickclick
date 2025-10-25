@@ -32,65 +32,32 @@ BEGIN
     RAISE NOTICE '========================================';
 END $$;
 
--- Create temporary backup table for your user profile
--- Simple approach: Use CASE to handle both JSONB and TEXT[]
-DO $$
-BEGIN
-    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'user_profiles') THEN
-        CREATE TEMP TABLE user_backup AS
-        SELECT 
-            id,
-            email,
-            full_name,
-            COALESCE(role::TEXT, 'user') as role,
-            COALESCE(is_superadmin, false) as is_superadmin,
-            -- Universal conversion: works for both JSONB and TEXT[]
-            CASE 
-                WHEN pg_typeof(assigned_usernames)::TEXT = 'jsonb' THEN 
-                    ARRAY(SELECT jsonb_array_elements_text(assigned_usernames))
-                WHEN assigned_usernames IS NOT NULL THEN 
-                    assigned_usernames
-                ELSE 
-                    ARRAY[]::TEXT[]
-            END as assigned_usernames,
-            CASE 
-                WHEN pg_typeof(completed_tutorial_ids)::TEXT = 'jsonb' THEN 
-                    ARRAY(SELECT jsonb_array_elements_text(completed_tutorial_ids))
-                WHEN completed_tutorial_ids IS NOT NULL THEN 
-                    completed_tutorial_ids
-                ELSE 
-                    ARRAY[]::TEXT[]
-            END as completed_tutorial_ids,
-            COALESCE(token_balance, 20) as token_balance,
-            created_at
-        FROM public.user_profiles
-        WHERE is_superadmin = true OR role::TEXT IN ('admin', 'superadmin');
-    ELSE
-        -- Create empty backup table if no user_profiles exists
-        CREATE TEMP TABLE user_backup (
-            id UUID,
-            email TEXT,
-            full_name TEXT,
-            role TEXT,
-            is_superadmin BOOLEAN,
-            assigned_usernames TEXT[],
-            completed_tutorial_ids TEXT[],
-            token_balance INTEGER,
-            created_at TIMESTAMPTZ
-        );
-    END IF;
-END $$;
+-- Create empty backup table - you'll manually re-add your account after
+-- This avoids all the type conversion issues with the broken old schema
+CREATE TEMP TABLE user_backup (
+    id UUID,
+    email TEXT,
+    full_name TEXT,
+    role TEXT,
+    is_superadmin BOOLEAN,
+    assigned_usernames TEXT[],
+    completed_tutorial_ids TEXT[],
+    token_balance INTEGER,
+    created_at TIMESTAMPTZ
+);
+
+-- MANUAL STEP: After rebuild completes, you'll need to:
+-- 1. Sign up again (or we can insert your account manually)
+-- 2. Promote yourself to superadmin
+-- 3. Create your usernames
+--
+-- This is cleaner than fighting the broken schema type mismatches.
 
 DO $$
-DECLARE
-    backup_count INTEGER;
 BEGIN
-    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'pg_temp' AND tablename LIKE 'user_backup%') THEN
-        SELECT COUNT(*) INTO backup_count FROM user_backup;
-        RAISE NOTICE '✅ Backed up % admin user(s)', backup_count;
-    ELSE
-        RAISE NOTICE '⚠️  No existing user_profiles table found - starting fresh';
-    END IF;
+    RAISE NOTICE '⚠️  Skipping backup due to schema incompatibilities';
+    RAISE NOTICE '📝 You will need to recreate your user account after rebuild';
+    RAISE NOTICE '💡 Tip: Keep your email/password ready for signup';
 END $$;
 
 -- ============================================================================
@@ -943,77 +910,24 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- STEP 7: RESTORE USER DATA
+-- STEP 7: SKIP RESTORE (No backup due to schema issues)
 -- ============================================================================
 
 DO $$
 BEGIN
     RAISE NOTICE '';
     RAISE NOTICE '========================================';
-    RAISE NOTICE '📥 STEP 7: RESTORING USER DATA';
+    RAISE NOTICE '⏭️  STEP 7: SKIPPING USER RESTORE';
     RAISE NOTICE '========================================';
-END $$;
-
--- Restore user profiles from backup
-INSERT INTO public.user_profiles (
-    id,
-    email,
-    full_name,
-    role,
-    is_superadmin,
-    assigned_usernames,
-    completed_tutorial_ids,
-    token_balance,
-    created_date
-)
-SELECT 
-    ub.id,
-    ub.email,
-    ub.full_name,
-    CASE 
-        WHEN ub.role IN ('user', 'admin', 'superadmin') THEN ub.role::user_role
-        ELSE 'user'::user_role
-    END as role,
-    ub.is_superadmin,
-    ub.assigned_usernames,
-    ub.completed_tutorial_ids,
-    ub.token_balance,
-    ub.created_at
-FROM user_backup ub
-ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    full_name = EXCLUDED.full_name,
-    role = EXCLUDED.role,
-    is_superadmin = EXCLUDED.is_superadmin,
-    assigned_usernames = EXCLUDED.assigned_usernames,
-    completed_tutorial_ids = EXCLUDED.completed_tutorial_ids,
-    token_balance = EXCLUDED.token_balance;
-
-DO $$
-DECLARE
-    restored_count INTEGER;
-BEGIN
-    SELECT COUNT(*) INTO restored_count FROM public.user_profiles;
-    RAISE NOTICE '✅ Restored % user profile(s)', restored_count;
-END $$;
-
--- Create username entries for restored users
-INSERT INTO public.usernames (user_name, display_name, assigned_to, is_active)
-SELECT 
-    DISTINCT unnest(assigned_usernames) as user_name,
-    unnest(assigned_usernames) as display_name,
-    id as assigned_to,
-    true as is_active
-FROM user_backup
-WHERE array_length(assigned_usernames, 1) > 0
-ON CONFLICT (user_name) DO NOTHING;
-
-DO $$
-DECLARE
-    username_count INTEGER;
-BEGIN
-    SELECT COUNT(*) INTO username_count FROM public.usernames;
-    RAISE NOTICE '✅ Created % username(s)/workspace(s)', username_count;
+    RAISE NOTICE '';
+    RAISE NOTICE '⚠️  Your old user data was NOT restored';
+    RAISE NOTICE '📝 After this script completes:';
+    RAISE NOTICE '   1. Go to your app and sign up with your email';
+    RAISE NOTICE '   2. Run this SQL to make yourself superadmin:';
+    RAISE NOTICE '      UPDATE user_profiles SET role = ''superadmin'', is_superadmin = true';
+    RAISE NOTICE '      WHERE email = ''your@email.com'';';
+    RAISE NOTICE '   3. Create your workspaces in User Management';
+    RAISE NOTICE '';
 END $$;
 
 -- ============================================================================
