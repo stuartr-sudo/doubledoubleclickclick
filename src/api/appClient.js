@@ -168,11 +168,24 @@ const app = {
       }
       
       return {
-        filter: async (filters = {}) => {
+        filter: async (filters = {}, orderBy = null) => {
           let query = supabase.from(tableName).select('*');
           Object.entries(filters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) query = query.eq(key, value);
+            if (value !== undefined && value !== null) {
+              // Handle arrays with .in() instead of .eq()
+              if (Array.isArray(value)) {
+                query = query.in(key, value);
+              } else {
+                query = query.eq(key, value);
+              }
+            }
           });
+          // Handle orderBy if provided (e.g., "-updated_date")
+          if (orderBy) {
+            const desc = orderBy.startsWith('-');
+            const field = desc ? orderBy.slice(1) : orderBy;
+            query = query.order(field, { ascending: !desc });
+          }
           const { data, error } = await query;
           if (error) throw error;
           return data || [];
