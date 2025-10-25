@@ -635,13 +635,13 @@ export default function TopicsPage() {
     return () => clearTimeout(t);
   }, [activeTab, faqRows, loadingData, focusQuestion, searchQuery]);
 
-  const isComplete = (fields) => {
+  const isComplete = useCallback((fields) => {
     const tm = fields?.["Target Market"] || [];
     const ppKey = getLinkedProductFieldName(fields || {});
     const pp = fields?.[ppKey] || [];
     return Array.isArray(tm) && tm.length > 0 &&
     Array.isArray(pp) && pp.length > 0;
-  };
+  }, []);
 
   const { consumeTokensForFeature } = useTokenConsumption();
 
@@ -1121,7 +1121,7 @@ export default function TopicsPage() {
       rows = rows.filter((r) => r.__manualAdded);
     }
     return rows;
-  }, [keywordRows, searchQuery, showSelectedOnly, showCompleteOnly, showManualOnly]);
+  }, [keywordRows, searchQuery, showSelectedOnly, showCompleteOnly, showManualOnly, isComplete]);
 
   const filteredFaqRows = React.useMemo(() => {
     if (!Array.isArray(faqRows)) return [];
