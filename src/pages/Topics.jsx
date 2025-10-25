@@ -569,23 +569,14 @@ export default function TopicsPage() {
 
   useEffect(() => {
     if (selectedUsername && topicsGateSatisfied) {
-      const suppressCurrentLoad = useWorkspaceScoping && isInitialDataLoadSuppressed.current && onboardingTimeRemaining === 0;
-
-      if (suppressCurrentLoad) {
-        console.log("TopicsPage: Suppressing initial data load for workspace user.");
-        setLoadingData(false);
-        setKeywordRows([]);
-        setFaqRows([]);
-      } else {
-        loadDataForUser(selectedUsername);
-      }
+      // ALWAYS load data when username is selected - NO SUPPRESSION
+      loadDataForUser(selectedUsername);
     } else if (!selectedUsername) {
       setKeywordRows([]);
       setFaqRows([]);
       setLoadingData(false);
     }
-    isInitialDataLoadSuppressed.current = false;
-  }, [selectedUsername, loadDataForUser, useWorkspaceScoping, topicsGateSatisfied, onboardingTimeRemaining]);
+  }, [selectedUsername, loadDataForUser, topicsGateSatisfied]);
 
   const handleUsernameSelect = React.useCallback((username) => {
     setLocalSelectedUsername(username);
