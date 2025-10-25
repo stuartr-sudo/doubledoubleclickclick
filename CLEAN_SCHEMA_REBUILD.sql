@@ -929,19 +929,19 @@ INSERT INTO public.user_profiles (
     created_date
 )
 SELECT 
-    id,
-    email,
-    full_name,
+    ub.id,
+    ub.email,
+    ub.full_name,
     CASE 
-        WHEN role IN ('user', 'admin', 'superadmin') THEN role::user_role
+        WHEN ub.role IN ('user', 'admin', 'superadmin') THEN ub.role::user_role
         ELSE 'user'::user_role
     END as role,
-    is_superadmin,
-    assigned_usernames,
-    completed_tutorial_ids,
-    token_balance,
-    created_date
-FROM user_backup
+    ub.is_superadmin,
+    ub.assigned_usernames,
+    ub.completed_tutorial_ids,
+    ub.token_balance,
+    ub.created_at
+FROM user_backup ub
 ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     full_name = EXCLUDED.full_name,
