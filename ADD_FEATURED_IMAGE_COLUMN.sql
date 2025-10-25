@@ -23,15 +23,19 @@ END $$;
 -- Refresh PostgREST schema cache
 NOTIFY pgrst, 'reload schema';
 
--- Verify
+-- Verify and show success message
+DO $$
+BEGIN
+  RAISE NOTICE '========================================';
+  RAISE NOTICE '✅ FEATURED IMAGE COLUMN READY';
+  RAISE NOTICE 'Autosave should now work without errors!';
+  RAISE NOTICE '========================================';
+END $$;
+
+-- Show the column details
 SELECT column_name, data_type, is_nullable
 FROM information_schema.columns
 WHERE table_schema = 'public'
   AND table_name = 'blog_posts'
   AND column_name = 'featured_image';
-
-RAISE NOTICE '========================================';
-RAISE NOTICE '✅ FEATURED IMAGE COLUMN READY';
-RAISE NOTICE 'Autosave should now work without errors!';
-RAISE NOTICE '========================================';
 
