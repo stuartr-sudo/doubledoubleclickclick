@@ -64,7 +64,7 @@ export default function MiniMultiSelect({ options = [], value = [], onChange, pl
               <CommandItem
                 key={option.value} // Use option.value as key
                 value={option.value} // Set value for command item search
-                className="relative flex cursor-default select-none items-center text-sm outline-none my-1 px-3 py-2 rounded-lg !border !border-slate-200 !bg-white !text-slate-900 hover:!bg-slate-100 data-[highlighted]:!bg-slate-100 whitespace-normal"
+                className="relative flex cursor-default select-none items-center text-sm outline-none my-1 px-3 py-2 rounded-lg !border !border-slate-200 !bg-white !text-slate-900 hover:!bg-slate-100 data-[highlighted]:!bg-slate-100 data-[selected=true]:!bg-white data-[selected=true]:!text-slate-900 whitespace-normal"
 
                 onSelect={(currentValue) => {
                   const newSelection = new Set(value); // Use Set for efficient add/delete
