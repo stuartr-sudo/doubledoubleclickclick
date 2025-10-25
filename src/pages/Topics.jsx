@@ -432,8 +432,8 @@ export default function TopicsPage() {
         const params = { action: "listAll", tableId: tableIdOrName };
         if (formula) params.filterByFormula = formula;
         const response = await airtableSync(params);
-        if (!response.data.success) throw new Error(response.data.error || `Failed to load table ${tableIdOrName}`);
-        return response.data.records || [];
+        if (!response.success) throw new Error(response.error || `Failed to load table ${tableIdOrName}`);
+        return response.records || [];
       };
 
       const sanitizedUsername = username.replace(/'/g, "\\'");
