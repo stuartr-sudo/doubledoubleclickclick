@@ -53,12 +53,13 @@ const GET_QUESTIONS_RATE_LIMIT = {
 
 const KEYWORD_MAP_HEADERS = [
 "Keyword",
+"Flash Template",
 "Get Questions",
 "Search Volume",
 "Actions"];
 
 
-const KEYWORD_MAP_LAYOUT = "2fr 200px 100px 100px";
+const KEYWORD_MAP_LAYOUT = "2fr 180px 200px 100px 100px";
 
 const REQUIRED_FIELDS = ["Target Market", "Promoted Product"];
 
@@ -1884,6 +1885,22 @@ const DataTable = ({ rows, headers, layout, tableId, options, handleUpdate, dens
 
                     }
                       </div> :
+                  header === "Flash Template" ?
+                  <Select
+                    value={fields["Flash Template"] || "None"}
+                    onValueChange={(value) => handleUpdate(tableId, row.id, "Flash Template", value)}>
+                    <SelectTrigger className="w-[160px] h-8 text-xs">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="None">None</SelectItem>
+                      <SelectItem value="Product Review">Product Review</SelectItem>
+                      <SelectItem value="How-To Guide">How-To Guide</SelectItem>
+                      <SelectItem value="Listicle">Listicle</SelectItem>
+                      <SelectItem value="Educational">Educational</SelectItem>
+                      <SelectItem value="News & Blog">News & Blog</SelectItem>
+                    </SelectContent>
+                  </Select> :
                   header === "Get Questions" ?
                   <div className="flex items-center gap-2">
                           <Switch
