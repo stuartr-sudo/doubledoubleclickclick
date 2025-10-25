@@ -814,7 +814,7 @@ export default function TopicsPage() {
       recordId,
       fields: { [finalWriteFieldName]: newValue }
     });
-  }, [currentUser, consumeTokensForFeature]);
+  }, [currentUser, consumeTokensForFeature, isComplete]);
 
   const refreshData = useCallback(() => {
     const cleared = { tm: [], bc: [], pp: [], cacheTime: 0 };
