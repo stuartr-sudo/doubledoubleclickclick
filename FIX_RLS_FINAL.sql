@@ -26,10 +26,10 @@ USING (
     auth.uid() IS NOT NULL
     AND (
         -- Check if post's user_name is in the user's assigned_usernames array
-        user_name = ANY(
-            SELECT assigned_usernames 
-            FROM public.user_profiles 
-            WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM public.user_profiles 
+            WHERE id = auth.uid() 
+            AND user_name = ANY(assigned_usernames)
         )
         -- OR user is superadmin
         OR EXISTS (
@@ -60,10 +60,10 @@ USING (
     auth.uid() IS NOT NULL
     AND (
         -- Check if post's user_name is in the user's assigned_usernames array
-        user_name = ANY(
-            SELECT assigned_usernames 
-            FROM public.user_profiles 
-            WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM public.user_profiles 
+            WHERE id = auth.uid() 
+            AND user_name = ANY(assigned_usernames)
         )
         -- OR user is superadmin
         OR EXISTS (
@@ -86,10 +86,10 @@ USING (
     auth.uid() IS NOT NULL
     AND (
         -- Check if post's user_name is in the user's assigned_usernames array
-        user_name = ANY(
-            SELECT assigned_usernames 
-            FROM public.user_profiles 
-            WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM public.user_profiles 
+            WHERE id = auth.uid() 
+            AND user_name = ANY(assigned_usernames)
         )
         -- OR user is superadmin
         OR EXISTS (
