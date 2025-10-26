@@ -111,14 +111,33 @@ export default function BalanceTopUp() {
     };
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     setIsLoading(true);
     try {
+      // DEBUG: Log what we're fetching
+      console.log('🔄 Loading user data...');
+      
       const fetchedUser = await User.me();
+      
+      // DEBUG: Log the fetched data
+      console.log('👤 User data loaded:', {
+        email: fetchedUser.email,
+        account_balance: fetchedUser.account_balance,
+        balance_type: typeof fetchedUser.account_balance
+      });
+      
       setUser(fetchedUser);
-      setCurrentBalance(parseFloat(fetchedUser.account_balance) || 0);
+      const balance = parseFloat(fetchedUser.account_balance) || 0;
+      setCurrentBalance(balance);
+      
+      // DEBUG: Log the parsed balance
+      console.log('💰 Parsed balance:', balance);
+      
+      if (forceRefresh) {
+        toast.success(`Balance refreshed: $${balance.toFixed(2)}`);
+      }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('❌ Error loading user data:', error);
       toast.error("Failed to load account data. Please try again later.");
     } finally {
       setIsLoading(false);
@@ -233,6 +252,14 @@ export default function BalanceTopUp() {
                 <p className="text-4xl font-bold text-slate-900">
                   ${currentBalance.toFixed(2)}
                 </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => loadData(true)}
+                  className="mt-2 text-xs text-indigo-600 hover:text-indigo-700"
+                >
+                  🔄 Refresh Balance
+                </Button>
               </div>
               <Coins className="h-16 w-16 text-indigo-600 opacity-50" />
             </div>
