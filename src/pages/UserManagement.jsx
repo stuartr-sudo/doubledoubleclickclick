@@ -440,23 +440,24 @@ export default function UserManagement() {
     setIsSavingPermsMap((prev) => ({ ...prev, [u.id]: false }));
   };
 
-  const updateUserTokens = async (u, newBalance) => {
+  const updateUserBalance = async (u, newBalance) => {
     if (!isAdmin) return;
-    const parsed = Number(newBalance);
+    const parsed = parseFloat(newBalance);
     if (!Number.isFinite(parsed) || parsed < 0) {
       toast.error("Please enter a valid non-negative number.");
       return;
     }
-    if (u.token_balance === parsed) return;
+    const currentBalance = parseFloat(u.account_balance) || 0;
+    if (currentBalance === parsed) return;
 
     setIsSavingTokensMap((prev) => ({ ...prev, [u.id]: true }));
     try {
-      await User.update(u.id, { token_balance: parsed });
-      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, token_balance: parsed } : x));
-      toast.success(`Updated tokens for ${u.full_name || u.email}`);
+      await User.update(u.id, { account_balance: parsed });
+      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, account_balance: parsed } : x));
+      toast.success(`Updated balance for ${u.full_name || u.email} to $${parsed.toFixed(2)}`);
     } catch (e) {
-      console.error("Failed to update token balance:", e);
-      toast.error("Failed to update token balance.");
+      console.error("Failed to update account balance:", e);
+      toast.error("Failed to update account balance.");
     }
     setIsSavingTokensMap((prev) => ({ ...prev, [u.id]: false }));
   };
@@ -1039,7 +1040,7 @@ export default function UserManagement() {
                               </div>
                             </div>
 
-                            {/* Department + Tokens */}
+                            {/* Department + Account Balance */}
                             <div className="grid gap-3 min-w-0 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
                               <div className="min-w-0">
                                 <Label className="text-slate-700 text-xs mb-1 block">Department</Label>
@@ -1054,15 +1055,16 @@ export default function UserManagement() {
 
                               </div>
                               <div className="min-w-0">
-                                <Label className="text-slate-700 text-xs mb-1 block">Tokens</Label>
+                                <Label className="text-slate-700 text-xs mb-1 block">Account Balance ($)</Label>
                                 <Input
                                   type="number"
                                   min={0}
-                                  defaultValue={Number(u.token_balance || 0)}
-                                  onBlur={(e) => updateUserTokens(u, e.target.value)}
+                                  step="0.01"
+                                  defaultValue={Number(u.account_balance || 0).toFixed(2)}
+                                  onBlur={(e) => updateUserBalance(u, e.target.value)}
                                   disabled={!isAdmin || !!isSavingTokensMap[u.id]}
                                   className="bg-white border-slate-300 text-slate-900 h-10 w-full min-w-0"
-                                  placeholder="0" />
+                                  placeholder="0.00" />
 
                               </div>
                             </div>

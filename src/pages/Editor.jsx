@@ -31,7 +31,7 @@ import { getVideoStatus } from "@/api/functions";
 import { checkAndConsumeTokens } from "@/api/functions";
 import { callFeatureEndpoint } from "@/api/functions";
 import { Slider } from "@/components/ui/slider";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
 import EditorToolbar from "../components/editor/EditorToolbar";
@@ -1305,7 +1305,7 @@ export default function Editor() {
     return () => clearInterval(interval);
   }, [backgroundJobs, currentPost, currentWebhook, insertContentAtPoint]);
 
-  const { consumeTokensForFeature, consumeTokensOptimistic } = useTokenConsumption();
+  const { consumeBalanceForFeature, consumeBalanceOptimistic } = useBalanceConsumption();
 
   const handleGenerateInfographic = async (config) => {
     // Prevent duplicate submissions
@@ -1314,11 +1314,11 @@ export default function Editor() {
       return;
     }
 
-    // Check and consume tokens BEFORE generation
-    const tokenResult = await consumeTokensForFeature('ai_infographics');
+    // Check and consume balance BEFORE generation
+    const balanceResult = await consumeBalanceForFeature('ai_infographics');
 
-    if (!tokenResult.success) {
-      // Token consumption failed - error already shown by the hook
+    if (!balanceResult.success) {
+      // Balance consumption failed - error already shown by the hook
       return;
     }
 
@@ -1635,8 +1635,8 @@ export default function Editor() {
       return;
     }
 
-    const tokenResult = await consumeTokensForFeature('ai_title_rewrite');
-    if (!tokenResult.success) {
+    const balanceResult = await consumeBalanceForFeature('ai_title_rewrite');
+    if (!balanceResult.success) {
       return;
     }
 

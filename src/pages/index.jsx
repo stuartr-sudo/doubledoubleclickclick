@@ -106,6 +106,8 @@ import Pricing from "./Pricing";
 
 import TokenPacketsTopUp from "./TokenPacketsTopUp";
 
+import BalanceTopUp from "./BalanceTopUp";
+
 import ContentStructureBuilder from "./ContentStructureBuilder";
 
 import CustomTemplateManager from "./CustomTemplateManager";
@@ -267,6 +269,8 @@ const PAGES = {
     Pricing: Pricing,
     
     TokenPacketsTopUp: TokenPacketsTopUp,
+    
+    BalanceTopUp: BalanceTopUp,
     
     ContentStructureBuilder: ContentStructureBuilder,
     
@@ -457,6 +461,10 @@ function PagesContent() {
                 <Route path="/Pricing" element={<Pricing />} />
                 
                 <Route path="/TokenPacketsTopUp" element={<TokenPacketsTopUp />} />
+                
+                <Route path="/BalanceTopUp" element={<BalanceTopUp />} />
+                
+                <Route path="/balance-top-up" element={<BalanceTopUp />} />
                 
                 <Route path="/ContentStructureBuilder" element={<ContentStructureBuilder />} />
                 

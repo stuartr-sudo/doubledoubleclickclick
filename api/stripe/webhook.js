@@ -192,18 +192,93 @@ export default async function handler(req, res) {
         const paymentIntent = event.data.object;
         const userId = paymentIntent.metadata?.user_id;
         const priceId = paymentIntent.metadata?.price_id;
+        const topUpAmount = paymentIntent.metadata?.top_up_amount;
+        const transactionType = paymentIntent.metadata?.transaction_type;
 
         if (!userId) break;
 
-        // Credit tokens for one-time payment
-        if (priceId) {
+        // Handle balance top-up
+        if (transactionType === 'balance_top_up' && topUpAmount) {
+          const amount = parseFloat(topUpAmount);
+          if (amount >= 10) {
+            console.log('[Webhook] Processing balance top-up:', amount, 'for user:', userId);
+            
+            // Get current balance
+            const { data: user, error: fetchError } = await supabase
+              .from('user_profiles')
+              .select('account_balance, processed_stripe_payments')
+              .eq('id', userId)
+              .single();
+
+            if (fetchError) {
+              console.error('[Webhook] Failed to fetch user for top-up:', fetchError);
+              break;
+            }
+
+            // Idempotency check
+            const processed = user.processed_stripe_payments || [];
+            if (processed.includes(paymentIntent.id)) {
+              console.log('[Webhook] Already processed top-up:', paymentIntent.id);
+              break;
+            }
+
+            const currentBalance = parseFloat(user.account_balance) || 0;
+            const newBalance = currentBalance + amount;
+
+            // Credit balance
+            const { error: updateError } = await supabase
+              .from('user_profiles')
+              .update({
+                account_balance: newBalance,
+                processed_stripe_payments: [...processed, paymentIntent.id],
+                last_payment_status: 'paid'
+              })
+              .eq('id', userId);
+
+            if (updateError) {
+              console.error('[Webhook] Failed to credit balance:', updateError);
+              break;
+            }
+
+            // Update top-up record status
+            await supabase
+              .from('balance_top_ups')
+              .update({
+                status: 'completed',
+                completed_at: new Date().toISOString()
+              })
+              .eq('stripe_payment_intent_id', paymentIntent.id);
+
+            // Log transaction
+            await supabase.rpc('log_balance_transaction', {
+              p_user_id: userId,
+              p_transaction_type: 'credit',
+              p_amount: amount,
+              p_balance_before: currentBalance,
+              p_balance_after: newBalance,
+              p_description: `Balance top-up via Stripe`,
+              p_stripe_payment_intent_id: paymentIntent.id,
+              p_metadata: {
+                payment_intent_id: paymentIntent.id,
+                amount: amount,
+                timestamp: new Date().toISOString()
+              }
+            }).then(() => {}).catch(err => {
+              console.error('[Webhook] Failed to log transaction:', err);
+            });
+
+            console.log('[Webhook] Balance credited successfully:', newBalance);
+          }
+        } 
+        // Legacy token crediting (keep for backward compatibility)
+        else if (priceId) {
           const product = await getProductByPriceId(priceId);
           if (product && product.tokens_granted) {
             await creditTokens(userId, product.tokens_granted, paymentIntent.id);
           }
         }
 
-        // Update payment status
+        // Update payment status if not already updated
         await supabase
           .from('user_profiles')
           .update({ last_payment_status: 'paid' })

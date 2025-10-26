@@ -1,0 +1,156 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { userId, featureName } = req.body;
+
+    if (!userId || !featureName) {
+      return res.status(400).json({ error: 'Missing userId or featureName' });
+    }
+
+    // 1. Get the user's current balance
+    const { data: userProfile, error: userError } = await supabase
+      .from('user_profiles')
+      .select('account_balance, is_superadmin, plan_price_id')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userProfile) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // 2. Get the feature flag and its dollar cost
+    const { data: featureFlag, error: flagError } = await supabase
+      .from('feature_flags')
+      .select('flag_name, is_enabled, dollar_cost, required_plan_keys, user_overrides, is_coming_soon')
+      .eq('flag_name', featureName)
+      .single();
+
+    if (flagError || !featureFlag) {
+      return res.status(200).json({ ok: false, code: 'MISSING_FEATURE_KEY', error: 'Feature flag not found' });
+    }
+
+    // 3. Check if feature is enabled
+    if (!featureFlag.is_enabled) {
+      return res.status(200).json({ ok: false, code: 'DISABLED', error: 'Feature is disabled' });
+    }
+
+    // 4. Check if feature is coming soon
+    if (featureFlag.is_coming_soon) {
+      return res.status(200).json({ ok: false, code: 'COMING_SOON', error: 'Feature is coming soon' });
+    }
+
+    // 5. Check user-specific overrides
+    const userOverrides = featureFlag.user_overrides || {};
+    if (typeof userOverrides[userId] === 'boolean' && !userOverrides[userId]) {
+      return res.status(200).json({ ok: false, code: 'DISABLED', error: 'Feature disabled for this user' });
+    }
+
+    // 6. Check plan requirements (superadmins can bypass plan restrictions)
+    if (!userProfile.is_superadmin) {
+      const requiredPlans = featureFlag.required_plan_keys || [];
+      if (Array.isArray(requiredPlans) && requiredPlans.length > 0) {
+        if (!userProfile.plan_price_id) {
+          return res.status(200).json({ ok: false, code: 'DISABLED', error: 'Plan required for this feature' });
+        }
+
+        const { data: userProduct } = await supabase
+          .from('app_products')
+          .select('plan_key')
+          .eq('stripe_price_id', userProfile.plan_price_id)
+          .single();
+
+        if (!userProduct || !requiredPlans.includes(userProduct.plan_key)) {
+          return res.status(200).json({ ok: false, code: 'DISABLED', error: 'Insufficient plan for this feature' });
+        }
+      }
+    }
+
+    // 7. Get dollar cost (default to $0.10 if not set)
+    const dollarCost = parseFloat(featureFlag.dollar_cost) || 0.10;
+
+    // 8. Check if user has enough balance
+    const currentBalance = parseFloat(userProfile.account_balance) || 0;
+    if (currentBalance < dollarCost) {
+      return res.status(200).json({
+        ok: false,
+        code: 'INSUFFICIENT_BALANCE',
+        error: 'Insufficient balance',
+        required: dollarCost,
+        available: currentBalance
+      });
+    }
+
+    // 9. Deduct balance from user's account
+    const newBalance = Math.max(0, currentBalance - dollarCost);
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({ account_balance: newBalance })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Error updating account balance:', updateError);
+      return res.status(500).json({ error: 'Failed to update account balance' });
+    }
+
+    // 10. Log the transaction
+    await supabase.rpc('log_balance_transaction', {
+      p_user_id: userId,
+      p_transaction_type: 'debit',
+      p_amount: dollarCost,
+      p_balance_before: currentBalance,
+      p_balance_after: newBalance,
+      p_description: `Used feature: ${featureName}`,
+      p_feature_used: featureName,
+      p_metadata: {
+        feature_name: featureName,
+        timestamp: new Date().toISOString()
+      }
+    }).then(() => {}).catch(err => {
+      console.error('Failed to log balance transaction:', err);
+    });
+
+    // 11. Log analytics event
+    await supabase
+      .from('analytics_events')
+      .insert({
+        user_id: userId,
+        event_name: 'balance_consumption',
+        properties: {
+          feature: featureName,
+          amount_spent: dollarCost,
+          balance_before: currentBalance,
+          balance_after: newBalance
+        }
+      })
+      .then(() => {}).catch(err => {
+        console.error('Failed to log analytics event:', err);
+      });
+
+    // 12. Return success with ok:true format
+    return res.status(200).json({
+      ok: true,
+      consumed: dollarCost,
+      balance: newBalance,
+      feature_key: featureName
+    });
+
+  } catch (error) {
+    console.error('Balance consumption error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+

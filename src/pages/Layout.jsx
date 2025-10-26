@@ -23,7 +23,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { FeatureFlagProvider, useFeatureFlagData } from "@/components/providers/FeatureFlagProvider";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
-import TokenTopUpBanner from "@/components/common/TokenTopUpBanner";
+import BalanceTopUpBanner from "@/components/common/BalanceTopUpBanner";
 import VideoModal from "@/components/common/VideoModal";
 import { WorkspaceProvider, WorkspaceContext } from "@/components/providers/WorkspaceProvider";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
@@ -337,16 +337,16 @@ function LayoutContent({ children, currentPageName }) {
     defaultEnabled: false
   });
 
-  // Helper: normalize token balance for display (default 20 for brand new users)
-  const getDisplayTokenBalance = (u) => {
-    if (!u) return 0;
-    const v = u.token_balance;
+  // Helper: format account balance for display (default $5.00 for brand new users)
+  const getDisplayBalance = (u) => {
+    if (!u) return '$0.00';
+    const v = u.account_balance;
     if (v === undefined || v === null) {
-      // Brand-new accounts start with 20 tokens (schema default)
-      return 20;
+      // Brand-new accounts start with $5.00 (schema default)
+      return '$5.00';
     }
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? `$${n.toFixed(2)}` : '$0.00';
   };
 
   // NEW: helper to ensure a username exists for current user
@@ -538,7 +538,7 @@ function LayoutContent({ children, currentPageName }) {
     fetchUserAndRedirect();
   }, [location.pathname, navigate, currentPageName]);
 
-  // NEW: Self-heal effect right after user is fetched – fixes race where username/tokens not set yet
+  // NEW: Self-heal effect right after user is fetched – fixes race where username/balance not set yet
   React.useEffect(() => {
     let cancelled = false;
     const runFixes = async () => {
@@ -546,17 +546,17 @@ function LayoutContent({ children, currentPageName }) {
 
       // 1) Ensure a brand username exists
       let u = await ensureUsernameAssigned(user);
-      // 2) Ensure real token balance is persisted (20) for first-time accounts
+      // 2) Ensure account balance is persisted ($5.00) for first-time accounts
       u = await ensureWelcomeTokens(u);
 
       if (!cancelled && u && u.id === user.id) {
-        // Update in-memory user so header/Token Top Up reflect the true balance immediately
+        // Update in-memory user so header/Balance display reflects the true balance immediately
         setUser(u);
-        // Notify listeners that rely on token balance/usernames
+        // Notify listeners that rely on account balance/usernames
         try {
           window.dispatchEvent(new CustomEvent("userUpdated", { detail: { user: u } }));
-          if (typeof u.token_balance === "number") {
-            window.dispatchEvent(new CustomEvent("tokenBalanceUpdated", { detail: { newBalance: u.token_balance } }));
+          if (typeof u.account_balance === "number") {
+            window.dispatchEvent(new CustomEvent("balanceUpdated", { detail: { newBalance: u.account_balance } }));
           }
         } catch (_) {}
       }
@@ -584,15 +584,15 @@ function LayoutContent({ children, currentPageName }) {
     loadTokenHelpVideo();
   }, []);
 
-  // Listen for token balance updates
+  // Listen for balance updates
   useEffect(() => {
-    const handleTokenBalanceUpdate = (event) => {
+    const handleBalanceUpdate = (event) => {
       if (event.detail && typeof event.detail.newBalance === 'number') {
         setUser((prevUser) => {
           if (prevUser) {
             return {
               ...prevUser,
-              token_balance: event.detail.newBalance
+              account_balance: event.detail.newBalance
             };
           }
           return prevUser;
@@ -600,16 +600,19 @@ function LayoutContent({ children, currentPageName }) {
       }
     };
 
-    window.addEventListener('tokenBalanceUpdated', handleTokenBalanceUpdate);
+    // Listen for both old and new event names during transition
+    window.addEventListener('balanceUpdated', handleBalanceUpdate);
+    window.addEventListener('tokenBalanceUpdated', handleBalanceUpdate);
     return () => {
-      window.removeEventListener('tokenBalanceUpdated', handleTokenBalanceUpdate);
+      window.removeEventListener('balanceUpdated', handleBalanceUpdate);
+      window.removeEventListener('tokenBalanceUpdated', handleBalanceUpdate);
     };
   }, []);
 
-  // NEW: feature flag for showing token balance
-  const { enabled: showTokenBalance } = useFeatureFlag("show_token_balance", {
+  // NEW: feature flag for showing account balance
+  const { enabled: showTokenBalance } = useFeatureFlag("show_account_balance", {
     currentUser: user,
-    defaultEnabled: false
+    defaultEnabled: true
   });
 
   const handleLogout = async () => {
@@ -706,22 +709,22 @@ function LayoutContent({ children, currentPageName }) {
 
             {/* User menu and Mobile menu button */}
             <div className="flex items-center gap-4">
-              {/* Token balance pill with help icon */}
+              {/* Account balance pill with help icon */}
               {user && showTokenBalance && navReady &&
               <div className="flex items-center gap-2">
-                <Link to={createPageUrl('TokenPacketsTopUp')}>
+                <Link to={createPageUrl('BalanceTopUp')}>
                   <div
                     className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-800 hover:bg-slate-50 hover:border-slate-300 transition-colors cursor-pointer"
-                    title="Click to top up AI tokens">
+                    title="Click to add funds">
                       <Coins className="w-4 h-4 text-green-500" />
-                      <span>{getDisplayTokenBalance(user)}</span>
+                      <span>{getDisplayBalance(user)}</span>
                     </div>
                   </Link>
                   {tokenHelpVideoUrl && (
                     <button
                       onClick={() => setShowTokenHelpVideo(true)}
                       className="p-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors"
-                      title="Watch token help video"
+                      title="Watch balance help video"
                     >
                       <Video className="w-4 h-4" />
                     </button>
@@ -739,12 +742,12 @@ function LayoutContent({ children, currentPageName }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="bg-white border border-slate-200 text-slate-900 w-56">
-                      {/* NEW: Token balance inside menu for small screens */}
+                      {/* NEW: Account balance inside menu for small screens */}
                       {showTokenBalance &&
                     <DropdownMenuItem disabled className="flex items-center gap-2 opacity-100 md:hidden">
                           <Coins className="w-4 h-4 text-green-500" />
                           <span className="text-slate-700">
-                            Tokens: {getDisplayTokenBalance(user)}
+                            Balance: {getDisplayBalance(user)}
                           </span>
                         </DropdownMenuItem>
                     }
@@ -827,8 +830,8 @@ function LayoutContent({ children, currentPageName }) {
         )}
       </header>
 
-      {/* Token top-up banner (auto-hides if user has tokens) */}
-      <TokenTopUpBanner />
+      {/* Balance top-up banner (auto-hides if user has sufficient balance) */}
+      <BalanceTopUpBanner />
 
       {/* FIXED: Removed `relative z-10` to break the stacking context trapping the AI menu */}
       <main className="flex-1">
