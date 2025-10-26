@@ -29,13 +29,16 @@ export default function BalanceTopUpBanner() {
         const currentBalance = parseFloat(currentUser.account_balance) || 0;
         
         // Only show banner if:
-        // 1. User has less than $1.00 balance
-        // 2. User is NOT new
+        // 1. User has less than $5.00 balance (threshold increased for better UX)
+        // 2. User is NOT new (new users start with $5.00 credit)
         // 3. Banner hasn't been dismissed
+        // Note: Superadmins are excluded from low balance warnings
+        const isSuperadmin = currentUser.is_superadmin || currentUser.role === 'superadmin';
         const shouldShow = (
-          currentBalance < 1.00 &&
+          currentBalance < 5.00 &&
           !isNewUser &&
-          !isDismissed
+          !isDismissed &&
+          !isSuperadmin
         );
         
         setIsVisible(shouldShow);
