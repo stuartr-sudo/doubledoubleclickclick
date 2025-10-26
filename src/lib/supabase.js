@@ -47,7 +47,7 @@ export const getCurrentUser = async () => {
           full_name: session.user.user_metadata?.full_name || session.user.email,
           role: 'user',
           is_superadmin: false,
-          token_balance: 20
+          account_balance: 5.00  // Default $5.00 for new users
         })
         .select()
         .single();
@@ -72,7 +72,7 @@ export const getCurrentUser = async () => {
     is_superadmin: profile?.is_superadmin || false,
     role: profile?.role || 'user',
     assigned_usernames: profile?.assigned_usernames || [],
-    token_balance: profile?.token_balance || 20,
+    account_balance: profile?.account_balance !== undefined ? profile.account_balance : 5.00,  // Use account_balance, default to $5.00
     completed_tutorial_ids: profile?.completed_tutorial_ids || [],
     topics: profile?.topics || [],
     topics_onboarding_completed_at: profile?.topics_onboarding_completed_at,
