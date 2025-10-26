@@ -1684,7 +1684,7 @@ export default function Editor() {
   };
 
   const handleCiteSources = async () => {
-    const result = consumeTokensForFeature("ai_cite_sources");
+    const result = await consumeBalanceForFeature("ai_cite_sources");
     if (!result.success) {
       return;
     }
@@ -2148,7 +2148,7 @@ export default function Editor() {
         return;
 
       case "generate-image":
-        consumeTokensForFeature('ai_generate_image').then(result => {
+        consumeBalanceForFeature('ai_generate_image').then(result => {
           if (result.success) openImageGenerator();
         });
         return;
@@ -2158,13 +2158,13 @@ export default function Editor() {
         return;
 
       case "generate-video":
-        consumeTokensForFeature('ai_generate_video').then(result => {
+        consumeBalanceForFeature('ai_generate_video').then(result => {
           if (result.success) setShowVideoGenerator(true);
         });
         return;
 
       case "sitemap-link":
-        consumeTokensForFeature('ai_sitemap_link').then(result => {
+        consumeBalanceForFeature('ai_sitemap_link').then(result => {
           if (result.success) {
             sendToPreview({ type: "editor-command", command: "saveSelection" });
             setShowSitemapLinker(true);
@@ -2203,7 +2203,7 @@ export default function Editor() {
         return;
 
       case "tiktok":
-        consumeTokensForFeature('ai_tiktok').then(result => {
+        consumeBalanceForFeature('ai_tiktok').then(result => {
           if (result.success) {
             setMediaLibraryInitialTab("tiktok");
             setShowMediaLibrary(true);
@@ -2235,13 +2235,13 @@ export default function Editor() {
         return;
 
       case "brand-it":
-        consumeTokensForFeature('ai_brand_it').then(result => {
+        consumeBalanceForFeature('ai_brand_it').then(result => {
           if(result.success) setShowBrandIt(true);
         });
         return;
 
       case "affilify":
-        consumeTokensForFeature('ai_affilify').then(result => {
+        consumeBalanceForFeature('ai_affilify').then(result => {
           if (result.success) setShowAffilify(true);
         });
         return;

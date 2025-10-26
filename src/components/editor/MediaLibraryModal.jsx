@@ -18,7 +18,7 @@ import { User } from "@/api/entities";
 import { Username } from "@/api/entities";
 import { PromotedProduct } from "@/api/entities";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
-import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
+import { useBalanceConsumption } from "@/components/hooks/useBalanceConsumption";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag"; // NEW: Import useFeatureFlag
 
 // Import required functions
@@ -410,7 +410,7 @@ export default function MediaLibraryModal({
   const [imageItems, setImageItems] = useState([]);
   const [videoItems, setVideoItems] = useState([]);
   const { selectedUsername } = useWorkspace();
-  const { consumeTokensForFeature, isCheckingTokens } = useTokenConsumption();
+  const { consumeBalanceForFeature, isCheckingBalance } = useBalanceConsumption();
 
   // All usernames for dropdowns (still used for filtering main library)
   const [allUsernames, setAllUsernames] = useState([]);
@@ -565,7 +565,7 @@ export default function MediaLibraryModal({
   // Handles selection of an image from the library
   const handleImageInsert = async (image) => {
     // Check feature flag + consume tokens for ai_image_library
-    const res = await consumeTokensForFeature("ai_image_library");
+    const res = await consumeBalanceForFeature("ai_image_library");
     if (!res?.success) {
       // Do not insert if feature disabled or tokens insufficient
       return;
@@ -615,7 +615,7 @@ export default function MediaLibraryModal({
   // Handles selection of videos from the combined video library (YouTube and TikTok)
   const handleLibraryVideoSelect = async (video) => {
     // NEW: guard video inserts from the library behind feature flag "video_library_insert"
-    const res = await consumeTokensForFeature("video_library_insert");
+    const res = await consumeBalanceForFeature("video_library_insert");
     if (!res?.success) {
       // Do not insert if feature disabled or tokens insufficient
       return;
@@ -649,7 +649,7 @@ export default function MediaLibraryModal({
     if (!youtubeQuery.trim()) return;
 
     // NEW: enforce feature flag before searching YouTube
-    const tokenCheck = await consumeTokensForFeature("ai_youtube");
+    const tokenCheck = await consumeBalanceForFeature("ai_youtube");
     if (!tokenCheck?.success) {
       // Hook shows appropriate toast; abort search
       return;
@@ -675,7 +675,7 @@ export default function MediaLibraryModal({
     if (!tiktokQuery.trim()) return;
 
     // NEW: enforce feature flag before searching TikTok
-    const tokenCheck = await consumeTokensForFeature("ai_tiktok");
+    const tokenCheck = await consumeBalanceForFeature("ai_tiktok");
     if (!tokenCheck?.success) {
       // Hook shows appropriate toast; abort search
       return;
@@ -710,7 +710,7 @@ export default function MediaLibraryModal({
     }
 
     // NEW: enforce feature flag before importing from Amazon
-    const tokenCheck = await consumeTokensForFeature("image_library_amazon_import");
+    const tokenCheck = await consumeBalanceForFeature("image_library_amazon_import");
     if (!tokenCheck?.success) {
       return; // Abort if feature disabled or insufficient tokens
     }
@@ -823,7 +823,7 @@ export default function MediaLibraryModal({
     }
 
     // NEW: enforce feature flag before importing from URL
-    const tokenCheck = await consumeTokensForFeature("ai_product_url_import");
+    const tokenCheck = await consumeBalanceForFeature("ai_product_url_import");
     if (!tokenCheck?.success) {
       return; // Abort if feature disabled or insufficient tokens
     }

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { InvokeLLM } from "@/api/integrations";
-// Removed checkAndConsumeTokens, as it's replaced by useTokenConsumption
+// Removed checkAndConsumeTokens, as it's replaced by useBalanceConsumption
 import { CustomContentTemplate } from "@/api/entities";
 import {
   Dialog,
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Wand2, RefreshCw } from "lucide-react"; // Copy and Check are no longer used
 import { Label } from "@/components/ui/label";
 // Select components are no longer used
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 import { useTemplates } from '@/components/providers/TemplateProvider';
 
 export default function TldrGeneratorModal({
@@ -35,7 +35,7 @@ export default function TldrGeneratorModal({
   // const [customTemplates, setCustomTemplates] = useState([]); // Removed, now from provider
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
-  const { consumeTokensForFeature } = useTokenConsumption(); // Initialize the hook
+  const { consumeBalanceForFeature } = useBalanceConsumption(); // Initialize the hook
   const { templates, loadTemplates, getTemplatesByFeature } = useTemplates();
 
   const customTemplates = React.useMemo(() => {
@@ -99,7 +99,7 @@ export default function TldrGeneratorModal({
 
     try {
       // Check tokens before making the API call
-      const tokenResult = await consumeTokensForFeature('ai_key_takeaway');
+      const tokenResult = await consumeBalanceForFeature('ai_key_takeaway');
       if (!tokenResult.success) {
         setIsGenerating(false);
         setError(tokenResult.error || "Insufficient tokens to generate TL;DR. Please check your plan or usage.");
@@ -161,7 +161,7 @@ Requirements:
     } finally {
       setIsGenerating(false);
     }
-  }, [selectedText, consumeTokensForFeature, selectedTemplate, onInsert, handleCloseModal]);
+  }, [selectedText, consumeBalanceForFeature, selectedTemplate, onInsert, handleCloseModal]);
 
   // Load custom templates (TLDR feature)
   // Replaced by useTemplates hook

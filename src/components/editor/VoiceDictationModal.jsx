@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Mic, Square, Copy, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import app from "@/api/appClient";
-import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
+import { useBalanceConsumption } from "@/components/hooks/useBalanceConsumption";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 import { User } from "@/api/entities";
 
@@ -32,7 +32,7 @@ export default function VoiceDictationModal({ isOpen, onClose, onInsert }) {
   // Max recording duration (seconds)
   const MAX_SECONDS = 90;
 
-  const { consumeTokensForFeature, isCheckingTokens } = useTokenConsumption();
+  const { consumeBalanceForFeature, isCheckingBalance } = useBalanceConsumption();
   const { enabled: voiceAiEnabled, isLoading: featureFlagLoading } = useFeatureFlag('voice_ai', {
     currentUser,
     defaultEnabled: false
@@ -90,7 +90,7 @@ export default function VoiceDictationModal({ isOpen, onClose, onInsert }) {
     }
 
     // Check and consume tokens BEFORE starting recording
-    const tokenResult = await consumeTokensForFeature('voice_ai');
+    const tokenResult = await consumeBalanceForFeature('voice_ai');
     if (!tokenResult.success) {
       setError(tokenResult.error || 'Insufficient tokens to use Voice AI.');
       return;
@@ -320,9 +320,9 @@ export default function VoiceDictationModal({ isOpen, onClose, onInsert }) {
   {recordingState === 'ready' &&
             <Button
               onClick={startRecording}
-              disabled={isCheckingTokens || featureFlagLoading || !voiceAiEnabled} className="bg-gradient-to-r text-white px-8 py-6 text-lg font-medium rounded-[25px] hover:bg-primary/90 inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 from-green-600 via-emerald-500 to-teal-500 hover:from-teal-500 hover:via-emerald-500 hover:to-green-600">
+              disabled={isCheckingBalance || featureFlagLoading || !voiceAiEnabled} className="bg-gradient-to-r text-white px-8 py-6 text-lg font-medium rounded-[25px] hover:bg-primary/90 inline-flex items-center justify-center gap-2 whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 from-green-600 via-emerald-500 to-teal-500 hover:from-teal-500 hover:via-emerald-500 hover:to-green-600">
 
-      {isCheckingTokens ?
+      {isCheckingBalance ?
               <>
           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
           Checking...

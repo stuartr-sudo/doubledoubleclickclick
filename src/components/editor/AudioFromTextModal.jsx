@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Music, Loader2, Sparkles, AlertCircle, Play, Pause, Check } from "lucide-react";
 import { toast } from "sonner";
 import { getElevenlabsVoices } from "@/api/functions";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 import { cn } from "@/lib/utils";
 
 export default function AudioFromTextModal({ isOpen, onClose, selectedText, onQueueJob }) {
@@ -18,7 +18,7 @@ export default function AudioFromTextModal({ isOpen, onClose, selectedText, onQu
   const textRef = useRef(null);
   const audioRef = useRef(null);
 
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   // Read freshest selection: prop -> persisted -> iframe -> window
   const readSelection = useCallback(() => {
@@ -176,7 +176,7 @@ export default function AudioFromTextModal({ isOpen, onClose, selectedText, onQu
       return;
     }
 
-    const result = await consumeTokensForFeature("ai_audio_generation");
+    const result = await consumeBalanceForFeature("ai_audio_generation");
     if (!result.success) {
       return;
     }

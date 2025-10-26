@@ -7,7 +7,7 @@ import { CheckCircle2, Loader2, Play, AlertCircle, Crown, User as UserIcon, Spar
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { AnimatePresence, motion } from "framer-motion";
-import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
+import { useBalanceConsumption } from "@/components/hooks/useBalanceConsumption";
 import { useFeatureFlagData } from "@/components/providers/FeatureFlagProvider";
 
 const STEP_LABELS = {
@@ -63,7 +63,7 @@ export default function RunWorkflowModal({
   const [error, setError] = useState("");
   const [loadingWorkflows, setLoadingWorkflows] = useState(true); // New state for loading workflows
 
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
   const { flags } = useFeatureFlagData();
 
   const TIPS = useMemo(() => ([
@@ -571,7 +571,7 @@ export default function RunWorkflowModal({
       if (result?.ok) {
         // Deduct tokens
         if (estimatedCost > 0) {
-          await consumeTokensForFeature("flash_workflow_orchestration", estimatedCost);
+          await consumeBalanceForFeature("flash_workflow_orchestration", estimatedCost);
           console.log("🔥 FLASH: Tokens consumed", estimatedCost);
         }
 
@@ -699,7 +699,7 @@ export default function RunWorkflowModal({
 
       if (result?.ok) {
         if (estimatedCost > 0) {
-          await consumeTokensForFeature("flash_workflow_orchestration", estimatedCost);
+          await consumeBalanceForFeature("flash_workflow_orchestration", estimatedCost);
         }
 
         if (itemId && itemType) {

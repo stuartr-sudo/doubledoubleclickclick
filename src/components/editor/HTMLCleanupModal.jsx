@@ -9,17 +9,17 @@ import {
 "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Check, Loader2 } from "lucide-react";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 
 export default function HTMLCleanupModal({ isOpen, onClose, currentContent, onContentUpdate }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cleanedContent, setCleanedContent] = useState("");
   const [error, setError] = useState(null);
   const [hasStarted, setHasStarted] = useState(false);
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   const handleCleanup = useCallback(async () => {
-    const tokenResult = await consumeTokensForFeature('ai_html_cleanup');
+    const tokenResult = await consumeBalanceForFeature('ai_html_cleanup');
     if (!tokenResult.success) {
       onClose(); // Hook handles toast, just close the modal.
       return;
@@ -92,7 +92,7 @@ ${currentContent}
     } finally {
       setIsProcessing(false);
     }
-  }, [currentContent, consumeTokensForFeature, onClose]);
+  }, [currentContent, consumeBalanceForFeature, onClose]);
 
   useEffect(() => {
     if (!isOpen) {

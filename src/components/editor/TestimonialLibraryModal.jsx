@@ -11,7 +11,7 @@ import { CustomContentTemplate } from "@/api/entities";
 import { Username } from "@/api/entities";
 import { User } from "@/api/entities";
 import { ExternalLink, Search as SearchIcon, Star, X, ArrowLeft, Check, Package, Plus, ChevronDown } from "lucide-react";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 import { useToast } from "@/components/ui/use-toast"; // Renamed to shadcnToast to avoid conflict with sonner
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
@@ -58,7 +58,7 @@ export default function TestimonialLibraryModal({
   const [tpLoading, setTpLoading] = React.useState(false);
   const [tpResults, setTpResults] = React.useState([]);
 
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
   const { toast: shadcnToast } = useToast(); // Aliased to avoid conflict with sonnerToast
   const { selectedUsername: globalUsername } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
@@ -334,7 +334,7 @@ export default function TestimonialLibraryModal({
 
   const handleInsertTestimonial = async (testimonial, templateOverride) => {
     // Check and consume tokens before inserting
-    const result = await consumeTokensForFeature('testimonial_library_insert');
+    const result = await consumeBalanceForFeature('testimonial_library_insert');
     if (!result.success) {
       return;
     }
@@ -617,7 +617,7 @@ export default function TestimonialLibraryModal({
                             return;
                           }
 
-                          const res = await consumeTokensForFeature("ai_testimonials_trustpilot_import");
+                          const res = await consumeBalanceForFeature("ai_testimonials_trustpilot_import");
                           if (!res.success) {
                             sonnerToast.error(res.error || "Token consumption failed.");
                             return;

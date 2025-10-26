@@ -22,7 +22,7 @@ import {
 import { toast } from "sonner";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
@@ -34,7 +34,7 @@ export default function SitemapLinkerModal({ isOpen, onClose, onLinkInsert, user
   const [isLoading, setIsLoading] = useState(true);
 
   const navigate = useNavigate();
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
   const { selectedUsername: globalUsername } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
 
@@ -99,7 +99,7 @@ export default function SitemapLinkerModal({ isOpen, onClose, onLinkInsert, user
   }, [sitemaps, searchTerm, selectedUsername]);
 
   const handleLinkInsertClick = async (page) => {
-    const result = await consumeTokensForFeature('ai_sitemap_link');
+    const result = await consumeBalanceForFeature('ai_sitemap_link');
     if (!result.success) {
       return;
     }

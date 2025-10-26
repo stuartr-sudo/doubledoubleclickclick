@@ -6,7 +6,7 @@ import { Loader2, Wand2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { BrandGuidelines } from "@/api/entities";
 import { InvokeLLM } from "@/api/integrations";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 
 export default function BrandItModal({
   isOpen,
@@ -20,7 +20,7 @@ export default function BrandItModal({
   const [error, setError] = useState('');
   const [guidelines, setGuidelines] = useState(null);
   const [hasStarted, setHasStarted] = React.useState(false);
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   // Remove llmChoice state and related logic - use default model
   const llmChoice = "openai:gpt-4.1"; // Fixed default, no user selection
@@ -71,7 +71,7 @@ export default function BrandItModal({
   const startRewrite = async () => {
     if (!userName || !htmlContent) return;
 
-    const tokenResult = await consumeTokensForFeature('ai_brand_it');
+    const tokenResult = await consumeBalanceForFeature('ai_brand_it');
     if (!tokenResult.success) {
       onClose(); // Hook handles toast, just close the modal.
       return;

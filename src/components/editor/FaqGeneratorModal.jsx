@@ -11,7 +11,7 @@ import { generateArticleFaqs } from "@/api/functions"; // Keep this import for o
 import { InvokeLLM } from "@/api/integrations";
 import { ContentEndpoint } from "@/api/entities";
 import { callFaqEndpoint } from "@/api/functions";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 import { agentSDK } from "@/agents";
 import { useTemplates } from '@/components/providers/TemplateProvider';
 
@@ -129,7 +129,7 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
   // HIDDEN: selected endpoint from admin page (no UI exposed)
   const [selectedEndpointId, setSelectedEndpointId] = useState("");
 
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
   const { templates, loadTemplates, getTemplatesByFeature } = useTemplates();
 
   const customTemplates = React.useMemo(() => {
@@ -304,7 +304,7 @@ export default function FaqGeneratorModal({ isOpen, onClose, selectedText, onIns
     const myRun = ++runRef.current;
 
     try {
-      const tokenResult = await consumeTokensForFeature('ai_faq');
+      const tokenResult = await consumeBalanceForFeature('ai_faq');
       if (!tokenResult.success) {
         setError(tokenResult.message || "Failed to consume tokens for FAQ generation.");
         setIsGenerating(false);

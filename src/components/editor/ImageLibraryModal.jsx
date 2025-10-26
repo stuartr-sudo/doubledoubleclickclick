@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { saveImageFromString } from "@/api/functions";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
@@ -35,7 +35,7 @@ export default function ImageLibraryModal({ isOpen, onClose, onInsert, usernameF
   const [importAltText, setImportAltText] = useState("");
   const [importUsername, setImportUsername] = useState("");
   const [isImporting, setIsImporting] = useState(false);
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   const { selectedUsername: globalUsername } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
@@ -164,7 +164,7 @@ export default function ImageLibraryModal({ isOpen, onClose, onInsert, usernameF
   const handleInsert = async () => {
     if (!selectedImage) return;
 
-    const result = await consumeTokensForFeature('image_library_access');
+    const result = await consumeBalanceForFeature('image_library_access');
     if (!result.success) {
       return; // Error toast is handled by the hook
     }
@@ -183,7 +183,7 @@ export default function ImageLibraryModal({ isOpen, onClose, onInsert, usernameF
     // Prevent multiple clicks by checking if already importing
     if (isImporting) return;
 
-    const result = await consumeTokensForFeature('image_library_access');
+    const result = await consumeBalanceForFeature('image_library_access');
     if (!result.success) {
       return; // Stop if tokens are insufficient
     }

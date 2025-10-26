@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { InvokeLLM } from "@/api/integrations";
 import ImageLibraryModal from "./ImageLibraryModal";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 import { agentSDK } from "@/agents";
 import FeatureHelpIcon from "./FeatureHelpIcon";
 
@@ -40,7 +40,7 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
   const [showImageLibrary, setShowImageLibrary] = useState(false);
   const autoInitRef = useRef(false);
   const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   // Helper functions that might be used in effects or handlers
   const articleText = useMemo(() => {
@@ -63,7 +63,7 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
 
   // HOISTED: define handleAutoGenerate before any use (buttons/useEffects)
   const handleAutoGenerate = useCallback(async () => {
-    const ok = await consumeTokensForFeature('ai_seo');
+    const ok = await consumeBalanceForFeature('ai_seo');
     if (!ok?.success) return;
 
     setAutoLoading(true);
@@ -107,7 +107,7 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
     } finally {
       setAutoLoading(false);
     }
-  }, [consumeTokensForFeature, setAutoLoading, postData, articleText, setMetadata, toast]);
+  }, [consumeBalanceForFeature, setAutoLoading, postData, articleText, setMetadata, toast]);
 
 
   useEffect(() => {
@@ -209,7 +209,7 @@ export default function SEOSettingsModal({ isOpen, onClose, postData, onSave }) 
   };
 
   const genTitle = async () => {
-    const ok = await consumeTokensForFeature('ai_seo');
+    const ok = await consumeBalanceForFeature('ai_seo');
     if (!ok?.success) return;
 
     setGenLoading((s) => ({ ...s, title: true }));
@@ -240,7 +240,7 @@ Content (truncated): """${articleText}"""`,
   };
 
   const genDescription = async () => {
-    const ok = await consumeTokensForFeature('ai_seo');
+    const ok = await consumeBalanceForFeature('ai_seo');
     if (!ok?.success) return;
 
     setGenLoading((s) => ({ ...s, desc: true }));
@@ -265,7 +265,7 @@ Content: """${articleText}"""`,
   };
 
   const genSlug = async () => {
-    const ok = await consumeTokensForFeature('ai_seo');
+    const ok = await consumeBalanceForFeature('ai_seo');
     if (!ok?.success) return;
 
     setGenLoading((s) => ({ ...s, slug: true }));
@@ -289,7 +289,7 @@ Content: """${articleText.slice(0, 1200)}"""`,
   };
 
   const genKeyword = async () => {
-    const ok = await consumeTokensForFeature('ai_seo');
+    const ok = await consumeBalanceForFeature('ai_seo');
     if (!ok?.success) return;
 
     setGenLoading((s) => ({ ...s, keyword: true }));
@@ -312,7 +312,7 @@ Content: """${articleText}"""`,
   };
 
   const genTags = async () => {
-    const ok = await consumeTokensForFeature('ai_seo');
+    const ok = await consumeBalanceForFeature('ai_seo');
     if (!ok?.success) return;
 
     setGenLoading((s) => ({ ...s, tags: true }));
@@ -366,7 +366,7 @@ Content: """${articleText.slice(0, 1200)}"""`,
   };
 
   const genExcerpt = async () => {
-    const ok = await consumeTokensForFeature('ai_seo');
+    const ok = await consumeBalanceForFeature('ai_seo');
     if (!ok?.success) return;
 
     setGenLoading((s) => ({ ...s, excerpt: true }));
@@ -405,7 +405,7 @@ Content: """${text}"""`,
   };
 
   const genSchema = async () => {
-    const ok = await consumeTokensForFeature('ai_seo');
+    const ok = await consumeBalanceForFeature('ai_seo');
     if (!ok?.success) return;
 
     setIsGeneratingSchema(true);

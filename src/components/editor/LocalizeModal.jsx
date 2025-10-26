@@ -14,7 +14,7 @@ import { Globe, Languages, Loader2, Wand2, Check } from "lucide-react";
 import { InvokeLLM } from "@/api/integrations";
 import { User } from "@/api/entities";
 import { callLlmWithRetry } from "./llmRetry";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 
 export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLocalized }) {
   const [language, setLanguage] = useState("German");
@@ -26,7 +26,7 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
   const [progressPct, setProgressPct] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   const stripFences = (s) => {
     if (!s) return "";
@@ -277,7 +277,7 @@ export default function LocalizeModal({ isOpen, onClose, originalHtml, onApplyLo
     if (!language || !originalHtml?.trim() || isLoading) return;
 
     // Check and consume tokens before starting localization
-    const result = await consumeTokensForFeature('ai_localize');
+    const result = await consumeBalanceForFeature('ai_localize');
     if (!result.success) {
       return; // Error toast is handled by the hook
     }

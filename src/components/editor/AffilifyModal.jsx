@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Megaphone, Loader2, Wand2, RefreshCw } from "lucide-react";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 
 export default function AffilifyModal({ isOpen, onClose, originalHtml, selectedText, onApply, onInsert }) {
   const [conversation, setConversation] = useState(null);
@@ -15,7 +15,7 @@ export default function AffilifyModal({ isOpen, onClose, originalHtml, selectedT
   // removed copied state
   const [tone, setTone] = useState("neutral");
   const subRef = useRef(null);
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   const tonePrompts = {
     neutral: "Keep tone neutral and objective.",
@@ -50,7 +50,7 @@ export default function AffilifyModal({ isOpen, onClose, originalHtml, selectedT
     if (isRunning) return;
 
     // Check and consume tokens before starting Affilify
-    const result = await consumeTokensForFeature('ai_affilify');
+    const result = await consumeBalanceForFeature('ai_affilify');
     if (!result.success) {
       return; // Error toast is handled by the hook
     }

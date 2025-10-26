@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Wand2, MapPin, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Sitemap } from "@/api/entities";
-import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
+import { useBalanceConsumption } from "@/components/hooks/useBalanceConsumption";
 import { InvokeLLM } from "@/api/integrations";
 
 export default function CtaTemplateFillModal({ isOpen, onClose, onInsert, selectedTemplate, pageHtml, pageTitle, preferredUsername }) {
@@ -19,7 +19,7 @@ export default function CtaTemplateFillModal({ isOpen, onClose, onInsert, select
   const [isLoadingSitemap, setIsLoadingSitemap] = useState(false);
   const [sitemapSearchQuery, setSitemapSearchQuery] = useState("");
 
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   const loadSitemap = useCallback(async () => {
     if (!preferredUsername) return;
@@ -68,7 +68,7 @@ export default function CtaTemplateFillModal({ isOpen, onClose, onInsert, select
     }
 
     // Check and consume tokens for the cta-title-rewrite feature
-    const tokenResult = await consumeTokensForFeature('cta-title-rewrite');
+    const tokenResult = await consumeBalanceForFeature('cta-title-rewrite');
     if (!tokenResult.success) {
       return;
     }

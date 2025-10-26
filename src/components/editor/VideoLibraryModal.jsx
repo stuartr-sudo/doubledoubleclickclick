@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Plus, ExternalLink, Video } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
 
@@ -29,7 +29,7 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
   const [isLoading, setIsLoading] = useState(true);
   const [localSelectedUsername, setLocalSelectedUsername] = useState("all");
   const [availableUsernames, setAvailableUsernames] = useState([]);
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   const { selectedUsername: globalUsername } = useWorkspace();
   const { enabled: useWorkspaceScoping } = useFeatureFlag('use_workspace_scoping');
@@ -89,7 +89,7 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
 
   const handleInsertYouTube = async (video) => {
     // Check and consume tokens before inserting
-    const result = await consumeTokensForFeature('video_library_insert');
+    const result = await consumeBalanceForFeature('video_library_insert');
     if (!result.success) {
       return; // Error toast is handled by the hook
     }
@@ -113,7 +113,7 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
 
   const handleInsertTikTok = async (video) => {
     // Check and consume tokens before inserting
-    const result = await consumeTokensForFeature('video_library_insert');
+    const result = await consumeBalanceForFeature('video_library_insert');
     if (!result.success) {
       return; // Error toast is handled by the hook
     }
@@ -136,7 +136,7 @@ export default function VideoLibraryModal({ isOpen, onClose, onInsert }) {
 
   const handleInsertAmazon = async (video) => {
     // Check and consume tokens before inserting
-    const result = await consumeTokensForFeature('video_library_insert');
+    const result = await consumeBalanceForFeature('video_library_insert');
     if (!result.success) {
       return;
     }

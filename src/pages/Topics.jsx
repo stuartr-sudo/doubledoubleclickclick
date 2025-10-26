@@ -31,7 +31,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import TopicsOnboardingModal from "@/components/onboarding/TopicsOnboardingModal";
 import { Username } from "@/api/entities";
-import { useTokenConsumption } from "@/components/hooks/useTokenConsumption";
+import { useBalanceConsumption } from "@/components/hooks/useBalanceConsumption";
 import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal";
 import { callPromptWebhook } from "@/api/functions";
 import app from "@/api/appClient";
@@ -642,7 +642,7 @@ export default function TopicsPage() {
     Array.isArray(pp) && pp.length > 0;
   }, []);
 
-  const { consumeTokensForFeature } = useTokenConsumption();
+  const { consumeBalanceForFeature } = useBalanceConsumption();
 
   const handleUpdate = useCallback(async (tableId, recordId, fieldName, newValue) => {
     const isKeywordMap = tableId === TABLE_IDS.keywordMap;
@@ -681,7 +681,7 @@ export default function TopicsPage() {
       const newTimestamps = [...recentTimestamps, now];
       localStorage.setItem(rateLimitKey, JSON.stringify(newTimestamps));
 
-      await consumeTokensForFeature("topics_get_questions");
+      await consumeBalanceForFeature("topics_get_questions");
 
       if (intervalRefs.current[recordId]) {
         clearInterval(intervalRefs.current[recordId]);
@@ -761,7 +761,7 @@ export default function TopicsPage() {
         ppKey && Array.isArray(fullyUpdatedRowFields[ppKey]) && fullyUpdatedRowFields[ppKey].length > 0;
 
         if (becameComplete) {
-          await consumeTokensForFeature("topics_assignment_complete");
+          await consumeBalanceForFeature("topics_assignment_complete");
         }
 
         // ALWAYS update Airtable, whether complete or not (handles deselections)
@@ -813,7 +813,7 @@ export default function TopicsPage() {
       recordId,
       fields: { [finalWriteFieldName]: newValue }
     });
-  }, [currentUser, consumeTokensForFeature, isComplete]);
+  }, [currentUser, consumeBalanceForFeature, isComplete]);
 
   const refreshData = useCallback(() => {
     const cleared = { tm: [], bc: [], pp: [], cacheTime: 0 };

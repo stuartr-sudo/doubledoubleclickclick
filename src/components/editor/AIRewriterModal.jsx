@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Wand2, RefreshCw, Copy, Check } from "lucide-react";
-import { useTokenConsumption } from '@/components/hooks/useTokenConsumption';
+import { useBalanceConsumption } from '@/components/hooks/useBalanceConsumption';
 
 export default function AIRewriterModal({ isOpen, onClose, selectedText, onRewrite }) {
   const [style, setStyle] = useState("improve");
@@ -26,7 +26,7 @@ export default function AIRewriterModal({ isOpen, onClose, selectedText, onRewri
   const [rewrittenText, setRewrittenText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const { consumeTokensOptimistic } = useTokenConsumption();
+  const { consumeBalanceOptimistic } = useBalanceConsumption();
 
   const styles = {
     improve: "Improve the clarity and flow of this text while keeping the same meaning",
@@ -44,7 +44,7 @@ export default function AIRewriterModal({ isOpen, onClose, selectedText, onRewri
     setIsLoading(true);
 
     // NEW: run token deduction in parallel (do not block UI)
-    consumeTokensOptimistic('ai_rewrite');
+    consumeBalanceOptimistic('ai_rewrite');
 
     try {
       const prompt = style === "custom" && customPrompt
