@@ -14,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Edit3, Send, ArrowLeft, FileText, Globe, Loader2, Smartphone, Tablet as TabletIcon, Laptop, Monitor, Calendar as CalendarIcon, Trash2, Info, X, Wand2, Palette, Settings, FileText as FileTextIcon, Clipboard as ClipboardIcon, ChevronDown, Download, Eye, EyeOff } from "lucide-react"; // Added Eye, EyeOff
+import { Save, Edit3, Send, ArrowLeft, FileText, Globe, Loader2, Smartphone, Tablet as TabletIcon, Laptop, Monitor, Calendar as CalendarIcon, Trash2, Info, X, Wand2, Palette, Settings, FileText as FileTextIcon, Clipboard as ClipboardIcon, ChevronDown, Download, Eye, EyeOff, Zap } from "lucide-react"; // Added Eye, EyeOff, Zap
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom"; // Added useSearchParams
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
@@ -69,6 +69,7 @@ import ShopifyPublishModal from "../components/editor/ShopifyPublishModal";
 import BrandItModal from "../components/editor/BrandItModal";
 import AffilifyModal from "../components/editor/AffilifyModal";
 import RunWorkflowModal from "../components/editor/RunWorkflowModal";
+import FlashToggleModal from "../components/content/FlashToggleModal";
 import PasteContentModal from "../components/content/PasteContentModal";
 import TextEditorModal from "../components/editor/TextEditorModal"; // FIX: Corrected import path
 import InlineFormatToolbar from "../components/editor/InlineFormatToolbar";
@@ -92,6 +93,11 @@ import { agentSDK } from "@/agents";
 import ImagineerModal from "../components/editor/ImagineerModal";
 import { initiateImagineerGeneration } from "@/api/functions";
 import VoiceDictationModal from '../components/editor/VoiceDictationModal';
+
+// Flash Placeholder System Imports
+import FlashPlaceholderManager from "../components/editor/FlashPlaceholderManager";
+import FlashPlaceholderSettingsModal from "../components/editor/FlashPlaceholderSettingsModal";
+import { useUserWebsiteStyles } from "@/components/hooks/useUserWebsiteStyles";
 
 function EditorErrorBoundary({ children }) {
   const [error, React_useState_null] = React.useState(null);
@@ -217,8 +223,13 @@ export default function Editor() {
   const referencesButtonRef = React.useRef(null);
 
   const [showWorkflowRunner, setShowWorkflowRunner] = React.useState(false);
-  // NEW: state for Flash workflow modal
+  // NEW: state for Flash toggle modal
   const [showFlashModal, setShowFlashModal] = React.useState(false);
+  const [flashEnabled, setFlashEnabled] = React.useState(false);
+  
+  // NEW: Flash Placeholder System state
+  const [showFlashPlaceholders, setShowFlashPlaceholders] = React.useState(false);
+  const [showFlashSettings, setShowFlashSettings] = React.useState(false);
 
 
   const skipNextPreviewPushRef = useRef(false);
@@ -2416,6 +2427,7 @@ export default function Editor() {
         setTitle(post.title || "");
         setContent(post.content || "");
         setPriority(post.priority || 'medium');
+        setFlashEnabled(post.flash_enabled || false);
         sendToPreview({ type: "set-html", html: post.content || "" });
         initSessionKey({ postId: post.id });
 
@@ -2475,6 +2487,7 @@ export default function Editor() {
         setCurrentWebhook(webhook);
         setTitle(webhook.title || "");
         setContent(webhook.content || "");
+        setFlashEnabled(webhook.flash_enabled || false);
         sendToPreview({ type: "set-html", html: webhook.content || "" });
         initSessionKey({ processingId: webhook.processing_id });
 
@@ -3478,6 +3491,37 @@ ${truncatedHtml}`;
     triggerAutoSave();
   }, [sendToPreview, setContent, handleSEOSave, triggerAutoSave]);
 
+  const handleFlashToggle = useCallback(async (enabled) => {
+    try {
+      setFlashEnabled(enabled);
+      
+      // Save to database
+      const updateData = { flash_enabled: enabled };
+      
+      if (currentPost) {
+        await BlogPost.update(currentPost.id, updateData);
+      } else if (currentWebhook) {
+        await WebhookReceived.update(currentWebhook.id, updateData);
+      }
+      
+      setShowFlashModal(false);
+      
+      if (enabled) {
+        toast.success("Flash AI Enhancement enabled!");
+      } else {
+        toast.success("Flash AI Enhancement disabled");
+      }
+    } catch (err) {
+      console.error("Failed to save flash setting:", err);
+      
+      if (err?.response?.status === 429) {
+        toast.error("Rate limit exceeded. Please wait a moment and try again.");
+      } else {
+        toast.error("Failed to save flash setting");
+      }
+    }
+  }, [currentPost, currentWebhook]);
+
   const handleOpenActionsModal = () => {
     if (isTextSelected) {
       setIsActionsModal(true);
@@ -3554,6 +3598,9 @@ ${truncatedHtml}`;
   };
 
   const currentUsername = currentPost?.user_name || currentWebhook?.user_name;
+
+  // NEW: Flash Placeholder System - User Website Styles
+  const { userStyles, loadUserStyles } = useUserWebsiteStyles(currentUsername);
 
   const makeHandle = (s) => String(s || "").
     toLowerCase().
@@ -3905,6 +3952,43 @@ ${content}
                   </div>
                 </div>
             </div>
+
+            {/* NEW: Flash Placeholder Toolbar */}
+            {flashEnabled && (
+              <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-indigo-600" />
+                    <span className="text-sm font-medium text-slate-700">Flash AI Enhancement</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowFlashPlaceholders(!showFlashPlaceholders)}
+                      className={showFlashPlaceholders ? "bg-indigo-50 border-indigo-200 text-indigo-700" : ""}
+                    >
+                      <Zap className="w-4 h-4 mr-1" />
+                      {showFlashPlaceholders ? 'Hide' : 'Show'} Placeholders
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowFlashSettings(true)}
+                    >
+                      <Settings className="w-4 h-4 mr-1" />
+                      Settings
+                    </Button>
+                  </div>
+                  
+                  <div className="ml-auto text-xs text-slate-500">
+                    {content ? content.replace(/<[^>]*>/g, '').split(/\s+/).length : 0} words
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex-1 mt-4 overflow-hidden flex">
               <div className="relative h-[70vh] w-full max-w-5xl mx-auto rounded-xl overflow-hidden" style={{ backgroundColor: "var(--hover)", border: "1px solid var(--border)" }}>
@@ -4271,14 +4355,37 @@ ${content}
                 triggerAutoSave();
               }} />
             
-            {/* NEW: Flash Workflow Modal */}
-            <RunWorkflowModal
+            {/* NEW: Flash Toggle Modal (simplified - no templates) */}
+            <FlashToggleModal
               isOpen={showFlashModal}
               onClose={() => setShowFlashModal(false)}
-              currentHtml={content}
-              userName={currentUsername} // Replicate working AutoLink logic for the internal_linker agent step
-              onApply={handleApplyFlashResult}
-              isFlashWorkflow={true} // Optional prop to distinguish this invocation
+              onToggle={handleFlashToggle}
+              currentEnabled={flashEnabled}
+              wordCount={content ? content.replace(/<[^>]*>/g, '').split(/\s+/).length : 0}
+              minWords={400}
+            />
+
+            {/* NEW: Flash Placeholder System */}
+            {flashEnabled && showFlashPlaceholders && (
+              <FlashPlaceholderManager
+                postId={currentPost?.id}
+                userName={currentUsername}
+                content={content}
+                onContentUpdate={handleContentUpdate}
+                userStyles={userStyles}
+                isVisible={showFlashPlaceholders}
+              />
+            )}
+
+            {/* NEW: Flash Placeholder Settings Modal */}
+            <FlashPlaceholderSettingsModal
+              isOpen={showFlashSettings}
+              onClose={() => setShowFlashSettings(false)}
+              userName={currentUsername}
+              onStylesUpdate={(styles) => {
+                loadUserStyles();
+                toast.success('Flash styles updated!');
+              }}
             />
 
             <PasteContentModal

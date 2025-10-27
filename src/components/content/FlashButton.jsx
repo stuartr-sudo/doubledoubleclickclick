@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Zap, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import FlashTemplateModal from "./FlashTemplateModal";
+import FlashToggleModal from "./FlashToggleModal";
 import { BlogPost } from "@/api/entities";
 import { WebhookReceived } from "@/api/entities";
 import { toast } from 'sonner';
@@ -61,10 +61,10 @@ const getButtonClass = () => {
     setShowModal(false);
   };
 
-  const handleTemplateSelect = async (template) => {
+  const handleFlashToggle = async (enabled) => {
     try {
-      // Update the item with the selected Flash Template
-      const updateData = { flash_template: template };
+      // Update the item with the Flash enabled setting
+      const updateData = { flash_enabled: enabled };
       
       if (item.type === "post") {
         await BlogPost.update(item.id, updateData);
@@ -74,18 +74,18 @@ const getButtonClass = () => {
       
       setShowModal(false);
       
-      if (template === "None") {
-        toast.success("Flash template removed.");
+      if (enabled) {
+        toast.success("Flash AI Enhancement enabled!");
       } else {
-        toast.success(`Flash template set to: ${template}`);
+        toast.success("Flash AI Enhancement disabled");
       }
     } catch (err) {
-      console.error("Failed to save flash template:", err);
+      console.error("Failed to save flash setting:", err);
       
       if (err?.response?.status === 429) {
         toast.error("Rate limit exceeded. Please wait a moment and try again.");
       } else {
-        toast.error("Failed to save flash template");
+        toast.error("Failed to save flash setting");
       }
     }
   };
@@ -137,11 +137,13 @@ const getButtonClass = () => {
       </button>
 
       {showModal && (
-        <FlashTemplateModal
+        <FlashToggleModal
           isOpen={showModal}
           onClose={handleModalClose}
-          onSelect={handleTemplateSelect}
-          currentTemplate={item.flash_template || "None"}
+          onToggle={handleFlashToggle}
+          currentEnabled={item.flash_enabled || false}
+          wordCount={wordCount}
+          minWords={MIN_WORD_COUNT}
         />
       )}
     </>

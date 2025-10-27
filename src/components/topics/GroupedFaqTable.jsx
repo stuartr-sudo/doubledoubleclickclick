@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 function getLinkedProductFieldName(fieldsObj) {
   const keys = Object.keys(fieldsObj || {});
@@ -19,8 +20,8 @@ function getLinkedProductFieldName(fieldsObj) {
 
 }
 
-const FAQ_HEADERS = ["Keyword", "Flash Template", "Target Market", "Promoted Product"];
-const FAQ_LAYOUT = "3fr minmax(160px, 200px) minmax(140px, 1fr) minmax(140px, 1fr)";
+const FAQ_HEADERS = ["Keyword", "Flash AI", "Target Market", "Promoted Product"];
+const FAQ_LAYOUT = "3fr minmax(120px, 140px) minmax(140px, 1fr) minmax(140px, 1fr)";
 
 export default function GroupedFaqTable({ rows = [], tableId, options, handleUpdate, onDeleteRow, writtenByKeyword }) {
   const [expanded, setExpanded] = React.useState({});
@@ -257,22 +258,14 @@ export default function GroupedFaqTable({ rows = [], tableId, options, handleUpd
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
                                 </div> :
-                          header === "Flash Template" ?
-                          <Select
-                            value={fields["Flash Template"] || "None"}
-                            onValueChange={(value) => handleUpdate(tableId, row.id, "Flash Template", value)}>
-                            <SelectTrigger className="w-full justify-between bg-white border-slate-300 text-slate-900 hover:bg-slate-50 focus:ring-2 focus:ring-indigo-500 h-8 text-sm px-3">
-                              <SelectValue placeholder="Select template..." />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white border border-slate-200 text-slate-900">
-                              <SelectItem value="None" className="text-sm hover:bg-slate-100">None</SelectItem>
-                              <SelectItem value="Product Review" className="text-sm hover:bg-slate-100">Product Review</SelectItem>
-                              <SelectItem value="How-To Guide" className="text-sm hover:bg-slate-100">How-To Guide</SelectItem>
-                              <SelectItem value="Listicle" className="text-sm hover:bg-slate-100">Listicle</SelectItem>
-                              <SelectItem value="Educational" className="text-sm hover:bg-slate-100">Educational</SelectItem>
-                              <SelectItem value="News & Blog" className="text-sm hover:bg-slate-100">News & Blog</SelectItem>
-                            </SelectContent>
-                          </Select> :
+                          header === "Flash AI" ?
+                          <div className="flex items-center justify-center">
+                            <Switch
+                              checked={fields["Flash AI"] || false}
+                              onCheckedChange={(checked) => handleUpdate(tableId, row.id, "Flash AI", checked)}
+                              className="data-[state=checked]:bg-indigo-600"
+                            />
+                          </div> :
                           header === "Target Market" ?
                           <MiniMultiSelect
                             options={options.tm}
