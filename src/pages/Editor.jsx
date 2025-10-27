@@ -3491,6 +3491,34 @@ ${truncatedHtml}`;
     triggerAutoSave();
   }, [sendToPreview, setContent, handleSEOSave, triggerAutoSave]);
 
+  // Generate test placeholders for immediate feedback
+  const generateTestPlaceholders = useCallback(async (postId) => {
+    try {
+      const testPlaceholders = [
+        { type: 'image', position: 1, context: 'Hero image for the article' },
+        { type: 'image', position: 2, context: 'Supporting image in the middle' },
+        { type: 'video', position: 3, context: 'Explanatory video' },
+        { type: 'product', position: 4, context: 'Promoted product section' },
+        { type: 'opinion', position: 5, context: 'Expert opinion on color psychology' },
+        { type: 'opinion', position: 6, context: 'Personal experience with color choices' }
+      ];
+
+      for (const placeholder of testPlaceholders) {
+        await supabase
+          .from('content_placeholders')
+          .insert({
+            post_id: postId,
+            type: placeholder.type,
+            position: placeholder.position,
+            context: placeholder.context,
+            fulfilled: false
+          });
+      }
+    } catch (error) {
+      console.error('Error generating test placeholders:', error);
+    }
+  }, []);
+
   const handleFlashToggle = useCallback(async (enabled) => {
     try {
       setFlashEnabled(enabled);
@@ -3506,9 +3534,22 @@ ${truncatedHtml}`;
       
       setShowFlashModal(false);
       
+      // FIX: Automatically show placeholders when Flash is enabled
       if (enabled) {
-        toast.success("Flash AI Enhancement enabled!");
+        setShowFlashPlaceholders(true);
+        
+        // Generate some test placeholders for immediate feedback
+        if (currentPost?.id) {
+          try {
+            await generateTestPlaceholders(currentPost.id);
+          } catch (placeholderError) {
+            console.log("Placeholder generation will happen in background:", placeholderError);
+          }
+        }
+        
+        toast.success("Flash AI Enhancement enabled! Placeholders are now visible.");
       } else {
+        setShowFlashPlaceholders(false);
         toast.success("Flash AI Enhancement disabled");
       }
     } catch (err) {
