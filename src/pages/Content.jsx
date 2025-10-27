@@ -27,7 +27,7 @@ import {
 import { toast } from "sonner";
 import { useWorkspace } from "@/components/hooks/useWorkspace";
 import useFeatureFlag from "@/components/hooks/useFeatureFlag";
-import FlashButton from "../components/content/FlashButton";
+import FlashToggle from "../components/content/FlashToggle";
 
 export default function Content() {// Renamed from ContentPage as per original file
   const [loading, setLoading] = useState(true);
@@ -810,8 +810,8 @@ export default function Content() {// Renamed from ContentPage as per original f
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
 
-                            {/* Flash Button */}
-                            <FlashButton
+                            {/* Flash Toggle */}
+                            <FlashToggle
                             item={post}
                             onStatusChange={handleFlashStatusChange} />
 
