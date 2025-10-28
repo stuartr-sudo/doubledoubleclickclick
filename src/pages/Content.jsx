@@ -716,10 +716,15 @@ export default function Content() {// Renamed from ContentPage as per original f
                   const daysFromPublish = calculateDaysFromPublish(post);
                   const flashStatus = post.flash_status || "idle";
 
-                  const getFlashStatusBadge = (status) => {
+                  const getFlashStatusBadge = (status, enabled) => {
+                    // If Flash is enabled but no specific status, show "Enabled"
+                    if (enabled && (!status || status === "idle")) {
+                      return <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200 flex-shrink-0">Enabled</Badge>;
+                    }
+                    
                     switch (status) {
                       case "running":
-                        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 flex-shrink-0">Running</Badge>;
+                        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 flex-shrink-0 animate-pulse">Running</Badge>;
                       case "completed":
                         return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 flex-shrink-0">Completed</Badge>;
                       case "failed":
@@ -729,8 +734,23 @@ export default function Content() {// Renamed from ContentPage as per original f
                     }
                   };
 
+                  // Add visual indicator for Flash status
+                  const getRowClassName = () => {
+                    const baseClass = "hover:bg-slate-50 transition-colors";
+                    if (flashStatus === "running") {
+                      return `${baseClass} bg-blue-50 border-l-4 border-blue-400`;
+                    }
+                    if (post.flash_enabled && flashStatus === "completed") {
+                      return `${baseClass} bg-green-50 border-l-4 border-green-400`;
+                    }
+                    if (flashStatus === "failed") {
+                      return `${baseClass} bg-red-50 border-l-4 border-red-400`;
+                    }
+                    return baseClass;
+                  };
+
                   return (
-                    <tr key={`${post.type}-${post.id}`} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`${post.type}-${post.id}`} className={getRowClassName()}>
                         <td className="px-3 py-3 whitespace-nowrap">
                           {/* Reduced padding from px-6 py-4 to px-3 py-3 */}
                         </td>
@@ -750,7 +770,7 @@ export default function Content() {// Renamed from ContentPage as per original f
                                 <div className="text-sm font-medium text-slate-900 truncate">
                                   {post.title}
                                 </div>
-                                {getFlashStatusBadge(flashStatus)}
+                                {getFlashStatusBadge(flashStatus, post.flash_enabled)}
                               </div>
                             </div>
                           </div>
