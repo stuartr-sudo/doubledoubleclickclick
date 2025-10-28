@@ -81,40 +81,40 @@ const FlashPlaceholderManager = ({
     const productPlaceholders = sortedPlaceholders.filter(p => p.type === 'product')
     const opinionPlaceholders = sortedPlaceholders.filter(p => p.type === 'opinion')
 
-    // Insert placeholders at different positions to distribute them
+    // Insert glowing orbs within the content text at strategic positions
     let insertionCount = 0
 
-    // Insert first image after first paragraph
+    // Insert first image orb after first sentence
     if (imagePlaceholders.length > 0) {
       const placeholderHtml = createPlaceholderHtml(imagePlaceholders[0], insertionCount++)
-      updatedContent = insertAfterFirstParagraph(updatedContent, placeholderHtml)
+      updatedContent = insertAfterFirstSentence(updatedContent, placeholderHtml)
     }
 
-    // Insert video after second paragraph
+    // Insert video orb after second sentence
     if (videoPlaceholders.length > 0) {
       const placeholderHtml = createPlaceholderHtml(videoPlaceholders[0], insertionCount++)
-      updatedContent = insertAfterSecondParagraph(updatedContent, placeholderHtml)
+      updatedContent = insertAfterSecondSentence(updatedContent, placeholderHtml)
     }
 
-    // Insert second image in middle
+    // Insert second image orb in middle of content
     if (imagePlaceholders.length > 1) {
       const placeholderHtml = createPlaceholderHtml(imagePlaceholders[1], insertionCount++)
       updatedContent = insertInMiddle(updatedContent, placeholderHtml)
     }
 
-    // Insert first opinion after third paragraph
+    // Insert first opinion orb after third sentence
     if (opinionPlaceholders.length > 0) {
       const placeholderHtml = createPlaceholderHtml(opinionPlaceholders[0], insertionCount++)
-      updatedContent = insertAfterThirdParagraph(updatedContent, placeholderHtml)
+      updatedContent = insertAfterThirdSentence(updatedContent, placeholderHtml)
     }
 
-    // Insert product section near end
+    // Insert product orb near end
     if (productPlaceholders.length > 0) {
       const placeholderHtml = createPlaceholderHtml(productPlaceholders[0], insertionCount++)
       updatedContent = insertNearEnd(updatedContent, placeholderHtml)
     }
 
-    // Insert remaining opinion placeholders at 80% and 90% of content
+    // Insert remaining opinion orb at 80% of content
     if (opinionPlaceholders.length > 1) {
       const placeholderHtml = createPlaceholderHtml(opinionPlaceholders[1], insertionCount++)
       updatedContent = insertAtPercentage(updatedContent, placeholderHtml, 0.8)
@@ -126,40 +126,43 @@ const FlashPlaceholderManager = ({
     }
   }
 
-  // Helper function to create placeholder HTML
+  // Helper function to create glowing orb placeholder HTML
   const createPlaceholderHtml = (placeholder, index) => {
     const placeholderId = `flash-${placeholder.type}-${placeholder.id}`
     const glowColor = getPlaceholderColor(placeholder.type)
     
     return `
-      <div class="flash-placeholder-container" style="margin: 20px 0; padding: 20px; border: 2px dashed ${glowColor}; border-radius: 12px; background: linear-gradient(135deg, ${glowColor}15, ${glowColor}05); position: relative;">
-        <div class="flash-placeholder-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-          <div class="flash-placeholder-icon" style="width: 24px; height: 24px; background: ${glowColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-            ${getPlaceholderIcon(placeholder.type)}
-          </div>
-          <div class="flash-placeholder-title" style="font-weight: 600; color: ${glowColor}; font-size: 16px;">
-            ${getPlaceholderTitle(placeholder.type)}
-          </div>
-          <div class="flash-placeholder-position" style="margin-left: auto; font-size: 12px; color: #666; background: white; padding: 4px 8px; border-radius: 12px;">
-            Position ${placeholder.position}
-          </div>
-        </div>
-        <div class="flash-placeholder-content" style="min-height: 80px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 8px; border: 1px solid ${glowColor}30;">
-          <div class="flash-placeholder-text" style="text-align: center; color: #666;">
-            <div style="font-size: 18px; margin-bottom: 8px;">${getPlaceholderEmoji(placeholder.type)}</div>
-            <div style="font-weight: 500; margin-bottom: 4px;">${placeholder.context}</div>
-            <div style="font-size: 12px; color: #999;">Click to add ${placeholder.type}</div>
-          </div>
-        </div>
-        <div class="flash-placeholder-actions" style="margin-top: 15px; display: flex; gap: 8px; justify-content: center;">
-          <button class="flash-placeholder-btn" style="padding: 8px 16px; background: ${glowColor}; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
-            Add ${placeholder.type}
-          </button>
-          <button class="flash-placeholder-remove" style="padding: 8px 16px; background: #f3f4f6; color: #666; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
-            Remove
-          </button>
-        </div>
-      </div>
+      <span class="flash-orb-placeholder" 
+            data-placeholder-id="${placeholderId}" 
+            data-type="${placeholder.type}"
+            style="
+              display: inline-block;
+              position: relative;
+              margin: 0 8px;
+              padding: 8px 12px;
+              background: linear-gradient(135deg, ${glowColor}20, ${glowColor}10);
+              border: 2px solid ${glowColor};
+              border-radius: 20px;
+              box-shadow: 0 0 20px ${glowColor}40, 0 0 40px ${glowColor}20;
+              color: ${glowColor};
+              font-size: 14px;
+              font-weight: 500;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              animation: glow-pulse 2s ease-in-out infinite alternate;
+            "
+            onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 0 30px ${glowColor}60, 0 0 60px ${glowColor}30';"
+            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 20px ${glowColor}40, 0 0 40px ${glowColor}20';"
+            onclick="handlePlaceholderClick('${placeholderId}', '${placeholder.type}')">
+        ${getPlaceholderIcon(placeholder.type)} ${getPlaceholderTitle(placeholder.type)}
+      </span>
+      
+      <style>
+        @keyframes glow-pulse {
+          0% { box-shadow: 0 0 20px ${glowColor}40, 0 0 40px ${glowColor}20; }
+          100% { box-shadow: 0 0 30px ${glowColor}60, 0 0 60px ${glowColor}40; }
+        }
+      </style>
     `
   }
 
@@ -245,6 +248,37 @@ const FlashPlaceholderManager = ({
   const insertAtPercentage = (content, placeholderHtml, percentage) => {
     const position = Math.floor(content.length * percentage)
     return content.slice(0, position) + placeholderHtml + content.slice(position)
+  }
+
+  // Helper functions to insert placeholders after sentences
+  const insertAfterFirstSentence = (content, placeholderHtml) => {
+    const sentences = content.split(/[.!?]+/)
+    if (sentences.length > 1) {
+      const firstSentence = sentences[0] + content.match(/[.!?]+/)?.[0] || '.'
+      const rest = content.substring(firstSentence.length)
+      return firstSentence + ' ' + placeholderHtml + ' ' + rest
+    }
+    return content + ' ' + placeholderHtml
+  }
+
+  const insertAfterSecondSentence = (content, placeholderHtml) => {
+    const sentences = content.split(/[.!?]+/)
+    if (sentences.length > 2) {
+      const firstTwoSentences = sentences.slice(0, 2).join('') + content.match(/[.!?]+/)?.[0] || '.'
+      const rest = content.substring(firstTwoSentences.length)
+      return firstTwoSentences + ' ' + placeholderHtml + ' ' + rest
+    }
+    return content + ' ' + placeholderHtml
+  }
+
+  const insertAfterThirdSentence = (content, placeholderHtml) => {
+    const sentences = content.split(/[.!?]+/)
+    if (sentences.length > 3) {
+      const firstThreeSentences = sentences.slice(0, 3).join('') + content.match(/[.!?]+/)?.[0] || '.'
+      const rest = content.substring(firstThreeSentences.length)
+      return firstThreeSentences + ' ' + placeholderHtml + ' ' + rest
+    }
+    return content + ' ' + placeholderHtml
   }
 
   // Group placeholders by type
