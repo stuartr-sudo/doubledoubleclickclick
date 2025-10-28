@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { ArrowLeft, Save, Globe, User as UserIcon, Mail, Calendar } from 'lucide-react'
-import { User } from '@/api/entities'
-import { getCurrentUser } from '@/lib/supabase'
+import { supabase, getCurrentUser } from '@/lib/supabase'
 
 const Profile = () => {
   const navigate = useNavigate()
@@ -33,7 +32,11 @@ const Profile = () => {
       }
 
       // Get user profile data
-      const { data: profile, error } = await User.get(currentUser.id)
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single()
 
       if (error) {
         console.error('Error loading profile:', error)
@@ -60,11 +63,14 @@ const Profile = () => {
 
     setSaving(true)
     try {
-      const { error } = await User.update(user.id, {
-        full_name: formData.full_name,
-        website_url: formData.website_url,
-        updated_date: new Date().toISOString()
-      })
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: formData.full_name,
+          website_url: formData.website_url,
+          updated_date: new Date().toISOString()
+        })
+        .eq('id', user.id)
 
       if (error) {
         console.error('Error updating profile:', error)
