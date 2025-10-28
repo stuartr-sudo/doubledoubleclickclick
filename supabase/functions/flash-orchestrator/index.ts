@@ -113,12 +113,103 @@ function optimizeStructure(content: string): string {
 }
 
 // Add internal links
-function addInternalLinks(content: string): string {
-  // Simple internal linking - in production this would be more sophisticated
-  return content.replace(
-    /\b(learn more|read more|see also|related|similar)\b/gi,
-    '<a href="#" style="color: #3b82f6; text-decoration: underline;">$1</a>'
-  );
+async function addInternalLinks(content: string, supabase: any, userId: string): Promise<string> {
+  try {
+    // Get user's website URL
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('website_url')
+      .eq('id', userId)
+      .single();
+
+    if (!userProfile?.website_url) {
+      console.log('No website URL found for user, skipping internal linking');
+      return content;
+    }
+
+    // Get existing content from the user's blog posts for internal linking
+    const { data: existingPosts } = await supabase
+      .from('blog_posts')
+      .select('id, title, content')
+      .eq('user_name', user_name)
+      .limit(10);
+
+    if (!existingPosts || existingPosts.length === 0) {
+      console.log('No existing posts found for internal linking');
+      return content;
+    }
+
+    // Create a simple internal linking system
+    let enhancedContent = content;
+    
+    // Extract key topics from current content
+    const currentTopics = extractTopics(content);
+    
+    // Find relevant existing posts
+    const relevantPosts = existingPosts.filter(post => 
+      currentTopics.some(topic => 
+        post.title.toLowerCase().includes(topic.toLowerCase()) ||
+        post.content.toLowerCase().includes(topic.toLowerCase())
+      )
+    );
+
+    // Add internal links to relevant content
+    relevantPosts.forEach((post, index) => {
+      if (index < 3) { // Limit to 3 internal links
+        const linkText = post.title;
+        const linkUrl = `${userProfile.website_url}/post/${post.id}`;
+        
+        // Find a good place to insert the link
+        const linkPattern = new RegExp(`\\b(${linkText.split(' ').slice(0, 2).join(' ')}\\b)`, 'gi');
+        if (enhancedContent.match(linkPattern)) {
+          enhancedContent = enhancedContent.replace(
+            linkPattern,
+            `<a href="${linkUrl}" style="color: #3b82f6; text-decoration: underline;" target="_blank">$1</a>`
+          );
+        } else {
+          // Add a "Related: " link at the end of a paragraph
+          enhancedContent = enhancedContent.replace(
+            /(\.\s*)(<br\s*\/?>|<\/p>)/gi,
+            `$1 <a href="${linkUrl}" style="color: #3b82f6; text-decoration: underline;" target="_blank">Related: ${linkText}</a>$2`
+          );
+        }
+      }
+    });
+
+    return enhancedContent;
+  } catch (error) {
+    console.error('Error adding internal links:', error);
+    return content;
+  }
+}
+
+// Extract topics from content
+function extractTopics(content: string): string[] {
+  const topics: string[] = [];
+  
+  // Extract headings as topics
+  const headings = content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi);
+  if (headings) {
+    headings.forEach(heading => {
+      const text = heading.replace(/<[^>]*>/g, '').trim();
+      if (text.length > 3 && text.length < 50) {
+        topics.push(text);
+      }
+    });
+  }
+  
+  // Extract bold text as topics
+  const boldText = content.match(/<strong>(.*?)<\/strong>/gi);
+  if (boldText) {
+    boldText.forEach(bold => {
+      const text = bold.replace(/<[^>]*>/g, '').trim();
+      if (text.length > 3 && text.length < 30) {
+        topics.push(text);
+      }
+    });
+  }
+  
+  return [...new Set(topics)]; // Remove duplicates
 }
 
 // Add citations
@@ -286,7 +377,7 @@ serve(async (req) => {
     enhancedContent = optimizeStructure(enhancedContent);
 
     // Add internal links
-    enhancedContent = addInternalLinks(enhancedContent);
+    enhancedContent = await addInternalLinks(enhancedContent, supabase, user_name);
 
     // Add citations
     enhancedContent = addCitations(enhancedContent);
