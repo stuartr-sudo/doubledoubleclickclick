@@ -75,10 +75,16 @@ export default function FlashToggle({ item, onStatusChange }) {
 
           // Import supabase client
           const { createClient } = await import('@supabase/supabase-js');
-          const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-          );
+          
+          // Get environment variables (works in both browser and server)
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+          const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+          
+          if (!supabaseUrl || !supabaseKey) {
+            throw new Error('Supabase environment variables not found');
+          }
+          
+          const supabase = createClient(supabaseUrl, supabaseKey);
 
           // Call the Flash orchestrator Edge Function
           const { data, error } = await supabase.functions.invoke('flash-orchestrator', {
