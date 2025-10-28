@@ -4,7 +4,10 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing Supabase environment variables')
+  console.error('Missing Supabase environment variables:', {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseServiceKey
+  })
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -22,11 +25,6 @@ export default async function handler(req, res) {
     if (!postId || !content) {
       console.error('Missing required fields:', { postId: !!postId, content: !!content })
       return res.status(400).json({ error: 'Missing required fields' })
-    }
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase credentials')
-      return res.status(500).json({ error: 'Server configuration error' })
     }
 
     // For now, let's just simulate success to test the UI flow
