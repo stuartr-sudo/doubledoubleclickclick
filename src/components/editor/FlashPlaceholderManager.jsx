@@ -56,10 +56,13 @@ const FlashPlaceholderManager = ({
     }
   }, [content, autoRefresh, loadPlaceholders])
 
-  // Inject placeholders into content when placeholders are loaded
+  // Inject placeholders into content when placeholders are loaded (only once)
   useEffect(() => {
     if (injectIntoContent && placeholders.length > 0 && content && onContentUpdate) {
-      injectPlaceholdersIntoContent()
+      // Check if placeholders are already injected to prevent duplicates
+      if (!content.includes('flash-placeholder-container')) {
+        injectPlaceholdersIntoContent()
+      }
     }
   }, [placeholders, content, injectIntoContent, onContentUpdate])
 
@@ -72,28 +75,50 @@ const FlashPlaceholderManager = ({
     // Sort placeholders by position
     const sortedPlaceholders = [...placeholders].sort((a, b) => a.position - b.position)
 
-    // Create placeholder HTML for each placeholder
-    sortedPlaceholders.forEach((placeholder, index) => {
-      const placeholderHtml = createPlaceholderHtml(placeholder, index)
-      
-      // Insert placeholder at strategic positions in content
-      if (placeholder.type === 'image' && placeholder.position === 1) {
-        // Insert first image after first paragraph
-        updatedContent = insertAfterFirstParagraph(updatedContent, placeholderHtml)
-      } else if (placeholder.type === 'image' && placeholder.position === 2) {
-        // Insert second image in middle
-        updatedContent = insertInMiddle(updatedContent, placeholderHtml)
-      } else if (placeholder.type === 'video') {
-        // Insert video after second paragraph
-        updatedContent = insertAfterSecondParagraph(updatedContent, placeholderHtml)
-      } else if (placeholder.type === 'product') {
-        // Insert product section near end
-        updatedContent = insertNearEnd(updatedContent, placeholderHtml)
-      } else if (placeholder.type === 'opinion') {
-        // Insert opinion after third paragraph
-        updatedContent = insertAfterThirdParagraph(updatedContent, placeholderHtml)
-      }
-    })
+    // Group placeholders by type for better distribution
+    const imagePlaceholders = sortedPlaceholders.filter(p => p.type === 'image')
+    const videoPlaceholders = sortedPlaceholders.filter(p => p.type === 'video')
+    const productPlaceholders = sortedPlaceholders.filter(p => p.type === 'product')
+    const opinionPlaceholders = sortedPlaceholders.filter(p => p.type === 'opinion')
+
+    // Insert placeholders at different positions to distribute them
+    let insertionCount = 0
+
+    // Insert first image after first paragraph
+    if (imagePlaceholders.length > 0) {
+      const placeholderHtml = createPlaceholderHtml(imagePlaceholders[0], insertionCount++)
+      updatedContent = insertAfterFirstParagraph(updatedContent, placeholderHtml)
+    }
+
+    // Insert video after second paragraph
+    if (videoPlaceholders.length > 0) {
+      const placeholderHtml = createPlaceholderHtml(videoPlaceholders[0], insertionCount++)
+      updatedContent = insertAfterSecondParagraph(updatedContent, placeholderHtml)
+    }
+
+    // Insert second image in middle
+    if (imagePlaceholders.length > 1) {
+      const placeholderHtml = createPlaceholderHtml(imagePlaceholders[1], insertionCount++)
+      updatedContent = insertInMiddle(updatedContent, placeholderHtml)
+    }
+
+    // Insert first opinion after third paragraph
+    if (opinionPlaceholders.length > 0) {
+      const placeholderHtml = createPlaceholderHtml(opinionPlaceholders[0], insertionCount++)
+      updatedContent = insertAfterThirdParagraph(updatedContent, placeholderHtml)
+    }
+
+    // Insert product section near end
+    if (productPlaceholders.length > 0) {
+      const placeholderHtml = createPlaceholderHtml(productPlaceholders[0], insertionCount++)
+      updatedContent = insertNearEnd(updatedContent, placeholderHtml)
+    }
+
+    // Insert remaining opinion placeholders at 80% and 90% of content
+    if (opinionPlaceholders.length > 1) {
+      const placeholderHtml = createPlaceholderHtml(opinionPlaceholders[1], insertionCount++)
+      updatedContent = insertAtPercentage(updatedContent, placeholderHtml, 0.8)
+    }
 
     // Update content if it changed
     if (updatedContent !== content) {
@@ -215,6 +240,11 @@ const FlashPlaceholderManager = ({
   const insertNearEnd = (content, placeholderHtml) => {
     const end = Math.floor(content.length * 0.8)
     return content.slice(0, end) + placeholderHtml + content.slice(end)
+  }
+
+  const insertAtPercentage = (content, placeholderHtml, percentage) => {
+    const position = Math.floor(content.length * percentage)
+    return content.slice(0, position) + placeholderHtml + content.slice(position)
   }
 
   // Group placeholders by type
