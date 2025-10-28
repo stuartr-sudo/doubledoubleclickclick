@@ -64,8 +64,15 @@ export default function FlashToggle({ item, onStatusChange }) {
           onStatusChange(item.id, { flash_status: "running" });
         }
         
-        // Call the actual Flash orchestrator Edge Function
+        // Call the Flash trigger API
         try {
+          console.log('🚀 Calling Flash API with:', {
+            postId: item.id,
+            postType: item.type,
+            hasContent: !!item.content,
+            userName: item.user_name
+          });
+
           const response = await fetch('/api/flash/trigger', {
             method: 'POST',
             headers: {
@@ -79,9 +86,11 @@ export default function FlashToggle({ item, onStatusChange }) {
             })
           });
           
+          console.log('📡 Flash API response status:', response.status);
+          
           if (response.ok) {
             const result = await response.json();
-            console.log('Flash processing started:', result);
+            console.log('✅ Flash processing successful:', result);
             
             // Update to completed after processing
             setTimeout(() => {
@@ -89,17 +98,19 @@ export default function FlashToggle({ item, onStatusChange }) {
                 onStatusChange(item.id, { flash_status: "completed" });
               }
               toast.success("Flash AI Enhancement completed!");
-            }, 5000); // 5 seconds for actual processing
+            }, 3000);
             
           } else {
-            throw new Error('Flash processing failed');
+            const errorData = await response.json();
+            console.error('❌ Flash API error response:', errorData);
+            throw new Error(errorData.error || 'Flash processing failed');
           }
         } catch (error) {
-          console.error('Flash processing error:', error);
+          console.error('💥 Flash processing error:', error);
           if (onStatusChange) {
             onStatusChange(item.id, { flash_status: "failed" });
           }
-          toast.error("Flash processing failed. Please try again.");
+          toast.error(`Flash processing failed: ${error.message}`);
         }
         
       } else {
