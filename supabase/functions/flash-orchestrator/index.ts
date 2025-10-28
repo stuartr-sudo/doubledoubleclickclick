@@ -45,13 +45,47 @@ serve(async (req) => {
       console.error('Failed to log execution:', logError)
     }
 
-    // For now, return success - the actual Flash features will be implemented
+    // Create Flash placeholders for the editor
+    const placeholders = [
+      { type: 'image', position: 1, context: 'Hero image for the article' },
+      { type: 'image', position: 2, context: 'Supporting image in the middle' },
+      { type: 'video', position: 3, context: 'Explanatory video' },
+      { type: 'product', position: 4, context: 'Promoted product section' },
+      { type: 'opinion', position: 5, context: 'Expert opinion on the topic' },
+      { type: 'opinion', position: 6, context: 'Personal experience or insight' }
+    ];
+
+    // Insert placeholders into the database
+    const { error: placeholderError } = await supabase
+      .from('content_placeholders')
+      .insert(
+        placeholders.map(placeholder => ({
+          post_id: post_id,
+          type: placeholder.type,
+          position: placeholder.position,
+          context: placeholder.context,
+          fulfilled: false
+        }))
+      );
+
+    if (placeholderError) {
+      console.error('Failed to create placeholders:', placeholderError);
+    }
+
+    // Update the execution log to completed
+    await supabase
+      .from('flash_execution_log')
+      .update({ status: 'completed' })
+      .eq('post_id', post_id)
+      .eq('execution_type', 'orchestrator');
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Flash orchestrator ready',
+        message: 'Flash orchestrator completed - placeholders created',
         content_length: content.length,
-        user_name: user_name
+        user_name: user_name,
+        placeholders_created: placeholders.length
       }),
       { 
         status: 200, 
