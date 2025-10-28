@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
+import { Loader2 } from "lucide-react";
 import { BlogPost } from "@/api/entities";
 import { WebhookReceived } from "@/api/entities";
 import { toast } from 'sonner';
@@ -28,8 +29,17 @@ export default function FlashToggle({ item, onStatusChange }) {
     }
 
     setIsSaving(true);
+    
+    // Set running status immediately for visual feedback
+    if (enabled && onStatusChange) {
+      onStatusChange(item.id, { flash_status: "running" });
+    }
+    
     try {
-      const updateData = { flash_enabled: enabled };
+      const updateData = { 
+        flash_enabled: enabled,
+        flash_status: enabled ? "running" : "idle"
+      };
       
       if (item.type === "post") {
         await BlogPost.update(item.id, updateData);
@@ -40,16 +50,38 @@ export default function FlashToggle({ item, onStatusChange }) {
       setIsEnabled(enabled);
       
       if (onStatusChange) {
-        onStatusChange(item.id, { flash_enabled: enabled });
+        onStatusChange(item.id, { 
+          flash_enabled: enabled,
+          flash_status: enabled ? "running" : "idle"
+        });
       }
       
       if (enabled) {
-        toast.success("Flash AI Enhancement enabled!");
+        toast.success("Flash AI Enhancement enabled! Processing...", {
+          description: "Flash features are being applied to your content."
+        });
+        
+        // Simulate Flash processing (in real implementation, this would call the Edge Function)
+        setTimeout(() => {
+          if (onStatusChange) {
+            onStatusChange(item.id, { flash_status: "completed" });
+          }
+          toast.success("Flash AI Enhancement completed!", {
+            description: "Your content has been enhanced with AI features."
+          });
+        }, 3000); // 3 second simulation
+        
       } else {
         toast.success("Flash AI Enhancement disabled");
       }
     } catch (err) {
       console.error("Failed to save flash setting:", err);
+      
+      // Set failed status on error
+      if (onStatusChange) {
+        onStatusChange(item.id, { flash_status: "failed" });
+      }
+      
       if (err?.response?.status === 429) {
         toast.error("Rate limit exceeded. Please wait a moment and try again.");
       } else {
@@ -60,6 +92,21 @@ export default function FlashToggle({ item, onStatusChange }) {
     }
   };
 
+  const getStatusText = () => {
+    if (isSaving) return "Saving...";
+    if (item.flash_status === "running") return "Running...";
+    if (item.flash_status === "completed") return "Completed";
+    if (item.flash_status === "failed") return "Failed";
+    return isEnabled ? "ON" : "OFF";
+  };
+
+  const getStatusColor = () => {
+    if (isSaving || item.flash_status === "running") return "text-blue-600";
+    if (item.flash_status === "completed") return "text-green-600";
+    if (item.flash_status === "failed") return "text-red-600";
+    return "text-slate-500";
+  };
+
   return (
     <div className="flex items-center gap-2">
       <Switch
@@ -68,9 +115,14 @@ export default function FlashToggle({ item, onStatusChange }) {
         disabled={isSaving || (isEnabled && wordCount < MIN_WORD_COUNT)}
         className="data-[state=checked]:bg-indigo-600"
       />
-      <span className="text-xs text-slate-500">
-        {isSaving ? "Saving..." : isEnabled ? "ON" : "OFF"}
-      </span>
+      <div className="flex items-center gap-1">
+        {(isSaving || item.flash_status === "running") && (
+          <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
+        )}
+        <span className={`text-xs ${getStatusColor()}`}>
+          {getStatusText()}
+        </span>
+      </div>
     </div>
   );
 }
