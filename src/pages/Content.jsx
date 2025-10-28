@@ -717,6 +717,15 @@ export default function Content() {// Renamed from ContentPage as per original f
                   const flashStatus = post.flash_status || "idle";
 
                   const getFlashStatusBadge = (status, enabled) => {
+                    if (status === "running") {
+                      return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 flex-shrink-0 animate-pulse">Running</Badge>;
+                    }
+                    if (status === "completed") {
+                      return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 flex-shrink-0">Completed</Badge>;
+                    }
+                    if (status === "failed") {
+                      return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200 flex-shrink-0">Failed</Badge>;
+                    }
                     if (enabled) {
                       return <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200 flex-shrink-0">Enabled</Badge>;
                     }

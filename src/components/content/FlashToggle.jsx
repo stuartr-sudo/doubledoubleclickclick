@@ -57,15 +57,50 @@ export default function FlashToggle({ item, onStatusChange }) {
       }
       
       if (enabled) {
-        toast.success("Flash AI Enhancement enabled!");
+        toast.success("Flash AI Enhancement enabled! Starting processing...");
         
-        // Simulate Flash processing
-        setTimeout(() => {
-          if (onStatusChange) {
-            onStatusChange(item.id, { flash_status: "completed" });
+        // Set running status immediately
+        if (onStatusChange) {
+          onStatusChange(item.id, { flash_status: "running" });
+        }
+        
+        // Call the actual Flash orchestrator Edge Function
+        try {
+          const response = await fetch('/api/flash/trigger', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              postId: item.id,
+              postType: item.type,
+              content: item.content,
+              userName: item.user_name
+            })
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('Flash processing started:', result);
+            
+            // Update to completed after processing
+            setTimeout(() => {
+              if (onStatusChange) {
+                onStatusChange(item.id, { flash_status: "completed" });
+              }
+              toast.success("Flash AI Enhancement completed!");
+            }, 5000); // 5 seconds for actual processing
+            
+          } else {
+            throw new Error('Flash processing failed');
           }
-          toast.success("Flash AI Enhancement completed!");
-        }, 2000);
+        } catch (error) {
+          console.error('Flash processing error:', error);
+          if (onStatusChange) {
+            onStatusChange(item.id, { flash_status: "failed" });
+          }
+          toast.error("Flash processing failed. Please try again.");
+        }
         
       } else {
         toast.success("Flash AI Enhancement disabled");
