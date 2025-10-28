@@ -395,24 +395,24 @@ function LayoutContent({ children, currentPageName }) {
   // NEW: helper to ensure token_balance is persisted (20 on first login) – idempotent
   const ensureWelcomeTokens = async (currentUser) => {
     if (!currentUser) return currentUser;
-    const marker = "welcome_seeded_20";
-    const processed = Array.isArray(currentUser.processed_stripe_payments)
-      ? currentUser.processed_stripe_payments
-      : [];
-    const alreadySeeded = processed.includes(marker);
 
     const numericBalance =
       currentUser.token_balance === undefined || currentUser.token_balance === null
         ? NaN
         : Number(currentUser.token_balance);
 
-    // seed only if not yet seeded and balance is not positive
-    if (!alreadySeeded && (!Number.isFinite(numericBalance) || numericBalance <= 0)) {
-      const updated = await app.auth.updateMe({
-        token_balance: 20,
-        processed_stripe_payments: [...processed, marker],
-      });
-      return updated;
+    // seed only if balance is not positive (simplified check)
+    if (!Number.isFinite(numericBalance) || numericBalance <= 0) {
+      try {
+        const updated = await app.auth.updateMe({
+          token_balance: 20
+        });
+        console.log("✅ Welcome tokens seeded:", updated);
+        return updated;
+      } catch (e) {
+        console.error("Failed to seed welcome tokens:", e);
+        return currentUser;
+      }
     }
     return currentUser;
   };
