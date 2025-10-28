@@ -64,47 +64,60 @@ export default function FlashToggle({ item, onStatusChange }) {
           onStatusChange(item.id, { flash_status: "running" });
         }
         
-        // Call the Flash trigger API
+        // Call Supabase Edge Functions directly
         try {
-          console.log('🚀 Calling Flash API with:', {
+          console.log('🚀 Calling Supabase Edge Functions with:', {
             postId: item.id,
             postType: item.type,
             hasContent: !!item.content,
             userName: item.user_name
           });
 
-          const response = await fetch('/api/flash/trigger', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+          // Import supabase client
+          const { createClient } = await import('@supabase/supabase-js');
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          );
+
+          // Call the Flash orchestrator Edge Function
+          const { data, error } = await supabase.functions.invoke('flash-orchestrator', {
+            body: {
               postId: item.id,
               postType: item.type,
               content: item.content,
-              userName: item.user_name
-            })
+              userName: item.user_name,
+              features: [
+                'tldr',
+                'table', 
+                'cta',
+                'faq',
+                'citations',
+                'internal-links',
+                'anchor-menu',
+                'brand-voice',
+                'humanize',
+                'structure',
+                'clean-html'
+              ]
+            }
           });
           
-          console.log('📡 Flash API response status:', response.status);
-          
-          if (response.ok) {
-            const result = await response.json();
-            console.log('✅ Flash processing successful:', result);
-            
-            // Update to completed after processing
-            setTimeout(() => {
-              if (onStatusChange) {
-                onStatusChange(item.id, { flash_status: "completed" });
-              }
-              toast.success("Flash AI Enhancement completed!");
-            }, 3000);
-            
-          } else {
-            const errorData = await response.json();
-            console.error('❌ Flash API error response:', errorData);
-            throw new Error(errorData.error || 'Flash processing failed');
+          if (error) {
+            console.error('❌ Supabase Edge Function error:', error);
+            throw new Error(error.message || 'Flash processing failed');
           }
+          
+          console.log('✅ Flash processing successful:', data);
+          
+          // Update to completed after processing
+          setTimeout(() => {
+            if (onStatusChange) {
+              onStatusChange(item.id, { flash_status: "completed" });
+            }
+            toast.success("Flash AI Enhancement completed!");
+          }, 3000);
+          
         } catch (error) {
           console.error('💥 Flash processing error:', error);
           if (onStatusChange) {
