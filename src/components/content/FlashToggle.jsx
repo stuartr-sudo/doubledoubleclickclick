@@ -89,10 +89,10 @@ export default function FlashToggle({ item, onStatusChange }) {
           // Call the Flash orchestrator Edge Function
           const { data, error } = await supabase.functions.invoke('flash-orchestrator', {
             body: {
-              postId: item.id,
-              postType: item.type,
+              post_id: item.id,
+              post_type: item.type,
               content: item.content,
-              userName: item.user_name,
+              user_name: item.user_name,
               features: [
                 'tldr',
                 'table', 
