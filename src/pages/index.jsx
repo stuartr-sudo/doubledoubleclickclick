@@ -160,6 +160,8 @@ import TokenTest from "./TokenTest";
 
 import UIShowcase from "./UIShowcase";
 
+import Profile from "./Profile";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -321,6 +323,8 @@ const PAGES = {
     TokenTest: TokenTest,
     
     UIShowcase: UIShowcase,
+    
+    Profile: Profile,
     
 }
 
@@ -514,6 +518,8 @@ function PagesContent() {
                 
                 
                 <Route path="/TokenTest" element={<TokenTest />} />
+                
+                <Route path="/Profile" element={<Profile />} />
                 
             </Routes>
         </Layout>

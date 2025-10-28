@@ -48,6 +48,7 @@ const navStructure = [
   { name: "Editor", href: "Editor", icon: Edit3, featureFlag: "show_editor_link" },
   { name: "Pages", href: "Pages", icon: FileText, featureFlag: "show_pages_link" },
   { name: "Pages Setup", href: "PagesSetup", icon: Settings, featureFlag: "show_pages_setup_link" },
+  { name: "Profile", href: "Profile", icon: UserIcon, featureFlag: "show_profile_link" },
   { name: "Topics", href: "Topics", icon: Database },
   { name: "Topic Products", href: "ProductLibrary", icon: ShoppingBag },
   { name: "DoubleClick Tutorials", href: "DoubleClickTutorials", icon: BookOpen }]
