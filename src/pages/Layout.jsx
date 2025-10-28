@@ -48,7 +48,6 @@ const navStructure = [
   { name: "Editor", href: "Editor", icon: Edit3, featureFlag: "show_editor_link" },
   { name: "Pages", href: "Pages", icon: FileText, featureFlag: "show_pages_link" },
   { name: "Pages Setup", href: "PagesSetup", icon: Settings, featureFlag: "show_pages_setup_link" },
-  { name: "Profile", href: "Profile", icon: UserIcon, featureFlag: "show_profile_link" },
   { name: "Topics", href: "Topics", icon: Database },
   { name: "Topic Products", href: "ProductLibrary", icon: ShoppingBag },
   { name: "DoubleClick Tutorials", href: "DoubleClickTutorials", icon: BookOpen }]
@@ -756,6 +755,12 @@ function LayoutContent({ children, currentPageName }) {
                         <Link to={createPageUrl('AccountSettings')} className="flex items-center gap-2">
                           <Settings className="w-4 h-4 text-slate-500" />
                           <span>Account Settings</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('Profile')} className="flex items-center gap-2">
+                          <UserIcon className="w-4 h-4 text-slate-500" />
+                          <span>Profile</span>
                         </Link>
                       </DropdownMenuItem>
                       {/* Affiliate Program */}
