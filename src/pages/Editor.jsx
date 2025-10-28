@@ -3997,33 +3997,9 @@ ${content}
             {/* NEW: Flash Placeholder Toolbar */}
             {flashEnabled && (
               <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-indigo-600" />
-                    <span className="text-sm font-medium text-slate-700">Flash AI Enhancement</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowFlashPlaceholders(!showFlashPlaceholders)}
-                      className={showFlashPlaceholders ? "bg-indigo-50 border-indigo-200 text-indigo-700" : ""}
-                    >
-                      <Zap className="w-4 h-4 mr-1" />
-                      {showFlashPlaceholders ? 'Hide' : 'Show'} Placeholders
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowFlashSettings(true)}
-                    >
-                      <Settings className="w-4 h-4 mr-1" />
-                      Settings
-                    </Button>
-                  </div>
-                  
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-indigo-600" />
+                  <span className="text-sm font-medium text-slate-700">Flash AI Enhancement Active</span>
                   <div className="ml-auto text-xs text-slate-500">
                     {content ? content.replace(/<[^>]*>/g, '').split(/\s+/).length : 0} words
                   </div>
@@ -4406,15 +4382,15 @@ ${content}
               minWords={400}
             />
 
-            {/* NEW: Flash Placeholder System */}
-            {flashEnabled && showFlashPlaceholders && (
+            {/* NEW: Flash Placeholder System - Always show when Flash is enabled */}
+            {flashEnabled && (
               <FlashPlaceholderManager
                 postId={currentPost?.id}
                 userName={currentUsername}
                 content={content}
                 onContentUpdate={handleContentUpdate}
                 userStyles={userStyles}
-                isVisible={showFlashPlaceholders}
+                isVisible={true}
               />
             )}
 
