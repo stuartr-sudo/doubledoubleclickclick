@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { ArrowLeft, Save, Globe, User, Mail, Calendar } from 'lucide-react'
+import { ArrowLeft, Save, Globe, User as UserIcon, Mail, Calendar } from 'lucide-react'
 import { User } from '@/api/entities'
 import { getCurrentUser } from '@/lib/supabase'
 
@@ -113,10 +113,10 @@ const Profile = () => {
             Back
           </Button>
           
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <User className="w-6 h-6 text-blue-600" />
-            </div>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <UserIcon className="w-6 h-6 text-blue-600" />
+              </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
               <p className="text-gray-600">Manage your account information and preferences</p>
@@ -129,7 +129,7 @@ const Profile = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
+                <UserIcon className="w-5 h-5" />
                 Basic Information
               </CardTitle>
               <CardDescription>
