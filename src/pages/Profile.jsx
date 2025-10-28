@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { ArrowLeft, Save, Globe, User, Mail, Calendar } from 'lucide-react'
-import app from '@/api/appClient'
+import { User } from '@/api/entities'
+import { getCurrentUser } from '@/lib/supabase'
 
 const Profile = () => {
   const navigate = useNavigate()
@@ -25,18 +26,14 @@ const Profile = () => {
 
   const loadUserProfile = async () => {
     try {
-      const { data: { user: currentUser } } = await app.auth.getUser()
+      const currentUser = await getCurrentUser()
       if (!currentUser) {
         navigate('/login')
         return
       }
 
       // Get user profile data
-      const { data: profile, error } = await app
-        .from('user_profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single()
+      const { data: profile, error } = await User.get(currentUser.id)
 
       if (error) {
         console.error('Error loading profile:', error)
@@ -63,14 +60,11 @@ const Profile = () => {
 
     setSaving(true)
     try {
-      const { error } = await app
-        .from('user_profiles')
-        .update({
-          full_name: formData.full_name,
-          website_url: formData.website_url,
-          updated_date: new Date().toISOString()
-        })
-        .eq('id', user.id)
+      const { error } = await User.update(user.id, {
+        full_name: formData.full_name,
+        website_url: formData.website_url,
+        updated_date: new Date().toISOString()
+      })
 
       if (error) {
         console.error('Error updating profile:', error)
