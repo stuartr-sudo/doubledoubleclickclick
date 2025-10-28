@@ -18,7 +18,8 @@ const FlashPlaceholderManager = ({
   content, 
   onContentUpdate,
   userStyles = {},
-  isVisible = true 
+  isVisible = true,
+  injectIntoContent = false
 }) => {
   const {
     placeholders,
@@ -54,6 +55,167 @@ const FlashPlaceholderManager = ({
       return () => clearTimeout(timer)
     }
   }, [content, autoRefresh, loadPlaceholders])
+
+  // Inject placeholders into content when placeholders are loaded
+  useEffect(() => {
+    if (injectIntoContent && placeholders.length > 0 && content && onContentUpdate) {
+      injectPlaceholdersIntoContent()
+    }
+  }, [placeholders, content, injectIntoContent, onContentUpdate])
+
+  // Function to inject placeholders into content
+  const injectPlaceholdersIntoContent = () => {
+    if (!placeholders.length || !content) return
+
+    let updatedContent = content
+
+    // Sort placeholders by position
+    const sortedPlaceholders = [...placeholders].sort((a, b) => a.position - b.position)
+
+    // Create placeholder HTML for each placeholder
+    sortedPlaceholders.forEach((placeholder, index) => {
+      const placeholderHtml = createPlaceholderHtml(placeholder, index)
+      
+      // Insert placeholder at strategic positions in content
+      if (placeholder.type === 'image' && placeholder.position === 1) {
+        // Insert first image after first paragraph
+        updatedContent = insertAfterFirstParagraph(updatedContent, placeholderHtml)
+      } else if (placeholder.type === 'image' && placeholder.position === 2) {
+        // Insert second image in middle
+        updatedContent = insertInMiddle(updatedContent, placeholderHtml)
+      } else if (placeholder.type === 'video') {
+        // Insert video after second paragraph
+        updatedContent = insertAfterSecondParagraph(updatedContent, placeholderHtml)
+      } else if (placeholder.type === 'product') {
+        // Insert product section near end
+        updatedContent = insertNearEnd(updatedContent, placeholderHtml)
+      } else if (placeholder.type === 'opinion') {
+        // Insert opinion after third paragraph
+        updatedContent = insertAfterThirdParagraph(updatedContent, placeholderHtml)
+      }
+    })
+
+    // Update content if it changed
+    if (updatedContent !== content) {
+      onContentUpdate(updatedContent)
+    }
+  }
+
+  // Helper function to create placeholder HTML
+  const createPlaceholderHtml = (placeholder, index) => {
+    const placeholderId = `flash-${placeholder.type}-${placeholder.id}`
+    const glowColor = getPlaceholderColor(placeholder.type)
+    
+    return `
+      <div class="flash-placeholder-container" style="margin: 20px 0; padding: 20px; border: 2px dashed ${glowColor}; border-radius: 12px; background: linear-gradient(135deg, ${glowColor}15, ${glowColor}05); position: relative;">
+        <div class="flash-placeholder-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+          <div class="flash-placeholder-icon" style="width: 24px; height: 24px; background: ${glowColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+            ${getPlaceholderIcon(placeholder.type)}
+          </div>
+          <div class="flash-placeholder-title" style="font-weight: 600; color: ${glowColor}; font-size: 16px;">
+            ${getPlaceholderTitle(placeholder.type)}
+          </div>
+          <div class="flash-placeholder-position" style="margin-left: auto; font-size: 12px; color: #666; background: white; padding: 4px 8px; border-radius: 12px;">
+            Position ${placeholder.position}
+          </div>
+        </div>
+        <div class="flash-placeholder-content" style="min-height: 80px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 8px; border: 1px solid ${glowColor}30;">
+          <div class="flash-placeholder-text" style="text-align: center; color: #666;">
+            <div style="font-size: 18px; margin-bottom: 8px;">${getPlaceholderEmoji(placeholder.type)}</div>
+            <div style="font-weight: 500; margin-bottom: 4px;">${placeholder.context}</div>
+            <div style="font-size: 12px; color: #999;">Click to add ${placeholder.type}</div>
+          </div>
+        </div>
+        <div class="flash-placeholder-actions" style="margin-top: 15px; display: flex; gap: 8px; justify-content: center;">
+          <button class="flash-placeholder-btn" style="padding: 8px 16px; background: ${glowColor}; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+            Add ${placeholder.type}
+          </button>
+          <button class="flash-placeholder-remove" style="padding: 8px 16px; background: #f3f4f6; color: #666; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+            Remove
+          </button>
+        </div>
+      </div>
+    `
+  }
+
+  // Helper functions for placeholder styling
+  const getPlaceholderColor = (type) => {
+    const colors = {
+      image: '#3B82F6',
+      video: '#EF4444', 
+      product: '#10B981',
+      opinion: '#F59E0B'
+    }
+    return colors[type] || '#6B7280'
+  }
+
+  const getPlaceholderIcon = (type) => {
+    const icons = {
+      image: '📷',
+      video: '🎥',
+      product: '🛍️',
+      opinion: '💭'
+    }
+    return icons[type] || '📝'
+  }
+
+  const getPlaceholderTitle = (type) => {
+    const titles = {
+      image: 'Image Placeholder',
+      video: 'Video Placeholder', 
+      product: 'Product Section',
+      opinion: 'Opinion Placeholder'
+    }
+    return titles[type] || 'Content Placeholder'
+  }
+
+  const getPlaceholderEmoji = (type) => {
+    const emojis = {
+      image: '🖼️',
+      video: '🎬',
+      product: '🛒',
+      opinion: '🗣️'
+    }
+    return emojis[type] || '📄'
+  }
+
+  // Helper functions to insert placeholders at different positions
+  const insertAfterFirstParagraph = (content, placeholderHtml) => {
+    const paragraphs = content.split('</p>')
+    if (paragraphs.length > 1) {
+      paragraphs[0] += '</p>' + placeholderHtml
+      return paragraphs.join('')
+    }
+    return content + placeholderHtml
+  }
+
+  const insertAfterSecondParagraph = (content, placeholderHtml) => {
+    const paragraphs = content.split('</p>')
+    if (paragraphs.length > 2) {
+      paragraphs[1] += '</p>' + placeholderHtml
+      return paragraphs.join('')
+    }
+    return content + placeholderHtml
+  }
+
+  const insertAfterThirdParagraph = (content, placeholderHtml) => {
+    const paragraphs = content.split('</p>')
+    if (paragraphs.length > 3) {
+      paragraphs[2] += '</p>' + placeholderHtml
+      return paragraphs.join('')
+    }
+    return content + placeholderHtml
+  }
+
+  const insertInMiddle = (content, placeholderHtml) => {
+    const middle = Math.floor(content.length / 2)
+    return content.slice(0, middle) + placeholderHtml + content.slice(middle)
+  }
+
+  const insertNearEnd = (content, placeholderHtml) => {
+    const end = Math.floor(content.length * 0.8)
+    return content.slice(0, end) + placeholderHtml + content.slice(end)
+  }
 
   // Group placeholders by type
   const groupedPlaceholders = placeholders.reduce((acc, placeholder) => {

@@ -6,6 +6,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper function to generate TLDR
+function generateTLDR(content: string): string {
+  // Simple TLDR generation - in production, this would use AI
+  const words = content.replace(/<[^>]*>/g, '').split(/\s+/).slice(0, 50);
+  return words.join(' ') + '...';
+}
+
+// Helper function to generate FAQ
+function generateFAQ(content: string): string {
+  // Simple FAQ generation - in production, this would use AI
+  const questions = [
+    'What is the main topic of this article?',
+    'How can I get started with this?',
+    'What are the key benefits?',
+    'Are there any prerequisites?',
+    'What should I do next?'
+  ];
+  
+  return questions.map(q => `
+    <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 6px; border-left: 3px solid #22c55e;">
+      <h4 style="margin: 0 0 8px 0; color: #15803d; font-size: 16px;">${q}</h4>
+      <p style="margin: 0; color: #374151; font-size: 14px;">This is a placeholder answer. In production, AI would generate specific answers based on the content.</p>
+    </div>
+  `).join('');
+}
+
+// Helper function to generate CTA
+function generateCTA(content: string): { title: string; description: string; buttonText: string } {
+  return {
+    title: 'Ready to Get Started?',
+    description: 'Take action on what you\'ve learned and implement these strategies today.',
+    buttonText: 'Get Started Now'
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -70,6 +105,49 @@ serve(async (req) => {
 
     if (placeholderError) {
       console.error('Failed to create placeholders:', placeholderError);
+    }
+
+    // Auto-insert Flash features into content
+    let enhancedContent = content;
+    
+    // Add TLDR at the beginning
+    const tldr = generateTLDR(content);
+    if (tldr) {
+      enhancedContent = `<div class="flash-tldr" style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0; border-radius: 8px;">
+        <h3 style="margin: 0 0 12px 0; color: #1e40af; font-size: 18px;">📋 TL;DR</h3>
+        <p style="margin: 0; color: #374151; line-height: 1.6;">${tldr}</p>
+      </div>` + enhancedContent;
+    }
+
+    // Add FAQ section near the end
+    const faq = generateFAQ(content);
+    if (faq) {
+      enhancedContent += `<div class="flash-faq" style="background: #f0fdf4; border: 1px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 8px;">
+        <h3 style="margin: 0 0 16px 0; color: #15803d; font-size: 20px;">❓ Frequently Asked Questions</h3>
+        ${faq}
+      </div>`;
+    }
+
+    // Add CTA buttons
+    const cta = generateCTA(content);
+    if (cta) {
+      enhancedContent += `<div class="flash-cta" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; margin: 20px 0; border-radius: 12px; text-align: center;">
+        <h3 style="margin: 0 0 16px 0; font-size: 20px;">${cta.title}</h3>
+        <p style="margin: 0 0 20px 0; opacity: 0.9;">${cta.description}</p>
+        <button style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px;">${cta.buttonText}</button>
+      </div>`;
+    }
+
+    // Update the content in the database
+    if (enhancedContent !== content) {
+      const { error: updateError } = await supabase
+        .from('blog_posts')
+        .update({ content: enhancedContent })
+        .eq('id', post_id);
+
+      if (updateError) {
+        console.error('Failed to update content:', updateError);
+      }
     }
 
     // Update the execution log to completed

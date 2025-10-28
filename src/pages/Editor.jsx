@@ -4382,7 +4382,7 @@ ${content}
               minWords={400}
             />
 
-            {/* NEW: Flash Placeholder System - Always show when Flash is enabled */}
+            {/* NEW: Flash Placeholder System - Inject placeholders into content */}
             {flashEnabled && (
               <FlashPlaceholderManager
                 postId={currentPost?.id}
@@ -4391,6 +4391,7 @@ ${content}
                 onContentUpdate={handleContentUpdate}
                 userStyles={userStyles}
                 isVisible={true}
+                injectIntoContent={true}
               />
             )}
 
