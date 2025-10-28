@@ -56,15 +56,15 @@ const FlashPlaceholderManager = ({
     }
   }, [content, autoRefresh, loadPlaceholders])
 
-  // Inject placeholders into content when placeholders are loaded (only once)
-  useEffect(() => {
-    if (injectIntoContent && placeholders.length > 0 && content && onContentUpdate) {
-      // Check if placeholders are already injected to prevent duplicates
-      if (!content.includes('flash-placeholder-container')) {
-        injectPlaceholdersIntoContent()
-      }
-    }
-  }, [placeholders, content, injectIntoContent, onContentUpdate])
+  // Don't inject placeholders into content - just display them
+  // useEffect(() => {
+  //   if (injectIntoContent && placeholders.length > 0 && content && onContentUpdate) {
+  //     // Check if placeholders are already injected to prevent duplicates
+  //     if (!content.includes('flash-placeholder-container')) {
+  //       injectPlaceholdersIntoContent()
+  //     }
+  //   }
+  // }, [placeholders, content, injectIntoContent, onContentUpdate])
 
   // Function to inject placeholders into content
   const injectPlaceholdersIntoContent = () => {
