@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { ArrowLeft, Save, Globe, User, Mail, Calendar } from 'lucide-react'
-import { app } from '@/lib/supabase'
+import app from '@/api/appClient'
 
 const Profile = () => {
   const navigate = useNavigate()
