@@ -218,9 +218,14 @@ const Profile = () => {
                   </div>
                 </div>
                 <div>
-                  <Label>Token Balance</Label>
+                  <Label>Account Balance</Label>
                   <div className="p-3 bg-gray-50 rounded-lg">
-                    <span className="font-medium">{user.token_balance || 0} tokens</span>
+                    <span className="font-medium">
+                      {user.account_balance !== undefined && user.account_balance !== null 
+                        ? `$${parseFloat(user.account_balance).toFixed(2)}`
+                        : '$5.00'
+                      }
+                    </span>
                   </div>
                 </div>
               </div>
