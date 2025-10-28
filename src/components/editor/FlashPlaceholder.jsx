@@ -46,7 +46,7 @@ const FlashPlaceholder = ({
 
   const {
     id,
-    placeholder_type,
+    type: placeholder_type,
     context,
     suggested_content,
     metadata = {},

@@ -57,7 +57,7 @@ const FlashPlaceholderManager = ({
 
   // Group placeholders by type
   const groupedPlaceholders = placeholders.reduce((acc, placeholder) => {
-    const type = placeholder.placeholder_type
+    const type = placeholder.type
     if (!acc[type]) acc[type] = []
     acc[type].push(placeholder)
     return acc
