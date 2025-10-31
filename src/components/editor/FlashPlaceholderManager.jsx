@@ -5,7 +5,7 @@
  * Handles drag-drop, voice recording, and content uploads.
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useFlashPlaceholders } from '@/components/hooks/useFlashPlaceholders'
 import FlashPlaceholder from './FlashPlaceholder'
 import { Button } from '@/components/ui/button'
@@ -19,7 +19,8 @@ const FlashPlaceholderManager = ({
   onContentUpdate,
   userStyles = {},
   isVisible = true,
-  injectIntoContent = false
+  injectIntoContent = false,
+  flashStatus = null
 }) => {
   const {
     placeholders,
@@ -56,117 +57,167 @@ const FlashPlaceholderManager = ({
     }
   }, [content, autoRefresh, loadPlaceholders])
 
-  // Don't inject placeholders into content - just display them
-  // useEffect(() => {
-  //   if (injectIntoContent && placeholders.length > 0 && content && onContentUpdate) {
-  //     // Check if placeholders are already injected to prevent duplicates
-  //     if (!content.includes('flash-placeholder-container')) {
-  //       injectPlaceholdersIntoContent()
-  //     }
-  //   }
-  // }, [placeholders, content, injectIntoContent, onContentUpdate])
+  // Get neon color scheme for each placeholder type
+  const getOrbColorScheme = (type) => {
+    const schemes = {
+      image: {
+        primary: '#00ffff',
+        secondary: '#0099ff',
+        glow: '#44ffff',
+        inner: '#88ffff'
+      },
+      video: {
+        primary: '#ffaa00',
+        secondary: '#ff8800',
+        glow: '#ffbb44',
+        inner: '#ffdd88'
+      },
+      product: {
+        primary: '#00ff00',
+        secondary: '#44ff44',
+        glow: '#88ff88',
+        inner: '#ccffcc'
+      },
+      opinion: {
+        primary: '#ff0088',
+        secondary: '#ff0044',
+        glow: '#ff44aa',
+        inner: '#ff88cc'
+      }
+    }
+    return schemes[type] || schemes.image
+  }
 
-  // Function to inject placeholders into content
-  const injectPlaceholdersIntoContent = () => {
+  // Helper function to create tiny neon orb HTML matching MateriaOrb style
+  const createOrbHtml = (placeholder) => {
+    const placeholderId = placeholder.id
+    const placeholderType = placeholder.type || placeholder.placeholder_type
+    const colors = getOrbColorScheme(placeholderType)
+    const baseSize = 16 // Tiny orb size matching Ask AI menu
+    
+    // Escape context for HTML attribute
+    const context = (placeholder.context || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    
+    return `
+      <span class="flash-orb-placeholder" 
+            data-placeholder-id="${placeholderId}" 
+            data-placeholder-type="${placeholderType}"
+            data-placeholder-position="${placeholder.position || 0}"
+            data-placeholder-context="${context}"
+            title="${context || placeholderType} placeholder"
+            style="
+              display: inline-block;
+              width: ${baseSize}px;
+              height: ${baseSize}px;
+              border-radius: 50%;
+              background: radial-gradient(circle at 30% 30%, ${colors.inner} 0%, ${colors.primary} 35%, ${colors.secondary} 75%, #000000 100%);
+              box-shadow: 
+                0 0 ${baseSize * 0.3}px ${colors.glow}cc,
+                0 0 ${baseSize * 0.5}px ${colors.glow}88,
+                0 0 ${baseSize * 0.8}px ${colors.glow}44,
+                inset 0 0 ${baseSize * 0.4}px ${colors.inner}aa,
+                inset ${baseSize * 0.12}px ${baseSize * 0.12}px ${baseSize * 0.25}px rgba(255,255,255,0.7);
+              position: relative;
+              cursor: pointer;
+              margin: 0 4px;
+              vertical-align: middle;
+              animation: flashOrbPulse 3s ease-in-out infinite, flashOrbFloat 4s ease-in-out infinite alternate;
+              z-index: 1000;
+            "
+            onclick="if(window.parent){window.parent.postMessage({type:'flash-orb-click',placeholderId:'${placeholderId}',placeholderType:'${placeholderType}',placeholderData:{id:'${placeholderId}',type:'${placeholderType}',context:'${context}'}},'*');}">
+        <span style="
+          position: absolute;
+          top: 15%;
+          left: 20%;
+          width: 40%;
+          height: 40%;
+          background: radial-gradient(circle, rgba(255,255,255,1) 0%, transparent 70%);
+          border-radius: 50%;
+          animation: flashOrbSparkle 2s ease-in-out infinite alternate;
+        "></span>
+      </span>
+    `
+  }
+
+  // Insert orb at strategic position based on placeholder position index
+  const insertOrbAtPosition = (content, orbHtml, position, totalPlaceholders) => {
+    // Parse position metadata if available
+    const positionStr = String(position || '')
+    
+    // Try to insert after specific paragraph if position indicates it
+    if (positionStr.includes('after_paragraph_')) {
+      const match = positionStr.match(/after_paragraph_(\d+)/)
+      if (match) {
+        const paraNum = parseInt(match[1], 10)
+        return insertAfterNthParagraph(content, orbHtml, paraNum)
+      }
+    }
+    
+    // Default: distribute evenly throughout content
+    const percentage = totalPlaceholders > 0 ? (position / totalPlaceholders) : 0.5
+    return insertAtPercentage(content, orbHtml, Math.max(0.1, Math.min(0.9, percentage)))
+  }
+
+  // Insert after Nth paragraph
+  const insertAfterNthParagraph = (content, orbHtml, n) => {
+    const paragraphs = content.split(/(<\/p>)/i)
+    let paraCount = 0
+    let inserted = false
+    
+    for (let i = 0; i < paragraphs.length; i++) {
+      if (paragraphs[i].match(/<\/p>/i)) {
+        paraCount++
+        if (paraCount === n && !inserted) {
+          paragraphs[i] += ' ' + orbHtml + ' '
+          inserted = true
+        }
+      }
+    }
+    
+    if (!inserted) {
+      // Fallback: insert at percentage
+      return insertAtPercentage(content, orbHtml, n * 0.2)
+    }
+    
+    return paragraphs.join('')
+  }
+
+  // Function to inject tiny neon orbs into content at placeholder positions
+  const injectOrbsIntoContent = useCallback(() => {
     if (!placeholders.length || !content) return
 
     let updatedContent = content
 
     // Sort placeholders by position
-    const sortedPlaceholders = [...placeholders].sort((a, b) => a.position - b.position)
+    const sortedPlaceholders = [...placeholders].sort((a, b) => (a.position || 0) - (b.position || 0))
 
-    // Group placeholders by type for better distribution
-    const imagePlaceholders = sortedPlaceholders.filter(p => p.type === 'image')
-    const videoPlaceholders = sortedPlaceholders.filter(p => p.type === 'video')
-    const productPlaceholders = sortedPlaceholders.filter(p => p.type === 'product')
-    const opinionPlaceholders = sortedPlaceholders.filter(p => p.type === 'opinion')
+    // Remove any existing orbs first to prevent duplicates
+    updatedContent = updatedContent.replace(/<span class="flash-orb-placeholder"[^>]*>[\s\S]*?<\/span>/gi, '')
 
-    // Insert glowing orbs within the content text at strategic positions
-    let insertionCount = 0
-
-    // Insert first image orb after first sentence
-    if (imagePlaceholders.length > 0) {
-      const placeholderHtml = createPlaceholderHtml(imagePlaceholders[0], insertionCount++)
-      updatedContent = insertAfterFirstSentence(updatedContent, placeholderHtml)
-    }
-
-    // Insert video orb after second sentence
-    if (videoPlaceholders.length > 0) {
-      const placeholderHtml = createPlaceholderHtml(videoPlaceholders[0], insertionCount++)
-      updatedContent = insertAfterSecondSentence(updatedContent, placeholderHtml)
-    }
-
-    // Insert second image orb in middle of content
-    if (imagePlaceholders.length > 1) {
-      const placeholderHtml = createPlaceholderHtml(imagePlaceholders[1], insertionCount++)
-      updatedContent = insertInMiddle(updatedContent, placeholderHtml)
-    }
-
-    // Insert first opinion orb after third sentence
-    if (opinionPlaceholders.length > 0) {
-      const placeholderHtml = createPlaceholderHtml(opinionPlaceholders[0], insertionCount++)
-      updatedContent = insertAfterThirdSentence(updatedContent, placeholderHtml)
-    }
-
-    // Insert product orb near end
-    if (productPlaceholders.length > 0) {
-      const placeholderHtml = createPlaceholderHtml(productPlaceholders[0], insertionCount++)
-      updatedContent = insertNearEnd(updatedContent, placeholderHtml)
-    }
-
-    // Insert remaining opinion orb at 80% of content
-    if (opinionPlaceholders.length > 1) {
-      const placeholderHtml = createPlaceholderHtml(opinionPlaceholders[1], insertionCount++)
-      updatedContent = insertAtPercentage(updatedContent, placeholderHtml, 0.8)
-    }
+    // Insert orbs at strategic positions based on placeholder.position
+    sortedPlaceholders.forEach((placeholder, index) => {
+      const orbHtml = createOrbHtml(placeholder)
+      // Insert based on position index - after paragraphs or at strategic points
+      updatedContent = insertOrbAtPosition(updatedContent, orbHtml, placeholder.position || index, sortedPlaceholders.length)
+    })
 
     // Update content if it changed
     if (updatedContent !== content) {
       onContentUpdate(updatedContent)
     }
-  }
+  }, [placeholders, content, onContentUpdate])
 
-  // Helper function to create glowing orb placeholder HTML
-  const createPlaceholderHtml = (placeholder, index) => {
-    const placeholderId = `flash-${placeholder.type}-${placeholder.id}`
-    const glowColor = getPlaceholderColor(placeholder.type)
-    
-    return `
-      <span class="flash-orb-placeholder" 
-            data-placeholder-id="${placeholderId}" 
-            data-type="${placeholder.type}"
-            style="
-              display: inline-block;
-              position: relative;
-              margin: 0 8px;
-              padding: 8px 12px;
-              background: linear-gradient(135deg, ${glowColor}20, ${glowColor}10);
-              border: 2px solid ${glowColor};
-              border-radius: 20px;
-              box-shadow: 0 0 20px ${glowColor}40, 0 0 40px ${glowColor}20;
-              color: ${glowColor};
-              font-size: 14px;
-              font-weight: 500;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              animation: glow-pulse 2s ease-in-out infinite alternate;
-            "
-            onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 0 30px ${glowColor}60, 0 0 60px ${glowColor}30';"
-            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 20px ${glowColor}40, 0 0 40px ${glowColor}20';"
-            onclick="handlePlaceholderClick('${placeholderId}', '${placeholder.type}')">
-        ${getPlaceholderIcon(placeholder.type)} ${getPlaceholderTitle(placeholder.type)}
-      </span>
-      
-      <style>
-        @keyframes glow-pulse {
-          0% { box-shadow: 0 0 20px ${glowColor}40, 0 0 40px ${glowColor}20; }
-          100% { box-shadow: 0 0 30px ${glowColor}60, 0 0 60px ${glowColor}40; }
-        }
-      </style>
-    `
-  }
+  // Inject orbs into content when Flash is completed and placeholders exist
+  useEffect(() => {
+    if (injectIntoContent && flashStatus === 'completed' && placeholders.length > 0 && content && onContentUpdate) {
+      // Check if orbs are already injected to prevent duplicates
+      if (!content.includes('flash-orb-placeholder')) {
+        injectOrbsIntoContent()
+      }
+    }
+  }, [injectIntoContent, flashStatus, placeholders, content, onContentUpdate, injectOrbsIntoContent])
 
-  // Helper functions for placeholder styling
+  // Keep old helper functions for backward compatibility (not used for orbs)
   const getPlaceholderColor = (type) => {
     const colors = {
       image: '#3B82F6',
@@ -322,6 +373,11 @@ const FlashPlaceholderManager = ({
   const handleAddPlaceholder = (type) => {
     // This would typically open a modal to create a new placeholder
     toast.info(`Add ${type} placeholder functionality coming soon`)
+  }
+
+  // Hide sidebar when orbs are injected into content
+  if (injectIntoContent && flashStatus === 'completed' && placeholders.length > 0) {
+    return null // Don't render sidebar, orbs are in content
   }
 
   if (!isVisible) return null

@@ -2666,6 +2666,36 @@ export default function Editor() {
     return () => window.removeEventListener("message", onMsg);
   }, []);
 
+  // Handle Flash orb clicks from iframe
+  React.useEffect(() => {
+    const onMsg = (event) => {
+      const d = event?.data || {};
+      if (d.type === 'flash-orb-click') {
+        const { placeholderType, placeholderId, placeholderData } = d;
+        
+        // Map placeholder types to modal openers
+        switch (placeholderType) {
+          case 'image':
+            setShowImageLibrary(true);
+            break;
+          case 'video':
+            setShowVideoGenerator(true);
+            break;
+          case 'product':
+            setShowProductSelector(true);
+            break;
+          case 'opinion':
+            setShowVoiceModal(true);
+            break;
+          default:
+            console.warn('Unknown placeholder type:', placeholderType);
+        }
+      }
+    };
+    
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
 
   const loadPublishCredentials = useCallback(async () => {
     if (!currentUser) return;
@@ -4382,7 +4412,7 @@ ${content}
               minWords={400}
             />
 
-            {/* NEW: Flash Placeholder System - Simple display only */}
+            {/* NEW: Flash Placeholder System - Inject orbs into content when Flash completed */}
             {flashEnabled && (
               <FlashPlaceholderManager
                 postId={currentPost?.id}
@@ -4391,7 +4421,8 @@ ${content}
                 onContentUpdate={handleContentUpdate}
                 userStyles={userStyles}
                 isVisible={true}
-                injectIntoContent={false}
+                injectIntoContent={true}
+                flashStatus={currentPost?.flash_status || currentWebhook?.flash_status}
               />
             )}
 

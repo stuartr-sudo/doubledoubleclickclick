@@ -1550,6 +1550,43 @@ export default function LiveHtmlPreview({
             .b44-dragging { opacity: 0.6; }
             .b44-drop-before { outline: 2px dashed #8b5cf6 !important; outline-offset: 2px; }
             .b44-drop-after { outline: 2px solid #10b981 !important; outline-offset: 2px; }
+            
+            /* --- Flash Orb Animations --- */
+            @keyframes flashOrbPulse {
+              0%, 100% {
+                transform: scale(1);
+                filter: brightness(1) saturate(1.2);
+              }
+              50% {
+                transform: scale(1.08);
+                filter: brightness(1.4) saturate(1.4);
+              }
+            }
+            
+            @keyframes flashOrbFloat {
+              0% {
+                transform: translateY(0px) rotate(0deg);
+              }
+              100% {
+                transform: translateY(-1.5px) rotate(360deg);
+              }
+            }
+            
+            @keyframes flashOrbSparkle {
+              0% {
+                opacity: 0.4;
+                transform: scale(0.7);
+              }
+              100% {
+                opacity: 1;
+                transform: scale(1.3);
+              }
+            }
+            
+            .flash-orb-placeholder:hover {
+              transform: scale(1.2) !important;
+              filter: brightness(1.6) saturate(1.5) !important;
+            }
           </style>
         </head>
         <body>${initialHtmlRef.current || ''}</body>
