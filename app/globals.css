@@ -1229,6 +1229,18 @@ svg.hero-minimal-image {
   font-size: var(--font-size-base);
   font-family: inherit;
   transition: border-color 0.2s;
+  background: white;
+  color: var(--color-text);
+  cursor: pointer;
+  appearance: auto;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
+}
+
+.form-group select option {
+  background: white;
+  color: var(--color-text);
+  padding: 8px;
 }
 
 .form-group input:focus,
@@ -1637,6 +1649,17 @@ svg.hero-minimal-image {
   font-family: inherit;
   font-size: 0.875rem;
   background: white;
+  color: var(--color-text);
+  cursor: pointer;
+  appearance: auto;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
+}
+
+.aspect-ratio-select option {
+  background: white;
+  color: var(--color-text);
+  padding: 8px;
 }
 
 .aspect-ratio-select:focus {
@@ -1724,6 +1747,17 @@ svg.hero-minimal-image {
   font-family: inherit;
   font-size: 0.875rem;
   background: white;
+  color: var(--color-text);
+  cursor: pointer;
+  appearance: auto;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
+}
+
+.text-enhancer-select option {
+  background: white;
+  color: var(--color-text);
+  padding: 8px;
 }
 
 .text-enhancer-select:focus {
