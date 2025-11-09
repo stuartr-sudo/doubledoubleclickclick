@@ -30,10 +30,11 @@ export default function AdminPage() {
   const fetchPosts = async () => {
     try {
       const res = await fetch('/api/blog')
-      const data = await res.json()
-      setPosts(data)
+      const result = await res.json()
+      setPosts(result.data || [])
     } catch (error) {
       console.error('Error fetching posts:', error)
+      setPosts([])
     } finally {
       setLoading(false)
     }
