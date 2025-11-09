@@ -5,6 +5,42 @@ import Link from 'next/link'
 import MobileMenu from '@/components/MobileMenu'
 import SubscribeHero from '@/components/SubscribeHero'
 
+interface Service {
+  id: string
+  title: string
+  description: string
+  icon?: string
+}
+
+interface Program {
+  id: string
+  badge: string
+  title: string
+  description: string
+  cta_text: string
+  cta_link: string
+}
+
+interface PricingTier {
+  id: string
+  name: string
+  price: string
+  period: string
+  description: string
+  annual_price?: string
+  annual_savings?: string
+  features: string[]
+  cta_text: string
+  cta_link: string
+  featured: boolean
+}
+
+interface Outcome {
+  id: string
+  title: string
+  description: string
+}
+
 interface HomepageContent {
   hero_title?: string
   hero_description?: string
@@ -14,11 +50,14 @@ interface HomepageContent {
   about_title?: string
   about_description?: string
   services_title?: string
-  services?: Array<{
-    title: string
-    description: string
-    icon?: string
-  }>
+  services?: Service[]
+  programs_title?: string
+  programs?: Program[]
+  pricing_title?: string
+  pricing?: PricingTier[]
+  outcomes_title?: string
+  outcomes_subtitle?: string
+  outcomes?: Outcome[]
   contact_email?: string
 }
 
