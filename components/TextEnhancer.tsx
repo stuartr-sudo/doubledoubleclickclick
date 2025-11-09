@@ -17,6 +17,8 @@ const LLM_PROVIDERS = {
   openai: {
     name: 'ChatGPT (OpenAI)',
     models: [
+      { id: 'gpt-5-mini-2025-08-07', name: 'GPT-5 Mini (Latest)' },
+      { id: 'gpt-4.1-2025-04-14', name: 'GPT-4.1 (Latest)' },
       { id: 'gpt-4o', name: 'GPT-4o (Best Quality)' },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini (Fast)' },
       { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
@@ -26,7 +28,8 @@ const LLM_PROVIDERS = {
   claude: {
     name: 'Claude (Anthropic)',
     models: [
-      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (Best)' },
+      { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5 (Latest)' },
+      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
       { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku (Fast)' },
       { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' },
     ],
@@ -35,7 +38,9 @@ const LLM_PROVIDERS = {
   gemini: {
     name: 'Gemini (Google)',
     models: [
-      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Best)' },
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Latest)' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Latest)' },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
       { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Fast)' },
       { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Experimental)' },
     ],
