@@ -150,7 +150,7 @@ export default function HomepageEditorPage() {
       ...prev,
       services: [
         ...prev.services,
-        { title: '', description: '', icon: '' }
+        { id: String(Date.now()), title: '', description: '', icon: '' }
       ]
     }))
   }
@@ -160,6 +160,80 @@ export default function HomepageEditorPage() {
       ...prev,
       services: prev.services.filter((_, i) => i !== index)
     }))
+  }
+
+  // Programs handlers
+  const handleProgramChange = (index: number, field: keyof Program, value: string) => {
+    const newPrograms = [...formData.programs]
+    newPrograms[index] = { ...newPrograms[index], [field]: value }
+    setFormData(prev => ({ ...prev, programs: newPrograms }))
+  }
+
+  const addProgram = () => {
+    setFormData(prev => ({
+      ...prev,
+      programs: [...prev.programs, { id: String(Date.now()), badge: '', title: '', description: '', cta_text: '', cta_link: '' }]
+    }))
+  }
+
+  const removeProgram = (index: number) => {
+    setFormData(prev => ({ ...prev, programs: prev.programs.filter((_, i) => i !== index) }))
+  }
+
+  // Pricing handlers
+  const handlePricingChange = (index: number, field: string, value: string | boolean | string[]) => {
+    const newPricing = [...formData.pricing]
+    newPricing[index] = { ...newPricing[index], [field]: value }
+    setFormData(prev => ({ ...prev, pricing: newPricing }))
+  }
+
+  const handlePricingFeatureChange = (tierIndex: number, featureIndex: number, value: string) => {
+    const newPricing = [...formData.pricing]
+    const newFeatures = [...newPricing[tierIndex].features]
+    newFeatures[featureIndex] = value
+    newPricing[tierIndex] = { ...newPricing[tierIndex], features: newFeatures }
+    setFormData(prev => ({ ...prev, pricing: newPricing }))
+  }
+
+  const addPricingFeature = (tierIndex: number) => {
+    const newPricing = [...formData.pricing]
+    newPricing[tierIndex].features.push('')
+    setFormData(prev => ({ ...prev, pricing: newPricing }))
+  }
+
+  const removePricingFeature = (tierIndex: number, featureIndex: number) => {
+    const newPricing = [...formData.pricing]
+    newPricing[tierIndex].features = newPricing[tierIndex].features.filter((_, i) => i !== featureIndex)
+    setFormData(prev => ({ ...prev, pricing: newPricing }))
+  }
+
+  const addPricingTier = () => {
+    setFormData(prev => ({
+      ...prev,
+      pricing: [...prev.pricing, { id: String(Date.now()), name: '', price: '', period: '', description: '', features: [], cta_text: '', cta_link: '', featured: false }]
+    }))
+  }
+
+  const removePricingTier = (index: number) => {
+    setFormData(prev => ({ ...prev, pricing: prev.pricing.filter((_, i) => i !== index) }))
+  }
+
+  // Outcomes handlers
+  const handleOutcomeChange = (index: number, field: keyof Outcome, value: string) => {
+    const newOutcomes = [...formData.outcomes]
+    newOutcomes[index] = { ...newOutcomes[index], [field]: value }
+    setFormData(prev => ({ ...prev, outcomes: newOutcomes }))
+  }
+
+  const addOutcome = () => {
+    setFormData(prev => ({
+      ...prev,
+      outcomes: [...prev.outcomes, { id: String(Date.now()), title: '', description: '' }]
+    }))
+  }
+
+  const removeOutcome = (index: number) => {
+    setFormData(prev => ({ ...prev, outcomes: prev.outcomes.filter((_, i) => i !== index) }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -378,6 +452,320 @@ export default function HomepageEditorPage() {
                       onChange={(e) => handleServiceChange(index, 'icon', e.target.value)}
                       placeholder="https://example.com/icon.svg"
                     />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Outcomes Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Outcomes</h2>
+              <button type="button" onClick={addOutcome} className="btn btn-sm btn-primary">
+                Add Outcome
+              </button>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="outcomes_title">Outcomes Title</label>
+              <input
+                type="text"
+                id="outcomes_title"
+                name="outcomes_title"
+                value={formData.outcomes_title}
+                onChange={handleChange}
+                placeholder="outcomes."
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="outcomes_subtitle">Outcomes Subtitle</label>
+              <textarea
+                id="outcomes_subtitle"
+                name="outcomes_subtitle"
+                value={formData.outcomes_subtitle}
+                onChange={handleChange}
+                rows={2}
+                placeholder="We specialize in..."
+              />
+            </div>
+
+            <div className="services-list">
+              {formData.outcomes?.map((outcome, index) => (
+                <div key={outcome.id} className="service-item">
+                  <div className="service-item-header">
+                    <h4>Outcome {index + 1}</h4>
+                    <button type="button" onClick={() => removeOutcome(index)} className="btn-remove">
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Outcome Title</label>
+                    <input
+                      type="text"
+                      value={outcome.title}
+                      onChange={(e) => handleOutcomeChange(index, 'title', e.target.value)}
+                      placeholder="Visibility in AI Answers"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Outcome Description</label>
+                    <textarea
+                      value={outcome.description}
+                      onChange={(e) => handleOutcomeChange(index, 'description', e.target.value)}
+                      rows={2}
+                      placeholder="Appear when customers ask..."
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Programs & Products Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Programs & Products</h2>
+              <button type="button" onClick={addProgram} className="btn btn-sm btn-primary">
+                Add Program
+              </button>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="programs_title">Programs Title</label>
+              <input
+                type="text"
+                id="programs_title"
+                name="programs_title"
+                value={formData.programs_title}
+                onChange={handleChange}
+                placeholder="programs & products."
+              />
+            </div>
+
+            <div className="services-list">
+              {formData.programs?.map((program, index) => (
+                <div key={program.id} className="service-item">
+                  <div className="service-item-header">
+                    <h4>Program {index + 1}</h4>
+                    <button type="button" onClick={() => removeProgram(index)} className="btn-remove">
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Badge</label>
+                    <input
+                      type="text"
+                      value={program.badge}
+                      onChange={(e) => handleProgramChange(index, 'badge', e.target.value)}
+                      placeholder="Guide, Training, Software (Beta)"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Program Title</label>
+                    <input
+                      type="text"
+                      value={program.title}
+                      onChange={(e) => handleProgramChange(index, 'title', e.target.value)}
+                      placeholder="The LLM Ranking Playbook"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Description</label>
+                    <textarea
+                      value={program.description}
+                      onChange={(e) => handleProgramChange(index, 'description', e.target.value)}
+                      rows={2}
+                      placeholder="A practical, step-by-step system..."
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>CTA Button Text</label>
+                      <input
+                        type="text"
+                        value={program.cta_text}
+                        onChange={(e) => handleProgramChange(index, 'cta_text', e.target.value)}
+                        placeholder="Get Early Access"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>CTA Button Link</label>
+                      <input
+                        type="text"
+                        value={program.cta_link}
+                        onChange={(e) => handleProgramChange(index, 'cta_link', e.target.value)}
+                        placeholder="/guide"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pricing Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Pricing</h2>
+              <button type="button" onClick={addPricingTier} className="btn btn-sm btn-primary">
+                Add Pricing Tier
+              </button>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="pricing_title">Pricing Title</label>
+              <input
+                type="text"
+                id="pricing_title"
+                name="pricing_title"
+                value={formData.pricing_title}
+                onChange={handleChange}
+                placeholder="pricing."
+              />
+            </div>
+
+            <div className="services-list">
+              {formData.pricing?.map((tier, tierIndex) => (
+                <div key={tier.id} className="service-item" style={{ border: tier.featured ? '2px solid #0066cc' : undefined }}>
+                  <div className="service-item-header">
+                    <h4>Pricing Tier {tierIndex + 1}</h4>
+                    <button type="button" onClick={() => removePricingTier(tierIndex)} className="btn-remove">
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Tier Name</label>
+                    <input
+                      type="text"
+                      value={tier.name}
+                      onChange={(e) => handlePricingChange(tierIndex, 'name', e.target.value)}
+                      placeholder="Brands, Agencies, Enterprise"
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Price</label>
+                      <input
+                        type="text"
+                        value={tier.price}
+                        onChange={(e) => handlePricingChange(tierIndex, 'price', e.target.value)}
+                        placeholder="$1,997 or Custom"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Period</label>
+                      <input
+                        type="text"
+                        value={tier.period}
+                        onChange={(e) => handlePricingChange(tierIndex, 'period', e.target.value)}
+                        placeholder="/month"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Description (optional)</label>
+                    <textarea
+                      value={tier.description}
+                      onChange={(e) => handlePricingChange(tierIndex, 'description', e.target.value)}
+                      rows={2}
+                      placeholder="For individual brands..."
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Annual Price (optional)</label>
+                      <input
+                        type="text"
+                        value={tier.annual_price || ''}
+                        onChange={(e) => handlePricingChange(tierIndex, 'annual_price', e.target.value)}
+                        placeholder="$19,171"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Annual Savings (optional)</label>
+                      <input
+                        type="text"
+                        value={tier.annual_savings || ''}
+                        onChange={(e) => handlePricingChange(tierIndex, 'annual_savings', e.target.value)}
+                        placeholder="20% off"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <label>Features</label>
+                      <button type="button" onClick={() => addPricingFeature(tierIndex)} className="btn btn-sm btn-secondary">
+                        Add Feature
+                      </button>
+                    </div>
+                    {tier.features.map((feature, featureIndex) => (
+                      <div key={featureIndex} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <input
+                          type="text"
+                          value={feature}
+                          onChange={(e) => handlePricingFeatureChange(tierIndex, featureIndex, e.target.value)}
+                          placeholder="Feature description"
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePricingFeature(tierIndex, featureIndex)}
+                          className="btn-remove btn-sm"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>CTA Button Text</label>
+                      <input
+                        type="text"
+                        value={tier.cta_text}
+                        onChange={(e) => handlePricingChange(tierIndex, 'cta_text', e.target.value)}
+                        placeholder="Get Started"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>CTA Button Link</label>
+                      <input
+                        type="text"
+                        value={tier.cta_link}
+                        onChange={(e) => handlePricingChange(tierIndex, 'cta_link', e.target.value)}
+                        placeholder="#contact or /signup"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={tier.featured}
+                        onChange={(e) => handlePricingChange(tierIndex, 'featured', e.target.checked)}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      Featured Tier (highlighted)
+                    </label>
                   </div>
                 </div>
               ))}
