@@ -5,6 +5,23 @@ import Link from 'next/link'
 import MobileMenu from '@/components/MobileMenu'
 import SubscribeHero from '@/components/SubscribeHero'
 
+interface HomepageContent {
+  hero_title?: string
+  hero_description?: string
+  hero_image?: string
+  hero_cta_text?: string
+  hero_cta_link?: string
+  about_title?: string
+  about_description?: string
+  services_title?: string
+  services?: Array<{
+    title: string
+    description: string
+    icon?: string
+  }>
+  contact_email?: string
+}
+
 interface HomePageClientProps {
   latestPosts: Array<{
     id: string
@@ -14,9 +31,17 @@ interface HomePageClientProps {
     featured_image: string | null
     created_date: string
   }>
+  homepageContent: HomepageContent | null
 }
 
-export default function HomePageClient({ latestPosts }: HomePageClientProps) {
+export default function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
+  // Default content if not set in CMS
+  const heroTitle = homepageContent?.hero_title || 'Make Your Brand the Answer AI Suggests'
+  const heroDescription = homepageContent?.hero_description || 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!'
+  const heroCTAText = homepageContent?.hero_cta_text || 'Get Started'
+  const heroCTALink = homepageContent?.hero_cta_link || '#contact'
+  const aboutTitle = homepageContent?.about_title || 'about.'
+  const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const benefitsSectionRef = useRef<HTMLElement | null>(null)
   const benefitItemsRef = useRef<Array<HTMLDivElement | null>>([])
@@ -86,9 +111,9 @@ export default function HomePageClient({ latestPosts }: HomePageClientProps) {
             {/* Left Side - Name */}
             <div className="hero-minimal-left">
               <h1 className="hero-minimal-name">
-                <span className="name-line">Make Your Brand</span>
-                <span className="name-line">the Answer AI</span>
-                <span className="name-line">Suggests</span>
+                {heroTitle.split('\n').map((line, i) => (
+                  <span key={i} className="name-line">{line}</span>
+                ))}
               </h1>
             </div>
 
@@ -111,7 +136,7 @@ export default function HomePageClient({ latestPosts }: HomePageClientProps) {
                 </div>
               </div>
               <p className="hero-minimal-intro">
-                Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!
+                {heroDescription}
               </p>
             </div>
           </div>
@@ -359,13 +384,13 @@ export default function HomePageClient({ latestPosts }: HomePageClientProps) {
       {/* About Section */}
       <section className="about-section" id="privacy">
         <div className="about-header">
-          <h2 className="section-label">about.</h2>
+          <h2 className="section-label">{aboutTitle}</h2>
           <button className="show-more-btn">Show More</button>
         </div>
         <div className="about-content">
           <div className="about-text-block">
             <p className="about-main-text">
-              When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.
+              {aboutDescription}
             </p>
           </div>
           <div className="about-image-block">

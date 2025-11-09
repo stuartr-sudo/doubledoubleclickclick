@@ -5,6 +5,12 @@ import HomePageClient from './HomePageClient'
 export default async function HomePage() {
   const supabase = await createClient()
   
+  // Fetch homepage content
+  const { data: homepageContent } = await supabase
+    .from('homepage_content')
+    .select('*')
+    .single()
+  
   // Fetch latest blog posts for homepage preview
   const { data: latestPosts } = await supabase
     .from('blog_posts')
@@ -48,5 +54,5 @@ export default async function HomePage() {
 
   const latest = latestPosts && latestPosts.length > 0 ? latestPosts : demoLatest
 
-  return <HomePageClient latestPosts={latest} />
+  return <HomePageClient latestPosts={latest} homepageContent={homepageContent} />
 }
