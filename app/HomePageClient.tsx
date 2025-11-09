@@ -237,9 +237,9 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
 
         {/* Footer - CTA Button */}
         <div className="hero-minimal-footer">
-          <Link href={heroFooterCTALink} className="btn-primary hero-minimal-footer-cta">
+          <Link href={heroFooterCTALink} className="hero-minimal-footer-cta">
             {heroFooterCTAText}
-            <svg className="cta-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg className="cta-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Link>
