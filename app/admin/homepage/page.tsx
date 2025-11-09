@@ -367,7 +367,7 @@ export default function HomepageEditorPage() {
               <ImageUpload
                 value={formData.hero_image}
                 onChange={(url) => setFormData({ ...formData, hero_image: url })}
-                label="Hero Image"
+                label="Hero Image (AI)"
                 folder="hero"
               />
             </div>
