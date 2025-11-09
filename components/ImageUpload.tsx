@@ -321,8 +321,8 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
         <p><strong>Tips:</strong></p>
         <ul>
           <li><strong>Style Presets:</strong> Choose a preset for consistent, on-brand images across your site</li>
-          <li><strong>Short Descriptions:</strong> With presets, you only need to describe the subject (e.g., "laptop on desk")</li>
-          <li><strong>Custom Style:</strong> Select "Custom" to write your own complete prompt</li>
+          <li><strong>Short Descriptions:</strong> With presets, you only need to describe the subject (e.g., &quot;laptop on desk&quot;)</li>
+          <li><strong>Custom Style:</strong> Select &quot;Custom&quot; to write your own complete prompt</li>
           <li><strong>Best Results:</strong> Minimal & Clean for heroes, Corporate for team pages, Modern for tech content</li>
         </ul>
       </div>
