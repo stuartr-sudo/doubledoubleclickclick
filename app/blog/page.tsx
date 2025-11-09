@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   description: 'Read our latest blog posts and insights',
 }
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export default async function BlogPage({ searchParams }: { searchParams?: { category?: string } }) {
   let posts = null
   
