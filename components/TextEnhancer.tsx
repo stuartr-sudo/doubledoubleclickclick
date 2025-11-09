@@ -190,7 +190,7 @@ export default function TextEnhancer({
       )}
 
       <p className="text-enhancer-hint">
-        ✨ Click "Enhance" to improve this text with AI • {LLM_PROVIDERS[provider].name}
+        ✨ Click &quot;Enhance&quot; to improve this text with AI • {LLM_PROVIDERS[provider].name}
       </p>
     </div>
   )
