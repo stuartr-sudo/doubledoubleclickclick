@@ -17,7 +17,8 @@ export async function POST(request: NextRequest) {
 
     switch (provider) {
       case 'openai':
-        apiKey = process.env.OPENAI_API_KEY
+        // Accept both OPENAI_API_KEY (correct) and OPEN_API_KEY (common typo)
+        apiKey = process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY
         if (!apiKey) {
           return NextResponse.json(
             { success: false, error: 'OpenAI API key not configured' },
@@ -100,7 +101,7 @@ async function enhanceWithOpenAI(
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`OpenAI API error: ${error}`)
+    throw new Error(`OpenAI API error: ${response.status} ${error}`)
   }
 
   const data = await response.json()
@@ -136,7 +137,7 @@ async function enhanceWithClaude(
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`Claude API error: ${error}`)
+    throw new Error(`Claude API error: ${response.status} ${error}`)
   }
 
   const data = await response.json()
@@ -179,7 +180,7 @@ async function enhanceWithGemini(
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`Gemini API error: ${error}`)
+    throw new Error(`Gemini API error: ${response.status} ${error}`)
   }
 
   const data = await response.json()
