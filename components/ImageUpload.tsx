@@ -180,7 +180,6 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
         setGeneratedImages(data.images)
         // Automatically use the first generated image (now optimized WebP from Supabase)
         onChange(data.images[0].url)
-        alert('Image generated and optimized successfully!')
       } else {
         alert(`Failed to generate image: ${data.error || 'Unknown error'}`)
       }
@@ -333,13 +332,6 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
               </div>
             )}
 
-            {generatedImages.length > 0 && (
-              <div style={{ marginTop: '1rem' }}>
-                <p style={{ fontSize: '0.875rem', color: '#28a745', fontWeight: 600 }}>
-                  ✓ Image generated successfully!
-                </p>
-              </div>
-            )}
           </div>
         ) : tab === 'url' ? (
           <div className="url-input-group">
