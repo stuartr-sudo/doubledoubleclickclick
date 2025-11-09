@@ -74,6 +74,7 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
           aspect_ratio: aspectRatio,
           num_images: 1,
           enhance_prompt: enhancePrompt,
+          folder: folder, // Pass folder to organize images in Supabase Storage
         }),
       })
 
@@ -81,9 +82,9 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
 
       if (data.success && data.images && data.images.length > 0) {
         setGeneratedImages(data.images)
-        // Automatically use the first generated image
+        // Automatically use the first generated image (now optimized WebP from Supabase)
         onChange(data.images[0].url)
-        alert('Image generated successfully!')
+        alert('Image generated and optimized successfully!')
       } else {
         alert(`Failed to generate image: ${data.error || 'Unknown error'}`)
       }

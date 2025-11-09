@@ -2,6 +2,17 @@
 
 This project integrates fal.ai's Nano Banana endpoint for AI-powered image generation directly in the admin interface.
 
+## 🚀 Performance Optimizations
+
+All generated images are automatically optimized for fast page loading:
+
+- **WebP Format**: Images are generated in WebP format (30-50% smaller than JPEG)
+- **Supabase CDN**: Uploaded to Supabase Storage with global CDN delivery
+- **Long Cache Headers**: 1-year cache control for maximum browser caching
+- **Permanent Hosting**: Images remain accessible indefinitely (not temporary URLs)
+
+This ensures **fast page loads** and **optimal Core Web Vitals** scores.
+
 ## Setup
 
 ### 1. Get Your fal.ai API Key
