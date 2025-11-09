@@ -284,62 +284,86 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       {/* Outcomes Section - Outcome-driven value props */}
       <section className="outcomes-section">
         <div className="outcomes-header">
-          <h2 className="section-label">outcomes.</h2>
+          <h2 className="section-label">{homepageContent?.outcomes_title || 'outcomes.'}</h2>
           <h3 className="outcomes-heading">Become the brand AI recommends</h3>
           <p className="outcomes-subtitle">
-            We specialize in one thing: ranking your brand inside AI assistants. Every program below is designed to move you toward that outcome.
+            {homepageContent?.outcomes_subtitle || 'We specialize in one thing: ranking your brand inside AI assistants. Every program below is designed to move you toward that outcome.'}
           </p>
         </div>
         <div className="outcomes-grid">
-          <div className="outcome-card">
-            <h4 className="outcome-title">Visibility in AI Answers</h4>
-            <p className="outcome-text">Appear when customers ask ChatGPT, Claude, and Perplexity about your category.</p>
-          </div>
-          <div className="outcome-card">
-            <h4 className="outcome-title">Qualified Demand</h4>
-            <p className="outcome-text">Turn intent-rich AI recommendations into visitors, trials, and purchases.</p>
-          </div>
-          <div className="outcome-card">
-            <h4 className="outcome-title">Competitive Positioning</h4>
-            <p className="outcome-text">Own the answer before competitors do with a defensible LLM content strategy.</p>
-          </div>
-          <div className="outcome-card">
-            <h4 className="outcome-title">Future‑Proof SEO</h4>
-            <p className="outcome-text">Bridge traditional search and LLM ranking to sustain growth through the shift to AI.</p>
-          </div>
+          {homepageContent?.outcomes && homepageContent.outcomes.length > 0 ? (
+            homepageContent.outcomes.map((outcome) => (
+              <div key={outcome.id} className="outcome-card">
+                <h4 className="outcome-title">{outcome.title}</h4>
+                <p className="outcome-text">{outcome.description}</p>
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="outcome-card">
+                <h4 className="outcome-title">Visibility in AI Answers</h4>
+                <p className="outcome-text">Appear when customers ask ChatGPT, Claude, and Perplexity about your category.</p>
+              </div>
+              <div className="outcome-card">
+                <h4 className="outcome-title">Qualified Demand</h4>
+                <p className="outcome-text">Turn intent-rich AI recommendations into visitors, trials, and purchases.</p>
+              </div>
+              <div className="outcome-card">
+                <h4 className="outcome-title">Competitive Positioning</h4>
+                <p className="outcome-text">Own the answer before competitors do with a defensible LLM content strategy.</p>
+              </div>
+              <div className="outcome-card">
+                <h4 className="outcome-title">Future‑Proof SEO</h4>
+                <p className="outcome-text">Bridge traditional search and LLM ranking to sustain growth through the shift to AI.</p>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
       {/* Programs & Products */}
       <section className="products-section" id="products">
         <div className="products-header">
-          <h2 className="section-label">programs & products.</h2>
+          <h2 className="section-label">{homepageContent?.programs_title || 'programs & products.'}</h2>
         </div>
         <div className="products-grid">
-          <div className="product-card">
-            <div className="product-badge">Guide</div>
-            <h3 className="product-title">The LLM Ranking Playbook</h3>
-            <p className="product-description">
-              A practical, step‑by‑step system to make your brand the answer AI suggests. Frameworks, prompts, and implementation checklists.
-            </p>
-            <Link href="/lead-capture?type=ebook" className="btn-pricing">Get Early Access</Link>
-          </div>
-          <div className="product-card">
-            <div className="product-badge">Training</div>
-            <h3 className="product-title">Rank in LLMs — Team Course</h3>
-            <p className="product-description">
-              A live, cohort‑based program for brand and content teams. Build your LLM content architecture and ship a first ranking sprint in 4 weeks.
-            </p>
-            <Link href="/lead-capture?type=course" className="btn-pricing">Join the Waitlist</Link>
-          </div>
-          <div className="product-card product-card-accent">
-            <div className="product-badge accent">Software (Beta)</div>
-            <h3 className="product-title">DoubleClicker — LLM Visibility</h3>
-            <p className="product-description">
-              Plan, publish, and monitor content for AI ranking. Limited beta access for qualified brands.
-            </p>
-            <Link href="/lead-capture?type=beta" className="btn-pricing">Apply for Beta</Link>
-          </div>
+          {homepageContent?.programs && homepageContent.programs.length > 0 ? (
+            homepageContent.programs.map((program) => (
+              <div key={program.id} className="product-card">
+                <div className="product-badge">{program.badge}</div>
+                <h3 className="product-title">{program.title}</h3>
+                <p className="product-description">{program.description}</p>
+                <Link href={program.cta_link} className="btn-pricing">{program.cta_text}</Link>
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="product-card">
+                <div className="product-badge">Guide</div>
+                <h3 className="product-title">The LLM Ranking Playbook</h3>
+                <p className="product-description">
+                  A practical, step‑by‑step system to make your brand the answer AI suggests. Frameworks, prompts, and implementation checklists.
+                </p>
+                <Link href="/lead-capture?type=ebook" className="btn-pricing">Get Early Access</Link>
+              </div>
+              <div className="product-card">
+                <div className="product-badge">Training</div>
+                <h3 className="product-title">Rank in LLMs — Team Course</h3>
+                <p className="product-description">
+                  A live, cohort‑based program for brand and content teams. Build your LLM content architecture and ship a first ranking sprint in 4 weeks.
+                </p>
+                <Link href="/lead-capture?type=course" className="btn-pricing">Join the Waitlist</Link>
+              </div>
+              <div className="product-card product-card-accent">
+                <div className="product-badge accent">Software (Beta)</div>
+                <h3 className="product-title">DoubleClicker — LLM Visibility</h3>
+                <p className="product-description">
+                  Plan, publish, and monitor content for AI ranking. Limited beta access for qualified brands.
+                </p>
+                <Link href="/lead-capture?type=beta" className="btn-pricing">Apply for Beta</Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -460,65 +484,95 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       {/* Pricing Section */}
       <section className="pricing-section" id="pricing">
         <div className="pricing-header">
-          <h2 className="section-label">pricing.</h2>
+          <h2 className="section-label">{homepageContent?.pricing_title || 'pricing.'}</h2>
         </div>
         <div className="pricing-grid">
-          <div className="pricing-card">
-            <h3 className="pricing-tier">Brands</h3>
-            <div className="pricing-price">
-              <span className="price-amount">$1,997</span>
-              <span className="price-period">/month</span>
-            </div>
-            <div className="pricing-annual">
-              <span className="annual-label">Annual:</span>
-              <span className="annual-price">$19,171</span>
-              <span className="annual-savings">(20% off)</span>
-            </div>
-            <ul className="pricing-features">
-              <li>LLM Optimization for 1 website</li>
-              <li>Monthly visibility reports</li>
-              <li>Content optimization recommendations</li>
-              <li>Email support</li>
-            </ul>
-            <a href="#contact" className="btn-pricing">
-              Get Started
-            </a>
-          </div>
-          <div className="pricing-card pricing-card-featured">
-            <h3 className="pricing-tier">Agencies</h3>
-            <div className="pricing-price">
-              <span className="price-amount">Custom</span>
-            </div>
-            <p className="pricing-description">Tailored solutions for agencies managing multiple client websites.</p>
-            <ul className="pricing-features">
-              <li>Multi-website management</li>
-              <li>White-label reporting</li>
-              <li>Priority support</li>
-              <li>Dedicated account manager</li>
-              <li>Custom integrations</li>
-            </ul>
-            <Link href="/agencies" className="btn-pricing">
-              Learn More
-            </Link>
-          </div>
-          <div className="pricing-card">
-            <h3 className="pricing-tier">Enterprise</h3>
-            <div className="pricing-price">
-              <span className="price-amount">Custom</span>
-            </div>
-            <p className="pricing-description">Enterprise-grade solutions for large organizations.</p>
-            <ul className="pricing-features">
-              <li>Unlimited websites</li>
-              <li>Advanced analytics & insights</li>
-              <li>24/7 priority support</li>
-              <li>Custom SLA</li>
-              <li>On-site training & consultation</li>
-              <li>API access</li>
-            </ul>
-            <Link href="/enterprise" className="btn-pricing">
-              Contact Sales
-            </Link>
-          </div>
+          {homepageContent?.pricing && homepageContent.pricing.length > 0 ? (
+            homepageContent.pricing.map((tier) => (
+              <div key={tier.id} className={`pricing-card ${tier.featured ? 'pricing-card-featured' : ''}`}>
+                <h3 className="pricing-tier">{tier.name}</h3>
+                <div className="pricing-price">
+                  <span className="price-amount">{tier.price}</span>
+                  {tier.period && <span className="price-period">{tier.period}</span>}
+                </div>
+                {tier.annual_price && (
+                  <div className="pricing-annual">
+                    <span className="annual-label">Annual:</span>
+                    <span className="annual-price">{tier.annual_price}</span>
+                    {tier.annual_savings && <span className="annual-savings">({tier.annual_savings})</span>}
+                  </div>
+                )}
+                {tier.description && <p className="pricing-description">{tier.description}</p>}
+                <ul className="pricing-features">
+                  {tier.features.map((feature, idx) => (
+                    <li key={idx}>{feature}</li>
+                  ))}
+                </ul>
+                <Link href={tier.cta_link} className="btn-pricing">
+                  {tier.cta_text}
+                </Link>
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="pricing-card">
+                <h3 className="pricing-tier">Brands</h3>
+                <div className="pricing-price">
+                  <span className="price-amount">$1,997</span>
+                  <span className="price-period">/month</span>
+                </div>
+                <div className="pricing-annual">
+                  <span className="annual-label">Annual:</span>
+                  <span className="annual-price">$19,171</span>
+                  <span className="annual-savings">(20% off)</span>
+                </div>
+                <ul className="pricing-features">
+                  <li>LLM Optimization for 1 website</li>
+                  <li>Monthly visibility reports</li>
+                  <li>Content optimization recommendations</li>
+                  <li>Email support</li>
+                </ul>
+                <a href="#contact" className="btn-pricing">
+                  Get Started
+                </a>
+              </div>
+              <div className="pricing-card pricing-card-featured">
+                <h3 className="pricing-tier">Agencies</h3>
+                <div className="pricing-price">
+                  <span className="price-amount">Custom</span>
+                </div>
+                <p className="pricing-description">Tailored solutions for agencies managing multiple client websites.</p>
+                <ul className="pricing-features">
+                  <li>Multi-website management</li>
+                  <li>White-label reporting</li>
+                  <li>Priority support</li>
+                  <li>Dedicated account manager</li>
+                  <li>Custom integrations</li>
+                </ul>
+                <Link href="/agencies" className="btn-pricing">
+                  Learn More
+                </Link>
+              </div>
+              <div className="pricing-card">
+                <h3 className="pricing-tier">Enterprise</h3>
+                <div className="pricing-price">
+                  <span className="price-amount">Custom</span>
+                </div>
+                <p className="pricing-description">Enterprise-grade solutions for large organizations.</p>
+                <ul className="pricing-features">
+                  <li>Unlimited websites</li>
+                  <li>Advanced analytics & insights</li>
+                  <li>24/7 priority support</li>
+                  <li>Custom SLA</li>
+                  <li>On-site training & consultation</li>
+                  <li>API access</li>
+                </ul>
+                <Link href="/enterprise" className="btn-pricing">
+                  Contact Sales
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
