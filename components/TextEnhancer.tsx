@@ -9,6 +9,8 @@ interface TextEnhancerProps {
   label?: string
   multiline?: boolean
   rows?: number
+  defaultProvider?: keyof typeof LLM_PROVIDERS
+  defaultModel?: string
 }
 
 const LLM_PROVIDERS = {
@@ -47,12 +49,14 @@ export default function TextEnhancer({
   fieldType, 
   label, 
   multiline = false,
-  rows = 3 
+  rows = 3,
+  defaultProvider,
+  defaultModel,
 }: TextEnhancerProps) {
   const [enhancing, setEnhancing] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [provider, setProvider] = useState<keyof typeof LLM_PROVIDERS>('openai')
-  const [model, setModel] = useState(LLM_PROVIDERS.openai.default)
+  const [provider, setProvider] = useState<keyof typeof LLM_PROVIDERS>(defaultProvider || 'openai')
+  const [model, setModel] = useState(defaultModel || LLM_PROVIDERS[defaultProvider || 'openai'].default)
   const [customInstructions, setCustomInstructions] = useState('')
 
   const handleProviderChange = (newProvider: keyof typeof LLM_PROVIDERS) => {

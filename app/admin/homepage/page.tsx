@@ -72,6 +72,35 @@ interface HomepageContent {
 export default function HomepageEditorPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  // Global AI provider/model used as defaults across fields
+  const AI_PROVIDERS = {
+    openai: {
+      name: 'ChatGPT (OpenAI)',
+      models: [
+        { id: 'gpt-4o', name: 'GPT-4o (Best Quality)' },
+        { id: 'gpt-4o-mini', name: 'GPT-4o Mini (Fast)' },
+      ],
+      default: 'gpt-4o-mini',
+    },
+    claude: {
+      name: 'Claude (Anthropic)',
+      models: [
+        { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (Best)' },
+        { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku (Fast)' },
+      ],
+      default: 'claude-3-5-sonnet-20241022',
+    },
+    gemini: {
+      name: 'Gemini (Google)',
+      models: [
+        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Best)' },
+        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Fast)' },
+      ],
+      default: 'gemini-1.5-flash',
+    },
+  } as const
+  const [aiProvider, setAiProvider] = useState<keyof typeof AI_PROVIDERS>('openai')
+  const [aiModel, setAiModel] = useState<string>(AI_PROVIDERS.openai.default)
   const [formData, setFormData] = useState<HomepageContent>({
     logo_image: '',
     logo_text: 'DoubleClicker',
@@ -306,6 +335,40 @@ export default function HomepageEditorPage() {
 
       <div className="admin-container">
         <form onSubmit={handleSubmit} className="homepage-form">
+          {/* AI Settings */}
+          <div className="form-section">
+            <h2 className="form-section-title">AI Settings</h2>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="ai_provider">Default AI Provider</label>
+                <select
+                  id="ai_provider"
+                  value={aiProvider}
+                  onChange={(e) => {
+                    const prov = e.target.value as keyof typeof AI_PROVIDERS
+                    setAiProvider(prov)
+                    setAiModel(AI_PROVIDERS[prov].default)
+                  }}
+                >
+                  {Object.entries(AI_PROVIDERS).map(([key, p]) => (
+                    <option key={key} value={key}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="ai_model">Default Model</label>
+                <select
+                  id="ai_model"
+                  value={aiModel}
+                  onChange={(e) => setAiModel(e.target.value)}
+                >
+                  {AI_PROVIDERS[aiProvider].models.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
           {/* Logo Section */}
           <div className="form-section">
             <h2 className="form-section-title">Logo & Branding</h2>
@@ -349,6 +412,8 @@ export default function HomepageEditorPage() {
                 onChange={(value) => setFormData({...formData, hero_title: value})}
                 fieldType="hero_title"
                 label="Hero Title"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
               />
             </div>
 
@@ -360,6 +425,8 @@ export default function HomepageEditorPage() {
                 label="Hero Description"
                 multiline={true}
                 rows={4}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
               />
             </div>
 
@@ -369,6 +436,8 @@ export default function HomepageEditorPage() {
                 onChange={(url) => setFormData({ ...formData, hero_image: url })}
                 label="Hero Image (AI)"
                 folder="hero"
+                defaultPromptProvider={aiProvider}
+                defaultPromptModel={aiModel}
               />
             </div>
 
@@ -379,6 +448,8 @@ export default function HomepageEditorPage() {
                   onChange={(value) => setFormData({...formData, hero_cta_text: value})}
                   fieldType="cta_text"
                   label="CTA Button Text"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
                 />
               </div>
 
@@ -406,6 +477,8 @@ export default function HomepageEditorPage() {
                 onChange={(value) => setFormData({...formData, about_title: value})}
                 fieldType="about_title"
                 label="About Title"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
               />
             </div>
 
@@ -417,6 +490,8 @@ export default function HomepageEditorPage() {
                 label="About Description"
                 multiline={true}
                 rows={4}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
               />
             </div>
 
@@ -426,6 +501,8 @@ export default function HomepageEditorPage() {
                 onChange={(url) => setFormData({ ...formData, about_image: url })}
                 label="About Image (optional)"
                 folder="about"
+                defaultPromptProvider={aiProvider}
+                defaultPromptModel={aiModel}
               />
             </div>
           </div>
@@ -491,6 +568,8 @@ export default function HomepageEditorPage() {
                       onChange={(url) => handleServiceChange(index, 'icon', url)}
                       label="Service Icon/Image (optional)"
                       folder="services"
+                      defaultPromptProvider={aiProvider}
+                      defaultPromptModel={aiModel}
                     />
                   </div>
                 </div>

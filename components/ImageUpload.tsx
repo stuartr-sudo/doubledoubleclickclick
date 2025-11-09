@@ -7,6 +7,8 @@ interface ImageUploadProps {
   onChange: (url: string) => void
   label?: string
   folder?: string
+  defaultPromptProvider?: keyof typeof LLM_PROVIDERS
+  defaultPromptModel?: string
 }
 
 // Image style presets for brand consistency
@@ -76,7 +78,7 @@ const LLM_PROVIDERS = {
   },
 }
 
-export default function ImageUpload({ value, onChange, label = 'Image', folder = 'images' }: ImageUploadProps) {
+export default function ImageUpload({ value, onChange, label = 'Image', folder = 'images', defaultPromptProvider, defaultPromptModel }: ImageUploadProps) {
   const [tab, setTab] = useState<'url' | 'upload' | 'ai'>('ai')
   const [uploading, setUploading] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -84,8 +86,8 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
   const [aiPrompt, setAiPrompt] = useState('')
   const [selectedStyle, setSelectedStyle] = useState<keyof typeof IMAGE_STYLE_PRESETS>('minimal')
   const [enhancePrompt, setEnhancePrompt] = useState(false) // Disabled by default when using style presets
-  const [promptProvider, setPromptProvider] = useState<keyof typeof LLM_PROVIDERS>('openai')
-  const [promptModel, setPromptModel] = useState<string>(LLM_PROVIDERS.openai.default)
+  const [promptProvider, setPromptProvider] = useState<keyof typeof LLM_PROVIDERS>(defaultPromptProvider || 'openai')
+  const [promptModel, setPromptModel] = useState<string>(defaultPromptModel || LLM_PROVIDERS[defaultPromptProvider || 'openai'].default)
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '1:1' | '4:3' | '9:16'>('16:9')
   const [generatedImages, setGeneratedImages] = useState<Array<{ url: string }>>([])
 
