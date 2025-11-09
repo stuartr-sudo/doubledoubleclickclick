@@ -40,6 +40,8 @@ interface Outcome {
 }
 
 interface HomepageContent {
+  logo_image: string
+  logo_text: string
   hero_title: string
   hero_description: string
   hero_image: string
@@ -63,6 +65,8 @@ export default function HomepageEditorPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState<HomepageContent>({
+    logo_image: '',
+    logo_text: 'DoubleClicker',
     hero_title: 'Make Your Brand the Answer AI Suggests',
     hero_description: 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!',
     hero_image: '',
@@ -288,6 +292,39 @@ export default function HomepageEditorPage() {
 
       <div className="admin-container">
         <form onSubmit={handleSubmit} className="homepage-form">
+          {/* Logo Section */}
+          <div className="form-section">
+            <h2 className="form-section-title">Logo & Branding</h2>
+            
+            <div className="form-group">
+              <label htmlFor="logo_text">Logo Text</label>
+              <input
+                type="text"
+                id="logo_text"
+                name="logo_text"
+                value={formData.logo_text}
+                onChange={handleChange}
+                placeholder="DoubleClicker"
+              />
+              <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                Text to display if no logo image is set (fallback)
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="logo_image">Logo Image</label>
+              <ImageUpload
+                value={formData.logo_image}
+                onChange={(url) => setFormData({ ...formData, logo_image: url })}
+                label="Logo Image"
+                folder="logos"
+              />
+              <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                Upload a logo image (PNG with transparency recommended). Recommended size: 200x50px
+              </p>
+            </div>
+          </div>
+
           {/* Hero Section */}
           <div className="form-section">
             <h2 className="form-section-title">Hero Section</h2>

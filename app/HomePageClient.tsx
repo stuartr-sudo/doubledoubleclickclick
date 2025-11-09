@@ -42,6 +42,8 @@ interface Outcome {
 }
 
 interface HomepageContent {
+  logo_image?: string
+  logo_text?: string
   hero_title?: string
   hero_description?: string
   hero_image?: string
@@ -75,6 +77,8 @@ interface HomePageClientProps {
 
 export default function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   // Default content if not set in CMS
+  const logoImage = homepageContent?.logo_image || ''
+  const logoText = homepageContent?.logo_text || 'DoubleClicker'
   const heroTitle = homepageContent?.hero_title || 'Make Your Brand the Answer AI Suggests'
   const heroDescription = homepageContent?.hero_description || 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!'
   const heroCTAText = homepageContent?.hero_cta_text || 'Get Started'
@@ -128,21 +132,31 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
     <main>
       {/* Hero Section - Minimalist Design */}
       <section className="hero-minimal">
-        {/* Header */}
-        <header className="hero-minimal-header">
-          <div className="hero-minimal-header-content">
-            <Link href="/" className="hero-brand">
-              DoubleClicker
-            </Link>
-            <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
-                <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-                <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
-              </svg>
-            </button>
-          </div>
-        </header>
+          {/* Header */}
+          <header className="hero-minimal-header">
+            <div className="hero-minimal-header-content">
+              <Link href="/" className="hero-brand">
+                {logoImage ? (
+                  <img 
+                    src={logoImage} 
+                    alt={logoText} 
+                    className="hero-brand-logo"
+                    width={150}
+                    height={40}
+                  />
+                ) : (
+                  <span>{logoText}</span>
+                )}
+              </Link>
+              <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                  <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
+          </header>
 
         {/* Main Content */}
         <div className="hero-minimal-content">
