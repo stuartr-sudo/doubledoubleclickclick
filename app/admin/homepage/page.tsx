@@ -310,7 +310,6 @@ export default function HomepageEditorPage() {
       const responseData = await res.json()
 
       if (res.ok) {
-        alert('Homepage content updated successfully!')
         // Refresh the data to show updated values
         fetchHomepageContent()
       } else {
