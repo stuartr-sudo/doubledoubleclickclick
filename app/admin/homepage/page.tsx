@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import ImageUpload from '@/components/ImageUpload'
+import TextEnhancer from '@/components/TextEnhancer'
 
 interface Service {
   id: string
@@ -341,26 +342,22 @@ export default function HomepageEditorPage() {
             <h2 className="form-section-title">Hero Section</h2>
             
             <div className="form-group">
-              <label htmlFor="hero_title">Hero Title</label>
-              <input
-                type="text"
-                id="hero_title"
-                name="hero_title"
+              <TextEnhancer
                 value={formData.hero_title}
-                onChange={handleChange}
-                placeholder="Main headline"
+                onChange={(value) => setFormData({...formData, hero_title: value})}
+                fieldType="hero_title"
+                label="Hero Title"
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="hero_description">Hero Description</label>
-              <textarea
-                id="hero_description"
-                name="hero_description"
+              <TextEnhancer
                 value={formData.hero_description}
-                onChange={handleChange}
+                onChange={(value) => setFormData({...formData, hero_description: value})}
+                fieldType="hero_description"
+                label="Hero Description"
+                multiline={true}
                 rows={4}
-                placeholder="Subheading or description"
               />
             </div>
 
@@ -383,14 +380,11 @@ export default function HomepageEditorPage() {
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="hero_cta_text">CTA Button Text</label>
-                <input
-                  type="text"
-                  id="hero_cta_text"
-                  name="hero_cta_text"
+                <TextEnhancer
                   value={formData.hero_cta_text}
-                  onChange={handleChange}
-                  placeholder="Get Started"
+                  onChange={(value) => setFormData({...formData, hero_cta_text: value})}
+                  fieldType="cta_text"
+                  label="CTA Button Text"
                 />
               </div>
 
@@ -413,26 +407,22 @@ export default function HomepageEditorPage() {
             <h2 className="form-section-title">About Section</h2>
             
             <div className="form-group">
-              <label htmlFor="about_title">About Title</label>
-              <input
-                type="text"
-                id="about_title"
-                name="about_title"
+              <TextEnhancer
                 value={formData.about_title}
-                onChange={handleChange}
-                placeholder="About"
+                onChange={(value) => setFormData({...formData, about_title: value})}
+                fieldType="about_title"
+                label="About Title"
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="about_description">About Description</label>
-              <textarea
-                id="about_description"
-                name="about_description"
+              <TextEnhancer
                 value={formData.about_description}
-                onChange={handleChange}
+                onChange={(value) => setFormData({...formData, about_description: value})}
+                fieldType="about_description"
+                label="About Description"
+                multiline={true}
                 rows={4}
-                placeholder="Tell your story..."
               />
             </div>
           </div>
