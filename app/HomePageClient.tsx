@@ -47,6 +47,7 @@ interface HomepageContent {
   hero_title?: string
   hero_description?: string
   hero_image?: string
+  about_image?: string
   hero_cta_text?: string
   hero_cta_link?: string
   about_title?: string
@@ -88,8 +89,10 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const heroDescription = homepageContent?.hero_description || 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!'
   const heroCTAText = homepageContent?.hero_cta_text || 'Get Started'
   const heroCTALink = homepageContent?.hero_cta_link || '#contact'
+  const heroImage = homepageContent?.hero_image || ''
   const aboutTitle = homepageContent?.about_title || 'about.'
   const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
+  const aboutImage = homepageContent?.about_image || ''
   const contactCTAText = homepageContent?.contact_cta_text || 'Get Started'
   const contactCTALink = homepageContent?.contact_cta_link || 'mailto:hello@doubleclicker.com'
   const linkedinUrl = homepageContent?.contact_linkedin_url || '#'
@@ -184,18 +187,29 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
             <div className="hero-minimal-right">
               <div className="hero-minimal-image-wrapper">
                 <div className="hero-minimal-image-container">
-                  {/* Profile Icon Placeholder */}
-                  <svg 
-                    className="hero-minimal-image"
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="300"
-                    height="300"
-                  >
-                    <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M6 21c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  {heroImage ? (
+                    <img
+                      src={heroImage}
+                      alt="Hero"
+                      className="hero-minimal-image"
+                      width={300}
+                      height={300}
+                      loading="lazy"
+                    />
+                  ) : (
+                    // Profile Icon Placeholder
+                    <svg 
+                      className="hero-minimal-image"
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="300"
+                      height="300"
+                    >
+                      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M6 21c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
                 </div>
               </div>
               <p className="hero-minimal-intro">
@@ -482,20 +496,31 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
           </div>
           <div className="about-image-block">
             <div className="about-image-wrapper">
-              {/* About Icon Placeholder */}
+              {/* About Image (dynamic) */}
               <div className="about-image-container">
-                <svg 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="about-image"
-                  width="500"
-                  height="600"
-                >
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M12 16V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M12 8H12.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                {aboutImage ? (
+                  <img
+                    src={aboutImage}
+                    alt="About"
+                    className="about-image"
+                    width={500}
+                    height={600}
+                    loading="lazy"
+                  />
+                ) : (
+                  <svg 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="about-image"
+                    width="500"
+                    height="600"
+                  >
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M12 16V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M12 8H12.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
               </div>
             </div>
             <p className="about-secondary-text">

@@ -47,6 +47,7 @@ interface HomepageContent {
   hero_title: string
   hero_description: string
   hero_image: string
+  about_image: string
   hero_cta_text: string
   hero_cta_link: string
   about_title: string
@@ -77,6 +78,7 @@ export default function HomepageEditorPage() {
     hero_title: 'Make Your Brand the Answer AI Suggests',
     hero_description: 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!',
     hero_image: '',
+    about_image: '',
     hero_cta_text: 'Get Started',
     hero_cta_link: '#contact',
     about_title: 'about.',
@@ -362,20 +364,12 @@ export default function HomepageEditorPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="hero_image">Hero Image URL</label>
-              <input
-                type="url"
-                id="hero_image"
-                name="hero_image"
+              <ImageUpload
                 value={formData.hero_image}
-                onChange={handleChange}
-                placeholder="https://example.com/image.jpg"
+                onChange={(url) => setFormData({ ...formData, hero_image: url })}
+                label="Hero Image"
+                folder="hero"
               />
-              {formData.hero_image && (
-                <div className="image-preview">
-                  <img src={formData.hero_image} alt="Hero preview" />
-                </div>
-              )}
             </div>
 
             <div className="form-row">
@@ -423,6 +417,15 @@ export default function HomepageEditorPage() {
                 label="About Description"
                 multiline={true}
                 rows={4}
+              />
+            </div>
+
+            <div className="form-group">
+              <ImageUpload
+                value={formData.about_image}
+                onChange={(url) => setFormData({ ...formData, about_image: url })}
+                label="About Image (optional)"
+                folder="about"
               />
             </div>
           </div>
@@ -483,12 +486,11 @@ export default function HomepageEditorPage() {
                   </div>
 
                   <div className="form-group">
-                    <label>Icon/Image URL (optional)</label>
-                    <input
-                      type="url"
-                      value={service.icon}
-                      onChange={(e) => handleServiceChange(index, 'icon', e.target.value)}
-                      placeholder="https://example.com/icon.svg"
+                    <ImageUpload
+                      value={service.icon || ''}
+                      onChange={(url) => handleServiceChange(index, 'icon', url)}
+                      label="Service Icon/Image (optional)"
+                      folder="services"
                     />
                   </div>
                 </div>
