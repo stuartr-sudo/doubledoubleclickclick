@@ -52,6 +52,20 @@ For production deployment:
 - **Location**: Available in all ImageUpload components throughout the admin interface
 - **Access**: `/admin/homepage`, `/admin/new`, `/admin/edit/[id]`
 
+### 🎨 Prebuilt Style Presets
+
+Choose from 7 professional style presets for brand consistency:
+
+1. **Custom (No Style)** - Full control, write your own complete prompt
+2. **Minimal & Clean** - Perfect for hero images, product shots, professional portraits
+3. **Corporate & Professional** - Great for about sections, team pages, business content
+4. **Modern & Tech** - Ideal for software, SaaS, tech products, digital services
+5. **Creative & Dynamic** - Best for marketing content, blog headers, creative services
+6. **Abstract & Background** - Perfect for section backgrounds, banners, hero overlays
+7. **Product Showcase** - Excellent for product pages, feature showcases, portfolios
+
+Each preset automatically applies professional photography standards, ensuring consistent, on-brand imagery across your entire website.
+
 ### 🎨 Prompt Enhancement
 
 The system automatically enhances your prompts with professional photography keywords like:
@@ -78,50 +92,61 @@ You can toggle this enhancement on/off when generating images.
 
 1. Navigate to any image field (Logo, Hero Image, etc.)
 2. Click the **"✨ Generate with AI"** tab
-3. Enter your image prompt:
+3. **Select a Style Preset** (e.g., "Minimal & Clean" for hero images)
+4. Enter a **short description**:
    ```
-   Example: "A modern minimalist office workspace with a laptop showing 
-   analytics dashboards, natural lighting, professional photography, 
-   clean design"
+   Example with "Minimal & Clean" preset:
+   "Professional working on a laptop"
+   
+   (The preset automatically adds: minimal design, clean aesthetic, 
+   soft lighting, professional photography, white background, etc.)
    ```
-4. Select aspect ratio (16:9 recommended for hero images)
-5. Toggle "Enhance prompt" if desired
-6. Click **"✨ Generate Image"**
-7. Wait 10-30 seconds for generation
-8. Image automatically appears and is ready to use
+5. Select aspect ratio (16:9 recommended for hero images)
+6. Optionally check "Extra quality boost" for additional enhancement
+7. Click **"✨ Generate Image"**
+8. Wait 10-30 seconds for generation
+9. Image automatically appears and is ready to use
 
 ### In Blog Editor (`/admin/new` or `/admin/edit/[id]`)
 
 Same process as above for Featured Image field.
 
-## Example Prompts
+## Example Prompts with Style Presets
 
-### For Hero/Banner Images
-```
-A professional business meeting in a modern office, diverse team 
-collaborating around a table with laptops, natural lighting through 
-large windows, corporate setting, high quality photography
-```
+### Using "Minimal & Clean" Preset
+**Short prompt:** `Professional working on a laptop`  
+**What the preset adds:** minimal design, clean aesthetic, simple composition, soft lighting, professional photography, white background, high quality, 8k resolution  
+**Best for:** Hero images, product shots, professional portraits
 
-### For Product/Service Images
-```
-Close-up of hands typing on a MacBook Pro laptop, clean workspace 
-with coffee cup and notepad, shallow depth of field, professional 
-photography, minimalist aesthetic
-```
+### Using "Corporate & Professional" Preset
+**Short prompt:** `Team meeting in a conference room`  
+**What the preset adds:** corporate setting, professional business environment, modern office, clean lines, natural lighting through windows, executive style, high-end photography  
+**Best for:** About sections, team pages, business content
 
-### For Abstract/Background Images
-```
-Abstract geometric pattern in blue and white tones, modern design, 
-clean lines, gradient background, corporate style, high resolution
-```
+### Using "Modern & Tech" Preset
+**Short prompt:** `Laptop showing analytics dashboard`  
+**What the preset adds:** modern technology aesthetic, sleek design, contemporary style, minimalist tech workspace, ambient lighting, futuristic elements  
+**Best for:** Software, SaaS, tech products, digital services
 
-### For People/Team Images
-```
-Portrait of a confident business professional in modern office 
-attire, natural smile, professional headshot, soft studio lighting, 
-blurred office background
-```
+### Using "Creative & Dynamic" Preset
+**Short prompt:** `Creative brainstorming session with sticky notes`  
+**What the preset adds:** creative composition, dynamic angles, artistic lighting, vibrant but professional, modern design studio aesthetic  
+**Best for:** Marketing content, blog headers, creative services
+
+### Using "Abstract & Background" Preset
+**Short prompt:** `Blue gradient waves`  
+**What the preset adds:** abstract geometric design, gradient backgrounds, modern patterns, soft focus, professional design, clean composition  
+**Best for:** Section backgrounds, banners, hero overlays
+
+### Using "Product Showcase" Preset
+**Short prompt:** `Wireless headphones on a desk`  
+**What the preset adds:** product photography, studio setup, professional lighting, clean background, centered composition, commercial photography  
+**Best for:** Product pages, feature showcases, portfolios
+
+### Using "Custom (No Style)" Preset
+**Full prompt:** `A professional business meeting in a modern office, diverse team collaborating around a table with laptops, natural lighting through large windows, corporate setting, high quality photography, sharp focus, 8k resolution`  
+**What the preset adds:** Nothing - you write the complete prompt  
+**Best for:** When you need specific control over every aspect
 
 ## API Details
 

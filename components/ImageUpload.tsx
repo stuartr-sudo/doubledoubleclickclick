@@ -9,13 +9,53 @@ interface ImageUploadProps {
   folder?: string
 }
 
+// Image style presets for brand consistency
+const IMAGE_STYLE_PRESETS = {
+  none: {
+    name: 'Custom (No Style)',
+    suffix: '',
+    examples: 'Use your own complete prompt',
+  },
+  minimal: {
+    name: 'Minimal & Clean',
+    suffix: 'minimal design, clean aesthetic, simple composition, soft lighting, professional photography, white or light background, high quality, 8k resolution',
+    examples: 'Perfect for hero images, product shots, professional portraits',
+  },
+  corporate: {
+    name: 'Corporate & Professional',
+    suffix: 'corporate setting, professional business environment, modern office, clean lines, natural lighting through windows, executive style, high-end photography, sharp focus',
+    examples: 'Great for about sections, team pages, business content',
+  },
+  modern: {
+    name: 'Modern & Tech',
+    suffix: 'modern technology aesthetic, sleek design, contemporary style, minimalist tech workspace, ambient lighting, futuristic elements, clean surfaces, professional tech photography',
+    examples: 'Ideal for software, SaaS, tech products, digital services',
+  },
+  creative: {
+    name: 'Creative & Dynamic',
+    suffix: 'creative composition, dynamic angles, artistic lighting, vibrant but professional, modern design studio aesthetic, depth of field, editorial photography style',
+    examples: 'Best for marketing content, blog headers, creative services',
+  },
+  abstract: {
+    name: 'Abstract & Background',
+    suffix: 'abstract geometric design, gradient backgrounds, modern patterns, soft focus, professional design, clean composition, subtle colors, suitable for overlays and backgrounds',
+    examples: 'Perfect for section backgrounds, banners, hero overlays',
+  },
+  product: {
+    name: 'Product Showcase',
+    suffix: 'product photography, studio setup, professional lighting, clean background, centered composition, commercial photography, high detail, catalog style',
+    examples: 'Excellent for product pages, feature showcases, portfolios',
+  },
+}
+
 export default function ImageUpload({ value, onChange, label = 'Image', folder = 'images' }: ImageUploadProps) {
   const [tab, setTab] = useState<'url' | 'upload' | 'ai'>('ai')
   const [uploading, setUploading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [urlInput, setUrlInput] = useState(value)
   const [aiPrompt, setAiPrompt] = useState('')
-  const [enhancePrompt, setEnhancePrompt] = useState(true)
+  const [selectedStyle, setSelectedStyle] = useState<keyof typeof IMAGE_STYLE_PRESETS>('minimal')
+  const [enhancePrompt, setEnhancePrompt] = useState(false) // Disabled by default when using style presets
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '1:1' | '4:3' | '9:16'>('16:9')
   const [generatedImages, setGeneratedImages] = useState<Array<{ url: string }>>([])
 
@@ -64,16 +104,23 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
     setGeneratedImages([])
 
     try {
+      // Build the final prompt with style preset
+      let finalPrompt = aiPrompt
+      const stylePreset = IMAGE_STYLE_PRESETS[selectedStyle]
+      if (stylePreset.suffix) {
+        finalPrompt = `${aiPrompt}, ${stylePreset.suffix}`
+      }
+
       const res = await fetch('/api/generate-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: aiPrompt,
+          prompt: finalPrompt,
           aspect_ratio: aspectRatio,
           num_images: 1,
-          enhance_prompt: enhancePrompt,
+          enhance_prompt: enhancePrompt, // Additional enhancement on top of style preset
           folder: folder, // Pass folder to organize images in Supabase Storage
         }),
       })
@@ -128,15 +175,46 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
         {tab === 'ai' ? (
           <div className="ai-generation-group">
             <div className="form-group">
-              <label htmlFor="ai-prompt">Image Prompt</label>
+              <label htmlFor="image-style">Image Style Preset</label>
+              <select
+                id="image-style"
+                value={selectedStyle}
+                onChange={(e) => setSelectedStyle(e.target.value as keyof typeof IMAGE_STYLE_PRESETS)}
+                className="aspect-ratio-select"
+                style={{ marginBottom: '0.5rem' }}
+              >
+                {Object.entries(IMAGE_STYLE_PRESETS).map(([key, preset]) => (
+                  <option key={key} value={key}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+              <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                {IMAGE_STYLE_PRESETS[selectedStyle].examples}
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="ai-prompt">What do you want to see?</label>
               <textarea
                 id="ai-prompt"
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Describe the image you want to generate... e.g., 'A modern workspace with a laptop showing analytics dashboards, professional lighting, minimalist design'"
-                rows={4}
+                placeholder={
+                  selectedStyle === 'none' 
+                    ? "Full prompt: e.g., 'A modern workspace with a laptop showing analytics dashboards, professional lighting, minimalist design'"
+                    : "Short description: e.g., 'A professional working on a laptop' or 'Team collaborating in a meeting room'"
+                }
+                rows={3}
                 className="ai-prompt-input"
               />
+              <p style={{ fontSize: '0.75rem', color: '#28a745', marginTop: '0.5rem' }}>
+                {selectedStyle !== 'none' && (
+                  <>
+                    <strong>✓ Style applied:</strong> {IMAGE_STYLE_PRESETS[selectedStyle].suffix.split(',').slice(0, 3).join(',')}...
+                  </>
+                )}
+              </p>
             </div>
 
             <div className="form-row" style={{ gap: '1rem', marginTop: '1rem' }}>
@@ -156,13 +234,13 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
               </div>
 
               <div className="form-group" style={{ flex: 1, display: 'flex', alignItems: 'flex-end' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 0, fontSize: '0.875rem' }}>
                   <input
                     type="checkbox"
                     checked={enhancePrompt}
                     onChange={(e) => setEnhancePrompt(e.target.checked)}
                   />
-                  <span>Enhance prompt with quality descriptors</span>
+                  <span>Extra quality boost</span>
                 </label>
               </div>
             </div>
@@ -242,10 +320,10 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
       <div className="image-upload-tips">
         <p><strong>Tips:</strong></p>
         <ul>
-          <li><strong>AI Generation:</strong> Describe your image clearly with details like style, mood, and composition</li>
-          <li><strong>URL Import:</strong> Works great with Unsplash, Pexels, or any public image URL</li>
-          <li><strong>File Upload:</strong> Max 5MB, JPG/PNG recommended</li>
-          <li><strong>Best size:</strong> 1200x630px for social sharing</li>
+          <li><strong>Style Presets:</strong> Choose a preset for consistent, on-brand images across your site</li>
+          <li><strong>Short Descriptions:</strong> With presets, you only need to describe the subject (e.g., "laptop on desk")</li>
+          <li><strong>Custom Style:</strong> Select "Custom" to write your own complete prompt</li>
+          <li><strong>Best Results:</strong> Minimal & Clean for heroes, Corporate for team pages, Modern for tech content</li>
         </ul>
       </div>
     </div>
