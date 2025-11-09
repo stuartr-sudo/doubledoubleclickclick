@@ -61,7 +61,12 @@ export default function HomepageEditorPage() {
       const res = await fetch('/api/homepage')
       if (res.ok) {
         const data = await res.json()
-        setFormData(data)
+        // Merge fetched data with defaults, ensuring services array exists
+        setFormData(prev => ({
+          ...prev,
+          ...data,
+          services: Array.isArray(data.services) ? data.services : prev.services
+        }))
       }
     } catch (error) {
       console.error('Error fetching homepage content:', error)
@@ -282,7 +287,7 @@ export default function HomepageEditorPage() {
             </div>
 
             <div className="services-list">
-              {formData.services.map((service, index) => (
+              {formData.services?.map((service, index) => (
                 <div key={index} className="service-item">
                   <div className="service-item-header">
                     <h4>Service {index + 1}</h4>
