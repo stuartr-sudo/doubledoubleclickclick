@@ -41,38 +41,48 @@ export async function POST(request: Request) {
       .single()
 
     if (existing) {
-      // Update existing
+      // Update existing - explicitly include logo_text
+      const updateData = {
+        ...body,
+        logo_text: body.logo_text || '', // Ensure logo_text is included
+        updated_at: new Date().toISOString(),
+      }
+      
       const { data, error } = await supabase
         .from('homepage_content')
-        .update({
-          ...body,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', existing.id)
         .select()
         .single()
 
       if (error) {
         console.error('Update error:', error)
+        console.error('Update data:', JSON.stringify(updateData, null, 2))
         return NextResponse.json(
-          { error: 'Failed to update homepage content' },
+          { error: 'Failed to update homepage content', details: error.message },
           { status: 500 }
         )
       }
 
       return NextResponse.json(data)
     } else {
-      // Create new
+      // Create new - explicitly include logo_text
+      const insertData = {
+        ...body,
+        logo_text: body.logo_text || 'DoubleClicker', // Default if not provided
+      }
+      
       const { data, error } = await supabase
         .from('homepage_content')
-        .insert([body])
+        .insert([insertData])
         .select()
         .single()
 
       if (error) {
         console.error('Insert error:', error)
+        console.error('Insert data:', JSON.stringify(insertData, null, 2))
         return NextResponse.json(
-          { error: 'Failed to create homepage content' },
+          { error: 'Failed to create homepage content', details: error.message },
           { status: 500 }
         )
       }
@@ -82,7 +92,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

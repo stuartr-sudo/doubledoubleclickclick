@@ -293,20 +293,28 @@ export default function HomepageEditorPage() {
     setSaving(true)
 
     try {
+      // Log what we're sending (for debugging)
+      console.log('Submitting formData:', { ...formData, logo_text: formData.logo_text })
+      
       const res = await fetch('/api/homepage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
 
+      const responseData = await res.json()
+
       if (res.ok) {
         alert('Homepage content updated successfully!')
+        // Refresh the data to show updated values
+        fetchHomepageContent()
       } else {
-        alert('Failed to update homepage content')
+        console.error('API Error:', responseData)
+        alert(`Failed to update homepage content: ${responseData.error || 'Unknown error'}${responseData.details ? `\n\nDetails: ${responseData.details}` : ''}`)
       }
     } catch (error) {
       console.error('Error updating homepage:', error)
-      alert('Error updating homepage')
+      alert(`Error updating homepage: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setSaving(false)
     }
