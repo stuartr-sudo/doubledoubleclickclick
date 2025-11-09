@@ -48,6 +48,34 @@ const IMAGE_STYLE_PRESETS = {
   },
 }
 
+// LLM providers for optional prompt enhancement
+const LLM_PROVIDERS = {
+  openai: {
+    name: 'ChatGPT (OpenAI)',
+    models: [
+      { id: 'gpt-4o', name: 'GPT-4o (Best Quality)' },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini (Fast)' },
+    ],
+    default: 'gpt-4o-mini',
+  },
+  claude: {
+    name: 'Claude (Anthropic)',
+    models: [
+      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (Best)' },
+      { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku (Fast)' },
+    ],
+    default: 'claude-3-5-sonnet-20241022',
+  },
+  gemini: {
+    name: 'Gemini (Google)',
+    models: [
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Best)' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Fast)' },
+    ],
+    default: 'gemini-1.5-flash',
+  },
+}
+
 export default function ImageUpload({ value, onChange, label = 'Image', folder = 'images' }: ImageUploadProps) {
   const [tab, setTab] = useState<'url' | 'upload' | 'ai'>('ai')
   const [uploading, setUploading] = useState(false)
@@ -56,8 +84,15 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
   const [aiPrompt, setAiPrompt] = useState('')
   const [selectedStyle, setSelectedStyle] = useState<keyof typeof IMAGE_STYLE_PRESETS>('minimal')
   const [enhancePrompt, setEnhancePrompt] = useState(false) // Disabled by default when using style presets
+  const [promptProvider, setPromptProvider] = useState<keyof typeof LLM_PROVIDERS>('openai')
+  const [promptModel, setPromptModel] = useState<string>(LLM_PROVIDERS.openai.default)
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '1:1' | '4:3' | '9:16'>('16:9')
   const [generatedImages, setGeneratedImages] = useState<Array<{ url: string }>>([])
+
+  const handleProviderChange = (prov: keyof typeof LLM_PROVIDERS) => {
+    setPromptProvider(prov)
+    setPromptModel(LLM_PROVIDERS[prov].default)
+  }
 
   const handleUrlSubmit = () => {
     onChange(urlInput)
@@ -121,6 +156,8 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
           aspect_ratio: aspectRatio,
           num_images: 1,
           enhance_prompt: enhancePrompt, // Additional enhancement on top of style preset
+          prompt_provider: promptProvider,
+          prompt_model: promptModel,
           folder: folder, // Pass folder to organize images in Supabase Storage
         }),
       })
@@ -233,15 +270,37 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
                 </select>
               </div>
 
-              <div className="form-group" style={{ flex: 1, display: 'flex', alignItems: 'flex-end' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 0, fontSize: '0.875rem' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
                   <input
                     type="checkbox"
                     checked={enhancePrompt}
                     onChange={(e) => setEnhancePrompt(e.target.checked)}
                   />
-                  <span>Extra quality boost</span>
+                  <span>Use AI to enhance prompt</span>
                 </label>
+                {enhancePrompt && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <select
+                      value={promptProvider}
+                      onChange={(e) => handleProviderChange(e.target.value as keyof typeof LLM_PROVIDERS)}
+                      className="aspect-ratio-select"
+                    >
+                      {Object.entries(LLM_PROVIDERS).map(([key, p]) => (
+                        <option key={key} value={key}>{p.name}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={promptModel}
+                      onChange={(e) => setPromptModel(e.target.value)}
+                      className="aspect-ratio-select"
+                    >
+                      {LLM_PROVIDERS[promptProvider].models.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 

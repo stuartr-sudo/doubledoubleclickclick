@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, aspect_ratio, num_images, enhance_prompt, folder } = await request.json()
+    const { prompt, aspect_ratio, num_images, enhance_prompt, folder, prompt_provider, prompt_model } = await request.json()
 
     if (!prompt) {
       return NextResponse.json(
@@ -23,7 +23,12 @@ export async function POST(request: NextRequest) {
     // Enhance prompt if requested
     let finalPrompt = prompt
     if (enhance_prompt) {
-      finalPrompt = await enhancePrompt(prompt)
+      // If a provider/model is specified, use it; otherwise use simple enhancer
+      if (prompt_provider) {
+        finalPrompt = await enhanceWithProvider(prompt, prompt_provider, prompt_model)
+      } else {
+        finalPrompt = await enhancePrompt(prompt)
+      }
     }
 
     // Call fal.ai Nano Banana endpoint with WebP format for optimization
@@ -70,6 +75,77 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Enhance prompt using selected LLM provider (OpenAI/Claude/Gemini)
+async function enhanceWithProvider(prompt: string, provider: string, model?: string): Promise<string> {
+  const system = 'You are a helpful creative director. Improve the following image prompt with concrete visual details, lighting, composition, camera angle, and style. Keep it concise and suitable for an image model. Return ONLY the enhanced prompt.'
+  if (provider === 'openai') {
+    const apiKey = process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY
+    if (!apiKey) throw new Error('OpenAI API key not configured')
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 300,
+      }),
+    })
+    if (!resp.ok) {
+      const text = await resp.text()
+      throw new Error(`OpenAI error: ${resp.status} ${text}`)
+    }
+    const data = await resp.json()
+    return (data.choices?.[0]?.message?.content || prompt).trim()
+  }
+
+  if (provider === 'claude') {
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) throw new Error('Anthropic API key not configured')
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model || 'claude-3-5-sonnet-20241022',
+        system,
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
+    if (!resp.ok) {
+      const text = await resp.text()
+      throw new Error(`Claude error: ${resp.status} ${text}`)
+    }
+    const data = await resp.json()
+    return (data.content?.[0]?.text || prompt).trim()
+  }
+
+  if (provider === 'gemini') {
+    const apiKey = process.env.GOOGLE_AI_API_KEY
+    if (!apiKey) throw new Error('Google AI API key not configured')
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-1.5-flash'}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${system}\n\n${prompt}` }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 300 },
+      }),
+    })
+    if (!resp.ok) {
+      const text = await resp.text()
+      throw new Error(`Gemini error: ${resp.status} ${text}`)
+    }
+    const data = await resp.json()
+    return (data.candidates?.[0]?.content?.parts?.[0]?.text || prompt).trim()
+  }
+
+  // Fallback to simple enhancer
+  return enhancePrompt(prompt)
 }
 
 // Upload images to Supabase Storage for permanent hosting and better performance
