@@ -3,6 +3,42 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
+interface Service {
+  id: string
+  title: string
+  description: string
+  icon?: string
+}
+
+interface Program {
+  id: string
+  badge: string
+  title: string
+  description: string
+  cta_text: string
+  cta_link: string
+}
+
+interface PricingTier {
+  id: string
+  name: string
+  price: string
+  period: string
+  description: string
+  annual_price?: string
+  annual_savings?: string
+  features: string[]
+  cta_text: string
+  cta_link: string
+  featured: boolean
+}
+
+interface Outcome {
+  id: string
+  title: string
+  description: string
+}
+
 interface HomepageContent {
   hero_title: string
   hero_description: string
@@ -12,11 +48,14 @@ interface HomepageContent {
   about_title: string
   about_description: string
   services_title: string
-  services: Array<{
-    title: string
-    description: string
-    icon: string
-  }>
+  services: Service[]
+  programs_title: string
+  programs: Program[]
+  pricing_title: string
+  pricing: PricingTier[]
+  outcomes_title: string
+  outcomes_subtitle: string
+  outcomes: Outcome[]
   contact_email: string
 }
 
@@ -29,25 +68,33 @@ export default function HomepageEditorPage() {
     hero_image: '',
     hero_cta_text: 'Get Started',
     hero_cta_link: '#contact',
-    about_title: 'About',
+    about_title: 'about.',
     about_description: 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now.',
-    services_title: 'Services',
+    services_title: 'how it works.',
     services: [
-      {
-        title: 'LLM Optimization',
-        description: 'We optimize your website content to be understood and recommended by AI systems.',
-        icon: ''
-      },
-      {
-        title: 'Brand Visibility',
-        description: 'Increase your presence in AI responses across ChatGPT, Claude, Perplexity, and other LLM platforms.',
-        icon: ''
-      },
-      {
-        title: 'Competitive Advantage',
-        description: 'Stay ahead in AI-powered search. We help you rank higher than competitors.',
-        icon: ''
-      }
+      { id: '1', title: 'Audit & Strategy', description: 'We analyze your current digital presence and identify LLM ranking opportunities.', icon: '' },
+      { id: '2', title: 'Content Optimization', description: 'Implement AI-optimized content architecture, schema markup, and semantic SEO.', icon: '' },
+      { id: '3', title: 'Monitor and Improve Rankings', description: 'Track your visibility across AI platforms and continuously optimize.', icon: '' }
+    ],
+    programs_title: 'programs & products.',
+    programs: [
+      { id: '1', badge: 'Guide', title: 'The LLM Ranking Playbook', description: 'A practical, step-by-step system to make your brand the answer AI suggests.', cta_text: 'Get Early Access', cta_link: '/guide' },
+      { id: '2', badge: 'Training', title: 'Rank in LLMs — Team Course', description: 'A live, cohort-based program for brand and content teams.', cta_text: 'Join the Waitlist', cta_link: '/course' },
+      { id: '3', badge: 'Software (Beta)', title: 'DoubleClicker — LLM Visibility', description: 'Plan, publish, and monitor content for AI ranking.', cta_text: 'Apply for Beta', cta_link: '/beta' }
+    ],
+    pricing_title: 'pricing.',
+    pricing: [
+      { id: '1', name: 'Brands', price: '$1,997', period: '/month', description: '', annual_price: '$19,171', annual_savings: '20% off', features: ['LLM Optimization for 1 website', 'Monthly visibility reports', 'Content optimization recommendations', 'Email support'], cta_text: 'Get Started', cta_link: '#contact', featured: false },
+      { id: '2', name: 'Agencies', price: 'Custom', period: '', description: 'Tailored solutions for agencies managing multiple client websites.', features: ['Multi-website management', 'White-label reporting', 'Priority support', 'Dedicated account manager', 'Custom integrations'], cta_text: 'Learn More', cta_link: '/agencies', featured: true },
+      { id: '3', name: 'Enterprise', price: 'Custom', period: '', description: 'Enterprise-grade solutions for large organizations.', features: ['Unlimited websites', 'Advanced analytics & insights', '24/7 priority support', 'Custom SLA', 'On-site training & consultation', 'API access'], cta_text: 'Contact Sales', cta_link: '/enterprise', featured: false }
+    ],
+    outcomes_title: 'outcomes.',
+    outcomes_subtitle: 'We specialize in one thing: ranking your brand inside AI assistants. Every program below is designed to move you toward that outcome.',
+    outcomes: [
+      { id: '1', title: 'Visibility in AI Answers', description: 'Appear when customers ask ChatGPT, Claude, and Perplexity about your category.' },
+      { id: '2', title: 'Qualified Demand', description: 'Turn intent-rich AI recommendations into visitors, trials, and purchases.' },
+      { id: '3', title: 'Competitive Positioning', description: 'Own the answer before competitors do with a defensible LLM content strategy.' },
+      { id: '4', title: 'Future-Proof SEO', description: 'Bridge traditional search and LLM ranking to sustain growth through the shift to AI.' }
     ],
     contact_email: 'hello@doubleclicker.com'
   })
@@ -61,11 +108,14 @@ export default function HomepageEditorPage() {
       const res = await fetch('/api/homepage')
       if (res.ok) {
         const data = await res.json()
-        // Merge fetched data with defaults, ensuring services array exists
+        // Merge fetched data with defaults, ensuring all arrays exist
         setFormData(prev => ({
           ...prev,
           ...data,
-          services: Array.isArray(data.services) ? data.services : prev.services
+          services: Array.isArray(data.services) ? data.services : prev.services,
+          programs: Array.isArray(data.programs) ? data.programs : prev.programs,
+          pricing: Array.isArray(data.pricing) ? data.pricing : prev.pricing,
+          outcomes: Array.isArray(data.outcomes) ? data.outcomes : prev.outcomes
         }))
       }
     } catch (error) {
