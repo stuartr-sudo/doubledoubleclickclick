@@ -23,11 +23,18 @@ export async function POST(request: NextRequest) {
     // Enhance prompt if requested
     let finalPrompt = prompt
     if (enhance_prompt) {
-      // If a provider/model is specified, use it; otherwise use simple enhancer
-      if (prompt_provider) {
-        finalPrompt = await enhanceWithProvider(prompt, prompt_provider, prompt_model)
-      } else {
-        finalPrompt = await enhancePrompt(prompt)
+      try {
+        // If a provider/model is specified, use it; otherwise use simple enhancer
+        if (prompt_provider) {
+          finalPrompt = await enhanceWithProvider(prompt, prompt_provider, prompt_model)
+        } else {
+          finalPrompt = await enhancePrompt(prompt)
+        }
+      } catch (enhanceError) {
+        console.error('Prompt enhancement error:', enhanceError)
+        // Continue with original prompt if enhancement fails
+        console.warn('Falling back to original prompt due to enhancement error')
+        finalPrompt = prompt
       }
     }
 
@@ -71,7 +78,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error generating image:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to generate image' },
+      { 
+        success: false, 
+        error: 'Failed to generate image',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
@@ -83,11 +94,15 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
   if (provider === 'openai') {
     const apiKey = process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY
     if (!apiKey) throw new Error('OpenAI API key not configured')
+    
+    // Validate model ID - use fallback if invalid
+    const validModel = model || 'gpt-4o-mini'
+    
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: model || 'gpt-4o-mini',
+        model: validModel,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: prompt },
@@ -98,7 +113,7 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
     })
     if (!resp.ok) {
       const text = await resp.text()
-      throw new Error(`OpenAI error: ${resp.status} ${text}`)
+      throw new Error(`OpenAI error (${resp.status}): ${text}`)
     }
     const data = await resp.json()
     return (data.choices?.[0]?.message?.content || prompt).trim()
@@ -107,11 +122,15 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
   if (provider === 'claude') {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) throw new Error('Anthropic API key not configured')
+    
+    // Validate model ID - use fallback if invalid
+    const validModel = model || 'claude-3-5-sonnet-20241022'
+    
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: model || 'claude-3-5-sonnet-20241022',
+        model: validModel,
         system,
         max_tokens: 300,
         messages: [{ role: 'user', content: prompt }],
@@ -119,7 +138,7 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
     })
     if (!resp.ok) {
       const text = await resp.text()
-      throw new Error(`Claude error: ${resp.status} ${text}`)
+      throw new Error(`Claude error (${resp.status}): ${text}`)
     }
     const data = await resp.json()
     return (data.content?.[0]?.text || prompt).trim()
@@ -128,7 +147,11 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
   if (provider === 'gemini') {
     const apiKey = process.env.GOOGLE_AI_API_KEY
     if (!apiKey) throw new Error('Google AI API key not configured')
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-1.5-flash'}:generateContent?key=${apiKey}`, {
+    
+    // Validate model ID - use fallback if invalid
+    const validModel = model || 'gemini-1.5-flash'
+    
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${validModel}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -138,7 +161,7 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
     })
     if (!resp.ok) {
       const text = await resp.text()
-      throw new Error(`Gemini error: ${resp.status} ${text}`)
+      throw new Error(`Gemini error (${resp.status}): ${text}`)
     }
     const data = await resp.json()
     return (data.candidates?.[0]?.content?.parts?.[0]?.text || prompt).trim()
