@@ -453,9 +453,9 @@ img {
 }
 
 .outcomes-header {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 0 auto var(--spacing-xl);
-  text-align: center;
+  text-align: left;
 }
 
 .outcomes-heading {
@@ -507,6 +507,7 @@ img {
 .products-header {
   max-width: 1400px;
   margin: 0 auto var(--spacing-xl);
+  text-align: left;
 }
 
 .products-grid {
@@ -1801,7 +1802,7 @@ img {
 }
 .subscribe-note.error { color: #b00020; }
 
-/* About Section */
+/* About Section - Minimal & Clean */
 .about-section {
   padding: var(--spacing-2xl) var(--spacing-lg);
   background: var(--color-bg);
@@ -1809,44 +1810,39 @@ img {
 
 .about-header {
   max-width: 1400px;
-  margin: 0 auto var(--spacing-xl);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin: 0 auto var(--spacing-lg);
+  text-align: left;
 }
 
 .about-content {
-  max-width: 1400px;
+  max-width: 900px;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-2xl);
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
 }
 
 .about-text-block {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.about-main-text {
-  font-size: var(--font-size-lg);
-  line-height: 1.6;
-  color: var(--color-text);
-  margin: 0;
-  font-weight: 400;
-}
-
-.about-image-block {
-  display: flex;
-  flex-direction: column;
   gap: var(--spacing-lg);
 }
 
+.about-main-text {
+  font-size: var(--font-size-xl);
+  line-height: 1.8;
+  color: var(--color-text);
+  margin: 0;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+.about-image-block {
+  display: none; /* Hide icon for minimal design */
+}
+
 .about-image-wrapper {
-  position: relative;
-  width: 100%;
+  display: none;
 }
 
 .about-image-dot {
