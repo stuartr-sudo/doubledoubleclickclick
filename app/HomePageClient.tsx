@@ -106,39 +106,51 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
     setIsMenuOpen(!isMenuOpen)
   }
 
-  // Parallax effect for benefits images (subtle, elegant)
+  // Parallax effect for benefits images (more consistent & elegant)
   useEffect(() => {
-    const handleScroll = () => {
-      const section = benefitsSectionRef.current
-      if (!section) return
+    let ticking = false
+    const section = benefitsSectionRef.current
+    if (!section) return
 
-      const sectionTop = section.offsetTop
-      const sectionHeight = section.offsetHeight
+    const speeds = [18, 24, 20, 28] // px max vertical offset per card
+    const maxHorizontal = 8 // px
+
+    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
+
+    const update = () => {
+      ticking = false
       const windowHeight = window.innerHeight
-      const scrollY = window.scrollY
+      const centerY = windowHeight / 2
 
-      if (scrollY + windowHeight > sectionTop && scrollY < sectionTop + sectionHeight) {
-        benefitItemsRef.current.forEach((item, index) => {
-          if (!item) return
-          const rect = item.getBoundingClientRect()
-          const centerY = windowHeight / 2
-          const distanceFromCenter = rect.top + rect.height / 2 - centerY
-          const speed = parseFloat(item.getAttribute('data-parallax') || '0.2')
-          const translateY = distanceFromCenter * speed
-          const horizontal = (index % 2 === 0 ? -1 : 1) * distanceFromCenter * 0.02
+      benefitItemsRef.current.forEach((item, index) => {
+        if (!item) return
+        const rect = item.getBoundingClientRect()
+        // -1 at top, 0 at center, 1 at bottom
+        const rel = clamp((rect.top + rect.height / 2 - centerY) / (windowHeight / 2), -1, 1)
+        const vy = rel * speeds[index % speeds.length]
+        const vx = (index % 2 === 0 ? -1 : 1) * rel * maxHorizontal
 
-          const image = (item.querySelector('.benefit-image') ||
-            item.querySelector('.benefit-image-placeholder')) as HTMLElement | null
-          if (image) {
-            image.style.transform = `translate(${horizontal}px, ${translateY}px) scale(1)`
-          }
-        })
+        const image = (item.querySelector('.benefit-image') ||
+          item.querySelector('.benefit-image-placeholder')) as HTMLElement | null
+        if (image) {
+          image.style.transform = `translate3d(${vx.toFixed(2)}px, ${vy.toFixed(2)}px, 0)`
+        }
+      })
+    }
+
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true
+        requestAnimationFrame(update)
       }
     }
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll()
-    return () => window.removeEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    // Initial run
+    update()
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+    }
   }, [])
 
   return (

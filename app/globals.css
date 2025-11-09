@@ -293,10 +293,16 @@ img {
 .hero-minimal-image {
   width: 100%;
   height: 100%;
-  color: #999;
-  padding: var(--spacing-xl);
+  display: block;
+  object-fit: cover; /* Ensure real images fill the circular container */
 }
 
+/* Preserve padding/color for the SVG placeholder only */
+svg.hero-minimal-image {
+  color: #999;
+  padding: var(--spacing-xl);
+  object-fit: contain;
+}
 .hero-minimal-intro {
   font-size: clamp(1.25rem, 2.5vw, 1.75rem);
   line-height: 1.5;
