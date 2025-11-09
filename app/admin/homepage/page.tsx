@@ -59,6 +59,11 @@ interface HomepageContent {
   outcomes_subtitle: string
   outcomes: Outcome[]
   contact_email: string
+  contact_cta_text: string
+  contact_cta_link: string
+  contact_linkedin_url: string
+  contact_twitter_url: string
+  contact_behance_url: string
 }
 
 export default function HomepageEditorPage() {
@@ -100,7 +105,12 @@ export default function HomepageEditorPage() {
       { id: '3', title: 'Competitive Positioning', description: 'Own the answer before competitors do with a defensible LLM content strategy.' },
       { id: '4', title: 'Future-Proof SEO', description: 'Bridge traditional search and LLM ranking to sustain growth through the shift to AI.' }
     ],
-    contact_email: 'hello@doubleclicker.com'
+    contact_email: 'hello@doubleclicker.com',
+    contact_cta_text: 'Get Started',
+    contact_cta_link: 'mailto:hello@doubleclicker.com',
+    contact_linkedin_url: '#',
+    contact_twitter_url: '#',
+    contact_behance_url: '#'
   })
 
   useEffect(() => {
@@ -822,6 +832,68 @@ export default function HomepageEditorPage() {
                 value={formData.contact_email}
                 onChange={handleChange}
                 placeholder="hello@example.com"
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="contact_cta_text">Contact CTA Button Text</label>
+                <input
+                  type="text"
+                  id="contact_cta_text"
+                  name="contact_cta_text"
+                  value={formData.contact_cta_text}
+                  onChange={handleChange}
+                  placeholder="Get Started"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="contact_cta_link">Contact CTA Button Link</label>
+                <input
+                  type="text"
+                  id="contact_cta_link"
+                  name="contact_cta_link"
+                  value={formData.contact_cta_link}
+                  onChange={handleChange}
+                  placeholder="mailto:hello@example.com or /contact"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="contact_linkedin_url">LinkedIn URL</label>
+              <input
+                type="url"
+                id="contact_linkedin_url"
+                name="contact_linkedin_url"
+                value={formData.contact_linkedin_url}
+                onChange={handleChange}
+                placeholder="https://linkedin.com/company/yourcompany"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="contact_twitter_url">Twitter URL</label>
+              <input
+                type="url"
+                id="contact_twitter_url"
+                name="contact_twitter_url"
+                value={formData.contact_twitter_url}
+                onChange={handleChange}
+                placeholder="https://twitter.com/yourhandle"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="contact_behance_url">Behance URL</label>
+              <input
+                type="url"
+                id="contact_behance_url"
+                name="contact_behance_url"
+                value={formData.contact_behance_url}
+                onChange={handleChange}
+                placeholder="https://behance.net/yourprofile"
               />
             </div>
           </div>

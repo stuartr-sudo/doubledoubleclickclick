@@ -61,6 +61,11 @@ interface HomepageContent {
   outcomes_subtitle?: string
   outcomes?: Outcome[]
   contact_email?: string
+  contact_cta_text?: string
+  contact_cta_link?: string
+  contact_linkedin_url?: string
+  contact_twitter_url?: string
+  contact_behance_url?: string
 }
 
 interface HomePageClientProps {
@@ -85,6 +90,11 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const heroCTALink = homepageContent?.hero_cta_link || '#contact'
   const aboutTitle = homepageContent?.about_title || 'about.'
   const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
+  const contactCTAText = homepageContent?.contact_cta_text || 'Get Started'
+  const contactCTALink = homepageContent?.contact_cta_link || 'mailto:hello@doubleclicker.com'
+  const linkedinUrl = homepageContent?.contact_linkedin_url || '#'
+  const twitterUrl = homepageContent?.contact_twitter_url || '#'
+  const behanceUrl = homepageContent?.contact_behance_url || '#'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const benefitsSectionRef = useRef<HTMLElement | null>(null)
   const benefitItemsRef = useRef<Array<HTMLDivElement | null>>([])
@@ -594,9 +604,9 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       <section className="contact-section" id="contact">
         <div className="contact-header">
           <nav className="contact-nav">
-            <a href="#" className="contact-link">Linkedin</a>
-            <a href="#" className="contact-link">Twitter</a>
-            <a href="#" className="contact-link">Behance</a>
+            <a href={linkedinUrl} className="contact-link" target="_blank" rel="noopener noreferrer">Linkedin</a>
+            <a href={twitterUrl} className="contact-link" target="_blank" rel="noopener noreferrer">Twitter</a>
+            <a href={behanceUrl} className="contact-link" target="_blank" rel="noopener noreferrer">Behance</a>
           </nav>
         </div>
         <div className="contact-content">
@@ -607,8 +617,8 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
             <span className="cursor-icon">●</span>
           </h2>
           <div className="contact-cta">
-            <a href="mailto:hello@doubleclicker.com" className="btn-contact">
-              Get Started
+            <a href={contactCTALink} className="btn-contact">
+              {contactCTAText}
             </a>
             <div className="availability-status">
               <span className="status-dot"></span>
