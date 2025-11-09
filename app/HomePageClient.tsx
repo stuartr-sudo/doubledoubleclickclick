@@ -50,6 +50,8 @@ interface HomepageContent {
   about_image?: string
   hero_cta_text?: string
   hero_cta_link?: string
+  hero_footer_cta_text?: string
+  hero_footer_cta_link?: string
   about_title?: string
   about_description?: string
   services_title?: string
@@ -89,6 +91,8 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const heroDescription = homepageContent?.hero_description || 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!'
   const heroCTAText = homepageContent?.hero_cta_text || 'Get Started'
   const heroCTALink = homepageContent?.hero_cta_link || '#contact'
+  const heroFooterCTAText = homepageContent?.hero_footer_cta_text || 'Get Started'
+  const heroFooterCTALink = homepageContent?.hero_footer_cta_link || 'mailto:hello@doubleclicker.com'
   const heroImage = homepageContent?.hero_image || ''
   const aboutTitle = homepageContent?.about_title || 'about.'
   const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
@@ -231,14 +235,14 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
           </div>
         </div>
 
-        {/* Footer - Contact */}
+        {/* Footer - CTA Button */}
         <div className="hero-minimal-footer">
-          <a href="mailto:hello@doubleclicker.com" className="hero-minimal-contact">
-            <span>hello@doubleclicker.com</span>
-            <svg className="contact-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <Link href={heroFooterCTALink} className="btn-primary hero-minimal-footer-cta">
+            {heroFooterCTAText}
+            <svg className="cta-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          </a>
+          </Link>
         </div>
       </section>
 

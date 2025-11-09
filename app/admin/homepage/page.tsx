@@ -50,6 +50,8 @@ interface HomepageContent {
   about_image: string
   hero_cta_text: string
   hero_cta_link: string
+  hero_footer_cta_text: string
+  hero_footer_cta_link: string
   about_title: string
   about_description: string
   services_title: string
@@ -116,11 +118,13 @@ export default function HomepageEditorPage() {
     logo_text: 'DoubleClicker',
     hero_title: 'Make Your Brand the Answer AI Suggests',
     hero_description: 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!',
-    hero_image: '',
-    about_image: '',
-    hero_cta_text: 'Get Started',
-    hero_cta_link: '#contact',
-    about_title: 'about.',
+      hero_image: '',
+      about_image: '',
+      hero_cta_text: 'Get Started',
+      hero_cta_link: '#contact',
+      hero_footer_cta_text: 'Get Started',
+      hero_footer_cta_link: 'mailto:hello@doubleclicker.com',
+      about_title: 'about.',
     about_description: 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now.',
     services_title: 'how it works.',
     services: [
@@ -479,6 +483,31 @@ export default function HomepageEditorPage() {
                   value={formData.hero_cta_link}
                   onChange={handleChange}
                   placeholder="#contact or /signup"
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.hero_footer_cta_text}
+                  onChange={(value) => setFormData({...formData, hero_footer_cta_text: value})}
+                  fieldType="cta_text"
+                  label="Footer CTA Button Text"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="hero_footer_cta_link">Footer CTA Button Link</label>
+                <input
+                  type="text"
+                  id="hero_footer_cta_link"
+                  name="hero_footer_cta_link"
+                  value={formData.hero_footer_cta_link}
+                  onChange={handleChange}
+                  placeholder="mailto:hello@example.com or /contact"
                 />
               </div>
             </div>
