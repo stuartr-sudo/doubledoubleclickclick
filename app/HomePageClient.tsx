@@ -166,8 +166,8 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                     src={logoImage} 
                     alt={logoText} 
                     className="hero-brand-logo"
-                    width={150}
-                    height={40}
+                    width={50}
+                    height={50}
                   />
                 ) : (
                   <span>{logoText}</span>

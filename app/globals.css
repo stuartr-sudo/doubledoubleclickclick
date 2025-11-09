@@ -175,10 +175,11 @@ img {
 }
 
 .hero-brand-logo {
-  max-height: 40px;
-  width: auto;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
   display: block;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .hero-menu-icon {
