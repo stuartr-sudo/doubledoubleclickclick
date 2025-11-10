@@ -144,7 +144,11 @@ export default function AdminPage() {
                       </td>
                       <td>{post.author || 'Anonymous'}</td>
                       <td>
-                        {new Date(post.created_date).toLocaleDateString()}
+                        {new Date(post.created_date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'numeric',
+                          day: 'numeric'
+                        })}
                       </td>
                       <td className="actions">
                         <Link

@@ -701,7 +701,11 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                       <p>{post.meta_description}</p>
                     )}
                     <time dateTime={post.created_date}>
-                      {new Date(post.created_date).toLocaleDateString()}
+                      {new Date(post.created_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric'
+                      })}
                     </time>
                   </div>
                 </article>
