@@ -2762,18 +2762,22 @@ svg.hero-minimal-image {
 @media (max-width: 768px) {
   .hero-minimal {
     min-height: auto;
-    padding: var(--spacing-md);
-    padding-bottom: var(--spacing-xl);
+    padding: var(--spacing-sm) var(--spacing-md);
+    padding-bottom: var(--spacing-lg);
+  }
+
+  .hero-minimal-header {
+    margin-bottom: var(--spacing-md);
   }
 
   .hero-minimal-content {
-    padding: var(--spacing-lg) 0;
+    padding: var(--spacing-sm) 0;
     align-items: flex-start;
   }
 
   .hero-minimal-grid {
     grid-template-columns: 1fr;
-    gap: var(--spacing-xl);
+    gap: var(--spacing-md);
     align-items: flex-start;
   }
 
@@ -2786,20 +2790,22 @@ svg.hero-minimal-image {
     text-align: center;
     font-size: clamp(3rem, 12vw, 5rem);
     line-height: 1;
-    padding-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    margin-bottom: 0;
   }
 
   .hero-minimal-right {
     align-items: center;
     text-align: center;
     padding-top: 0;
-    padding-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-sm);
     width: 100%;
   }
 
   .hero-minimal-image-wrapper {
     align-items: center;
     width: 100%;
+    margin-bottom: var(--spacing-sm);
   }
 
   .hero-minimal-dot {
@@ -2811,13 +2817,14 @@ svg.hero-minimal-image {
     text-align: center;
     max-width: 100%;
     padding-left: 0;
-    padding-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    margin-bottom: 0;
   }
 
   .hero-minimal-footer {
     justify-content: center;
-    padding-top: var(--spacing-lg);
-    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+    margin-top: var(--spacing-md);
   }
 
   .benefits-grid {
@@ -2870,6 +2877,20 @@ svg.hero-minimal-image {
 
   .hero-minimal-name {
     font-size: clamp(2.5rem, 10vw, 4rem);
+    padding-bottom: var(--spacing-xs);
+  }
+
+  .hero-minimal-grid {
+    gap: var(--spacing-sm);
+  }
+
+  .hero-minimal-intro {
+    padding-bottom: var(--spacing-xs);
+  }
+
+  .hero-minimal-footer {
+    padding-top: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
   }
 }
 
