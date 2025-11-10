@@ -2827,6 +2827,14 @@ svg.hero-minimal-image {
     margin-top: var(--spacing-md);
   }
 
+  .benefits-section {
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .benefits-header {
+    margin-bottom: var(--spacing-md);
+  }
+
   .benefits-grid {
     grid-template-columns: 1fr;
     gap: var(--spacing-lg);
