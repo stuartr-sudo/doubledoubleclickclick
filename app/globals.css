@@ -519,7 +519,7 @@ img {
   position: relative;
   display: grid;
   grid-template-columns: minmax(280px, 1fr) 120px minmax(280px, 1fr);
-  align-items: stretch;
+  align-items: start;
   gap: var(--spacing-2xl);
   min-height: 420px;
 }
@@ -531,9 +531,9 @@ img {
 .timeline-marker {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  align-self: stretch;
+  padding-top: 0;
 }
 
 .timeline-number {
@@ -619,9 +619,7 @@ img {
 
 .timeline-media {
   display: flex;
-  align-items: center;
   justify-content: center;
-  flex: 1;
 }
 
 .timeline-media-inner {
