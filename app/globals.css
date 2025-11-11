@@ -357,12 +357,14 @@ img {
   overflow: hidden;
   position: relative;
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .tech-carousel-track {
   display: flex;
-  gap: var(--spacing-2xl);
-  animation: scroll-infinite 30s linear infinite;
+  gap: var(--spacing-3xl);
+  animation: scroll-infinite 40s linear infinite;
   width: fit-content;
 }
 
@@ -371,9 +373,9 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 120px;
-  height: 120px;
-  padding: var(--spacing-lg);
+  width: 200px;
+  height: 200px;
+  padding: var(--spacing-xl);
 }
 
 .tech-icon {
@@ -402,7 +404,7 @@ img {
 }
 
 .tech-icon-text {
-  font-size: 0.875rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--color-text);
   text-align: center;
@@ -3021,13 +3023,17 @@ img {
   }
 
   .tech-carousel-item {
-    width: 100px;
-    height: 100px;
+    width: 150px;
+    height: 150px;
   }
 
   .tech-carousel-track {
-    gap: var(--spacing-xl);
-    animation-duration: 20s;
+    gap: var(--spacing-2xl);
+    animation-duration: 30s;
+  }
+
+  .tech-icon-text {
+    font-size: 1rem;
   }
 
   .how-it-works-section {
