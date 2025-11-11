@@ -164,19 +164,6 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
           {/* Header */}
           <header className="hero-minimal-header">
             <div className="hero-minimal-header-content">
-              <Link href="/" className="hero-brand">
-                {logoImage ? (
-                  <img 
-                    src={logoImage} 
-                    alt={logoText} 
-                    className="hero-brand-logo"
-                    width={68}
-                    height={68}
-                  />
-                ) : (
-                  <span>{logoText}</span>
-                )}
-              </Link>
               <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
@@ -190,7 +177,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         {/* Main Content */}
         <div className="hero-minimal-content">
           <div className="hero-minimal-grid">
-            {/* Left Side - Name */}
+            {/* Left Side - Title */}
             <div className="hero-minimal-left">
               <h1 className="hero-minimal-name">
                 {heroTitle.split('\n').map((line, i) => (
@@ -208,19 +195,18 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                       src={heroImage}
                       alt="Hero"
                       className="hero-minimal-image"
-                      width={300}
-                      height={300}
+                      width={400}
+                      height={400}
                       loading="lazy"
                     />
                   ) : (
-                    // Profile Icon Placeholder
                     <svg 
                       className="hero-minimal-image"
                       viewBox="0 0 24 24" 
                       fill="none" 
                       xmlns="http://www.w3.org/2000/svg"
-                      width="300"
-                      height="300"
+                      width="400"
+                      height="400"
                     >
                       <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       <path d="M6 21c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -231,18 +217,16 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
               <p className="hero-minimal-intro">
                 {heroDescription}
               </p>
+              <div className="hero-minimal-footer-inline">
+                <Link href={heroFooterCTALink} className="hero-minimal-footer-cta">
+                  {heroFooterCTAText}
+                  <svg className="cta-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Footer - CTA Button */}
-        <div className="hero-minimal-footer">
-          <Link href={heroFooterCTALink} className="hero-minimal-footer-cta">
-            {heroFooterCTAText}
-            <svg className="cta-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </Link>
         </div>
       </section>
 

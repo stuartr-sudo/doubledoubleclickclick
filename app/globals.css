@@ -24,6 +24,7 @@
   --spacing-lg: 2rem;
   --spacing-xl: 3rem;
   --spacing-2xl: 4rem;
+  --spacing-3xl: 6rem;
   
   /* Typography */
   --font-size-xs: 0.75rem;
@@ -139,7 +140,7 @@ img {
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-xl) var(--spacing-2xl);
   overflow-x: hidden;
   overflow-y: visible;
 }
@@ -148,14 +149,14 @@ img {
 .hero-minimal-header {
   position: relative;
   z-index: 10;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
 }
 
 .hero-minimal-header-content {
   max-width: 1400px;
   margin: 0 auto;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
 }
 
@@ -206,7 +207,7 @@ img {
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
-  padding: var(--spacing-xl) 0;
+  padding: var(--spacing-2xl) 0;
   overflow-x: hidden;
   overflow-y: visible;
   min-height: 0;
@@ -215,32 +216,31 @@ img {
 .hero-minimal-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-2xl);
+  gap: var(--spacing-3xl);
   width: 100%;
-  align-items: center;
+  align-items: start;
   max-width: 100%;
 }
 
 /* Left Side - Name */
 .hero-minimal-left {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-left: 0;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: var(--spacing-xl);
   overflow: hidden;
 }
 
 .hero-minimal-name {
-  font-size: clamp(4rem, 10vw, 8rem);
+  font-size: clamp(3.5rem, 8vw, 7rem);
   font-weight: 700;
   color: var(--color-primary);
-  line-height: 0.9;
-  letter-spacing: 0.02em;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
   margin: 0;
-  text-align: center;
+  text-align: left;
   word-break: break-word;
   overflow-wrap: break-word;
-  padding-bottom: var(--spacing-sm);
 }
 
 .name-line {
@@ -252,71 +252,53 @@ img {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--spacing-lg);
-  padding-top: var(--spacing-xl);
-  padding-bottom: var(--spacing-lg);
-  max-width: 100%;
-  overflow: hidden;
+  justify-content: flex-start;
+  gap: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
 }
 
 .hero-minimal-image-wrapper {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  max-width: 100%;
-}
-
-.hero-minimal-dot {
-  width: 12px;
-  height: 12px;
-  background: var(--color-primary);
-  border-radius: 50%;
-  margin-bottom: var(--spacing-sm);
-  margin-right: var(--spacing-xs);
-  flex-shrink: 0;
-}
-
-.hero-minimal-image-container {
-  width: 300px;
-  height: 300px;
-  max-width: 100%;
-  border-radius: 50%;
-  overflow: hidden;
-  background: #f5f5f5;
-  border: 1px solid var(--color-border);
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+}
+
+.hero-minimal-image-container {
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .hero-minimal-image {
   width: 100%;
   height: 100%;
-  display: block;
-  object-fit: cover; /* Ensure real images fill the circular container */
+  object-fit: contain;
+  border-radius: 0;
 }
 
-/* Preserve padding/color for the SVG placeholder only */
 svg.hero-minimal-image {
-  color: #999;
-  padding: var(--spacing-xl);
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  opacity: 0.1;
 }
+
 .hero-minimal-intro {
-  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
-  line-height: 1.5;
+  font-size: clamp(1.125rem, 1.5vw, 1.5rem);
+  line-height: 1.6;
   color: var(--color-text);
-  max-width: 100%;
   margin: 0;
-  font-weight: 600;
-  text-align: left;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  padding-bottom: var(--spacing-md);
-  letter-spacing: 0.02em;
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  max-width: 600px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.hero-minimal-footer-inline {
+  margin-top: var(--spacing-sm);
 }
 
 /* Footer - CTA Button */
