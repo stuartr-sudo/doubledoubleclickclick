@@ -791,7 +791,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       {/* Footer */}
       <footer className="footer">
         <div className="container">
-          <p>&copy; {new Date().getFullYear()} DoubleClicker. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} SEWO - Get Found Everywhere. All rights reserved.</p>
         </div>
       </footer>
 

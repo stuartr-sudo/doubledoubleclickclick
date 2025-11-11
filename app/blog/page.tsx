@@ -5,8 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Blog | DoubleClicker',
-  description: 'Read our latest blog posts and insights',
+  title: 'Blog | SEWO - Get Found Everywhere',
+  description: 'Expert insights on LLM ranking, AI search optimization, and making your brand the answer AI suggests.',
 }
 
 // Force dynamic rendering
