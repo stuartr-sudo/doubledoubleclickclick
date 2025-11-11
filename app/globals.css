@@ -530,7 +530,7 @@ img {
 }
 
 .how-it-works-step:last-child .step-line {
-  display: none;
+  visibility: hidden;
 }
 
 /* Number circle positioned in center column */
