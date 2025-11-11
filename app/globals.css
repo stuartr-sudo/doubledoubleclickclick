@@ -604,24 +604,34 @@ img {
   flex-direction: column;
   justify-content: center;
   gap: var(--spacing-lg);
-  padding: 0 var(--spacing-lg);
+  /* Remove asymmetric inner padding that caused drift */
+  padding: 0;
   min-height: 400px;
+  /* Fix width so all containers align perfectly */
+  width: min(560px, 100%);
 }
 
+/* Column placement and horizontal alignment
+   Ensure left column items align toward center line (end),
+   and right column items align from the center line (start). */
 .timeline-side--text {
   grid-column: 1;
+  justify-self: end;
 }
 
 .timeline-side--media {
   grid-column: 3;
+  justify-self: start;
 }
 
 .timeline-row--reverse .timeline-side--text {
   grid-column: 3;
+  justify-self: start;
 }
 
 .timeline-row--reverse .timeline-side--media {
   grid-column: 1;
+  justify-self: end;
 }
 
 .timeline-title {
