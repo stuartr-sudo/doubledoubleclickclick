@@ -79,13 +79,19 @@ interface HomepageContent {
   quiz_badge_text?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
+  tech_carousel_bg_color?: string
   how_it_works_title?: string
   how_it_works_steps?: Array<{ id: string; number: string; title: string; description: string; image?: string; link_text?: string; link_url?: string }>
+  how_it_works_bg_color?: string
   why_work_with_us_title?: string
   why_work_with_us_subtitle?: string
   why_work_with_us_description?: string
   why_work_with_us_items?: WhyWorkWithUsItem[]
+  why_work_with_us_bg_color?: string
   faq_items?: FAQItem[]
+  faq_bg_color?: string
+  blog_grid_bg_color?: string
+  quiz_cta_bg_color?: string
   about_title?: string
   about_description?: string
   services_title?: string
@@ -170,6 +176,12 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
     { id: '2', title: 'Collaborative approach', description: 'We ensure transparency throughout the process.', link_text: 'Our process', link_url: '#', icon: '' },
     { id: '3', title: 'Innovative solutions', description: 'We leverage the latest technologies to deliver solutions.', link_text: 'Our solutions', link_url: '#', icon: '' }
   ]
+  const techCarouselBgColor = homepageContent?.tech_carousel_bg_color || '#ffffff'
+  const howItWorksBgColor = homepageContent?.how_it_works_bg_color || '#ffffff'
+  const whyWorkWithUsBgColor = homepageContent?.why_work_with_us_bg_color || '#ffffff'
+  const faqBgColor = homepageContent?.faq_bg_color || '#ffffff'
+  const blogGridBgColor = homepageContent?.blog_grid_bg_color || '#ffffff'
+  const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
 
@@ -273,7 +285,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       </section>
 
       {/* Technology Carousel Section */}
-      <section className="tech-carousel-section">
+      <section className="tech-carousel-section" style={{ background: techCarouselBgColor }}>
         <div className="tech-carousel-header">
           <h2 className="section-label">{techCarouselTitle}</h2>
         </div>
@@ -314,7 +326,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       </section>
 
       {/* How It Works Section - Timeline Layout */}
-      <section className="how-it-works-section">
+      <section className="how-it-works-section" style={{ background: howItWorksBgColor }}>
         <div className="how-it-works-header">
           <h2 className="section-label">{howItWorksTitle}</h2>
         </div>
@@ -463,7 +475,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       </section>
 
       {/* Quiz CTA Section */}
-      <section className="quiz-cta-section">
+      <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
         <div className="quiz-cta-container">
           <h2 className="quiz-cta-title">Want More SEO Traffic?</h2>
           <p className="quiz-cta-subtitle">
@@ -481,7 +493,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       </section>
 
       {/* Why Work With Us Section */}
-      <section className="why-work-with-us-section">
+      <section className="why-work-with-us-section" style={{ background: whyWorkWithUsBgColor }}>
         <div className="why-work-with-us-container">
           <div className="why-work-with-us-header">
             <div className="why-work-with-us-label-line"></div>
@@ -519,7 +531,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       </section>
 
       {/* FAQ Section */}
-      <section className="faq-section">
+      <section className="faq-section" style={{ background: faqBgColor }}>
         <div className="faq-container">
           <div className="faq-header">
             <span className="faq-label">FAQ</span>
@@ -564,7 +576,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
 
       {/* Latest Blog Posts - 3x2 Grid */}
       {latestPosts && latestPosts.length > 0 && (
-        <section className="blog-grid-section">
+        <section className="blog-grid-section" style={{ background: blogGridBgColor }}>
           <div className="blog-grid-container">
             <div className="blog-grid-3x2">
               {latestPosts.slice(0, 6).map((post) => (

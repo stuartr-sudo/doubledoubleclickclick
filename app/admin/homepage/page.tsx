@@ -42,13 +42,19 @@ interface HomepageContent {
   quiz_badge_text?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
+  tech_carousel_bg_color?: string
   how_it_works_title?: string
   how_it_works_steps?: Array<{ id: string; number: string; title: string; description: string; image?: string; link_text?: string; link_url?: string }>
+  how_it_works_bg_color?: string
   why_work_with_us_title?: string
   why_work_with_us_subtitle?: string
   why_work_with_us_description?: string
   why_work_with_us_items?: WhyWorkWithUsItem[]
+  why_work_with_us_bg_color?: string
   faq_items?: FAQItem[]
+  faq_bg_color?: string
+  blog_grid_bg_color?: string
+  quiz_cta_bg_color?: string
 }
 
 export default function HomepageEditorPage() {
@@ -127,10 +133,12 @@ export default function HomepageEditorPage() {
       { id: '6', name: 'Supabase', icon: '' },
       { id: '7', name: 'n8n', icon: '' }
     ],
+    tech_carousel_bg_color: '#ffffff',
     how_it_works_title: 'How it works',
     how_it_works_steps: [
       { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' }
     ],
+    how_it_works_bg_color: '#ffffff',
     why_work_with_us_title: 'Why Work With Us',
     why_work_with_us_subtitle: 'We strive to deliver value to our clients',
     why_work_with_us_description: 'We are dedicated to providing the highest level of service, delivering innovative solutions, and exceeding expectations in everything we do.',
@@ -139,6 +147,7 @@ export default function HomepageEditorPage() {
       { id: '2', title: 'Collaborative approach', description: 'We ensure transparency throughout the process.', link_text: 'Our process', link_url: '#', icon: '' },
       { id: '3', title: 'Innovative solutions', description: 'We leverage the latest technologies to deliver solutions.', link_text: 'Our solutions', link_url: '#', icon: '' }
     ],
+    why_work_with_us_bg_color: '#ffffff',
     faq_items: [
       { id: '1', question: 'How does your consulting process work?', answer: 'Our consulting process begins with a comprehensive analysis of your current LLM visibility. We assess how AI systems understand and rank your brand, then create a customized strategy to improve your positioning.' },
       { id: '2', question: 'What industries do you specialize in?', answer: 'We work with brands across various industries, from technology and SaaS to e-commerce, healthcare, finance, and professional services.' },
@@ -146,7 +155,10 @@ export default function HomepageEditorPage() {
       { id: '4', question: 'Do you offer one-time consultations?', answer: 'Yes, we offer both one-time consultations and ongoing partnerships. A one-time consultation provides you with a strategic roadmap and actionable recommendations.' },
       { id: '5', question: 'Can small businesses afford your services?', answer: 'Absolutely. We offer flexible pricing options designed to accommodate businesses of all sizes. Our services are structured to provide value at every level.' },
       { id: '6', question: 'How do I get started?', answer: 'Getting started is simple. Take our 12-step quiz to see where you\'re missing out on LLM visibility, or reach out directly through our contact form.' }
-    ]
+    ],
+    faq_bg_color: '#ffffff',
+    blog_grid_bg_color: '#ffffff',
+    quiz_cta_bg_color: '#ffffff'
   })
 
   // Generate gradient string from color picker values
@@ -831,15 +843,37 @@ export default function HomepageEditorPage() {
               </button>
             </div>
 
-            <div className="form-group">
-              <TextEnhancer
-                value={formData.tech_carousel_title || ''}
-                onChange={(value) => setFormData({...formData, tech_carousel_title: value})}
-                fieldType="tech_carousel_title"
-                label="Carousel Title"
-                defaultProvider={aiProvider}
-                defaultModel={aiModel}
-              />
+            <div className="form-row">
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.tech_carousel_title || ''}
+                  onChange={(value) => setFormData({...formData, tech_carousel_title: value})}
+                  fieldType="tech_carousel_title"
+                  label="Carousel Title"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="tech_carousel_bg_color">Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="tech_carousel_bg_color"
+                    value={formData.tech_carousel_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, tech_carousel_bg_color: e.target.value})}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.tech_carousel_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, tech_carousel_bg_color: e.target.value})}
+                    placeholder="#ffffff"
+                    style={{ flex: 1, padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="services-list">
@@ -852,29 +886,27 @@ export default function HomepageEditorPage() {
                     </button>
                   </div>
 
-                  <div className="form-group">
-                    <label>Technology Name</label>
-                    <input
-                      type="text"
-                      value={item.name}
-                      onChange={(e) => handleTechCarouselItemChange(index, 'name', e.target.value)}
-                      placeholder="ChatGPT, Claude, Gemini, etc."
-                    />
-                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Technology Name</label>
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => handleTechCarouselItemChange(index, 'name', e.target.value)}
+                        placeholder="ChatGPT, Claude, Gemini, etc."
+                      />
+                    </div>
 
-                  <div className="form-group">
-                    <label>Icon/Logo (AI)</label>
-                    <ImageUpload
-                      value={item.icon || ''}
-                      onChange={(url) => handleTechCarouselItemChange(index, 'icon', url)}
-                      label="Technology Icon/Logo"
-                      folder="tech-icons"
-                      defaultPromptProvider={aiProvider}
-                      defaultPromptModel={aiModel}
-                    />
-                    <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
-                      Upload or generate an icon/logo for this technology. Recommended size: 80x80px or 1:1 aspect ratio.
-                    </p>
+                    <div className="form-group">
+                      <ImageUpload
+                        value={item.icon || ''}
+                        onChange={(url) => handleTechCarouselItemChange(index, 'icon', url)}
+                        label="Icon/Logo"
+                        folder="tech-icons"
+                        defaultPromptProvider={aiProvider}
+                        defaultPromptModel={aiModel}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -890,15 +922,37 @@ export default function HomepageEditorPage() {
               </button>
             </div>
 
-            <div className="form-group">
-              <TextEnhancer
-                value={formData.how_it_works_title || ''}
-                onChange={(value) => setFormData({...formData, how_it_works_title: value})}
-                fieldType="how_it_works_title"
-                label="Section Title"
-                defaultProvider={aiProvider}
-                defaultModel={aiModel}
-              />
+            <div className="form-row">
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.how_it_works_title || ''}
+                  onChange={(value) => setFormData({...formData, how_it_works_title: value})}
+                  fieldType="how_it_works_title"
+                  label="Section Title"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="how_it_works_bg_color">Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="how_it_works_bg_color"
+                    value={formData.how_it_works_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, how_it_works_bg_color: e.target.value})}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.how_it_works_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, how_it_works_bg_color: e.target.value})}
+                    placeholder="#ffffff"
+                    style={{ flex: 1, padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="services-list">
@@ -997,15 +1051,37 @@ export default function HomepageEditorPage() {
               </button>
             </div>
 
-            <div className="form-group">
-              <TextEnhancer
-                value={formData.why_work_with_us_title || ''}
-                onChange={(value) => setFormData({...formData, why_work_with_us_title: value})}
-                fieldType="why_work_with_us_title"
-                label="Section Label"
-                defaultProvider={aiProvider}
-                defaultModel={aiModel}
-              />
+            <div className="form-row">
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.why_work_with_us_title || ''}
+                  onChange={(value) => setFormData({...formData, why_work_with_us_title: value})}
+                  fieldType="why_work_with_us_title"
+                  label="Section Label"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="why_work_with_us_bg_color">Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="why_work_with_us_bg_color"
+                    value={formData.why_work_with_us_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, why_work_with_us_bg_color: e.target.value})}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.why_work_with_us_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, why_work_with_us_bg_color: e.target.value})}
+                    placeholder="#ffffff"
+                    style={{ flex: 1, padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="form-group">
@@ -1116,6 +1192,26 @@ export default function HomepageEditorPage() {
               </button>
             </div>
 
+            <div className="form-group">
+              <label htmlFor="faq_bg_color">Background Color</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="color"
+                  id="faq_bg_color"
+                  value={formData.faq_bg_color || '#ffffff'}
+                  onChange={(e) => setFormData({...formData, faq_bg_color: e.target.value})}
+                  style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                />
+                <input
+                  type="text"
+                  value={formData.faq_bg_color || '#ffffff'}
+                  onChange={(e) => setFormData({...formData, faq_bg_color: e.target.value})}
+                  placeholder="#ffffff"
+                  style={{ flex: 1, padding: '0.5rem' }}
+                />
+              </div>
+            </div>
+
             <div className="services-list">
               {(formData.faq_items || []).map((faq, index) => (
                 <div key={faq.id} className="service-item">
@@ -1155,6 +1251,55 @@ export default function HomepageEditorPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Additional Background Colors */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Additional Section Colors</h2>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="quiz_cta_bg_color">Quiz CTA Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="quiz_cta_bg_color"
+                    value={formData.quiz_cta_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, quiz_cta_bg_color: e.target.value})}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.quiz_cta_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, quiz_cta_bg_color: e.target.value})}
+                    placeholder="#ffffff"
+                    style={{ flex: 1, padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="blog_grid_bg_color">Blog Grid Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="blog_grid_bg_color"
+                    value={formData.blog_grid_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, blog_grid_bg_color: e.target.value})}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.blog_grid_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, blog_grid_bg_color: e.target.value})}
+                    placeholder="#ffffff"
+                    style={{ flex: 1, padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
