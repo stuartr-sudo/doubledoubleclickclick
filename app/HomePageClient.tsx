@@ -420,34 +420,6 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section className="contact-section" id="contact">
-        <div className="contact-header">
-          <nav className="contact-nav">
-            <a href={linkedinUrl} className="contact-link" target="_blank" rel="noopener noreferrer">Linkedin</a>
-            <a href={twitterUrl} className="contact-link" target="_blank" rel="noopener noreferrer">Twitter</a>
-            <a href={behanceUrl} className="contact-link" target="_blank" rel="noopener noreferrer">Behance</a>
-          </nav>
-        </div>
-        <div className="contact-content">
-          <h2 className="contact-headline">
-            Ready to make your brand the answer AI suggests?
-            <br />
-            Let&apos;s get your website ranking in LLMs.
-            <span className="cursor-icon">●</span>
-          </h2>
-          <div className="contact-cta">
-            <a href={contactCTALink} className="btn-contact">
-              {contactCTAText}
-            </a>
-            <div className="availability-status">
-              <span className="status-dot"></span>
-              <span className="status-text">Available For Work</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Latest Blog Posts - 3x2 Grid */}
       {latestPosts && latestPosts.length > 0 && (
         <section className="blog-grid-section">
