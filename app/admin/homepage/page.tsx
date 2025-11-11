@@ -554,13 +554,15 @@ export default function HomepageEditorPage() {
                   • linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)
                 </p>
                 <div 
+                  key={formData.hero_bg_gradient || 'default'}
                   style={{
                     width: '100%',
                     height: '60px',
                     borderRadius: '8px',
                     background: formData.hero_bg_gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     marginTop: '0.5rem',
-                    border: '1px solid #ddd'
+                    border: '1px solid #ddd',
+                    transition: 'background 0.1s ease'
                   }}
                 />
               </div>
