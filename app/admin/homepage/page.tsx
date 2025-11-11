@@ -56,6 +56,11 @@ interface HomepageContent {
   hero_text_color?: string
   hero_cta_bg_color?: string
   hero_cta_text_color?: string
+  quiz_title?: string
+  quiz_description?: string
+  quiz_cta_text?: string
+  quiz_cta_link?: string
+  quiz_steps?: string
   about_title: string
   about_description: string
   services_title: string
@@ -132,6 +137,11 @@ export default function HomepageEditorPage() {
       hero_text_color: '#ffffff',
       hero_cta_bg_color: '#000000',
       hero_cta_text_color: '#ffffff',
+      quiz_title: 'Take the 12-Step Quiz',
+      quiz_description: 'See where you\'re missing out on LLM visibility. Get personalized insights in minutes.',
+      quiz_cta_text: 'Start Quiz',
+      quiz_cta_link: '/quiz',
+      quiz_steps: '12',
       about_title: 'about.',
     about_description: 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now.',
     services_title: 'how it works.',
@@ -618,6 +628,76 @@ export default function HomepageEditorPage() {
                     style={{ flex: 1 }}
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quiz CTA Section */}
+          <div className="form-section">
+            <h2 className="form-section-title">Quiz CTA (Right Side)</h2>
+            
+            <div className="form-group">
+              <label htmlFor="quiz_steps">Number of Steps</label>
+              <input
+                type="text"
+                id="quiz_steps"
+                name="quiz_steps"
+                value={formData.quiz_steps || '12'}
+                onChange={handleChange}
+                placeholder="12"
+              />
+              <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                The number displayed in the quiz badge (e.g., "12 Steps")
+              </p>
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.quiz_title || ''}
+                onChange={(value) => setFormData({...formData, quiz_title: value})}
+                fieldType="quiz_title"
+                label="Quiz Title"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.quiz_description || ''}
+                onChange={(value) => setFormData({...formData, quiz_description: value})}
+                fieldType="quiz_description"
+                label="Quiz Description"
+                multiline={true}
+                rows={3}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="quiz_cta_text">Quiz CTA Button Text</label>
+                <input
+                  type="text"
+                  id="quiz_cta_text"
+                  name="quiz_cta_text"
+                  value={formData.quiz_cta_text || ''}
+                  onChange={handleChange}
+                  placeholder="Start Quiz"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="quiz_cta_link">Quiz CTA Button Link</label>
+                <input
+                  type="text"
+                  id="quiz_cta_link"
+                  name="quiz_cta_link"
+                  value={formData.quiz_cta_link || ''}
+                  onChange={handleChange}
+                  placeholder="/quiz"
+                />
               </div>
             </div>
           </div>

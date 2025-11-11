@@ -56,6 +56,11 @@ interface HomepageContent {
   hero_text_color?: string
   hero_cta_bg_color?: string
   hero_cta_text_color?: string
+  quiz_title?: string
+  quiz_description?: string
+  quiz_cta_text?: string
+  quiz_cta_link?: string
+  quiz_steps?: string
   about_title?: string
   about_description?: string
   services_title?: string
@@ -102,6 +107,11 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const heroTextColor = homepageContent?.hero_text_color || '#ffffff'
   const heroCTABgColor = homepageContent?.hero_cta_bg_color || '#000000'
   const heroCTATextColor = homepageContent?.hero_cta_text_color || '#ffffff'
+  const quizTitle = homepageContent?.quiz_title || 'Take the 12-Step Quiz'
+  const quizDescription = homepageContent?.quiz_description || 'See where you&apos;re missing out on LLM visibility. Get personalized insights in minutes.'
+  const quizCTAText = homepageContent?.quiz_cta_text || 'Start Quiz'
+  const quizCTALink = homepageContent?.quiz_cta_link || '/quiz'
+  const quizSteps = homepageContent?.quiz_steps || '12'
   const aboutTitle = homepageContent?.about_title || 'about.'
   const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
   const aboutImage = homepageContent?.about_image || ''
@@ -214,26 +224,29 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
               </div>
             </div>
 
-            {/* Right Column - Image */}
+            {/* Right Column - Quiz CTA */}
             <div className="hero-stripe-right">
-              {heroImage ? (
-                <div className="hero-stripe-image-wrapper">
-                  <img
-                    src={heroImage}
-                    alt="Hero"
-                    className="hero-stripe-image"
-                    width={800}
-                    height={800}
-                    loading="eager"
-                  />
+              <div className="hero-quiz-cta">
+                <div className="quiz-badge">
+                  <span className="quiz-steps">{quizSteps}</span>
+                  <span className="quiz-badge-text">Steps</span>
                 </div>
-              ) : (
-                <div className="hero-stripe-image-placeholder">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <h2 className="quiz-title">{quizTitle}</h2>
+                <p className="quiz-description">{quizDescription}</p>
+                <Link 
+                  href={quizCTALink} 
+                  className="quiz-cta-button"
+                  style={{
+                    backgroundColor: heroCTABgColor,
+                    color: heroCTATextColor
+                  }}
+                >
+                  {quizCTAText}
+                  <svg className="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                </div>
-              )}
+                </Link>
+              </div>
             </div>
           </div>
         </div>
