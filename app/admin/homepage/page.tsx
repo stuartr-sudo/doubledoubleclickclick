@@ -52,6 +52,10 @@ interface HomepageContent {
   hero_cta_link: string
   hero_footer_cta_text: string
   hero_footer_cta_link: string
+  hero_bg_gradient?: string
+  hero_text_color?: string
+  hero_cta_bg_color?: string
+  hero_cta_text_color?: string
   about_title: string
   about_description: string
   services_title: string
@@ -124,6 +128,10 @@ export default function HomepageEditorPage() {
       hero_cta_link: '#contact',
       hero_footer_cta_text: 'Get Started',
       hero_footer_cta_link: 'mailto:hello@doubleclicker.com',
+      hero_bg_gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      hero_text_color: '#ffffff',
+      hero_cta_bg_color: '#000000',
+      hero_cta_text_color: '#ffffff',
       about_title: 'about.',
     about_description: 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now.',
     services_title: 'how it works.',
@@ -509,6 +517,107 @@ export default function HomepageEditorPage() {
                   onChange={handleChange}
                   placeholder="mailto:hello@example.com or /contact"
                 />
+              </div>
+            </div>
+
+            {/* Hero Colors & Styling */}
+            <div className="form-section">
+              <h2 className="form-section-title">Hero Colors & Styling</h2>
+              
+              <div className="form-group">
+                <label htmlFor="hero_bg_gradient">Background Gradient</label>
+                <input
+                  type="text"
+                  id="hero_bg_gradient"
+                  name="hero_bg_gradient"
+                  value={formData.hero_bg_gradient || ''}
+                  onChange={handleChange}
+                  placeholder="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                />
+                <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                  CSS gradient string. Examples:
+                  <br />
+                  • linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+                  <br />
+                  • linear-gradient(135deg, #f093fb 0%, #f5576c 100%)
+                  <br />
+                  • linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)
+                </p>
+                <div 
+                  style={{
+                    width: '100%',
+                    height: '60px',
+                    borderRadius: '8px',
+                    background: formData.hero_bg_gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    marginTop: '0.5rem',
+                    border: '1px solid #ddd'
+                  }}
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="hero_text_color">Text Color</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      id="hero_text_color"
+                      name="hero_text_color"
+                      value={formData.hero_text_color || '#ffffff'}
+                      onChange={handleChange}
+                      style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                    />
+                    <input
+                      type="text"
+                      value={formData.hero_text_color || '#ffffff'}
+                      onChange={(e) => setFormData({...formData, hero_text_color: e.target.value})}
+                      placeholder="#ffffff"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="hero_cta_bg_color">CTA Background Color</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      id="hero_cta_bg_color"
+                      name="hero_cta_bg_color"
+                      value={formData.hero_cta_bg_color || '#000000'}
+                      onChange={handleChange}
+                      style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                    />
+                    <input
+                      type="text"
+                      value={formData.hero_cta_bg_color || '#000000'}
+                      onChange={(e) => setFormData({...formData, hero_cta_bg_color: e.target.value})}
+                      placeholder="#000000"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="hero_cta_text_color">CTA Text Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="hero_cta_text_color"
+                    name="hero_cta_text_color"
+                    value={formData.hero_cta_text_color || '#ffffff'}
+                    onChange={handleChange}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.hero_cta_text_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, hero_cta_text_color: e.target.value})}
+                    placeholder="#ffffff"
+                    style={{ flex: 1 }}
+                  />
+                </div>
               </div>
             </div>
           </div>
