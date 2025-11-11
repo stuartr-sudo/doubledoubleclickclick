@@ -675,7 +675,8 @@ img {
 
 /* Step Card Section (Separate Sections) */
 .step-card-section {
-  padding: var(--spacing-3xl) var(--spacing-2xl);
+  padding: 0 var(--spacing-2xl);
+  padding-top: var(--spacing-3xl);
   background: var(--color-bg);
 }
 
