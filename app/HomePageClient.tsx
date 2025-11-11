@@ -169,16 +169,14 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
     <main>
       {/* Hero Section - Stripe-style Design */}
       <section className="hero-stripe">
-        {/* Header */}
-        <header className="hero-stripe-header">
-          <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
-              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-              <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
-            </svg>
-          </button>
-        </header>
+        {/* Hamburger Menu - Inside Hero Container */}
+        <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+          </svg>
+        </button>
 
         {/* Main Content */}
         <div className="hero-stripe-content">
@@ -225,15 +223,14 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                     alt="Hero"
                     className="hero-stripe-image"
                     width={800}
-                    height={600}
+                    height={800}
                     loading="eager"
                   />
                 </div>
               ) : (
                 <div className="hero-stripe-image-placeholder">
                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M3 9h18M9 3v18" stroke="currentColor" strokeWidth="1.5"/>
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
               )}
