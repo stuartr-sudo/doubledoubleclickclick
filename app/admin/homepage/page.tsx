@@ -647,7 +647,7 @@ export default function HomepageEditorPage() {
                 placeholder="12"
               />
               <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
-                The number displayed in the quiz badge (e.g., "12 Steps")
+                The number displayed in the quiz badge (e.g., &quot;12 Steps&quot;)
               </p>
             </div>
 
