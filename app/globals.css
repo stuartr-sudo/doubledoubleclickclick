@@ -537,9 +537,9 @@ img {
   position: relative;
   display: grid;
   grid-template-columns: minmax(280px, 1fr) 120px minmax(280px, 1fr);
-  align-items: start;
+  align-items: center;
   gap: var(--spacing-2xl);
-  min-height: 420px;
+  min-height: 520px;
 }
 
 .timeline-row + .timeline-row {
@@ -563,9 +563,10 @@ img {
 .timeline-marker {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: 0;
+  height: 100%;
+  min-height: 400px;
 }
 
 /* Connecting line from step 2 to step 3 */
@@ -601,8 +602,10 @@ img {
 .timeline-side {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: var(--spacing-lg);
   padding: 0 var(--spacing-lg);
+  min-height: 400px;
 }
 
 .timeline-side--text {
@@ -666,13 +669,14 @@ img {
 .timeline-media {
   display: flex;
   justify-content: center;
+  align-items: center;
+  min-height: 360px;
 }
 
 .timeline-media-inner {
   width: 100%;
   max-width: 360px;
-  height: 100%;
-  max-height: 360px;
+  height: 360px;
   aspect-ratio: 1;
   border-radius: 18px;
   background: var(--color-bg-light);
