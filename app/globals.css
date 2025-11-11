@@ -521,8 +521,8 @@ img {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: var(--spacing-3xl);
-  align-items: start;
-  min-height: 350px;
+  align-items: center;
+  height: 420px;
 }
 
 .how-it-works-step:last-child {
@@ -580,8 +580,7 @@ img {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-2xl);
-  align-items: start;
-  padding-top: 6px; /* ensure consistent alignment across steps */
+  align-items: center;
   height: 100%;
 }
 
