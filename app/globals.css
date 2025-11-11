@@ -557,8 +557,6 @@ img {
   flex-direction: column;
   gap: var(--spacing-lg);
   padding: 0 var(--spacing-lg);
-  justify-content: center;
-  height: 100%;
 }
 
 .timeline-side--text {
