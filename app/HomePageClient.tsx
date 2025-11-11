@@ -253,10 +253,8 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
           <h2 className="section-label">{howItWorksTitle}</h2>
         </div>
         <div className="how-it-works-steps-container">
-          {howItWorksSteps.map((step, index) => {
-            const isEven = index % 2 === 1
-            return (
-              <div key={step.id} className={`how-it-works-step ${isEven ? 'step-reverse' : ''}`}>
+          {howItWorksSteps.map((step, index) => (
+              <div key={step.id} className="how-it-works-step">
                 {/* Connecting Line & Number Circle */}
                 <div className="step-connector">
                   <div className="step-number-circle">{step.number}</div>
@@ -301,8 +299,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                   </div>
                 </div>
               </div>
-            )
-          })}
+            ))}
         </div>
       </section>
 
