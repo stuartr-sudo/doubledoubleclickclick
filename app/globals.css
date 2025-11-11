@@ -133,54 +133,23 @@ img {
   color: var(--color-accent);
 }
 
-/* Hero Section - Minimalist Design */
-.hero-minimal {
-  position: relative;
+/* Hero Section - Modern Redesign */
+.hero-modern {
   min-height: 100vh;
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
   padding: var(--spacing-xl) var(--spacing-2xl);
-  overflow-x: hidden;
-  overflow-y: visible;
-}
-
-/* Minimal Hero Header */
-.hero-minimal-header {
   position: relative;
-  z-index: 10;
-  margin-bottom: var(--spacing-lg);
 }
 
-.hero-minimal-header-content {
-  max-width: 1400px;
-  margin: 0 auto;
+.hero-modern-header {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-}
-
-.hero-brand {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-primary);
-  text-decoration: none;
-  letter-spacing: 0.05em;
-  transition: opacity 0.2s;
-  display: flex;
-  align-items: center;
-}
-
-.hero-brand:hover {
-  opacity: 0.7;
-}
-
-.hero-brand-logo {
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
-  display: block;
-  object-fit: cover;
+  padding-bottom: var(--spacing-lg);
+  position: relative;
+  z-index: 10;
 }
 
 .hero-menu-icon {
@@ -199,147 +168,128 @@ img {
   opacity: 0.7;
 }
 
-/* Minimal Hero Content */
-.hero-minimal-content {
+.hero-modern-content {
   flex: 1;
   display: flex;
   align-items: center;
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
-  padding: var(--spacing-2xl) 0;
-  overflow-x: hidden;
-  overflow-y: visible;
-  min-height: 0;
 }
 
-.hero-minimal-grid {
+.hero-modern-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-3xl);
   width: 100%;
   align-items: start;
-  max-width: 100%;
 }
 
-/* Left Side - Name */
-.hero-minimal-left {
+/* Left Column - Title */
+.hero-modern-left {
   display: flex;
   align-items: flex-start;
-  justify-content: flex-start;
-  padding-top: var(--spacing-xl);
-  overflow: hidden;
+  padding-top: var(--spacing-2xl);
 }
 
-.hero-minimal-name {
-  font-size: clamp(3.5rem, 8vw, 7rem);
+.hero-modern-title {
+  font-size: clamp(3rem, 7vw, 6rem);
   font-weight: 700;
   color: var(--color-primary);
-  line-height: 0.95;
-  letter-spacing: -0.02em;
+  line-height: 1;
+  letter-spacing: -0.03em;
   margin: 0;
   text-align: left;
-  word-break: break-word;
-  overflow-wrap: break-word;
 }
 
-.name-line {
+.title-line {
   display: block;
 }
 
-/* Right Side - Image and Text */
-.hero-minimal-right {
+/* Right Column - Image, Description, CTA */
+.hero-modern-right {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
   gap: var(--spacing-xl);
   padding-top: var(--spacing-lg);
 }
 
-.hero-minimal-image-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.hero-modern-image-container {
   width: 100%;
-}
-
-.hero-minimal-image-container {
-  width: 100%;
-  max-width: 500px;
+  max-width: 550px;
   aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  margin: 0 auto;
 }
 
-.hero-minimal-image {
+.hero-modern-image {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 0;
+  display: block;
 }
 
-svg.hero-minimal-image {
+.hero-modern-image-placeholder {
   width: 100%;
   height: 100%;
-  opacity: 0.1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.05;
 }
 
-.hero-minimal-intro {
-  font-size: clamp(1.125rem, 1.5vw, 1.5rem);
-  line-height: 1.6;
+.hero-modern-image-placeholder svg {
+  width: 60%;
+  height: 60%;
+}
+
+.hero-modern-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  max-width: 600px;
+}
+
+.hero-modern-description {
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  line-height: 1.7;
   color: var(--color-text);
   margin: 0;
-  max-width: 600px;
   font-weight: 400;
   letter-spacing: -0.01em;
 }
 
-.hero-minimal-footer-inline {
-  margin-top: var(--spacing-sm);
-}
-
-/* Footer - CTA Button */
-.hero-minimal-footer {
-  margin-top: auto;
-  padding-top: var(--spacing-xl);
-  padding-bottom: var(--spacing-lg);
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.hero-minimal-footer-cta {
+.hero-modern-cta {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   text-decoration: none;
   color: var(--color-primary);
-  font-size: var(--font-size-base);
+  font-size: 1rem;
   font-weight: 500;
   letter-spacing: -0.01em;
-  padding: var(--spacing-sm) 0;
+  padding: 0;
   border-bottom: 1px solid var(--color-primary);
   transition: all 0.3s ease;
-  position: relative;
+  width: fit-content;
 }
 
-.hero-minimal-footer-cta:hover {
-  opacity: 0.7;
+.hero-modern-cta:hover {
+  opacity: 0.6;
   border-bottom-color: transparent;
 }
 
-.hero-minimal-footer-cta .cta-icon {
-  width: 14px;
-  height: 14px;
+.hero-modern-cta .cta-arrow {
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   transition: transform 0.3s ease;
 }
 
-.hero-minimal-footer-cta:hover .cta-icon {
-  transform: translate(2px, -2px);
+.hero-modern-cta:hover .cta-arrow {
+  transform: translate(3px, -3px);
 }
 
 /* Legacy Hero Section (for other pages) */
@@ -2742,71 +2692,60 @@ svg.hero-minimal-image {
 
 /* Responsive Design - Work Section */
 @media (max-width: 768px) {
-  .hero-minimal {
+  .hero-modern {
     min-height: auto;
     padding: var(--spacing-sm) var(--spacing-md);
     padding-bottom: var(--spacing-lg);
   }
 
-  .hero-minimal-header {
+  .hero-modern-header {
+    padding-bottom: var(--spacing-md);
+  }
+
+  .hero-modern-content {
+    padding: var(--spacing-sm) 0;
+  }
+
+  .hero-modern-layout {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .hero-modern-left {
+    padding-top: 0;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .hero-modern-title {
+    text-align: center;
+    font-size: clamp(2.5rem, 10vw, 4.5rem);
+    padding-bottom: var(--spacing-sm);
+  }
+
+  .hero-modern-right {
+    align-items: center;
+    padding-top: 0;
+    width: 100%;
+  }
+
+  .hero-modern-image-container {
+    max-width: 100%;
     margin-bottom: var(--spacing-md);
   }
 
-  .hero-minimal-content {
-    padding: var(--spacing-sm) 0;
-    align-items: flex-start;
-  }
-
-  .hero-minimal-grid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-md);
-    align-items: flex-start;
-  }
-
-  .hero-minimal-left {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .hero-minimal-name {
-    text-align: center;
-    font-size: clamp(3rem, 12vw, 5rem);
-    line-height: 1;
-    padding-bottom: var(--spacing-sm);
-    margin-bottom: 0;
-  }
-
-  .hero-minimal-right {
+  .hero-modern-text {
     align-items: center;
-    text-align: center;
-    padding-top: 0;
-    padding-bottom: var(--spacing-sm);
-    width: 100%;
-  }
-
-  .hero-minimal-image-wrapper {
-    align-items: center;
-    width: 100%;
-    margin-bottom: var(--spacing-sm);
-  }
-
-  .hero-minimal-dot {
-    margin-right: 0;
-    margin-left: 0;
-  }
-
-  .hero-minimal-intro {
     text-align: center;
     max-width: 100%;
-    padding-left: 0;
-    padding-bottom: var(--spacing-sm);
-    margin-bottom: 0;
   }
 
-  .hero-minimal-footer {
-    justify-content: center;
-    padding-top: var(--spacing-md);
-    margin-top: var(--spacing-md);
+  .hero-modern-description {
+    text-align: center;
+  }
+
+  .hero-modern-cta {
+    margin: 0 auto;
   }
 
   .benefits-section {
@@ -2879,27 +2818,21 @@ svg.hero-minimal-image {
 }
 
 @media (max-width: 480px) {
-  .hero-minimal-image-container {
-    width: 200px;
-    height: 200px;
+  .hero-modern-image-container {
+    max-width: 100%;
   }
 
-  .hero-minimal-name {
-    font-size: clamp(2.5rem, 10vw, 4rem);
+  .hero-modern-title {
+    font-size: clamp(2rem, 9vw, 3.5rem);
     padding-bottom: var(--spacing-xs);
   }
 
-  .hero-minimal-grid {
-    gap: var(--spacing-sm);
+  .hero-modern-layout {
+    gap: var(--spacing-md);
   }
 
-  .hero-minimal-intro {
-    padding-bottom: var(--spacing-xs);
-  }
-
-  .hero-minimal-footer {
-    padding-top: var(--spacing-sm);
-    margin-top: var(--spacing-sm);
+  .hero-modern-description {
+    font-size: clamp(1rem, 4vw, 1.125rem);
   }
 }
 

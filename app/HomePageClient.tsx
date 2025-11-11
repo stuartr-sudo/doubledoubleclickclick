@@ -159,68 +159,59 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
 
   return (
     <main>
-      {/* Hero Section - Minimalist Design */}
-      <section className="hero-minimal">
-          {/* Header */}
-          <header className="hero-minimal-header">
-            <div className="hero-minimal-header-content">
-              <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
-                  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-                  <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
-                </svg>
-              </button>
-            </div>
-          </header>
+      {/* Hero Section - Modern Redesign */}
+      <section className="hero-modern">
+        {/* Header */}
+        <header className="hero-modern-header">
+          <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+        </header>
 
         {/* Main Content */}
-        <div className="hero-minimal-content">
-          <div className="hero-minimal-grid">
-            {/* Left Side - Title */}
-            <div className="hero-minimal-left">
-              <h1 className="hero-minimal-name">
+        <div className="hero-modern-content">
+          <div className="hero-modern-layout">
+            {/* Left Column - Headline */}
+            <div className="hero-modern-left">
+              <h1 className="hero-modern-title">
                 {heroTitle.split('\n').map((line, i) => (
-                  <span key={i} className="name-line">{line}</span>
+                  <span key={i} className="title-line">{line}</span>
                 ))}
               </h1>
             </div>
 
-            {/* Right Side - Image and Text */}
-            <div className="hero-minimal-right">
-              <div className="hero-minimal-image-wrapper">
-                <div className="hero-minimal-image-container">
-                  {heroImage ? (
-                    <img
-                      src={heroImage}
-                      alt="Hero"
-                      className="hero-minimal-image"
-                      width={400}
-                      height={400}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <svg 
-                      className="hero-minimal-image"
-                      viewBox="0 0 24 24" 
-                      fill="none" 
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="400"
-                      height="400"
-                    >
+            {/* Right Column - Image, Description, CTA */}
+            <div className="hero-modern-right">
+              <div className="hero-modern-image-container">
+                {heroImage ? (
+                  <img
+                    src={heroImage}
+                    alt="Hero"
+                    className="hero-modern-image"
+                    width={500}
+                    height={500}
+                    loading="eager"
+                  />
+                ) : (
+                  <div className="hero-modern-image-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       <path d="M6 21c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-              <p className="hero-minimal-intro">
-                {heroDescription}
-              </p>
-              <div className="hero-minimal-footer-inline">
-                <Link href={heroFooterCTALink} className="hero-minimal-footer-cta">
+              <div className="hero-modern-text">
+                <p className="hero-modern-description">
+                  {heroDescription}
+                </p>
+                <Link href={heroFooterCTALink} className="hero-modern-cta">
                   {heroFooterCTAText}
-                  <svg className="cta-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </Link>
