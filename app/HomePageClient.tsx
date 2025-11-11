@@ -222,25 +222,31 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
             {/* First set of items */}
             {techCarouselItems.map((item) => (
               <div key={item.id} className="tech-carousel-item">
-                {item.icon ? (
-                  <img src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
-                ) : (
-                  <div className="tech-icon-placeholder">
-                    <span className="tech-icon-text">{item.name}</span>
-                  </div>
-                )}
+                <div className="tech-icon-wrapper">
+                  {item.icon ? (
+                    <img src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
+                  ) : (
+                    <div className="tech-icon-placeholder">
+                      <span className="tech-icon-text">{item.name}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="tech-title">{item.name}</div>
               </div>
             ))}
             {/* Duplicate set for seamless infinite scroll */}
             {techCarouselItems.map((item) => (
               <div key={`${item.id}-duplicate`} className="tech-carousel-item">
-                {item.icon ? (
-                  <img src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
-                ) : (
-                  <div className="tech-icon-placeholder">
-                    <span className="tech-icon-text">{item.name}</span>
-                  </div>
-                )}
+                <div className="tech-icon-wrapper">
+                  {item.icon ? (
+                    <img src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
+                  ) : (
+                    <div className="tech-icon-placeholder">
+                      <span className="tech-icon-text">{item.name}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="tech-title">{item.name}</div>
               </div>
             ))}
           </div>
