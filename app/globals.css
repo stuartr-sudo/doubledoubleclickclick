@@ -551,6 +551,19 @@ img {
   padding-top: 0;
 }
 
+/* Connecting line from step 2 to step 3 */
+.timeline-row--continue .timeline-marker::after {
+  content: '';
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  width: 2px;
+  height: var(--spacing-3xl);
+  background: var(--color-border);
+  transform: translateX(-50%);
+  opacity: 0.35;
+}
+
 .timeline-number {
   width: 72px;
   height: 72px;
