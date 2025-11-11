@@ -252,55 +252,58 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         <div className="how-it-works-header">
           <h2 className="section-label">{howItWorksTitle}</h2>
         </div>
-        <div className="how-it-works-steps-container">
-          {howItWorksSteps.map((step, index) => (
-              <div key={step.id} className="how-it-works-step">
-                {/* Connecting Line & Number Circle */}
-                <div className="step-connector">
-                  <div className="step-number-circle">{step.number}</div>
-                  {index < howItWorksSteps.length - 1 && <div className="step-line"></div>}
-                </div>
-
-                {/* Content */}
-                <div className="step-content">
-                  {/* Image */}
-                  <div className="step-image-wrapper">
-                    {step.image ? (
-                      <img
-                        src={step.image}
-                        alt={step.title}
-                        className="step-image"
-                        width={500}
-                        height={500}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="step-image-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                          <path d="M3 9h18M9 3v18" stroke="currentColor" strokeWidth="1.5"/>
-                        </svg>
+            <div className="how-it-works-timeline">
+              {howItWorksSteps.map((step, index) => {
+                const isReversed = index % 2 === 1
+                return (
+                  <div
+                    key={step.id}
+                    className={`timeline-row ${isReversed ? 'timeline-row--reverse' : ''}`}
+                  >
+                    <div className="timeline-side timeline-side--text">
+                      <h3 className="timeline-title">{step.title}</h3>
+                      <p className="timeline-description">{step.description}</p>
+                      {step.link_text && step.link_url && (
+                        <Link href={step.link_url} className="timeline-link">
+                          {step.link_text}
+                          <svg className="timeline-link-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </Link>
+                      )}
+                    </div>
+                    <div className="timeline-marker">
+                      <span className="timeline-number">{step.number}</span>
+                    </div>
+                    <div className="timeline-side timeline-side--media">
+                      <div className="timeline-media">
+                        <div className="timeline-media-inner">
+                          {step.image ? (
+                            <img
+                              src={step.image}
+                              alt={step.title}
+                              className="timeline-media-image"
+                              width={500}
+                              height={500}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="timeline-media-placeholder">
+                              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                                <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                              </svg>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
-
-                  {/* Text Content */}
-                  <div className="step-text-wrapper">
-                    <h3 className="step-title">{step.title}</h3>
-                    <p className="step-description">{step.description}</p>
-                    {step.link_text && step.link_url && (
-                      <Link href={step.link_url} className="step-link">
-                        {step.link_text}
-                        <svg className="step-link-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-        </div>
+                )
+              })}
+            </div>
       </section>
 
       {/* Outcomes Section - Outcome-driven value props */}
