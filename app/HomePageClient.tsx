@@ -348,7 +348,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
             </div>
       </section>
 
-      {/* Step 3 - Separate Section (Reversed from Step 2: text left, image right) */}
+      {/* Step 3 - Separate Section (Image Right, Text Left - Same as Step 1) */}
       <section className="step-card-section">
         <div className="step-card-container">
           <div className="timeline-row">
