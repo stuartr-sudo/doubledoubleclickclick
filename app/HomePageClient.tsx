@@ -143,10 +143,42 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const twitterUrl = homepageContent?.contact_twitter_url || '#'
   const behanceUrl = homepageContent?.contact_behance_url || '#'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
 
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen)
   }
+
+  const toggleFaq = (index: number) => {
+    setOpenFaqIndex(openFaqIndex === index ? null : index)
+  }
+
+  const faqItems = [
+    {
+      question: 'How does your consulting process work?',
+      answer: 'Our consulting process begins with a comprehensive analysis of your current LLM visibility. We assess how AI systems understand and rank your brand, then create a customized strategy to improve your positioning. Throughout the process, we provide ongoing guidance and optimization to ensure long-term success.'
+    },
+    {
+      question: 'What industries do you specialize in?',
+      answer: 'We work with brands across various industries, from technology and SaaS to e-commerce, healthcare, finance, and professional services. Our approach is tailored to each industry\'s unique challenges and opportunities in AI-powered search.'
+    },
+    {
+      question: 'How long does it take to see results?',
+      answer: 'Results can vary depending on your current visibility and the scope of optimization needed. Typically, you\'ll start seeing improvements in LLM rankings within 4-8 weeks, with more significant gains appearing over 3-6 months as AI systems index and understand your optimized content.'
+    },
+    {
+      question: 'Do you offer one-time consultations?',
+      answer: 'Yes, we offer both one-time consultations and ongoing partnerships. A one-time consultation provides you with a strategic roadmap and actionable recommendations, while ongoing partnerships include continuous optimization, monitoring, and support.'
+    },
+    {
+      question: 'Can small businesses afford your services?',
+      answer: 'Absolutely. We offer flexible pricing options designed to accommodate businesses of all sizes. Our services are structured to provide value at every level, from startups to enterprise organizations. Contact us to discuss a solution that fits your budget.'
+    },
+    {
+      question: 'How do I get started?',
+      answer: 'Getting started is simple. Take our 12-step quiz to see where you\'re missing out on LLM visibility, or reach out directly through our contact form. We\'ll schedule a consultation to discuss your goals and create a customized plan for your brand.'
+    }
+  ]
 
   return (
     <main>
@@ -416,6 +448,50 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
               className="quiz-cta-input"
             />
             <Link href={quizCTALink} className="quiz-cta-button">NEXT</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="faq-section">
+        <div className="faq-container">
+          <div className="faq-header">
+            <span className="faq-label">FAQ</span>
+            <h2 className="faq-title">Answers to your most common questions</h2>
+          </div>
+          <div className="faq-list">
+            {faqItems.map((item, index) => (
+              <div key={index} className="faq-item">
+                <button
+                  className="faq-question"
+                  onClick={() => toggleFaq(index)}
+                  aria-expanded={openFaqIndex === index}
+                >
+                  <span className="faq-question-text">{item.question}</span>
+                  <svg
+                    className={`faq-chevron ${openFaqIndex === index ? 'faq-chevron-open' : ''}`}
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M6 9L12 15L18 9"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                {openFaqIndex === index && (
+                  <div className="faq-answer">
+                    <p>{item.answer}</p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
