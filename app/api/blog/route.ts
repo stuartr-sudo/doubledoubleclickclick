@@ -1,8 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { verifySession } from '@/lib/auth'
 
 export async function POST(request: Request) {
   try {
+    // Require admin session for creating posts
+    const { authenticated } = await verifySession()
+    if (!authenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const supabase = await createClient()
     const body = await request.json()
 

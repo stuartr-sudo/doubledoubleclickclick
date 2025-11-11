@@ -1,8 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { verifySession } from '@/lib/auth'
 
 export async function PUT(request: Request) {
   try {
+    // Require admin session for updates
+    const { authenticated } = await verifySession()
+    if (!authenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const supabase = await createClient()
     const body = await request.json()
     const { searchParams } = new URL(request.url)
@@ -44,6 +51,12 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    // Require admin session for deletions
+    const { authenticated } = await verifySession()
+    if (!authenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
