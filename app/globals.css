@@ -517,16 +517,20 @@ img {
 
 .how-it-works-step {
   position: relative;
-  margin-bottom: var(--spacing-4xl);
+  margin-bottom: 8rem;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: var(--spacing-3xl);
   align-items: center;
-  height: 400px;
+  min-height: 350px;
 }
 
 .how-it-works-step:last-child {
   margin-bottom: 0;
+}
+
+.how-it-works-step:last-child .step-line {
+  display: none;
 }
 
 /* Number circle positioned in center column */
@@ -559,11 +563,13 @@ img {
 
 .step-line {
   width: 2px;
-  height: calc(400px + var(--spacing-4xl));
+  height: 8rem;
   background: var(--color-border);
   margin-top: var(--spacing-md);
-  position: relative;
-  align-self: center;
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Content spans left or right column */
