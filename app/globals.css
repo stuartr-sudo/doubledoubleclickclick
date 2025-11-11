@@ -519,7 +519,7 @@ img {
   position: relative;
   display: grid;
   grid-template-columns: minmax(280px, 1fr) 120px minmax(280px, 1fr);
-  align-items: center;
+  align-items: stretch;
   gap: var(--spacing-2xl);
   min-height: 420px;
 }
@@ -530,10 +530,10 @@ img {
 
 .timeline-marker {
   position: relative;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  align-self: stretch;
 }
 
 .timeline-number {
@@ -558,6 +558,7 @@ img {
   gap: var(--spacing-lg);
   padding: 0 var(--spacing-lg);
   justify-content: center;
+  height: 100%;
 }
 
 .timeline-side--text {
@@ -620,12 +621,16 @@ img {
 
 .timeline-media {
   display: flex;
+  align-items: center;
   justify-content: center;
+  flex: 1;
 }
 
 .timeline-media-inner {
   width: 100%;
   max-width: 360px;
+  height: 100%;
+  max-height: 360px;
   aspect-ratio: 1;
   border-radius: 18px;
   background: var(--color-bg-light);
