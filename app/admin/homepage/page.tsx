@@ -61,6 +61,7 @@ interface HomepageContent {
   quiz_cta_text?: string
   quiz_cta_link?: string
   quiz_steps?: string
+  quiz_badge_text?: string
   about_title: string
   about_description: string
   services_title: string
@@ -142,6 +143,7 @@ export default function HomepageEditorPage() {
       quiz_cta_text: 'Start Quiz',
       quiz_cta_link: '/quiz',
       quiz_steps: '12',
+      quiz_badge_text: 'Steps',
       about_title: 'about.',
     about_description: 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now.',
     services_title: 'how it works.',
@@ -650,6 +652,21 @@ export default function HomepageEditorPage() {
               />
               <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
                 The number displayed in the quiz badge (e.g., &quot;12 Steps&quot;)
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="quiz_badge_text">Badge Text</label>
+              <input
+                type="text"
+                id="quiz_badge_text"
+                name="quiz_badge_text"
+                value={formData.quiz_badge_text || 'Steps'}
+                onChange={handleChange}
+                placeholder="Steps"
+              />
+              <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                The text displayed next to the number in the badge (e.g., &quot;Steps&quot;, &quot;Questions&quot;, &quot;Minutes&quot;)
               </p>
             </div>
 

@@ -61,6 +61,7 @@ interface HomepageContent {
   quiz_cta_text?: string
   quiz_cta_link?: string
   quiz_steps?: string
+  quiz_badge_text?: string
   about_title?: string
   about_description?: string
   services_title?: string
@@ -112,6 +113,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const quizCTAText = homepageContent?.quiz_cta_text || 'Start Quiz'
   const quizCTALink = homepageContent?.quiz_cta_link || '/quiz'
   const quizSteps = homepageContent?.quiz_steps || '12'
+  const quizBadgeText = homepageContent?.quiz_badge_text || 'Steps'
   const aboutTitle = homepageContent?.about_title || 'about.'
   const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
   const aboutImage = homepageContent?.about_image || ''
@@ -216,7 +218,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
               <div className="hero-quiz-cta">
                 <div className="quiz-badge">
                   <span className="quiz-steps">{quizSteps}</span>
-                  <span className="quiz-badge-text">Steps</span>
+                  <span className="quiz-badge-text">{quizBadgeText}</span>
                 </div>
                 <h2 className="quiz-title">{quizTitle}</h2>
                 <p className="quiz-description">{quizDescription}</p>
