@@ -714,16 +714,12 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         </div>
       </section>
 
-      {/* Subscribe Hero */}
-      <SubscribeHero source="homepage" />
-
-      {/* Latest Blog Posts Preview */}
+      {/* Latest Blog Posts - 3x2 Grid */}
       {latestPosts && latestPosts.length > 0 && (
-        <section className="blog-preview">
-          <div className="container">
-            <h2 className="section-title">Latest Blog Posts</h2>
-            <div className="blog-grid">
-              {latestPosts.map((post) => (
+        <section className="blog-grid-section">
+          <div className="blog-grid-container">
+            <div className="blog-grid-3x2">
+              {latestPosts.slice(0, 6).map((post) => (
                 <article key={post.id} className="blog-card">
                   {post.featured_image && (
                     <div className="blog-card-image">
@@ -756,14 +752,27 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                 </article>
               ))}
             </div>
-            <div className="blog-preview-cta">
-              <Link href="/blog" className="btn btn-secondary">
-                View All Posts
-              </Link>
-            </div>
           </div>
         </section>
       )}
+
+      {/* Quiz CTA Section - Bottom */}
+      <section className="quiz-cta-section">
+        <div className="quiz-cta-container">
+          <h2 className="quiz-cta-title">Want More SEO Traffic?</h2>
+          <p className="quiz-cta-subtitle">
+            Answer 5 quick questions and I will give you a step-by-step <strong>7-week action plan</strong> showing you exactly what you need to do to get more traffic.
+          </p>
+          <div className="quiz-cta-form">
+            <input 
+              type="url" 
+              placeholder="What is the URL of your website?" 
+              className="quiz-cta-input"
+            />
+            <Link href={quizCTALink} className="quiz-cta-button">NEXT</Link>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="footer">
