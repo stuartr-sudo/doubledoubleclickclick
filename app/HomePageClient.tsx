@@ -420,52 +420,6 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         </div>
       </section>
 
-      {/* Programs & Products */}
-      <section className="products-section" id="products">
-        <div className="products-header">
-          <h2 className="section-label">{homepageContent?.programs_title || 'programs & products.'}</h2>
-        </div>
-        <div className="products-grid">
-          {homepageContent?.programs && homepageContent.programs.length > 0 ? (
-            homepageContent.programs.map((program) => (
-              <div key={program.id} className="product-card">
-                <div className="product-badge">{program.badge}</div>
-                <h3 className="product-title">{program.title}</h3>
-                <p className="product-description">{program.description}</p>
-                <Link href={program.cta_link} className="btn-pricing">{program.cta_text}</Link>
-              </div>
-            ))
-          ) : (
-            <>
-              <div className="product-card">
-                <div className="product-badge">Guide</div>
-                <h3 className="product-title">The LLM Ranking Playbook</h3>
-                <p className="product-description">
-                  A practical, step‑by‑step system to make your brand the answer AI suggests. Frameworks, prompts, and implementation checklists.
-                </p>
-                <Link href="/lead-capture?type=ebook" className="btn-pricing">Get Early Access</Link>
-              </div>
-              <div className="product-card">
-                <div className="product-badge">Training</div>
-                <h3 className="product-title">Rank in LLMs — Team Course</h3>
-                <p className="product-description">
-                  A live, cohort‑based program for brand and content teams. Build your LLM content architecture and ship a first ranking sprint in 4 weeks.
-                </p>
-                <Link href="/lead-capture?type=course" className="btn-pricing">Join the Waitlist</Link>
-              </div>
-              <div className="product-card product-card-accent">
-                <div className="product-badge accent">Software (Beta)</div>
-                <h3 className="product-title">DoubleClicker — LLM Visibility</h3>
-                <p className="product-description">
-                  Plan, publish, and monitor content for AI ranking. Limited beta access for qualified brands.
-                </p>
-                <Link href="/lead-capture?type=beta" className="btn-pricing">Apply for Beta</Link>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-
       {/* Services Section */}
       <section className="services-section" id="services">
         <div className="services-header">
