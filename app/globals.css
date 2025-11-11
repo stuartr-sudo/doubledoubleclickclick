@@ -350,7 +350,7 @@ img {
 
 .tech-carousel-header {
   margin-bottom: var(--spacing-xl);
-  text-align: left;
+  text-align: center;
 }
 
 .tech-carousel-wrapper {
