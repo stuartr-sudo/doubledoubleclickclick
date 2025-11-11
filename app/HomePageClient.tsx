@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import MobileMenu from '@/components/MobileMenu'
 import SubscribeHero from '@/components/SubscribeHero'
