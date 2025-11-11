@@ -84,6 +84,10 @@ interface HomepageContent {
 export default function HomepageEditorPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  // Gradient color picker state
+  const [gradientStartColor, setGradientStartColor] = useState('#667eea')
+  const [gradientEndColor, setGradientEndColor] = useState('#764ba2')
+  const [gradientDirection, setGradientDirection] = useState('135deg')
   // Global AI provider/model used as defaults across fields
   const AI_PROVIDERS = {
     openai: {
@@ -180,6 +184,26 @@ export default function HomepageEditorPage() {
     contact_behance_url: '#'
   })
 
+  // Generate gradient string from color picker values
+  const generateGradient = (start: string, end: string, direction: string) => {
+    return `linear-gradient(${direction}, ${start} 0%, ${end} 100%)`
+  }
+
+  // Parse gradient string to extract colors and direction
+  const parseGradient = (gradientString: string) => {
+    try {
+      // Match pattern: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+      const match = gradientString.match(/linear-gradient\((\d+deg),\s*(#[0-9a-fA-F]{6})\s+\d+%,\s*(#[0-9a-fA-F]{6})\s+\d+%\)/i)
+      if (match) {
+        setGradientDirection(match[1])
+        setGradientStartColor(match[2])
+        setGradientEndColor(match[3])
+      }
+    } catch (error) {
+      console.error('Error parsing gradient:', error)
+    }
+  }
+
   useEffect(() => {
     fetchHomepageContent()
   }, [])
@@ -198,12 +222,39 @@ export default function HomepageEditorPage() {
           pricing: Array.isArray(data.pricing) ? data.pricing : prev.pricing,
           outcomes: Array.isArray(data.outcomes) ? data.outcomes : prev.outcomes
         }))
+        
+        // Parse gradient and set color picker states
+        if (data.hero_bg_gradient) {
+          parseGradient(data.hero_bg_gradient)
+        }
       }
     } catch (error) {
       console.error('Error fetching homepage content:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle gradient color changes
+  const handleGradientColorChange = (type: 'start' | 'end', color: string) => {
+    if (type === 'start') {
+      setGradientStartColor(color)
+    } else {
+      setGradientEndColor(color)
+    }
+    const newGradient = generateGradient(
+      type === 'start' ? color : gradientStartColor,
+      type === 'end' ? color : gradientEndColor,
+      gradientDirection
+    )
+    setFormData(prev => ({ ...prev, hero_bg_gradient: newGradient }))
+  }
+
+  // Handle gradient direction change
+  const handleGradientDirectionChange = (direction: string) => {
+    setGradientDirection(direction)
+    const newGradient = generateGradient(gradientStartColor, gradientEndColor, direction)
+    setFormData(prev => ({ ...prev, hero_bg_gradient: newGradient }))
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -538,35 +589,113 @@ export default function HomepageEditorPage() {
               
               <div className="form-group">
                 <label htmlFor="hero_bg_gradient">Background Gradient</label>
-                <input
-                  type="text"
-                  id="hero_bg_gradient"
-                  name="hero_bg_gradient"
-                  value={formData.hero_bg_gradient || ''}
-                  onChange={handleChange}
-                  placeholder="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                />
-                <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
-                  CSS gradient string. Examples:
-                  <br />
-                  • linear-gradient(135deg, #667eea 0%, #764ba2 100%)
-                  <br />
-                  • linear-gradient(135deg, #f093fb 0%, #f5576c 100%)
-                  <br />
-                  • linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)
-                </p>
+                
+                {/* Color Pickers */}
+                <div className="form-row" style={{ marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label htmlFor="gradient_start_color" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block' }}>
+                      Start Color
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <input
+                        type="color"
+                        id="gradient_start_color"
+                        value={gradientStartColor}
+                        onChange={(e) => handleGradientColorChange('start', e.target.value)}
+                        style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                      />
+                      <input
+                        type="text"
+                        value={gradientStartColor}
+                        onChange={(e) => handleGradientColorChange('start', e.target.value)}
+                        placeholder="#667eea"
+                        style={{ flex: 1, padding: '0.5rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="gradient_end_color" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block' }}>
+                      End Color
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <input
+                        type="color"
+                        id="gradient_end_color"
+                        value={gradientEndColor}
+                        onChange={(e) => handleGradientColorChange('end', e.target.value)}
+                        style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                      />
+                      <input
+                        type="text"
+                        value={gradientEndColor}
+                        onChange={(e) => handleGradientColorChange('end', e.target.value)}
+                        placeholder="#764ba2"
+                        style={{ flex: 1, padding: '0.5rem' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direction Selector */}
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label htmlFor="gradient_direction" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block' }}>
+                    Direction
+                  </label>
+                  <select
+                    id="gradient_direction"
+                    value={gradientDirection}
+                    onChange={(e) => handleGradientDirectionChange(e.target.value)}
+                    style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
+                  >
+                    <option value="0deg">To Right (→)</option>
+                    <option value="45deg">To Bottom Right (↘)</option>
+                    <option value="90deg">To Bottom (↓)</option>
+                    <option value="135deg">To Bottom Left (↙)</option>
+                    <option value="180deg">To Left (←)</option>
+                    <option value="225deg">To Top Left (↖)</option>
+                    <option value="270deg">To Top (↑)</option>
+                    <option value="315deg">To Top Right (↗)</option>
+                  </select>
+                </div>
+
+                {/* Gradient Preview */}
                 <div 
                   key={formData.hero_bg_gradient || 'default'}
                   style={{
                     width: '100%',
                     height: '60px',
                     borderRadius: '8px',
-                    background: formData.hero_bg_gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: formData.hero_bg_gradient || generateGradient(gradientStartColor, gradientEndColor, gradientDirection),
                     marginTop: '0.5rem',
                     border: '1px solid #ddd',
                     transition: 'background 0.1s ease'
                   }}
                 />
+
+                {/* Manual Override (Advanced) */}
+                <details style={{ marginTop: '1rem' }}>
+                  <summary style={{ cursor: 'pointer', fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>
+                    Advanced: Manual CSS Gradient String
+                  </summary>
+                  <input
+                    type="text"
+                    id="hero_bg_gradient"
+                    name="hero_bg_gradient"
+                    value={formData.hero_bg_gradient || ''}
+                    onChange={(e) => {
+                      handleChange(e)
+                      if (e.target.value) {
+                        parseGradient(e.target.value)
+                      }
+                    }}
+                    placeholder="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                    style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem', fontSize: '0.875rem' }}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.5rem' }}>
+                    You can manually enter a CSS gradient string. The color pickers above will update automatically.
+                  </p>
+                </details>
               </div>
 
               <div className="form-row">
