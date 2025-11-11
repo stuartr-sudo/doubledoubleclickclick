@@ -499,7 +499,8 @@ img {
   position: relative;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 var(--spacing-2xl) var(--spacing-3xl);
+  padding: 0 var(--spacing-2xl);
+  padding-bottom: 0;
 }
 
 .how-it-works-timeline::before {
@@ -675,8 +676,8 @@ img {
 
 /* Step Card Section (Separate Sections) */
 .step-card-section {
-  padding: 0 var(--spacing-2xl);
-  padding-top: var(--spacing-3xl);
+  padding: var(--spacing-3xl) var(--spacing-2xl);
+  padding-bottom: 0;
   background: var(--color-bg);
 }
 
