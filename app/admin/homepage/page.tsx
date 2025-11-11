@@ -86,6 +86,7 @@ interface HomepageContent {
 export default function HomepageEditorPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [activeTechTab, setActiveTechTab] = useState(0)
   // Gradient color picker state
   const [gradientStartColor, setGradientStartColor] = useState('#667eea')
   const [gradientEndColor, setGradientEndColor] = useState('#764ba2')
@@ -409,20 +410,33 @@ export default function HomepageEditorPage() {
   }
 
   const addTechCarouselItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      tech_carousel_items: [
+    setFormData(prev => {
+      const newItems = [
         ...(prev.tech_carousel_items || []),
         { id: String(Date.now()), name: '', icon: '' }
       ]
-    }))
+      setActiveTechTab(newItems.length - 1) // Switch to the new tab
+      return {
+        ...prev,
+        tech_carousel_items: newItems
+      }
+    })
   }
 
   const removeTechCarouselItem = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      tech_carousel_items: (prev.tech_carousel_items || []).filter((_, i) => i !== index)
-    }))
+    setFormData(prev => {
+      const newItems = (prev.tech_carousel_items || []).filter((_, i) => i !== index)
+      // Adjust active tab if needed
+      if (activeTechTab >= newItems.length && newItems.length > 0) {
+        setActiveTechTab(newItems.length - 1)
+      } else if (newItems.length === 0) {
+        setActiveTechTab(0)
+      }
+      return {
+        ...prev,
+        tech_carousel_items: newItems
+      }
+    })
   }
 
   // How It Works handlers
@@ -981,41 +995,62 @@ export default function HomepageEditorPage() {
               </div>
             </div>
 
-            <div className="services-list">
-              {(formData.tech_carousel_items || []).map((item, index) => (
-                <div key={item.id} className="service-item">
-                  <div className="service-item-header">
-                    <h4>Technology {index + 1}</h4>
-                    <button type="button" onClick={() => removeTechCarouselItem(index)} className="btn-remove">
-                      Remove
+            {/* Technology Tabs */}
+            {(formData.tech_carousel_items || []).length > 0 && (
+              <div className="tech-tabs-container">
+                <div className="tech-tabs">
+                  {(formData.tech_carousel_items || []).map((item, index) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`tech-tab ${activeTechTab === index ? 'tech-tab-active' : ''}`}
+                      onClick={() => setActiveTechTab(index)}
+                    >
+                      {item.name || `Technology ${index + 1}`}
                     </button>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Technology Name</label>
-                      <input
-                        type="text"
-                        value={item.name}
-                        onChange={(e) => handleTechCarouselItemChange(index, 'name', e.target.value)}
-                        placeholder="ChatGPT, Claude, Gemini, etc."
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <ImageUpload
-                        value={item.icon || ''}
-                        onChange={(url) => handleTechCarouselItemChange(index, 'icon', url)}
-                        label="Icon/Logo"
-                        folder="tech-icons"
-                        defaultPromptProvider={aiProvider}
-                        defaultPromptModel={aiModel}
-                      />
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+
+                {/* Active Tab Content */}
+                {(formData.tech_carousel_items || [])[activeTechTab] && (
+                  <div className="tech-tab-content">
+                    <div className="tech-tab-header">
+                      <h4>Technology {activeTechTab + 1}</h4>
+                      <button 
+                        type="button" 
+                        onClick={() => removeTechCarouselItem(activeTechTab)} 
+                        className="btn-remove"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Technology Name</label>
+                        <input
+                          type="text"
+                          value={(formData.tech_carousel_items || [])[activeTechTab]?.name || ''}
+                          onChange={(e) => handleTechCarouselItemChange(activeTechTab, 'name', e.target.value)}
+                          placeholder="ChatGPT, Claude, Gemini, etc."
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <ImageUpload
+                          value={(formData.tech_carousel_items || [])[activeTechTab]?.icon || ''}
+                          onChange={(url) => handleTechCarouselItemChange(activeTechTab, 'icon', url)}
+                          label="Icon/Logo"
+                          folder="tech-icons"
+                          defaultPromptProvider={aiProvider}
+                          defaultPromptModel={aiModel}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* How It Works Section */}

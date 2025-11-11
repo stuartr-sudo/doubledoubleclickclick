@@ -2622,6 +2622,69 @@ img {
   font-size: var(--font-size-lg);
 }
 
+/* Technology Tabs */
+.tech-tabs-container {
+  margin-top: var(--spacing-xl);
+}
+
+.tech-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: var(--spacing-lg);
+  overflow-x: auto;
+  padding-bottom: 0;
+}
+
+.tech-tab {
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--color-text-light);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  position: relative;
+  margin-bottom: -2px;
+}
+
+.tech-tab:hover {
+  color: var(--color-text);
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.tech-tab-active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.tech-tab-content {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: var(--spacing-xl);
+  border: 1px solid var(--color-border);
+}
+
+.tech-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tech-tab-header h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 .form-actions {
   padding: var(--spacing-xl);
   text-align: center;
