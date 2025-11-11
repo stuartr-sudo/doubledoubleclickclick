@@ -62,6 +62,8 @@ interface HomepageContent {
   quiz_cta_link?: string
   quiz_steps?: string
   quiz_badge_text?: string
+  tech_carousel_title?: string
+  tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   about_title: string
   about_description: string
   services_title: string
@@ -148,6 +150,16 @@ export default function HomepageEditorPage() {
       quiz_cta_link: '/quiz',
       quiz_steps: '12',
       quiz_badge_text: 'Steps',
+      tech_carousel_title: 'Technology we work with',
+      tech_carousel_items: [
+        { id: '1', name: 'ChatGPT', icon: '' },
+        { id: '2', name: 'Claude', icon: '' },
+        { id: '3', name: 'Gemini', icon: '' },
+        { id: '4', name: 'Grok', icon: '' },
+        { id: '5', name: 'Perplexity', icon: '' },
+        { id: '6', name: 'Supabase', icon: '' },
+        { id: '7', name: 'n8n', icon: '' }
+      ],
       about_title: 'about.',
     about_description: 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now.',
     services_title: 'how it works.',
@@ -220,7 +232,8 @@ export default function HomepageEditorPage() {
           services: Array.isArray(data.services) ? data.services : prev.services,
           programs: Array.isArray(data.programs) ? data.programs : prev.programs,
           pricing: Array.isArray(data.pricing) ? data.pricing : prev.pricing,
-          outcomes: Array.isArray(data.outcomes) ? data.outcomes : prev.outcomes
+          outcomes: Array.isArray(data.outcomes) ? data.outcomes : prev.outcomes,
+          tech_carousel_items: Array.isArray(data.tech_carousel_items) ? data.tech_carousel_items : prev.tech_carousel_items
         }))
         
         // Parse gradient and set color picker states
@@ -366,6 +379,30 @@ export default function HomepageEditorPage() {
 
   const removeOutcome = (index: number) => {
     setFormData(prev => ({ ...prev, outcomes: prev.outcomes.filter((_, i) => i !== index) }))
+  }
+
+  // Tech Carousel handlers
+  const handleTechCarouselItemChange = (index: number, field: 'name' | 'icon', value: string) => {
+    const newItems = [...(formData.tech_carousel_items || [])]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setFormData(prev => ({ ...prev, tech_carousel_items: newItems }))
+  }
+
+  const addTechCarouselItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      tech_carousel_items: [
+        ...(prev.tech_carousel_items || []),
+        { id: String(Date.now()), name: '', icon: '' }
+      ]
+    }))
+  }
+
+  const removeTechCarouselItem = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      tech_carousel_items: (prev.tech_carousel_items || []).filter((_, i) => i !== index)
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -847,6 +884,65 @@ export default function HomepageEditorPage() {
                   placeholder="/quiz"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Technology Carousel Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Technology Carousel</h2>
+              <button type="button" onClick={addTechCarouselItem} className="btn btn-sm btn-primary">
+                + Add Technology
+              </button>
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.tech_carousel_title || ''}
+                onChange={(value) => setFormData({...formData, tech_carousel_title: value})}
+                fieldType="tech_carousel_title"
+                label="Carousel Title"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="services-list">
+              {(formData.tech_carousel_items || []).map((item, index) => (
+                <div key={item.id} className="service-item">
+                  <div className="service-item-header">
+                    <h4>Technology {index + 1}</h4>
+                    <button type="button" onClick={() => removeTechCarouselItem(index)} className="btn-remove">
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Technology Name</label>
+                    <input
+                      type="text"
+                      value={item.name}
+                      onChange={(e) => handleTechCarouselItemChange(index, 'name', e.target.value)}
+                      placeholder="ChatGPT, Claude, Gemini, etc."
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Icon/Logo (AI)</label>
+                    <ImageUpload
+                      value={item.icon || ''}
+                      onChange={(url) => handleTechCarouselItemChange(index, 'icon', url)}
+                      label="Technology Icon/Logo"
+                      folder="tech-icons"
+                      defaultPromptProvider={aiProvider}
+                      defaultPromptModel={aiModel}
+                    />
+                    <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                      Upload or generate an icon/logo for this technology. Recommended size: 80x80px or 1:1 aspect ratio.
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

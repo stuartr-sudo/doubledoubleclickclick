@@ -62,6 +62,8 @@ interface HomepageContent {
   quiz_cta_link?: string
   quiz_steps?: string
   quiz_badge_text?: string
+  tech_carousel_title?: string
+  tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   about_title?: string
   about_description?: string
   services_title?: string
@@ -114,6 +116,16 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const quizCTALink = homepageContent?.quiz_cta_link || '/quiz'
   const quizSteps = homepageContent?.quiz_steps || '12'
   const quizBadgeText = homepageContent?.quiz_badge_text || 'Steps'
+  const techCarouselTitle = homepageContent?.tech_carousel_title || 'Technology we work with'
+  const techCarouselItems = homepageContent?.tech_carousel_items || [
+    { id: '1', name: 'ChatGPT', icon: '' },
+    { id: '2', name: 'Claude', icon: '' },
+    { id: '3', name: 'Gemini', icon: '' },
+    { id: '4', name: 'Grok', icon: '' },
+    { id: '5', name: 'Perplexity', icon: '' },
+    { id: '6', name: 'Supabase', icon: '' },
+    { id: '7', name: 'n8n', icon: '' }
+  ]
   const aboutTitle = homepageContent?.about_title || 'about.'
   const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
   const aboutImage = homepageContent?.about_image || ''
@@ -237,6 +249,41 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                 </Link>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Technology Carousel Section */}
+      <section className="tech-carousel-section">
+        <div className="tech-carousel-header">
+          <h2 className="section-label">{techCarouselTitle}</h2>
+        </div>
+        <div className="tech-carousel-wrapper">
+          <div className="tech-carousel-track">
+            {/* First set of items */}
+            {techCarouselItems.map((item) => (
+              <div key={item.id} className="tech-carousel-item">
+                {item.icon ? (
+                  <img src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
+                ) : (
+                  <div className="tech-icon-placeholder">
+                    <span className="tech-icon-text">{item.name}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+            {/* Duplicate set for seamless infinite scroll */}
+            {techCarouselItems.map((item) => (
+              <div key={`${item.id}-duplicate`} className="tech-carousel-item">
+                {item.icon ? (
+                  <img src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
+                ) : (
+                  <div className="tech-icon-placeholder">
+                    <span className="tech-icon-text">{item.name}</span>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -341,6 +341,83 @@ img {
   transform: translate(3px, -3px);
 }
 
+/* Technology Carousel Section */
+.tech-carousel-section {
+  padding: var(--spacing-3xl) var(--spacing-2xl);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.tech-carousel-header {
+  margin-bottom: var(--spacing-xl);
+  text-align: left;
+}
+
+.tech-carousel-wrapper {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.tech-carousel-track {
+  display: flex;
+  gap: var(--spacing-2xl);
+  animation: scroll-infinite 30s linear infinite;
+  width: fit-content;
+}
+
+.tech-carousel-item {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  padding: var(--spacing-lg);
+}
+
+.tech-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(100%);
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.tech-icon:hover {
+  filter: grayscale(0%);
+  opacity: 1;
+}
+
+.tech-icon-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-light);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.tech-icon-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: center;
+  opacity: 0.7;
+}
+
+@keyframes scroll-infinite {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 /* Legacy Hero Section (for other pages) */
 .hero {
   padding: var(--spacing-2xl) 0;
@@ -2784,6 +2861,20 @@ img {
 
   .hero-quiz-cta {
     max-width: 100%;
+  }
+
+  .tech-carousel-section {
+    padding: var(--spacing-xl) var(--spacing-lg);
+  }
+
+  .tech-carousel-item {
+    width: 100px;
+    height: 100px;
+  }
+
+  .tech-carousel-track {
+    gap: var(--spacing-xl);
+    animation-duration: 20s;
   }
 
   .benefits-section {
