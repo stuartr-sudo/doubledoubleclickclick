@@ -345,49 +345,55 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                   )}
                 </div>
               </div>
+            </div>
+      </section>
 
-              {/* Step 3 - Identical to Step 2 (image left, text right) */}
-              <div className="timeline-row timeline-row--continue">
-                <div className="step-card-media">
-                  <div className="step-card-media-inner">
-                    {step3.image ? (
-                      <img
-                        src={step3.image}
-                        alt={step3.title}
-                        className="step-card-image"
-                        width={500}
-                        height={500}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="step-card-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                          <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="timeline-marker">
-                  <span className="timeline-number">{step3.number}</span>
-                </div>
-                <div className="step-card-text">
-                  <h3 className="timeline-title">{step3.title}</h3>
-                  <p className="timeline-description">{step3.description}</p>
-                  {step3.link_text && step3.link_url && (
-                    <Link href={step3.link_url} className="timeline-link">
-                      {step3.link_text}
-                      <svg className="timeline-link-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      {/* Step 3 - Separate Section (Reversed from Step 2: text left, image right) */}
+      <section className="step-card-section">
+        <div className="step-card-container">
+          <div className="timeline-row">
+            <div className="timeline-side timeline-side--text">
+              <h3 className="timeline-title">{step3.title}</h3>
+              <p className="timeline-description">{step3.description}</p>
+              {step3.link_text && step3.link_url && (
+                <Link href={step3.link_url} className="timeline-link">
+                  {step3.link_text}
+                  <svg className="timeline-link-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </Link>
+              )}
+            </div>
+            <div className="timeline-marker">
+              <span className="timeline-number">{step3.number}</span>
+            </div>
+            <div className="timeline-side timeline-side--media">
+              <div className="timeline-media">
+                <div className="timeline-media-inner">
+                  {step3.image ? (
+                    <img
+                      src={step3.image}
+                      alt={step3.title}
+                      className="timeline-media-image"
+                      width={500}
+                      height={500}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="timeline-media-placeholder">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
                       </svg>
-                    </Link>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
+          </div>
+        </div>
       </section>
 
       {/* Outcomes Section - Outcome-driven value props */}
