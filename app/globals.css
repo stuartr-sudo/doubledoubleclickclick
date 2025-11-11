@@ -676,27 +676,13 @@ img {
 
 /* Step Card Section (Separate Sections) */
 .step-card-section {
-  padding: var(--spacing-3xl) var(--spacing-2xl);
-  padding-bottom: 0;
+  padding: 0 var(--spacing-2xl);
   background: var(--color-bg);
 }
 
 .step-card-container {
   max-width: 1280px;
   margin: 0 auto;
-  position: relative;
-}
-
-.step-card-container::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--spacing-3xl));
-  left: 50%;
-  width: 2px;
-  height: var(--spacing-3xl);
-  background: var(--color-border);
-  transform: translateX(-50%);
-  opacity: 0.35;
 }
 
 .step-card-normal {
