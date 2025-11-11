@@ -396,6 +396,24 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         </div>
       </section>
 
+      {/* Quiz CTA Section */}
+      <section className="quiz-cta-section">
+        <div className="quiz-cta-container">
+          <h2 className="quiz-cta-title">Want More SEO Traffic?</h2>
+          <p className="quiz-cta-subtitle">
+            Answer 5 quick questions and I will give you a step-by-step <strong>7-week action plan</strong> showing you exactly what you need to do to get more traffic.
+          </p>
+          <div className="quiz-cta-form">
+            <input 
+              type="url" 
+              placeholder="What is the URL of your website?" 
+              className="quiz-cta-input"
+            />
+            <Link href={quizCTALink} className="quiz-cta-button">NEXT</Link>
+          </div>
+        </div>
+      </section>
+
       {/* Outcomes Section - Outcome-driven value props */}
       <section className="outcomes-section">
         <div className="outcomes-header">

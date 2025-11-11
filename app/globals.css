@@ -857,6 +857,90 @@ img {
 }
 
 /* Outcomes */
+/* Quiz CTA Section */
+.quiz-cta-section {
+  padding: var(--spacing-3xl) var(--spacing-2xl);
+  background: var(--color-bg);
+  text-align: center;
+}
+
+.quiz-cta-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.quiz-cta-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 var(--spacing-lg);
+  color: var(--color-text);
+}
+
+.quiz-cta-subtitle {
+  font-size: clamp(1rem, 1.2vw, 1.25rem);
+  line-height: 1.6;
+  color: var(--color-text-light);
+  margin: 0 0 var(--spacing-2xl);
+}
+
+.quiz-cta-subtitle strong {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.quiz-cta-form {
+  display: flex;
+  gap: var(--spacing-md);
+  max-width: 700px;
+  margin: 0 auto;
+  align-items: center;
+}
+
+.quiz-cta-input {
+  flex: 1;
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: 1rem;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  background: white;
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.quiz-cta-input:focus {
+  border-color: var(--color-primary);
+}
+
+.quiz-cta-input::placeholder {
+  color: var(--color-text-light);
+  opacity: 0.6;
+}
+
+.quiz-cta-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md) var(--spacing-2xl);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  background: var(--color-primary);
+  color: white;
+  border: 2px solid var(--color-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.quiz-cta-button:hover {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
 .outcomes-section {
   padding: var(--spacing-2xl) var(--spacing-lg);
   background: var(--color-bg);
@@ -3255,6 +3339,29 @@ img {
     max-width: 100%;
     aspect-ratio: 4 / 3;
     border-radius: 14px;
+  }
+
+  .quiz-cta-section {
+    padding: var(--spacing-xl) var(--spacing-lg);
+  }
+
+  .quiz-cta-title {
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+  }
+
+  .quiz-cta-subtitle {
+    font-size: 1rem;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .quiz-cta-form {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .quiz-cta-input,
+  .quiz-cta-button {
+    width: 100%;
   }
 
   .benefits-section {
