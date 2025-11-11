@@ -414,46 +414,6 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         </div>
       </section>
 
-      {/* Outcomes Section - Outcome-driven value props */}
-      <section className="outcomes-section">
-        <div className="outcomes-header">
-          <h2 className="section-label">{homepageContent?.outcomes_title || 'outcomes.'}</h2>
-          <h3 className="outcomes-heading">Become the brand AI recommends</h3>
-          <p className="outcomes-subtitle">
-            {homepageContent?.outcomes_subtitle || 'We specialize in one thing: ranking your brand inside AI assistants. Every program below is designed to move you toward that outcome.'}
-          </p>
-        </div>
-        <div className="outcomes-grid">
-          {homepageContent?.outcomes && homepageContent.outcomes.length > 0 ? (
-            homepageContent.outcomes.map((outcome) => (
-              <div key={outcome.id} className="outcome-card">
-                <h4 className="outcome-title">{outcome.title}</h4>
-                <p className="outcome-text">{outcome.description}</p>
-              </div>
-            ))
-          ) : (
-            <>
-              <div className="outcome-card">
-                <h4 className="outcome-title">Visibility in AI Answers</h4>
-                <p className="outcome-text">Appear when customers ask ChatGPT, Claude, and Perplexity about your category.</p>
-              </div>
-              <div className="outcome-card">
-                <h4 className="outcome-title">Qualified Demand</h4>
-                <p className="outcome-text">Turn intent-rich AI recommendations into visitors, trials, and purchases.</p>
-              </div>
-              <div className="outcome-card">
-                <h4 className="outcome-title">Competitive Positioning</h4>
-                <p className="outcome-text">Own the answer before competitors do with a defensible LLM content strategy.</p>
-              </div>
-              <div className="outcome-card">
-                <h4 className="outcome-title">Future‑Proof SEO</h4>
-                <p className="outcome-text">Bridge traditional search and LLM ranking to sustain growth through the shift to AI.</p>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-
       {/* Programs & Products */}
       <section className="products-section" id="products">
         <div className="products-header">
