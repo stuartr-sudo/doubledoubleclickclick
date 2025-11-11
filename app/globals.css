@@ -265,10 +265,6 @@ img {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
-  padding: var(--spacing-2xl);
-  background: var(--color-bg);
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
 .quiz-badge {
@@ -280,6 +276,7 @@ img {
   border-radius: 8px;
   width: fit-content;
   font-weight: 600;
+  margin-bottom: var(--spacing-xs);
 }
 
 .quiz-steps {
@@ -2780,10 +2777,6 @@ img {
     text-align: center;
   }
 
-  .hero-stripe-cta {
-    margin: 0 auto;
-  }
-
   .hero-stripe-right {
     padding: var(--spacing-lg);
     min-height: 50vh;
@@ -2791,7 +2784,6 @@ img {
 
   .hero-quiz-cta {
     max-width: 100%;
-    padding: var(--spacing-xl);
   }
 
   .benefits-section {
@@ -2886,7 +2878,7 @@ img {
   }
 
   .hero-quiz-cta {
-    padding: var(--spacing-lg);
+    padding: 0;
   }
 }
 
