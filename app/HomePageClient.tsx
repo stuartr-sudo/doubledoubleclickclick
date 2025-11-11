@@ -41,6 +41,21 @@ interface Outcome {
   description: string
 }
 
+interface FAQItem {
+  id: string
+  question: string
+  answer: string
+}
+
+interface WhyWorkWithUsItem {
+  id: string
+  title: string
+  description: string
+  link_text: string
+  link_url: string
+  icon?: string
+}
+
 interface HomepageContent {
   logo_image?: string
   logo_text?: string
@@ -66,6 +81,11 @@ interface HomepageContent {
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   how_it_works_title?: string
   how_it_works_steps?: Array<{ id: string; number: string; title: string; description: string; image?: string; link_text?: string; link_url?: string }>
+  why_work_with_us_title?: string
+  why_work_with_us_subtitle?: string
+  why_work_with_us_description?: string
+  why_work_with_us_items?: WhyWorkWithUsItem[]
+  faq_items?: FAQItem[]
   about_title?: string
   about_description?: string
   services_title?: string
@@ -142,6 +162,14 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const linkedinUrl = homepageContent?.contact_linkedin_url || '#'
   const twitterUrl = homepageContent?.contact_twitter_url || '#'
   const behanceUrl = homepageContent?.contact_behance_url || '#'
+  const whyWorkWithUsTitle = homepageContent?.why_work_with_us_title || 'Why Work With Us'
+  const whyWorkWithUsSubtitle = homepageContent?.why_work_with_us_subtitle || 'We strive to deliver value to our clients'
+  const whyWorkWithUsDescription = homepageContent?.why_work_with_us_description || 'We are dedicated to providing the highest level of service, delivering innovative solutions, and exceeding expectations in everything we do.'
+  const whyWorkWithUsItems = homepageContent?.why_work_with_us_items || [
+    { id: '1', title: 'Proven track record', description: 'We have helped countless businesses overcome challenges.', link_text: 'Our track record', link_url: '#', icon: '' },
+    { id: '2', title: 'Collaborative approach', description: 'We ensure transparency throughout the process.', link_text: 'Our process', link_url: '#', icon: '' },
+    { id: '3', title: 'Innovative solutions', description: 'We leverage the latest technologies to deliver solutions.', link_text: 'Our solutions', link_url: '#', icon: '' }
+  ]
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
 
@@ -448,6 +476,44 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
               className="quiz-cta-input"
             />
             <Link href={quizCTALink} className="quiz-cta-button">NEXT</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Work With Us Section */}
+      <section className="why-work-with-us-section">
+        <div className="why-work-with-us-container">
+          <div className="why-work-with-us-header">
+            <div className="why-work-with-us-label-line"></div>
+            <span className="why-work-with-us-label">{whyWorkWithUsTitle}</span>
+            <h2 className="why-work-with-us-title">{whyWorkWithUsSubtitle}</h2>
+            <p className="why-work-with-us-description">{whyWorkWithUsDescription}</p>
+          </div>
+          <div className="why-work-with-us-grid">
+            {whyWorkWithUsItems.map((item) => (
+              <div key={item.id} className="why-work-with-us-card">
+                <div className="why-work-with-us-icon-wrapper">
+                  {item.icon ? (
+                    <img src={item.icon} alt={item.title} className="why-work-with-us-icon" width={64} height={64} />
+                  ) : (
+                    <div className="why-work-with-us-icon-placeholder">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <h3 className="why-work-with-us-card-title">{item.title}</h3>
+                <p className="why-work-with-us-card-description">{item.description}</p>
+                <Link href={item.link_url} className="why-work-with-us-link">
+                  {item.link_text}
+                  <svg className="why-work-with-us-link-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
       </section>

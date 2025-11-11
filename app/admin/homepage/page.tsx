@@ -11,6 +11,15 @@ interface FAQItem {
   answer: string
 }
 
+interface WhyWorkWithUsItem {
+  id: string
+  title: string
+  description: string
+  link_text: string
+  link_url: string
+  icon?: string
+}
+
 interface HomepageContent {
   logo_image: string
   logo_text: string
@@ -35,6 +44,10 @@ interface HomepageContent {
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   how_it_works_title?: string
   how_it_works_steps?: Array<{ id: string; number: string; title: string; description: string; image?: string; link_text?: string; link_url?: string }>
+  why_work_with_us_title?: string
+  why_work_with_us_subtitle?: string
+  why_work_with_us_description?: string
+  why_work_with_us_items?: WhyWorkWithUsItem[]
   faq_items?: FAQItem[]
 }
 
@@ -118,6 +131,14 @@ export default function HomepageEditorPage() {
     how_it_works_steps: [
       { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' }
     ],
+    why_work_with_us_title: 'Why Work With Us',
+    why_work_with_us_subtitle: 'We strive to deliver value to our clients',
+    why_work_with_us_description: 'We are dedicated to providing the highest level of service, delivering innovative solutions, and exceeding expectations in everything we do.',
+    why_work_with_us_items: [
+      { id: '1', title: 'Proven track record', description: 'We have helped countless businesses overcome challenges.', link_text: 'Our track record', link_url: '#', icon: '' },
+      { id: '2', title: 'Collaborative approach', description: 'We ensure transparency throughout the process.', link_text: 'Our process', link_url: '#', icon: '' },
+      { id: '3', title: 'Innovative solutions', description: 'We leverage the latest technologies to deliver solutions.', link_text: 'Our solutions', link_url: '#', icon: '' }
+    ],
     faq_items: [
       { id: '1', question: 'How does your consulting process work?', answer: 'Our consulting process begins with a comprehensive analysis of your current LLM visibility. We assess how AI systems understand and rank your brand, then create a customized strategy to improve your positioning.' },
       { id: '2', question: 'What industries do you specialize in?', answer: 'We work with brands across various industries, from technology and SaaS to e-commerce, healthcare, finance, and professional services.' },
@@ -163,6 +184,7 @@ export default function HomepageEditorPage() {
           ...data,
           tech_carousel_items: Array.isArray(data.tech_carousel_items) ? data.tech_carousel_items : prev.tech_carousel_items,
           how_it_works_steps: Array.isArray(data.how_it_works_steps) ? data.how_it_works_steps : prev.how_it_works_steps,
+          why_work_with_us_items: Array.isArray(data.why_work_with_us_items) ? data.why_work_with_us_items : prev.why_work_with_us_items,
           faq_items: Array.isArray(data.faq_items) ? data.faq_items : prev.faq_items
         }))
         
@@ -205,6 +227,36 @@ export default function HomepageEditorPage() {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }))
+  }
+
+  // Why Work With Us handlers
+  const handleWhyWorkWithUsChange = (index: number, field: 'title' | 'description' | 'link_text' | 'link_url', value: string) => {
+    const newItems = [...(formData.why_work_with_us_items || [])]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setFormData(prev => ({ ...prev, why_work_with_us_items: newItems }))
+  }
+
+  const handleWhyWorkWithUsIconChange = (index: number, url: string) => {
+    const newItems = [...(formData.why_work_with_us_items || [])]
+    newItems[index] = { ...newItems[index], icon: url }
+    setFormData(prev => ({ ...prev, why_work_with_us_items: newItems }))
+  }
+
+  const addWhyWorkWithUsItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      why_work_with_us_items: [
+        ...(prev.why_work_with_us_items || []),
+        { id: String(Date.now()), title: '', description: '', link_text: '', link_url: '#', icon: '' }
+      ]
+    }))
+  }
+
+  const removeWhyWorkWithUsItem = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      why_work_with_us_items: (prev.why_work_with_us_items || []).filter((_, i) => i !== index)
     }))
   }
 
@@ -927,6 +979,125 @@ export default function HomepageEditorPage() {
                         type="text"
                         value={step.link_url || ''}
                         onChange={(e) => handleHowItWorksStepChange(index, 'link_url', e.target.value)}
+                        placeholder="# or /page"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Why Work With Us Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Why Work With Us Section</h2>
+              <button type="button" onClick={addWhyWorkWithUsItem} className="btn btn-sm btn-primary">
+                + Add Item
+              </button>
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.why_work_with_us_title || ''}
+                onChange={(value) => setFormData({...formData, why_work_with_us_title: value})}
+                fieldType="why_work_with_us_title"
+                label="Section Label"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.why_work_with_us_subtitle || ''}
+                onChange={(value) => setFormData({...formData, why_work_with_us_subtitle: value})}
+                fieldType="why_work_with_us_subtitle"
+                label="Section Title"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.why_work_with_us_description || ''}
+                onChange={(value) => setFormData({...formData, why_work_with_us_description: value})}
+                fieldType="why_work_with_us_description"
+                label="Section Description"
+                multiline={true}
+                rows={3}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="services-list">
+              {(formData.why_work_with_us_items || []).map((item, index) => (
+                <div key={item.id} className="service-item">
+                  <div className="service-item-header">
+                    <h4>Item {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeWhyWorkWithUsItem(index)}
+                      className="btn-remove"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <ImageUpload
+                      value={item.icon || ''}
+                      onChange={(url) => handleWhyWorkWithUsIconChange(index, url)}
+                      label="Icon"
+                      folder="why-work-with-us"
+                      defaultPromptProvider={aiProvider}
+                      defaultPromptModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={item.title}
+                      onChange={(value) => handleWhyWorkWithUsChange(index, 'title', value)}
+                      fieldType="why_work_with_us_item_title"
+                      label="Title"
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={item.description}
+                      onChange={(value) => handleWhyWorkWithUsChange(index, 'description', value)}
+                      fieldType="why_work_with_us_item_description"
+                      label="Description"
+                      multiline={true}
+                      rows={2}
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Link Text</label>
+                      <input
+                        type="text"
+                        value={item.link_text}
+                        onChange={(e) => handleWhyWorkWithUsChange(index, 'link_text', e.target.value)}
+                        placeholder="Our track record"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Link URL</label>
+                      <input
+                        type="text"
+                        value={item.link_url}
+                        onChange={(e) => handleWhyWorkWithUsChange(index, 'link_url', e.target.value)}
                         placeholder="# or /page"
                       />
                     </div>
