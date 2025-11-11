@@ -25,6 +25,13 @@ ADD COLUMN IF NOT EXISTS testimonials_subtitle text DEFAULT 'Whether you''re a s
 ADD COLUMN IF NOT EXISTS testimonials_items jsonb DEFAULT '[]'::jsonb,
 ADD COLUMN IF NOT EXISTS testimonials_bg_color text DEFAULT '#f5f5f5';
 
+-- Add Services section fields to homepage_content
+ALTER TABLE public.homepage_content 
+ADD COLUMN IF NOT EXISTS services_section_title text DEFAULT 'Our services',
+ADD COLUMN IF NOT EXISTS services_section_description text DEFAULT 'Our team combines expertise with creativity to transform outdoor spaces into breathtaking landscapes that enhance the beauty of any property.',
+ADD COLUMN IF NOT EXISTS services_items jsonb DEFAULT '[]'::jsonb,
+ADD COLUMN IF NOT EXISTS services_bg_color text DEFAULT '#ffffff';
+
 -- Add additional background color fields
 ALTER TABLE public.homepage_content 
 ADD COLUMN IF NOT EXISTS tech_carousel_bg_color text DEFAULT '#ffffff',
@@ -75,6 +82,16 @@ ADD COLUMN IF NOT EXISTS quiz_cta_bg_color text DEFAULT '#ffffff';
 --     "author_title": "CEO",
 --     "author_company": "Thompson Industries",
 --     "author_image": "https://example.com/author.jpg"
+--   }
+-- ]
+
+-- Example structure for services_items:
+-- [
+--   {
+--     "id": "1",
+--     "title": "Landscaping works",
+--     "image": "https://example.com/service1.jpg",
+--     "link_url": "#"
 --   }
 -- ]
 

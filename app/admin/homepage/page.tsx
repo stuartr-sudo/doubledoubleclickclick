@@ -30,6 +30,13 @@ interface TestimonialItem {
   author_image?: string
 }
 
+interface ServiceItem {
+  id: string
+  title: string
+  image?: string
+  link_url?: string
+}
+
 interface HomepageContent {
   logo_image: string
   logo_text: string
@@ -68,6 +75,10 @@ interface HomepageContent {
   testimonials_subtitle?: string
   testimonials_items?: TestimonialItem[]
   testimonials_bg_color?: string
+  services_section_title?: string
+  services_section_description?: string
+  services_items?: ServiceItem[]
+  services_bg_color?: string
   blog_grid_bg_color?: string
   quiz_cta_bg_color?: string
 }
@@ -181,6 +192,14 @@ export default function HomepageEditorPage() {
       { id: '3', quote: 'The team at Consulting exceeded our expectations in every way. We are grateful for their partnership and the positive impact they\'ve had on our business.', rating: 5, author_name: 'John Smith', author_title: 'Founder', author_company: 'JS Solutions', author_image: '' }
     ],
     testimonials_bg_color: '#f5f5f5',
+    services_section_title: 'Our services',
+    services_section_description: 'Our team combines expertise with creativity to transform outdoor spaces into breathtaking landscapes that enhance the beauty of any property.',
+    services_items: [
+      { id: '1', title: 'Landscaping works', image: '', link_url: '#' },
+      { id: '2', title: 'Garden design', image: '', link_url: '#' },
+      { id: '3', title: 'Seasonal planting', image: '', link_url: '#' }
+    ],
+    services_bg_color: '#ffffff',
     blog_grid_bg_color: '#ffffff',
     quiz_cta_bg_color: '#ffffff'
   })
@@ -349,6 +368,37 @@ export default function HomepageEditorPage() {
 
   const handleTestimonialImageChange = (index: number, url: string) => {
     handleTestimonialChange(index, 'author_image', url)
+  }
+
+  // Service handlers
+  const handleServiceChange = (index: number, field: keyof ServiceItem, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      services_items: (prev.services_items || []).map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      )
+    }))
+  }
+
+  const addService = () => {
+    setFormData(prev => ({
+      ...prev,
+      services_items: [
+        ...(prev.services_items || []),
+        { id: String(Date.now()), title: '', image: '', link_url: '#' }
+      ]
+    }))
+  }
+
+  const removeService = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      services_items: (prev.services_items || []).filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleServiceImageChange = (index: number, url: string) => {
+    handleServiceChange(index, 'image', url)
   }
 
   // Tech Carousel handlers
@@ -1460,6 +1510,113 @@ export default function HomepageEditorPage() {
                       onChange={(e) => handleTestimonialChange(index, 'author_company', e.target.value)}
                       placeholder="Company Name"
                     />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Services Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Services Section</h2>
+              <button type="button" onClick={addService} className="btn btn-sm btn-primary">
+                + Add Service
+              </button>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.services_section_title || ''}
+                  onChange={(value) => setFormData({...formData, services_section_title: value})}
+                  fieldType="services_section_title"
+                  label="Section Title"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="services_bg_color">Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="services_bg_color"
+                    value={formData.services_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, services_bg_color: e.target.value})}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.services_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, services_bg_color: e.target.value})}
+                    placeholder="#ffffff"
+                    style={{ flex: 1, padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.services_section_description || ''}
+                onChange={(value) => setFormData({...formData, services_section_description: value})}
+                fieldType="services_section_description"
+                label="Section Description"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="services-list">
+              {(formData.services_items || []).map((service, index) => (
+                <div key={service.id} className="service-item">
+                  <div className="service-item-header">
+                    <h4>Service {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeService(index)}
+                      className="btn-remove"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={service.title}
+                      onChange={(value) => handleServiceChange(index, 'title', value)}
+                      fieldType={`service_${index}_title`}
+                      label="Service Title"
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <ImageUpload
+                        value={service.image || ''}
+                        onChange={(url) => handleServiceImageChange(index, url)}
+                        label="Service Image"
+                        folder="services"
+                        defaultPromptProvider={aiProvider}
+                        defaultPromptModel={aiModel}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Link URL</label>
+                      <input
+                        type="text"
+                        value={service.link_url || ''}
+                        onChange={(e) => handleServiceChange(index, 'link_url', e.target.value)}
+                        placeholder="#"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}

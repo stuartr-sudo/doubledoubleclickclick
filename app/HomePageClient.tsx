@@ -66,6 +66,13 @@ interface TestimonialItem {
   author_image?: string
 }
 
+interface ServiceItem {
+  id: string
+  title: string
+  image?: string
+  link_url?: string
+}
+
 interface HomepageContent {
   logo_image?: string
   logo_text?: string
@@ -105,6 +112,10 @@ interface HomepageContent {
   testimonials_subtitle?: string
   testimonials_items?: TestimonialItem[]
   testimonials_bg_color?: string
+  services_section_title?: string
+  services_section_description?: string
+  services_items?: ServiceItem[]
+  services_bg_color?: string
   blog_grid_bg_color?: string
   quiz_cta_bg_color?: string
   about_title?: string
@@ -204,6 +215,14 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
     { id: '3', quote: 'The team at Consulting exceeded our expectations in every way. We are grateful for their partnership and the positive impact they\'ve had on our business.', rating: 5, author_name: 'John Smith', author_title: 'Founder', author_company: 'JS Solutions', author_image: '' }
   ]
   const testimonialsBgColor = homepageContent?.testimonials_bg_color || '#f5f5f5'
+  const servicesSectionTitle = homepageContent?.services_section_title || 'Our services'
+  const servicesSectionDescription = homepageContent?.services_section_description || 'Our team combines expertise with creativity to transform outdoor spaces into breathtaking landscapes that enhance the beauty of any property.'
+  const servicesItems = homepageContent?.services_items || [
+    { id: '1', title: 'Landscaping works', image: '', link_url: '#' },
+    { id: '2', title: 'Garden design', image: '', link_url: '#' },
+    { id: '3', title: 'Seasonal planting', image: '', link_url: '#' }
+  ]
+  const servicesBgColor = homepageContent?.services_bg_color || '#ffffff'
   const blogGridBgColor = homepageContent?.blog_grid_bg_color || '#ffffff'
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -658,6 +677,52 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Services Section */}
+      <section className="services-showcase-section" style={{ background: servicesBgColor }}>
+        <div className="services-showcase-container">
+          <div className="services-showcase-header">
+            <h2 className="services-showcase-title">{servicesSectionTitle}</h2>
+            <p className="services-showcase-description">{servicesSectionDescription}</p>
+          </div>
+          <div className="services-showcase-grid">
+            {servicesItems.map((service) => (
+              <Link
+                key={service.id}
+                href={service.link_url || '#'}
+                className="service-showcase-card"
+              >
+                <div className="service-showcase-image">
+                  {service.image ? (
+                    <img
+                      src={service.image}
+                      alt={service.title}
+                      width={440}
+                      height={480}
+                    />
+                  ) : (
+                    <div className="service-showcase-placeholder">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                      </svg>
+                    </div>
+                  )}
+                  <div className="service-showcase-overlay"></div>
+                </div>
+                <div className="service-showcase-content">
+                  <h3 className="service-showcase-card-title">{service.title}</h3>
+                  <svg className="service-showcase-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
