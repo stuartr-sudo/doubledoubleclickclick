@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
 
@@ -14,7 +14,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export async function createSession(adminId: string): Promise<string> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   
   // Generate unique session token
   const sessionToken = crypto.randomUUID()
@@ -55,7 +55,7 @@ export async function verifySession(): Promise<{ authenticated: boolean; adminId
       return { authenticated: false }
     }
     
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     
     // Check if session exists and is valid
     const { data: session, error } = await supabase
@@ -91,7 +91,7 @@ export async function destroySession(): Promise<void> {
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
   
   if (sessionToken) {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     
     // Delete session from database
     await supabase
@@ -105,7 +105,7 @@ export async function destroySession(): Promise<void> {
 }
 
 export async function cleanExpiredSessions(): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   
   await supabase
     .from('admin_sessions')
