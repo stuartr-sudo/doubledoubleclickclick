@@ -550,6 +550,7 @@ img {
   letter-spacing: 0.04em;
   box-shadow: 0 16px 36px rgba(15, 15, 15, 0.18);
   z-index: 2;
+  margin-top: 6px;
 }
 
 .timeline-side {
@@ -557,6 +558,7 @@ img {
   flex-direction: column;
   gap: var(--spacing-lg);
   padding: 0 var(--spacing-lg);
+  padding-top: 6px;
 }
 
 .timeline-side--text {
