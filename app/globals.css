@@ -537,6 +537,8 @@ img {
   align-items: center;
   z-index: 2;
   grid-column: 2;
+  justify-self: center;
+  width: 60px;
 }
 
 .step-number-circle {
@@ -552,6 +554,7 @@ img {
   font-weight: 600;
   z-index: 3;
   position: relative;
+  flex-shrink: 0;
 }
 
 .step-line {
@@ -559,10 +562,8 @@ img {
   height: calc(400px + var(--spacing-4xl));
   background: var(--color-border);
   margin-top: var(--spacing-md);
-  position: absolute;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  align-self: center;
 }
 
 /* Content spans left or right column */
