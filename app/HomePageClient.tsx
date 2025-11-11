@@ -64,6 +64,8 @@ interface HomepageContent {
   quiz_badge_text?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
+  how_it_works_title?: string
+  how_it_works_steps?: Array<{ id: string; number: string; title: string; description: string; image?: string; link_text?: string; link_url?: string }>
   about_title?: string
   about_description?: string
   services_title?: string
@@ -126,6 +128,12 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
     { id: '6', name: 'Supabase', icon: '' },
     { id: '7', name: 'n8n', icon: '' }
   ]
+  const howItWorksTitle = homepageContent?.how_it_works_title || 'How it works'
+  const howItWorksSteps = homepageContent?.how_it_works_steps || [
+    { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' },
+    { id: '2', number: '02', title: 'Tailored Strategy', description: 'We analyze your goals and create a customized strategy designed to drive measurable success for your business needs.', image: '', link_text: 'Discover More', link_url: '#' },
+    { id: '3', number: '03', title: 'Continuous Support', description: 'From implementation to optimization, we provide ongoing guidance and adjustments to ensure long-term growth for you and your business.', image: '', link_text: 'Discover More', link_url: '#' }
+  ]
   const aboutTitle = homepageContent?.about_title || 'about.'
   const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
   const aboutImage = homepageContent?.about_image || ''
@@ -135,59 +143,10 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const twitterUrl = homepageContent?.contact_twitter_url || '#'
   const behanceUrl = homepageContent?.contact_behance_url || '#'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const benefitsSectionRef = useRef<HTMLElement | null>(null)
-  const benefitItemsRef = useRef<Array<HTMLDivElement | null>>([])
 
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen)
   }
-
-  // Parallax effect for benefits images (more consistent & elegant)
-  useEffect(() => {
-    let ticking = false
-    const section = benefitsSectionRef.current
-    if (!section) return
-
-    const speeds = [18, 24, 20, 28] // px max vertical offset per card
-    const maxHorizontal = 8 // px
-
-    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
-
-    const update = () => {
-      ticking = false
-      const windowHeight = window.innerHeight
-      const centerY = windowHeight / 2
-
-      benefitItemsRef.current.forEach((item, index) => {
-        if (!item) return
-        const rect = item.getBoundingClientRect()
-        // -1 at top, 0 at center, 1 at bottom
-        const rel = clamp((rect.top + rect.height / 2 - centerY) / (windowHeight / 2), -1, 1)
-        const vy = rel * speeds[index % speeds.length]
-        const vx = (index % 2 === 0 ? -1 : 1) * rel * maxHorizontal
-
-        const image = (item.querySelector('.benefit-image') ||
-          item.querySelector('.benefit-image-placeholder')) as HTMLElement | null
-        if (image) {
-          image.style.transform = `translate3d(${vx.toFixed(2)}px, ${vy.toFixed(2)}px, 0)`
-        }
-      })
-    }
-
-    const onScroll = () => {
-      if (!ticking) {
-        ticking = true
-        requestAnimationFrame(update)
-      }
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true })
-    // Initial run
-    update()
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-    }
-  }, [])
 
   return (
     <main>
@@ -288,92 +247,62 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="benefits-section" ref={benefitsSectionRef}>
-        <div className="benefits-header">
-          <h2 className="section-label">benefits.</h2>
+      {/* How It Works Section */}
+      <section className="how-it-works-section">
+        <div className="how-it-works-header">
+          <h2 className="section-label">{howItWorksTitle}</h2>
         </div>
-        <div className="benefits-grid">
-          <div
-            className="benefit-image-item"
-            data-parallax="0.22"
-            ref={(el) => { benefitItemsRef.current[0] = el }}
-          >
-            <div className="benefit-image-wrapper" aria-hidden="true">
-              {/* Replace with /public/benefit-1.jpg */}
-              <div className="benefit-image-placeholder benefit-1">
-                <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#efefef" />
-                      <stop offset="100%" stopColor="#d9d9d9" />
-                    </linearGradient>
-                  </defs>
-                  <rect width="400" height="400" fill="url(#g1)" />
-                </svg>
+        <div className="how-it-works-steps-container">
+          {howItWorksSteps.map((step, index) => {
+            const isEven = index % 2 === 1
+            return (
+              <div key={step.id} className={`how-it-works-step ${isEven ? 'step-reverse' : ''}`}>
+                {/* Connecting Line & Number Circle */}
+                <div className="step-connector">
+                  <div className="step-number-circle">{step.number}</div>
+                  {index < howItWorksSteps.length - 1 && <div className="step-line"></div>}
+                </div>
+
+                {/* Content */}
+                <div className="step-content">
+                  {/* Image */}
+                  <div className="step-image-wrapper">
+                    {step.image ? (
+                      <img
+                        src={step.image}
+                        alt={step.title}
+                        className="step-image"
+                        width={500}
+                        height={500}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="step-image-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                          <path d="M3 9h18M9 3v18" stroke="currentColor" strokeWidth="1.5"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Text Content */}
+                  <div className="step-text-wrapper">
+                    <h3 className="step-title">{step.title}</h3>
+                    <p className="step-description">{step.description}</p>
+                    {step.link_text && step.link_url && (
+                      <Link href={step.link_url} className="step-link">
+                        {step.link_text}
+                        <svg className="step-link-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </Link>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <div
-            className="benefit-image-item"
-            data-parallax="0.3"
-            ref={(el) => { benefitItemsRef.current[1] = el }}
-          >
-            <div className="benefit-image-wrapper" aria-hidden="true">
-              {/* Replace with /public/benefit-2.jpg */}
-              <div className="benefit-image-placeholder benefit-2">
-                <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="g2" x1="1" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f2f2f2" />
-                      <stop offset="100%" stopColor="#e6e6e6" />
-                    </linearGradient>
-                  </defs>
-                  <rect width="400" height="400" fill="url(#g2)" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div
-            className="benefit-image-item"
-            data-parallax="0.26"
-            ref={(el) => { benefitItemsRef.current[2] = el }}
-          >
-            <div className="benefit-image-wrapper" aria-hidden="true">
-              {/* Replace with /public/benefit-3.jpg */}
-              <div className="benefit-image-placeholder benefit-3">
-                <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="g3" x1="0" y1="1" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#ededed" />
-                      <stop offset="100%" stopColor="#dcdcdc" />
-                    </linearGradient>
-                  </defs>
-                  <rect width="400" height="400" fill="url(#g3)" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div
-            className="benefit-image-item"
-            data-parallax="0.34"
-            ref={(el) => { benefitItemsRef.current[3] = el }}
-          >
-            <div className="benefit-image-wrapper" aria-hidden="true">
-              {/* Replace with /public/benefit-4.jpg */}
-              <div className="benefit-image-placeholder benefit-4">
-                <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="g4" x1="1" y1="1" x2="0" y2="0">
-                      <stop offset="0%" stopColor="#f0f0f0" />
-                      <stop offset="100%" stopColor="#e1e1e1" />
-                    </linearGradient>
-                  </defs>
-                  <rect width="400" height="400" fill="url(#g4)" />
-                </svg>
-              </div>
-            </div>
-          </div>
+            )
+          })}
         </div>
       </section>
 

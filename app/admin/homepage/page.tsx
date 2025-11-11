@@ -64,6 +64,8 @@ interface HomepageContent {
   quiz_badge_text?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
+  how_it_works_title?: string
+  how_it_works_steps?: Array<{ id: string; number: string; title: string; description: string; image?: string; link_text?: string; link_url?: string }>
   about_title: string
   about_description: string
   services_title: string
@@ -160,6 +162,12 @@ export default function HomepageEditorPage() {
         { id: '6', name: 'Supabase', icon: '' },
         { id: '7', name: 'n8n', icon: '' }
       ],
+      how_it_works_title: 'How it works',
+      how_it_works_steps: [
+        { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' },
+        { id: '2', number: '02', title: 'Tailored Strategy', description: 'We analyze your goals and create a customized strategy designed to drive measurable success for your business needs.', image: '', link_text: 'Discover More', link_url: '#' },
+        { id: '3', number: '03', title: 'Continuous Support', description: 'From implementation to optimization, we provide ongoing guidance and adjustments to ensure long-term growth for you and your business.', image: '', link_text: 'Discover More', link_url: '#' }
+      ],
       about_title: 'about.',
     about_description: 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now.',
     services_title: 'how it works.',
@@ -233,7 +241,8 @@ export default function HomepageEditorPage() {
           programs: Array.isArray(data.programs) ? data.programs : prev.programs,
           pricing: Array.isArray(data.pricing) ? data.pricing : prev.pricing,
           outcomes: Array.isArray(data.outcomes) ? data.outcomes : prev.outcomes,
-          tech_carousel_items: Array.isArray(data.tech_carousel_items) ? data.tech_carousel_items : prev.tech_carousel_items
+          tech_carousel_items: Array.isArray(data.tech_carousel_items) ? data.tech_carousel_items : prev.tech_carousel_items,
+          how_it_works_steps: Array.isArray(data.how_it_works_steps) ? data.how_it_works_steps : prev.how_it_works_steps
         }))
         
         // Parse gradient and set color picker states
@@ -402,6 +411,38 @@ export default function HomepageEditorPage() {
     setFormData(prev => ({
       ...prev,
       tech_carousel_items: (prev.tech_carousel_items || []).filter((_, i) => i !== index)
+    }))
+  }
+
+  // How It Works handlers
+  const handleHowItWorksStepChange = (index: number, field: 'number' | 'title' | 'description' | 'link_text' | 'link_url', value: string) => {
+    const newSteps = [...(formData.how_it_works_steps || [])]
+    newSteps[index] = { ...newSteps[index], [field]: value }
+    setFormData(prev => ({ ...prev, how_it_works_steps: newSteps }))
+  }
+
+  const handleHowItWorksStepImageChange = (index: number, url: string) => {
+    const newSteps = [...(formData.how_it_works_steps || [])]
+    newSteps[index] = { ...newSteps[index], image: url }
+    setFormData(prev => ({ ...prev, how_it_works_steps: newSteps }))
+  }
+
+  const addHowItWorksStep = () => {
+    const currentSteps = formData.how_it_works_steps || []
+    const nextNumber = String(currentSteps.length + 1).padStart(2, '0')
+    setFormData(prev => ({
+      ...prev,
+      how_it_works_steps: [
+        ...currentSteps,
+        { id: String(Date.now()), number: nextNumber, title: '', description: '', image: '', link_text: 'Discover More', link_url: '#' }
+      ]
+    }))
+  }
+
+  const removeHowItWorksStep = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      how_it_works_steps: (prev.how_it_works_steps || []).filter((_, i) => i !== index)
     }))
   }
 
@@ -940,6 +981,113 @@ export default function HomepageEditorPage() {
                     <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
                       Upload or generate an icon/logo for this technology. Recommended size: 80x80px or 1:1 aspect ratio.
                     </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* How It Works Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">How It Works Section</h2>
+              <button type="button" onClick={addHowItWorksStep} className="btn btn-sm btn-primary">
+                + Add Step
+              </button>
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.how_it_works_title || ''}
+                onChange={(value) => setFormData({...formData, how_it_works_title: value})}
+                fieldType="how_it_works_title"
+                label="Section Title"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="services-list">
+              {(formData.how_it_works_steps || []).map((step, index) => (
+                <div key={step.id} className="service-item">
+                  <div className="service-item-header">
+                    <h4>Step {index + 1}</h4>
+                    <button type="button" onClick={() => removeHowItWorksStep(index)} className="btn-remove">
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Step Number</label>
+                      <input
+                        type="text"
+                        value={step.number}
+                        onChange={(e) => handleHowItWorksStepChange(index, 'number', e.target.value)}
+                        placeholder="01, 02, 03..."
+                        style={{ width: '100px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={step.title}
+                      onChange={(value) => handleHowItWorksStepChange(index, 'title', value)}
+                      fieldType="step_title"
+                      label="Step Title"
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={step.description}
+                      onChange={(value) => handleHowItWorksStepChange(index, 'description', value)}
+                      fieldType="step_description"
+                      label="Step Description"
+                      multiline={true}
+                      rows={4}
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Step Image (AI)</label>
+                    <ImageUpload
+                      value={step.image || ''}
+                      onChange={(url) => handleHowItWorksStepImageChange(index, url)}
+                      label="Step Image"
+                      folder="how-it-works"
+                      defaultPromptProvider={aiProvider}
+                      defaultPromptModel={aiModel}
+                    />
+                    <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                      Upload or generate an image for this step. Recommended: 1:1 aspect ratio (square).
+                    </p>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Link Text</label>
+                      <input
+                        type="text"
+                        value={step.link_text || ''}
+                        onChange={(e) => handleHowItWorksStepChange(index, 'link_text', e.target.value)}
+                        placeholder="Discover More"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Link URL</label>
+                      <input
+                        type="text"
+                        value={step.link_url || ''}
+                        onChange={(e) => handleHowItWorksStepChange(index, 'link_url', e.target.value)}
+                        placeholder="# or /page"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
