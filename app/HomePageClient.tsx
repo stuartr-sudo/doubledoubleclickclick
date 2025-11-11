@@ -159,10 +159,10 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
 
   return (
     <main>
-      {/* Hero Section - Modern Redesign */}
-      <section className="hero-modern">
+      {/* Hero Section - Clean Editorial Design */}
+      <section className="hero-editorial">
         {/* Header */}
-        <header className="hero-modern-header">
+        <header className="hero-editorial-header">
           <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
@@ -173,47 +173,37 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         </header>
 
         {/* Main Content */}
-        <div className="hero-modern-content">
-          <div className="hero-modern-layout">
+        <div className="hero-editorial-content">
+          <div className="hero-editorial-grid">
             {/* Left Column - Headline */}
-            <div className="hero-modern-left">
-              <h1 className="hero-modern-title">
+            <div className="hero-editorial-left">
+              <h1 className="hero-editorial-title">
                 {heroTitle.split('\n').map((line, i) => (
                   <span key={i} className="title-line">{line}</span>
                 ))}
               </h1>
             </div>
 
-            {/* Right Column - Image, Description, CTA */}
-            <div className="hero-modern-right">
-              <div className="hero-modern-image-container">
-                {heroImage ? (
+            {/* Right Column - Image and Content */}
+            <div className="hero-editorial-right">
+              {heroImage && (
+                <div className="hero-editorial-image-wrapper">
                   <img
                     src={heroImage}
                     alt="Hero"
-                    className="hero-modern-image"
-                    width={500}
-                    height={500}
+                    className="hero-editorial-image"
+                    width={600}
+                    height={600}
                     loading="eager"
                   />
-                ) : (
-                  <div className="hero-modern-image-placeholder">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M6 21c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                )}
-              </div>
-              <div className="hero-modern-text">
-                <p className="hero-modern-description">
+                </div>
+              )}
+              <div className="hero-editorial-content-block">
+                <p className="hero-editorial-description">
                   {heroDescription}
                 </p>
-                <Link href={heroFooterCTALink} className="hero-modern-cta">
+                <Link href={heroFooterCTALink} className="hero-editorial-cta">
                   {heroFooterCTAText}
-                  <svg className="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
                 </Link>
               </div>
             </div>
