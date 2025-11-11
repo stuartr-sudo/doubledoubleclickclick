@@ -17,6 +17,14 @@ ADD COLUMN IF NOT EXISTS why_work_with_us_description text DEFAULT 'We are dedic
 ADD COLUMN IF NOT EXISTS why_work_with_us_items jsonb DEFAULT '[]'::jsonb,
 ADD COLUMN IF NOT EXISTS why_work_with_us_bg_color text DEFAULT '#ffffff';
 
+-- Add Testimonials section fields to homepage_content
+ALTER TABLE public.homepage_content 
+ADD COLUMN IF NOT EXISTS testimonials_label text DEFAULT 'Testimonials',
+ADD COLUMN IF NOT EXISTS testimonials_title text DEFAULT 'Trusted by 10k+ customers',
+ADD COLUMN IF NOT EXISTS testimonials_subtitle text DEFAULT 'Whether you''re a small startup or a multinational corporation, let us be your trusted advisor on the path to success.',
+ADD COLUMN IF NOT EXISTS testimonials_items jsonb DEFAULT '[]'::jsonb,
+ADD COLUMN IF NOT EXISTS testimonials_bg_color text DEFAULT '#f5f5f5';
+
 -- Add additional background color fields
 ALTER TABLE public.homepage_content 
 ADD COLUMN IF NOT EXISTS tech_carousel_bg_color text DEFAULT '#ffffff',
@@ -56,5 +64,19 @@ ADD COLUMN IF NOT EXISTS quiz_cta_bg_color text DEFAULT '#ffffff';
 --     "icon": "https://example.com/icon.png"
 --   }
 -- ]
+
+-- Example structure for testimonials_items:
+-- [
+--   {
+--     "id": "1",
+--     "quote": "The impact of Consulting's work on our organization has been transformative...",
+--     "rating": 5,
+--     "author_name": "Alex Peterson",
+--     "author_title": "CEO",
+--     "author_company": "Thompson Industries",
+--     "author_image": "https://example.com/author.jpg"
+--   }
+-- ]
+
 
 

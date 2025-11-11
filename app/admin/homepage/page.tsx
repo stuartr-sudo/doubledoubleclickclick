@@ -20,6 +20,16 @@ interface WhyWorkWithUsItem {
   icon?: string
 }
 
+interface TestimonialItem {
+  id: string
+  quote: string
+  rating: number
+  author_name: string
+  author_title: string
+  author_company: string
+  author_image?: string
+}
+
 interface HomepageContent {
   logo_image: string
   logo_text: string
@@ -53,6 +63,11 @@ interface HomepageContent {
   why_work_with_us_bg_color?: string
   faq_items?: FAQItem[]
   faq_bg_color?: string
+  testimonials_label?: string
+  testimonials_title?: string
+  testimonials_subtitle?: string
+  testimonials_items?: TestimonialItem[]
+  testimonials_bg_color?: string
   blog_grid_bg_color?: string
   quiz_cta_bg_color?: string
 }
@@ -157,6 +172,15 @@ export default function HomepageEditorPage() {
       { id: '6', question: 'How do I get started?', answer: 'Getting started is simple. Take our 12-step quiz to see where you\'re missing out on LLM visibility, or reach out directly through our contact form.' }
     ],
     faq_bg_color: '#ffffff',
+    testimonials_label: 'Testimonials',
+    testimonials_title: 'Trusted by 10k+ customers',
+    testimonials_subtitle: 'Whether you\'re a small startup or a multinational corporation, let us be your trusted advisor on the path to success.',
+    testimonials_items: [
+      { id: '1', quote: 'The impact of Consulting\'s work on our organization has been transformative. Their dedication to our success have helped us achieve remarkable growth.', rating: 5, author_name: 'Alex Peterson', author_title: 'CEO', author_company: 'Thompson Industries', author_image: '' },
+      { id: '2', quote: 'Their team\'s depth of knowledge, strategic thinking, and commitment to excellence have been instrumental in helping us navigate complex challenges.', rating: 4, author_name: 'David Martinez', author_title: 'Director', author_company: 'Johnson Enterprises', author_image: '' },
+      { id: '3', quote: 'The team at Consulting exceeded our expectations in every way. We are grateful for their partnership and the positive impact they\'ve had on our business.', rating: 5, author_name: 'John Smith', author_title: 'Founder', author_company: 'JS Solutions', author_image: '' }
+    ],
+    testimonials_bg_color: '#f5f5f5',
     blog_grid_bg_color: '#ffffff',
     quiz_cta_bg_color: '#ffffff'
   })
@@ -294,6 +318,37 @@ export default function HomepageEditorPage() {
       ...prev,
       faq_items: (prev.faq_items || []).filter((_, i) => i !== index)
     }))
+  }
+
+  // Testimonial handlers
+  const handleTestimonialChange = (index: number, field: keyof TestimonialItem, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      testimonials_items: (prev.testimonials_items || []).map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      )
+    }))
+  }
+
+  const addTestimonial = () => {
+    setFormData(prev => ({
+      ...prev,
+      testimonials_items: [
+        ...(prev.testimonials_items || []),
+        { id: String(Date.now()), quote: '', rating: 5, author_name: '', author_title: '', author_company: '', author_image: '' }
+      ]
+    }))
+  }
+
+  const removeTestimonial = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      testimonials_items: (prev.testimonials_items || []).filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleTestimonialImageChange = (index: number, url: string) => {
+    handleTestimonialChange(index, 'author_image', url)
   }
 
   // Tech Carousel handlers
@@ -1247,6 +1302,163 @@ export default function HomepageEditorPage() {
                       rows={4}
                       defaultProvider={aiProvider}
                       defaultModel={aiModel}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Testimonials Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Testimonials Section</h2>
+              <button type="button" onClick={addTestimonial} className="btn btn-sm btn-primary">
+                + Add Testimonial
+              </button>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.testimonials_label || ''}
+                  onChange={(value) => setFormData({...formData, testimonials_label: value})}
+                  fieldType="testimonials_label"
+                  label="Section Label"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="testimonials_bg_color">Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="testimonials_bg_color"
+                    value={formData.testimonials_bg_color || '#f5f5f5'}
+                    onChange={(e) => setFormData({...formData, testimonials_bg_color: e.target.value})}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.testimonials_bg_color || '#f5f5f5'}
+                    onChange={(e) => setFormData({...formData, testimonials_bg_color: e.target.value})}
+                    placeholder="#f5f5f5"
+                    style={{ flex: 1, padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.testimonials_title || ''}
+                onChange={(value) => setFormData({...formData, testimonials_title: value})}
+                fieldType="testimonials_title"
+                label="Section Title"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.testimonials_subtitle || ''}
+                onChange={(value) => setFormData({...formData, testimonials_subtitle: value})}
+                fieldType="testimonials_subtitle"
+                label="Section Subtitle"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="services-list">
+              {(formData.testimonials_items || []).map((testimonial, index) => (
+                <div key={testimonial.id} className="service-item">
+                  <div className="service-item-header">
+                    <h4>Testimonial {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeTestimonial(index)}
+                      className="btn-remove"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={testimonial.quote}
+                      onChange={(value) => handleTestimonialChange(index, 'quote', value)}
+                      fieldType={`testimonial_${index}_quote`}
+                      label="Quote"
+                      multiline={true}
+                      rows={3}
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Rating (1-5)</label>
+                      <select
+                        value={testimonial.rating}
+                        onChange={(e) => handleTestimonialChange(index, 'rating', parseInt(e.target.value))}
+                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      >
+                        <option value={5}>5 Stars</option>
+                        <option value={4}>4 Stars</option>
+                        <option value={3}>3 Stars</option>
+                        <option value={2}>2 Stars</option>
+                        <option value={1}>1 Star</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <ImageUpload
+                        value={testimonial.author_image || ''}
+                        onChange={(url) => handleTestimonialImageChange(index, url)}
+                        label="Author Image"
+                        folder="testimonials"
+                        defaultPromptProvider={aiProvider}
+                        defaultPromptModel={aiModel}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Author Name</label>
+                      <input
+                        type="text"
+                        value={testimonial.author_name}
+                        onChange={(e) => handleTestimonialChange(index, 'author_name', e.target.value)}
+                        placeholder="John Smith"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Author Title</label>
+                      <input
+                        type="text"
+                        value={testimonial.author_title}
+                        onChange={(e) => handleTestimonialChange(index, 'author_title', e.target.value)}
+                        placeholder="CEO, Founder, etc."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Company Name</label>
+                    <input
+                      type="text"
+                      value={testimonial.author_company}
+                      onChange={(e) => handleTestimonialChange(index, 'author_company', e.target.value)}
+                      placeholder="Company Name"
                     />
                   </div>
                 </div>

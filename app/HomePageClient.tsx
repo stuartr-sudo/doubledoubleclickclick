@@ -56,6 +56,16 @@ interface WhyWorkWithUsItem {
   icon?: string
 }
 
+interface TestimonialItem {
+  id: string
+  quote: string
+  rating: number
+  author_name: string
+  author_title: string
+  author_company: string
+  author_image?: string
+}
+
 interface HomepageContent {
   logo_image?: string
   logo_text?: string
@@ -90,6 +100,11 @@ interface HomepageContent {
   why_work_with_us_bg_color?: string
   faq_items?: FAQItem[]
   faq_bg_color?: string
+  testimonials_label?: string
+  testimonials_title?: string
+  testimonials_subtitle?: string
+  testimonials_items?: TestimonialItem[]
+  testimonials_bg_color?: string
   blog_grid_bg_color?: string
   quiz_cta_bg_color?: string
   about_title?: string
@@ -180,6 +195,15 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const howItWorksBgColor = homepageContent?.how_it_works_bg_color || '#ffffff'
   const whyWorkWithUsBgColor = homepageContent?.why_work_with_us_bg_color || '#ffffff'
   const faqBgColor = homepageContent?.faq_bg_color || '#ffffff'
+  const testimonialsLabel = homepageContent?.testimonials_label || 'Testimonials'
+  const testimonialsTitle = homepageContent?.testimonials_title || 'Trusted by 10k+ customers'
+  const testimonialsSubtitle = homepageContent?.testimonials_subtitle || 'Whether you\'re a small startup or a multinational corporation, let us be your trusted advisor on the path to success.'
+  const testimonialsItems = homepageContent?.testimonials_items || [
+    { id: '1', quote: 'The impact of Consulting\'s work on our organization has been transformative. Their dedication to our success have helped us achieve remarkable growth.', rating: 5, author_name: 'Alex Peterson', author_title: 'CEO', author_company: 'Thompson Industries', author_image: '' },
+    { id: '2', quote: 'Their team\'s depth of knowledge, strategic thinking, and commitment to excellence have been instrumental in helping us navigate complex challenges.', rating: 4, author_name: 'David Martinez', author_title: 'Director', author_company: 'Johnson Enterprises', author_image: '' },
+    { id: '3', quote: 'The team at Consulting exceeded our expectations in every way. We are grateful for their partnership and the positive impact they\'ve had on our business.', rating: 5, author_name: 'John Smith', author_title: 'Founder', author_company: 'JS Solutions', author_image: '' }
+  ]
+  const testimonialsBgColor = homepageContent?.testimonials_bg_color || '#f5f5f5'
   const blogGridBgColor = homepageContent?.blog_grid_bg_color || '#ffffff'
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -568,6 +592,71 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                     <p>{item.answer}</p>
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="testimonials-section" style={{ background: testimonialsBgColor }}>
+        <div className="testimonials-container">
+          <div className="testimonials-header">
+            <span className="testimonials-label">{testimonialsLabel}</span>
+            <div className="testimonials-header-content">
+              <h2 className="testimonials-title">{testimonialsTitle}</h2>
+              <p className="testimonials-subtitle">{testimonialsSubtitle}</p>
+            </div>
+          </div>
+          <div className="testimonials-grid">
+            {testimonialsItems.map((testimonial) => (
+              <div key={testimonial.id} className="testimonial-card">
+                <div className="testimonial-rating">
+                  {[...Array(5)].map((_, index) => (
+                    <svg
+                      key={index}
+                      className={`star ${index < testimonial.rating ? 'star-filled' : 'star-empty'}`}
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M10 1L12.5 7.5L19 8.5L14.5 13L15.5 19L10 16L4.5 19L5.5 13L1 8.5L7.5 7.5L10 1Z"
+                        fill={index < testimonial.rating ? '#FFB800' : '#E0E0E0'}
+                        stroke={index < testimonial.rating ? '#FFB800' : '#E0E0E0'}
+                        strokeWidth="1"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ))}
+                </div>
+                <p className="testimonial-quote">{testimonial.quote}</p>
+                <div className="testimonial-author">
+                  <div className="testimonial-author-image">
+                    {testimonial.author_image ? (
+                      <img
+                        src={testimonial.author_image}
+                        alt={testimonial.author_name}
+                        width={56}
+                        height={56}
+                      />
+                    ) : (
+                      <div className="testimonial-author-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                          <path d="M6 21C6 17.6863 8.68629 15 12 15C15.3137 15 18 17.6863 18 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="testimonial-author-info">
+                    <div className="testimonial-author-name">{testimonial.author_name}</div>
+                    <div className="testimonial-author-title">{testimonial.author_company}</div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
