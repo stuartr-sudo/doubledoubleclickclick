@@ -133,7 +133,6 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
     { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' }
   ]
   const step2 = homepageContent?.how_it_works_steps?.[1] || { id: '2', number: '02', title: 'Tailored Strategy', description: 'We analyze your goals and create a customized strategy designed to drive measurable success for your business needs.', image: '', link_text: 'Discover More', link_url: '#' }
-  const step3 = homepageContent?.how_it_works_steps?.[2] || { id: '3', number: '03', title: 'Continuous Support', description: 'From implementation to optimization, we provide ongoing guidance and adjustments to ensure long-term growth for you and your business.', image: '', link_text: 'Discover More', link_url: '#' }
   const aboutTitle = homepageContent?.about_title || 'about.'
   const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
   const aboutImage = homepageContent?.about_image || ''
@@ -346,54 +345,6 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                 </div>
               </div>
             </div>
-      </section>
-
-      {/* Step 3 - Separate Section (Exact Copy of Step 1 Layout) */}
-      <section className="step-card-section">
-        <div className="step-card-container">
-          <div className="timeline-row">
-            <div className="timeline-side timeline-side--text">
-              <h3 className="timeline-title">{step3.title}</h3>
-              <p className="timeline-description">{step3.description}</p>
-              {step3.link_text && step3.link_url && (
-                <Link href={step3.link_url} className="timeline-link">
-                  {step3.link_text}
-                  <svg className="timeline-link-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </Link>
-              )}
-            </div>
-            <div className="timeline-marker">
-              <span className="timeline-number">{step3.number}</span>
-            </div>
-            <div className="timeline-side timeline-side--media">
-              <div className="timeline-media">
-                <div className="timeline-media-inner">
-                  {step3.image ? (
-                    <img
-                      src={step3.image}
-                      alt={step3.title}
-                      className="timeline-media-image"
-                      width={500}
-                      height={500}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="timeline-media-placeholder">
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Outcomes Section - Outcome-driven value props */}
