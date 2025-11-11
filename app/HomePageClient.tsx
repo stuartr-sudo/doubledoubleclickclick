@@ -130,9 +130,9 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   ]
   const howItWorksTitle = homepageContent?.how_it_works_title || 'How it works'
   const howItWorksSteps = homepageContent?.how_it_works_steps || [
-    { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' },
-    { id: '2', number: '02', title: 'Tailored Strategy', description: 'We analyze your goals and create a customized strategy designed to drive measurable success for your business needs.', image: '', link_text: 'Discover More', link_url: '#' }
+    { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' }
   ]
+  const step2 = homepageContent?.how_it_works_steps?.[1] || { id: '2', number: '02', title: 'Tailored Strategy', description: 'We analyze your goals and create a customized strategy designed to drive measurable success for your business needs.', image: '', link_text: 'Discover More', link_url: '#' }
   const aboutTitle = homepageContent?.about_title || 'about.'
   const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
   const aboutImage = homepageContent?.about_image || ''
@@ -303,6 +303,52 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                 )
               })}
             </div>
+      </section>
+
+      {/* Step 2 - Separate Section with Reversed Layout */}
+      <section className="step-card-section">
+        <div className="step-card-container">
+          <div className="step-card-reverse">
+            <div className="step-card-media">
+              <div className="step-card-media-inner">
+                {step2.image ? (
+                  <img
+                    src={step2.image}
+                    alt={step2.title}
+                    className="step-card-image"
+                    width={500}
+                    height={500}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="step-card-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                    </svg>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="step-card-marker">
+              <span className="step-card-number">{step2.number}</span>
+            </div>
+            <div className="step-card-text">
+              <h3 className="step-card-title">{step2.title}</h3>
+              <p className="step-card-description">{step2.description}</p>
+              {step2.link_text && step2.link_url && (
+                <Link href={step2.link_url} className="step-card-link">
+                  {step2.link_text}
+                  <svg className="step-card-link-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Outcomes Section - Outcome-driven value props */}

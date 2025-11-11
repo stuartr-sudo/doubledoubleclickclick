@@ -550,7 +550,6 @@ img {
   letter-spacing: 0.04em;
   box-shadow: 0 16px 36px rgba(15, 15, 15, 0.18);
   z-index: 2;
-  margin-top: 6px;
 }
 
 .timeline-side {
@@ -558,7 +557,6 @@ img {
   flex-direction: column;
   gap: var(--spacing-lg);
   padding: 0 var(--spacing-lg);
-  padding-top: 6px;
 }
 
 .timeline-side--text {
@@ -659,6 +657,176 @@ img {
 .timeline-media-placeholder svg {
   width: 50%;
   height: 50%;
+}
+
+/* Step Card Section (Reversed Layout) */
+.step-card-section {
+  padding: var(--spacing-3xl) var(--spacing-2xl);
+  background: var(--color-bg);
+}
+
+.step-card-container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.step-card-reverse {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 120px minmax(280px, 1fr);
+  align-items: start;
+  gap: var(--spacing-2xl);
+  min-height: 420px;
+}
+
+.step-card-media {
+  grid-column: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.step-card-media-inner {
+  width: 100%;
+  max-width: 360px;
+  height: 100%;
+  max-height: 360px;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(15, 15, 15, 0.12);
+}
+
+.step-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.step-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-light);
+  opacity: 0.3;
+}
+
+.step-card-placeholder svg {
+  width: 50%;
+  height: 50%;
+}
+
+.step-card-marker {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 0;
+  grid-column: 2;
+}
+
+.step-card-number {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  box-shadow: 0 16px 36px rgba(15, 15, 15, 0.18);
+  z-index: 2;
+}
+
+.step-card-text {
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: 0 var(--spacing-lg);
+}
+
+.step-card-title {
+  font-size: clamp(1.75rem, 2.6vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.step-card-description {
+  font-size: clamp(1rem, 1.2vw, 1.15rem);
+  line-height: 1.7;
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+.step-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  font-weight: 500;
+  text-decoration: none;
+  width: fit-content;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 4px;
+  transition: border-color 0.3s ease, color 0.3s ease;
+}
+
+.step-card-link:hover {
+  border-color: var(--color-text);
+}
+
+.step-card-link-arrow {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.25s ease;
+}
+
+.step-card-link:hover .step-card-link-arrow {
+  transform: translate(3px, -3px);
+}
+
+@media (max-width: 768px) {
+  .step-card-reverse {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .step-card-media {
+    grid-column: 1;
+    order: 2;
+  }
+
+  .step-card-marker {
+    grid-column: 1;
+    order: 1;
+    justify-content: center;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .step-card-number {
+    width: 50px;
+    height: 50px;
+    font-size: 1rem;
+  }
+
+  .step-card-text {
+    grid-column: 1;
+    order: 3;
+    padding: 0;
+  }
 }
 
 .benefits-section {
