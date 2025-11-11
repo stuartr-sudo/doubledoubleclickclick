@@ -2115,6 +2115,71 @@ img {
   background: var(--color-bg-light);
 }
 
+/* Admin Login Page */
+.admin-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: var(--spacing-lg);
+}
+
+.admin-login-container {
+  width: 100%;
+  max-width: 420px;
+}
+
+.admin-login-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: var(--spacing-2xl);
+}
+
+.admin-login-header {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.admin-login-header h1 {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.admin-login-header p {
+  font-size: var(--font-size-base);
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+.admin-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.admin-login-error {
+  padding: var(--spacing-md);
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 6px;
+  color: #c00;
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.admin-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-light);
+}
+
 .admin-header {
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);

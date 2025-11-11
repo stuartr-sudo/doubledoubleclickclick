@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import ImageUpload from '@/components/ImageUpload'
 import TextEnhancer from '@/components/TextEnhancer'
 
@@ -84,6 +85,7 @@ interface HomepageContent {
 }
 
 export default function HomepageEditorPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [activeTechTab, setActiveTechTab] = useState(0)
@@ -471,6 +473,21 @@ export default function HomepageEditorPage() {
     }))
   }
 
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/admin/logout', {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        router.push('/admin/login')
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -523,6 +540,9 @@ export default function HomepageEditorPage() {
               <Link href="/admin" className="btn btn-secondary">
                 ← Back to Admin
               </Link>
+              <button onClick={handleLogout} className="btn btn-secondary">
+                Logout
+              </button>
             </div>
           </div>
         </div>
