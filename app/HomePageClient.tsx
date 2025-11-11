@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import MobileMenu from '@/components/MobileMenu'
 import SubscribeHero from '@/components/SubscribeHero'
+    import HowItWorks from '@/components/HowItWorks'
 
 interface Service {
   id: string
@@ -180,10 +181,10 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
     { id: '6', name: 'Supabase', icon: '' },
     { id: '7', name: 'n8n', icon: '' }
   ]
-  const howItWorksTitle = homepageContent?.how_it_works_title || 'How it works'
-  const howItWorksSteps = homepageContent?.how_it_works_steps || [
-    { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' }
-  ]
+      const howItWorksTitle = homepageContent?.how_it_works_title || 'How it works'
+      const howItWorksSteps = (homepageContent?.how_it_works_steps as any) || [
+        { id: 1, title: 'Sign up & Browse Courses', description: 'Get started in minutes and explore our library.', image: '' },
+      ]
   const step2 = homepageContent?.how_it_works_steps?.[1] || { id: '2', number: '02', title: 'Tailored Strategy', description: 'We analyze your goals and create a customized strategy designed to drive measurable success for your business needs.', image: '', link_text: 'Discover More', link_url: '#' }
   const step3 = homepageContent?.how_it_works_steps?.[2] || { id: '3', number: '03', title: 'Continuous Support', description: 'From implementation to optimization, we provide ongoing guidance and adjustments to ensure long-term growth for you and your business.', image: '', link_text: 'Discover More', link_url: '#' }
   const aboutTitle = homepageContent?.about_title || 'about.'
@@ -327,7 +328,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         </div>
       </section>
 
-      {/* Technology Carousel Section */}
+          {/* Technology Carousel Section */}
       <section className="tech-carousel-section" style={{ background: techCarouselBgColor }}>
         <div className="tech-carousel-header">
           <h2 className="section-label">{techCarouselTitle}</h2>
@@ -366,7 +367,22 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
             ))}
           </div>
         </div>
-      </section>
+          </section>
+
+          {/* New How It Works */}
+          {howItWorksSteps && Array.isArray(howItWorksSteps) && howItWorksSteps.length > 0 && (
+            <HowItWorks
+              title={howItWorksTitle}
+              steps={howItWorksSteps.map((s: any, i: number) => ({
+                id: s.id ?? i + 1,
+                title: s.title,
+                description: s.description,
+                image: s.image,
+                button1: s.link_text,
+                button2: undefined
+              }))}
+            />
+          )}
 
       {/* How It Works removed per request */}
 
