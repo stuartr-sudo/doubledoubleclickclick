@@ -2407,11 +2407,132 @@ img {
 
 .admin-toolbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-xl);
-  flex-wrap: wrap;
   gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.admin-filters {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-md) 0;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.2s;
+  color: var(--color-text);
+}
+
+.filter-btn:hover {
+  background: var(--color-bg-light);
+  border-color: var(--color-primary);
+}
+
+.filter-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.admin-posts-list {
+  margin-top: var(--spacing-lg);
+}
+
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: var(--spacing-xl);
+}
+
+.post-card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.post-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.post-card-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: var(--color-bg-light);
+}
+
+.post-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.post-card-content {
+  padding: var(--spacing-lg);
+}
+
+.post-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+  gap: var(--spacing-md);
+}
+
+.post-card-header h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+  flex: 1;
+}
+
+.post-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.post-status.published {
+  background: #d4edda;
+  color: #155724;
+}
+
+.post-status.draft {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.post-meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.post-excerpt {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+  line-height: 1.6;
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.post-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
 }
 
 .filter-tabs {

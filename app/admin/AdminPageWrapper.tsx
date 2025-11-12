@@ -91,45 +91,50 @@ export default function AdminPageWrapper() {
   return (
     <main className="admin-page">
       <div className="admin-header">
-        <h1>Blog Admin</h1>
-        <div className="admin-toolbar">
-          <Link href="/admin/homepage" className="btn btn-secondary">
-            Edit Homepage
-          </Link>
-          <Link href="/admin/new" className="btn btn-primary">
-            New Post
-          </Link>
-          <Link href="/" className="btn btn-secondary">
-            View Site
-          </Link>
-          <button onClick={handleLogout} className="btn btn-secondary">
-            Logout
-          </button>
+        <div className="admin-container">
+          <div className="admin-header-content">
+            <h1>Blog Admin</h1>
+            <div className="admin-toolbar">
+              <Link href="/admin/homepage" className="btn btn-secondary">
+                Edit Homepage
+              </Link>
+              <Link href="/admin/new" className="btn btn-primary">
+                New Post
+              </Link>
+              <Link href="/" className="btn btn-secondary">
+                View Site
+              </Link>
+              <button onClick={handleLogout} className="btn btn-secondary">
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="admin-filters">
-        <button
-          className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-          onClick={() => setFilter('all')}
-        >
-          All Posts ({posts.length})
-        </button>
-        <button
-          className={`filter-btn ${filter === 'published' ? 'active' : ''}`}
-          onClick={() => setFilter('published')}
-        >
-          Published ({posts.filter(p => p.status === 'published').length})
-        </button>
-        <button
-          className={`filter-btn ${filter === 'draft' ? 'active' : ''}`}
-          onClick={() => setFilter('draft')}
-        >
-          Drafts ({posts.filter(p => p.status === 'draft').length})
-        </button>
-      </div>
+      <div className="admin-container">
+        <div className="admin-filters">
+          <button
+            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+            onClick={() => setFilter('all')}
+          >
+            All Posts ({posts.length})
+          </button>
+          <button
+            className={`filter-btn ${filter === 'published' ? 'active' : ''}`}
+            onClick={() => setFilter('published')}
+          >
+            Published ({posts.filter(p => p.status === 'published').length})
+          </button>
+          <button
+            className={`filter-btn ${filter === 'draft' ? 'active' : ''}`}
+            onClick={() => setFilter('draft')}
+          >
+            Drafts ({posts.filter(p => p.status === 'draft').length})
+          </button>
+        </div>
 
-      <div className="admin-posts-list">
+        <div className="admin-posts-list">
         {filteredPosts.length === 0 ? (
           <div className="empty-state">
             <p>No posts found.</p>
@@ -182,6 +187,7 @@ export default function AdminPageWrapper() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </main>
   )
