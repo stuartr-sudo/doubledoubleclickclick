@@ -480,7 +480,6 @@ export default function HomepageEditorPage() {
       })
 
       if (response.ok) {
-        router.push('/admin/login')
         router.refresh()
       }
     } catch (error) {
