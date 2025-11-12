@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import MobileMenu from '@/components/MobileMenu'
 import SubscribeHero from '@/components/SubscribeHero'
-import HowItWorks from '@/components/HowItWorks'
 
 interface Service {
   id: string
@@ -366,13 +365,6 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
           </div>
         </div>
       </section>
-
-      {/* How It Works Section - Framer Motion */}
-      <HowItWorks
-        title={howItWorksTitle}
-        steps={howItWorksSteps}
-        bgColor={howItWorksBgColor}
-      />
 
       {/* Quiz CTA Section */}
       <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
