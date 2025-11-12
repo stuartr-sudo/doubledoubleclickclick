@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { motion, useAnimation } from 'framer-motion'
+import { motion, useAnimation, Variants } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 import Link from 'next/link'
 
@@ -22,12 +22,12 @@ interface HowItWorksProps {
 }
 
 // Fade-in animation variant
-const fadeInVariant = {
+const fadeInVariant: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: 'easeOut' },
+    transition: { duration: 0.6, ease: [0.17, 0.67, 0.83, 0.67] },
   },
 }
 
