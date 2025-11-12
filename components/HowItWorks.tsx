@@ -130,14 +130,16 @@ const HowItWorks = ({ title, subtitle, steps, bgColor }: HowItWorksProps) => {
 
   return (
     <section className="hiw-section" style={{ background: bgColor || '#ffffff' }}>
-      <div className="hiw-container">
-        {(title || subtitle) && (
+      {(title || subtitle) && (
+        <div className="hiw-container">
           <div className="hiw-header">
             {title && <h2 className="hiw-title">{title}</h2>}
             {subtitle && <p className="hiw-subtitle">{subtitle}</p>}
           </div>
-        )}
+        </div>
+      )}
 
+      <div className="hiw-container hiw-container--timeline">
         <div className="hiw-line" />
 
         <div className="hiw-steps">
