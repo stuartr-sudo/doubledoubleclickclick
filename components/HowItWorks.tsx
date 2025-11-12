@@ -3,22 +3,35 @@
 import React from 'react'
 import { motion, useAnimation } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
+import Link from 'next/link'
 
-type Step = {
-  id: number | string
+interface Step {
+  id: string
+  number: string
   title: string
   description: string
   image?: string
-  button1?: string
-  button2?: string
+  link_text?: string
+  link_url?: string
 }
 
+interface HowItWorksProps {
+  title?: string
+  steps: Step[]
+  bgColor?: string
+}
+
+// Fade-in animation variant
 const fadeInVariant = {
   hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } }
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: 'easeOut' },
+  },
 }
 
-function StepRow({ step, isLeft }: { step: Step; isLeft: boolean }) {
+const Step = ({ step, isLeft }: { step: Step; isLeft: boolean }) => {
   const controls = useAnimation()
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.2 })
 
@@ -32,19 +45,25 @@ function StepRow({ step, isLeft }: { step: Step; isLeft: boolean }) {
       variants={fadeInVariant}
       initial="hidden"
       animate={controls}
-      className={`hiw-step ${isLeft ? 'hiw-step--reverse' : ''}`}
+      className={`how-it-works-step ${isLeft ? 'how-it-works-step--reverse' : ''}`}
     >
-      {/* Step number */}
-      <div className="hiw-num">
-        <span>{String(step.id).padStart(2, '0')}</span>
+      {/* Step Number */}
+      <div className="how-it-works-step-number">
+        <div className="how-it-works-step-number-circle">
+          {step.number}
+        </div>
       </div>
 
-      {/* Media */}
-      <div className="hiw-media">
+      {/* Image */}
+      <div className="how-it-works-step-image">
         {step.image ? (
-          <img src={step.image} alt={step.title} width={320} height={320} />
+          <img
+            src={step.image}
+            alt={step.title}
+            className="how-it-works-step-image-img"
+          />
         ) : (
-          <div className="hiw-media-placeholder">
+          <div className="how-it-works-step-image-placeholder">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
               <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -56,38 +75,40 @@ function StepRow({ step, isLeft }: { step: Step; isLeft: boolean }) {
       </div>
 
       {/* Content */}
-      <div className="hiw-content">
-        <h3 className="hiw-title">{step.title}</h3>
-        <p className="hiw-desc">{step.description}</p>
-        {(step.button1 || step.button2) && (
-          <div className="hiw-actions">
-            {step.button1 && <button className="hiw-btn hiw-btn--primary">{step.button1}</button>}
-            {step.button2 && <button className="hiw-btn hiw-btn--ghost">{step.button2}</button>}
-          </div>
-        )}
+      <div className="how-it-works-step-content">
+        <h3 className="how-it-works-step-title">{step.title}</h3>
+        <p className="how-it-works-step-description">{step.description}</p>
+        <div className="how-it-works-step-actions">
+          {step.link_text && step.link_url && (
+            <Link href={step.link_url} className="how-it-works-step-button how-it-works-step-button--primary">
+              {step.link_text}
+            </Link>
+          )}
+        </div>
       </div>
     </motion.div>
   )
 }
 
-export default function HowItWorks({
-  title,
-  steps
-}: {
-  title?: string
-  steps: Step[]
-}) {
+const HowItWorks = ({ title, steps, bgColor }: HowItWorksProps) => {
   return (
-    <section className="hiw">
-      <div className="hiw-header">
-        <h2 className="section-label">{title || 'How it works'}</h2>
+    <section className="how-it-works-section-new" style={{ background: bgColor || '#ffffff' }}>
+      {title && (
+        <div className="how-it-works-header-new">
+          <h2 className="section-label">{title}</h2>
+        </div>
+      )}
+      <div className="how-it-works-container">
+        {/* Vertical Line */}
+        <div className="how-it-works-line" />
+
+        {steps.map((step, index) => (
+          <Step key={step.id} step={step} isLeft={index % 2 !== 0} />
+        ))}
       </div>
-      <div className="hiw-line" />
-      {steps.map((s, i) => (
-        <StepRow key={s.id} step={s} isLeft={i % 2 === 1} />
-      ))}
     </section>
   )
 }
 
+export default HowItWorks
 
