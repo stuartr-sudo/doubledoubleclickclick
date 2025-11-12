@@ -473,20 +473,7 @@ export default function HomepageEditorPage() {
     }))
   }
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/admin/logout', {
-        method: 'POST',
-      })
-
-      if (response.ok) {
-        router.push('/admin/login')
-        router.refresh()
-      }
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
+  // Logout removed (no auth)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -540,9 +527,7 @@ export default function HomepageEditorPage() {
               <Link href="/admin" className="btn btn-secondary">
                 ← Back to Admin
               </Link>
-              <button onClick={handleLogout} className="btn btn-secondary">
-                Logout
-              </button>
+              {/* Auth removed */}
             </div>
           </div>
         </div>

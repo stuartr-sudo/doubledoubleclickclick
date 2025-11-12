@@ -61,20 +61,7 @@ export default function AdminPageWrapper() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/admin/logout', {
-        method: 'POST',
-      })
-
-      if (response.ok) {
-        router.push('/admin/login')
-        router.refresh()
-      }
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
+  // Logout removed (no auth)
 
   const filteredPosts = posts.filter(post => {
     if (filter === 'all') return true
@@ -103,9 +90,7 @@ export default function AdminPageWrapper() {
           <Link href="/" className="btn btn-secondary">
             View Site
           </Link>
-          <button onClick={handleLogout} className="btn btn-secondary">
-            Logout
-          </button>
+          {/* Auth removed */}
         </div>
       </div>
 
