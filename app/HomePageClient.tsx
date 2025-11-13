@@ -455,12 +455,6 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                 <div className="why-work-with-us-card-content">
                   <h3 className="why-work-with-us-card-title">{item.title}</h3>
                   <p className="why-work-with-us-card-description">{item.description}</p>
-                  <Link href={item.link_url} className="why-work-with-us-link">
-                    {item.link_text}
-                    <svg className="why-work-with-us-link-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </Link>
                 </div>
               </div>
             ))}
