@@ -95,6 +95,11 @@ interface HomepageContent {
   quiz_cta_link?: string
   quiz_steps?: string
   quiz_badge_text?: string
+  quiz_form_title?: string
+  quiz_form_description?: string
+  quiz_form_placeholder?: string
+  quiz_form_cta_text?: string
+  quiz_form_cta_link?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   tech_carousel_bg_color?: string
@@ -171,6 +176,11 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const quizCTALink = homepageContent?.quiz_cta_link || '/quiz'
   const quizSteps = homepageContent?.quiz_steps || '12'
   const quizBadgeText = homepageContent?.quiz_badge_text || 'Steps'
+  const quizFormTitle = homepageContent?.quiz_form_title || 'Want More SEO Traffic?'
+  const quizFormDescription = homepageContent?.quiz_form_description || 'Answer 5 quick questions and I will give you a step-by-step 7-week action plan showing you exactly what you need to do to get more traffic.'
+  const quizFormPlaceholder = homepageContent?.quiz_form_placeholder || 'What is the URL of your website?'
+  const quizFormCtaText = homepageContent?.quiz_form_cta_text || 'NEXT'
+  const quizFormCtaLink = homepageContent?.quiz_form_cta_link || '/quiz'
   const techCarouselTitle = homepageContent?.tech_carousel_title || 'Technology we work with'
   const techCarouselItems = homepageContent?.tech_carousel_items || [
     { id: '1', name: 'ChatGPT', icon: '' },
@@ -377,17 +387,29 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       {/* Quiz CTA Section */}
       <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
         <div className="quiz-cta-container">
-          <h2 className="quiz-cta-title">Want More SEO Traffic?</h2>
-          <p className="quiz-cta-subtitle">
-            Answer 5 quick questions and I will give you a step-by-step <strong>7-week action plan</strong> showing you exactly what you need to do to get more traffic.
-          </p>
+          <h2 className="quiz-cta-title">{quizFormTitle}</h2>
+          <p className="quiz-cta-subtitle" dangerouslySetInnerHTML={{ __html: quizFormDescription }} />
           <div className="quiz-cta-form">
             <input 
               type="url" 
-              placeholder="What is the URL of your website?" 
+              placeholder={quizFormPlaceholder} 
               className="quiz-cta-input"
             />
-            <Link href={quizCTALink} className="quiz-cta-button">NEXT</Link>
+            <Link href={quizFormCtaLink} className="quiz-cta-button">{quizFormCtaText}</Link>
+          </div>
+        </div>
+      </section>
+      <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
+        <div className="quiz-cta-container">
+          <h2 className="quiz-cta-title">{quizFormTitle}</h2>
+          <p className="quiz-cta-subtitle" dangerouslySetInnerHTML={{ __html: quizFormDescription }} />
+          <div className="quiz-cta-form">
+            <input 
+              type="url" 
+              placeholder={quizFormPlaceholder} 
+              className="quiz-cta-input"
+            />
+            <Link href={quizFormCtaLink} className="quiz-cta-button">{quizFormCtaText}</Link>
           </div>
         </div>
       </section>

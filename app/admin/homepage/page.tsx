@@ -58,6 +58,11 @@ interface HomepageContent {
   quiz_cta_link?: string
   quiz_steps?: string
   quiz_badge_text?: string
+  quiz_form_title?: string
+  quiz_form_description?: string
+  quiz_form_placeholder?: string
+  quiz_form_cta_text?: string
+  quiz_form_cta_link?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   tech_carousel_bg_color?: string
@@ -152,6 +157,11 @@ export default function HomepageEditorPage() {
     quiz_cta_link: '/quiz',
     quiz_steps: '12',
     quiz_badge_text: 'Steps',
+    quiz_form_title: 'Want More SEO Traffic?',
+    quiz_form_description: 'Answer 5 quick questions and I will give you a step-by-step <strong>7-week action plan</strong> showing you exactly what you need to do to get more traffic.',
+    quiz_form_placeholder: 'What is the URL of your website?',
+    quiz_form_cta_text: 'NEXT',
+    quiz_form_cta_link: '/quiz',
     tech_carousel_title: 'Technology we work with',
     tech_carousel_items: [
       { id: '1', name: 'ChatGPT', icon: '' },
@@ -972,7 +982,82 @@ export default function HomepageEditorPage() {
             </div>
           </div>
 
-          {/* Technology Carousel Section */}
+        {/* Inline Quiz Lead Capture */}
+        <div className="form-section">
+          <div className="form-section-header">
+            <h2 className="form-section-title">Inline Quiz Lead Capture</h2>
+            <p className="form-section-description">
+              Controls the two “Want More SEO Traffic?” blocks that invite visitors to enter their URL.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <TextEnhancer
+              value={formData.quiz_form_title || ''}
+              onChange={(value) => setFormData({ ...formData, quiz_form_title: value })}
+              fieldType="quiz_form_title"
+              label="Section Title"
+              defaultProvider={aiProvider}
+              defaultModel={aiModel}
+            />
+          </div>
+
+          <div className="form-group">
+            <TextEnhancer
+              value={formData.quiz_form_description || ''}
+              onChange={(value) => setFormData({ ...formData, quiz_form_description: value })}
+              fieldType="quiz_form_description"
+              label="Section Description"
+              multiline={true}
+              rows={3}
+              defaultProvider={aiProvider}
+              defaultModel={aiModel}
+            />
+            <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+              Supports basic HTML such as &lt;strong&gt; for emphasis.
+            </p>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="quiz_form_placeholder">Input Placeholder</label>
+              <input
+                type="text"
+                id="quiz_form_placeholder"
+                name="quiz_form_placeholder"
+                value={formData.quiz_form_placeholder || ''}
+                onChange={handleChange}
+                placeholder="What is the URL of your website?"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="quiz_form_cta_text">Button Text</label>
+              <input
+                type="text"
+                id="quiz_form_cta_text"
+                name="quiz_form_cta_text"
+                value={formData.quiz_form_cta_text || ''}
+                onChange={handleChange}
+                placeholder="NEXT"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="quiz_form_cta_link">Button Link</label>
+              <input
+                type="text"
+                id="quiz_form_cta_link"
+                name="quiz_form_cta_link"
+                value={formData.quiz_form_cta_link || ''}
+                onChange={handleChange}
+                placeholder="/quiz"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Technology Carousel Section */}
           <div className="form-section">
             <div className="form-section-header">
               <h2 className="form-section-title">Technology Carousel</h2>
