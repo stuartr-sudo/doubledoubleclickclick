@@ -36,6 +36,15 @@ interface ServiceItem {
   link_url?: string
 }
 
+interface ProofResultItem {
+  id: string
+  title: string
+  description: string
+  image?: string
+  cta_text: string
+  cta_link: string
+}
+
 interface HomepageContent {
   logo_image: string
   logo_text: string
@@ -86,6 +95,10 @@ interface HomepageContent {
   blog_grid_title?: string
   blog_grid_bg_color?: string
   blog_section_visible?: boolean
+  proof_results_title?: string
+  proof_results_subtitle?: string
+  proof_results_items?: ProofResultItem[]
+  proof_results_bg_color?: string
   quiz_cta_bg_color?: string
 }
 
@@ -216,6 +229,14 @@ export default function HomepageEditorPage() {
     blog_grid_title: 'Latest from the blog',
     blog_grid_bg_color: '#ffffff',
     blog_section_visible: true,
+    proof_results_title: 'Proof of Results',
+    proof_results_subtitle: 'Real outcomes from our LLM optimization work',
+    proof_results_items: [
+      { id: '1', title: 'Case Study 1', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' },
+      { id: '2', title: 'Case Study 2', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' },
+      { id: '3', title: 'Case Study 3', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' }
+    ],
+    proof_results_bg_color: '#ffffff',
     quiz_cta_bg_color: '#ffffff'
   })
 
@@ -423,6 +444,36 @@ export default function HomepageEditorPage() {
 
   const handleServiceImageChange = (index: number, url: string) => {
     handleServiceChange(index, 'image', url)
+  }
+
+  // Proof Results handlers
+  const handleProofResultChange = (index: number, field: 'title' | 'description' | 'cta_text' | 'cta_link', value: string) => {
+    const newItems = [...(formData.proof_results_items || [])]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setFormData(prev => ({ ...prev, proof_results_items: newItems }))
+  }
+
+  const handleProofResultImageChange = (index: number, url: string) => {
+    const newItems = [...(formData.proof_results_items || [])]
+    newItems[index] = { ...newItems[index], image: url }
+    setFormData(prev => ({ ...prev, proof_results_items: newItems }))
+  }
+
+  const addProofResult = () => {
+    setFormData(prev => ({
+      ...prev,
+      proof_results_items: [
+        ...(prev.proof_results_items || []),
+        { id: String(Date.now()), title: '', description: '', image: '', cta_text: 'READ MORE', cta_link: '#' }
+      ]
+    }))
+  }
+
+  const removeProofResult = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      proof_results_items: (prev.proof_results_items || []).filter((_, i) => i !== index)
+    }))
   }
 
   // Tech Carousel handlers
@@ -1410,6 +1461,136 @@ export default function HomepageEditorPage() {
                       defaultProvider={aiProvider}
                       defaultModel={aiModel}
                     />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Proof of Results Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Proof of Results Section</h2>
+              <button type="button" onClick={addProofResult} className="btn btn-sm btn-primary">
+                + Add Result
+              </button>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.proof_results_title || ''}
+                  onChange={(value) => setFormData({...formData, proof_results_title: value})}
+                  fieldType="proof_results_title"
+                  label="Section Title"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="proof_results_bg_color">Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="proof_results_bg_color"
+                    value={formData.proof_results_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, proof_results_bg_color: e.target.value})}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.proof_results_bg_color || '#ffffff'}
+                    onChange={(e) => setFormData({...formData, proof_results_bg_color: e.target.value})}
+                    placeholder="#ffffff"
+                    style={{ flex: 1, padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.proof_results_subtitle || ''}
+                onChange={(value) => setFormData({...formData, proof_results_subtitle: value})}
+                fieldType="proof_results_subtitle"
+                label="Section Subtitle"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="services-list">
+              {(formData.proof_results_items || []).map((item, index) => (
+                <div key={item.id} className="service-item">
+                  <div className="service-item-header">
+                    <h4>Result {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeProofResult(index)}
+                      className="btn-remove"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <ImageUpload
+                      value={item.image || ''}
+                      onChange={(url) => handleProofResultImageChange(index, url)}
+                      label="Result Image"
+                      folder="proof-results"
+                      defaultPromptProvider={aiProvider}
+                      defaultPromptModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={item.title}
+                      onChange={(value) => handleProofResultChange(index, 'title', value)}
+                      fieldType="proof_result_title"
+                      label="Title"
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={item.description}
+                      onChange={(value) => handleProofResultChange(index, 'description', value)}
+                      fieldType="proof_result_description"
+                      label="Description"
+                      multiline={true}
+                      rows={3}
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>CTA Button Text</label>
+                      <input
+                        type="text"
+                        value={item.cta_text}
+                        onChange={(e) => handleProofResultChange(index, 'cta_text', e.target.value)}
+                        placeholder="READ MORE"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>CTA Link</label>
+                      <input
+                        type="text"
+                        value={item.cta_link}
+                        onChange={(e) => handleProofResultChange(index, 'cta_link', e.target.value)}
+                        placeholder="/blog/article-slug or #"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}

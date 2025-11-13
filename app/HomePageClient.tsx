@@ -56,6 +56,15 @@ interface WhyWorkWithUsItem {
   image?: string
 }
 
+interface ProofResultItem {
+  id: string
+  title: string
+  description: string
+  image?: string
+  cta_text: string
+  cta_link: string
+}
+
 interface TestimonialItem {
   id: string
   quote: string
@@ -124,6 +133,10 @@ interface HomepageContent {
   blog_grid_title?: string
   blog_grid_bg_color?: string
   blog_section_visible?: boolean
+  proof_results_title?: string
+  proof_results_subtitle?: string
+  proof_results_items?: ProofResultItem[]
+  proof_results_bg_color?: string
   quiz_cta_bg_color?: string
   about_title?: string
   about_description?: string
@@ -239,6 +252,14 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const blogGridBgColor = homepageContent?.blog_grid_bg_color || '#ffffff'
   const blogGridTitle = homepageContent?.blog_grid_title || 'Latest from the blog'
   const blogSectionVisible = homepageContent?.blog_section_visible ?? true
+  const proofResultsTitle = homepageContent?.proof_results_title || 'Proof of Results'
+  const proofResultsSubtitle = homepageContent?.proof_results_subtitle || 'Real outcomes from our LLM optimization work'
+  const proofResultsItems = homepageContent?.proof_results_items || [
+    { id: '1', title: 'Case Study 1', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' },
+    { id: '2', title: 'Case Study 2', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' },
+    { id: '3', title: 'Case Study 3', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' }
+  ]
+  const proofResultsBgColor = homepageContent?.proof_results_bg_color || '#ffffff'
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
@@ -413,6 +434,43 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         steps={howItWorksSteps}
         bgColor={howItWorksBgColor}
       />
+
+      {/* Proof of Results Section */}
+      <section className="proof-results-section" style={{ background: proofResultsBgColor }}>
+        <div className="proof-results-container">
+          <div className="proof-results-header">
+            <h2 className="proof-results-title">{proofResultsTitle}</h2>
+            <p className="proof-results-subtitle">{proofResultsSubtitle}</p>
+          </div>
+          <div className="proof-results-grid">
+            {proofResultsItems.map((item) => (
+              <article key={item.id} className="proof-result-card">
+                <div className="proof-result-image">
+                  {item.image ? (
+                    <img src={item.image} alt={item.title} loading="lazy" />
+                  ) : (
+                    <div className="proof-result-image-placeholder">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <div className="proof-result-content">
+                  <h3 className="proof-result-card-title">{item.title}</h3>
+                  <p className="proof-result-description">{item.description}</p>
+                  <Link href={item.cta_link} className="proof-result-cta">
+                    {item.cta_text}
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Quiz CTA Section */}
       <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
