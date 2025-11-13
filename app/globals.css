@@ -1039,10 +1039,11 @@ img {
 }
 
 .why-work-with-us-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
   display: block;
+  margin: auto;
 }
 
 .why-work-with-us-image-placeholder {
