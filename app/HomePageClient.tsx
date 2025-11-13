@@ -123,6 +123,7 @@ interface HomepageContent {
   services_bg_color?: string
   blog_grid_title?: string
   blog_grid_bg_color?: string
+  blog_section_visible?: boolean
   quiz_cta_bg_color?: string
   about_title?: string
   about_description?: string
@@ -237,6 +238,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const servicesBgColor = homepageContent?.services_bg_color || '#ffffff'
   const blogGridBgColor = homepageContent?.blog_grid_bg_color || '#ffffff'
   const blogGridTitle = homepageContent?.blog_grid_title || 'Latest from the blog'
+  const blogSectionVisible = homepageContent?.blog_section_visible ?? true
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
@@ -621,7 +623,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       </section>
 
       {/* Latest Blog Posts - 3x2 Grid */}
-      {latestPosts && latestPosts.length > 0 && (
+      {blogSectionVisible && latestPosts && latestPosts.length > 0 && (
         <section className="blog-grid-section" style={{ background: blogGridBgColor }}>
           <div className="blog-grid-container">
             <div className="blog-grid-header">

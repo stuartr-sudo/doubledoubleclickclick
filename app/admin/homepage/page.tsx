@@ -85,6 +85,7 @@ interface HomepageContent {
   services_bg_color?: string
   blog_grid_title?: string
   blog_grid_bg_color?: string
+  blog_section_visible?: boolean
   quiz_cta_bg_color?: string
 }
 
@@ -214,6 +215,7 @@ export default function HomepageEditorPage() {
     services_bg_color: '#ffffff',
     blog_grid_title: 'Latest from the blog',
     blog_grid_bg_color: '#ffffff',
+    blog_section_visible: true,
     quiz_cta_bg_color: '#ffffff'
   })
 
@@ -1753,6 +1755,15 @@ export default function HomepageEditorPage() {
         <div className="form-section">
           <div className="form-section-header">
             <h2 className="form-section-title">Blog Section</h2>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+              <input
+                type="checkbox"
+                checked={formData.blog_section_visible ?? true}
+                onChange={(e) => setFormData({ ...formData, blog_section_visible: e.target.checked })}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <span>Show Blog Section</span>
+            </label>
           </div>
 
           <div className="form-group">
