@@ -14,13 +14,13 @@ export default async function HomePage() {
     .select('*')
     .single()
   
-  // Fetch latest blog posts for homepage preview
+  // Fetch latest blog posts for homepage preview (limit to 6 since we only show 6)
   const { data: latestPosts } = await supabase
     .from('blog_posts')
     .select('id, title, slug, meta_description, featured_image, created_date')
     .eq('status', 'published')
     .order('created_date', { ascending: false })
-    .limit(3)
+    .limit(6)
 
   const demoLatest = [
     {

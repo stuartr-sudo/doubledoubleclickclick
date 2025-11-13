@@ -1,11 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo, lazy, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import MobileMenu from '@/components/MobileMenu'
-import SubscribeHero from '@/components/SubscribeHero'
-import HowItWorks from '@/components/HowItWorks'
+import Image from 'next/image'
+import dynamic from 'next/dynamic'
+
+// Dynamic imports for code splitting - load below-the-fold components lazily
+const MobileMenu = dynamic(() => import('@/components/MobileMenu'), { ssr: false })
+const SubscribeHero = dynamic(() => import('@/components/SubscribeHero'), { ssr: false })
+const HowItWorks = dynamic(() => import('@/components/HowItWorks'), { ssr: true })
 
 interface Service {
   id: string
@@ -169,7 +173,7 @@ interface HomePageClientProps {
   homepageContent: HomepageContent | null
 }
 
-export default function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
+function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   // Default content if not set in CMS
   const logoImage = homepageContent?.logo_image || ''
   const logoText = homepageContent?.logo_text || 'DoubleClicker'
@@ -447,7 +451,14 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
               <article key={item.id} className="proof-result-card">
                 <div className="proof-result-image">
                   {item.image ? (
-                    <img src={item.image} alt={item.title} loading="lazy" />
+                    <Image 
+                      src={item.image} 
+                      alt={item.title} 
+                      width={400}
+                      height={225}
+                      loading="lazy"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                    />
                   ) : (
                     <div className="proof-result-image-placeholder">
                       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -503,7 +514,14 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
               <div key={item.id} className="why-work-with-us-card">
                 <div className="why-work-with-us-image">
                   {item.image ? (
-                    <img src={item.image} alt={item.title} loading="lazy" />
+                    <Image 
+                      src={item.image} 
+                      alt={item.title} 
+                      width={400}
+                      height={400}
+                      loading="lazy"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                    />
                   ) : (
                     <div className="why-work-with-us-image-placeholder">
                       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -608,11 +626,13 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                 <div className="testimonial-author">
                   <div className="testimonial-author-image">
                     {testimonial.author_image ? (
-                      <img
+                      <Image
                         src={testimonial.author_image}
                         alt={testimonial.author_name}
                         width={56}
                         height={56}
+                        loading="lazy"
+                        style={{ objectFit: 'cover', borderRadius: '50%' }}
                       />
                     ) : (
                       <div className="testimonial-author-placeholder">
@@ -650,11 +670,13 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
               >
                 <div className="service-showcase-image">
                   {service.image ? (
-                    <img
+                    <Image
                       src={service.image}
                       alt={service.title}
                       width={440}
                       height={480}
+                      loading="lazy"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     />
                   ) : (
                     <div className="service-showcase-placeholder">
@@ -692,12 +714,13 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
                 <article key={post.id} className="blog-card">
                   {post.featured_image && (
                     <div className="blog-card-image">
-                      <img 
+                      <Image 
                         src={post.featured_image} 
                         alt={post.title}
                         loading="lazy"
                         width={400}
                         height={250}
+                        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                       />
                     </div>
                   )}
@@ -751,8 +774,13 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       </footer>
 
       {/* Mobile Menu Component */}
-      <MobileMenu isOpen={isMenuOpen} onClose={handleMenuToggle} />
+      <Suspense fallback={null}>
+        <MobileMenu isOpen={isMenuOpen} onClose={handleMenuToggle} />
+      </Suspense>
     </main>
   )
 }
+
+// Memoize component to prevent unnecessary re-renders
+export default memo(HomePageClient)
 
