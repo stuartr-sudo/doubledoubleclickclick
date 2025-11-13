@@ -1013,17 +1013,19 @@ img {
 }
 
 .why-work-with-us-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--spacing-2xl);
   margin-top: var(--spacing-3xl);
-  justify-items: center;
+  justify-content: center;
 }
 
 .why-work-with-us-card {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  flex: 0 1 calc(33.333% - var(--spacing-2xl));
+  max-width: 400px;
 }
 
 .why-work-with-us-image {
