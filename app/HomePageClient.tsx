@@ -420,23 +420,6 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
           </form>
         </div>
       </section>
-      <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
-        <div className="quiz-cta-container">
-          <h2 className="quiz-cta-title">{quizFormTitle}</h2>
-          <p className="quiz-cta-subtitle" dangerouslySetInnerHTML={{ __html: quizFormDescription }} />
-          <form className="quiz-cta-form" onSubmit={handleQuizSubmit}>
-            <input 
-              type="url" 
-              placeholder={quizFormPlaceholder} 
-              className="quiz-cta-input"
-              value={quizWebsite}
-              onChange={(e) => setQuizWebsite(e.target.value)}
-            />
-            <button type="submit" className="quiz-cta-button">{quizFormCtaText}</button>
-          </form>
-        </div>
-      </section>
-
       {/* Why Work With Us Section */}
       <section className="why-work-with-us-section" style={{ background: whyWorkWithUsBgColor }}>
         <div className="why-work-with-us-container">
