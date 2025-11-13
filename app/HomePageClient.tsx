@@ -517,8 +517,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                     <Image 
                       src={item.image} 
                       alt={item.title} 
-                      width={400}
-                      height={400}
+                      width={600}
+                      height={600}
                       loading="lazy"
                       style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     />

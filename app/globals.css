@@ -1235,7 +1235,8 @@ img {
   flex-direction: column;
   gap: var(--spacing-md);
   flex: 0 1 calc(33.333% - var(--spacing-2xl));
-  max-width: 400px;
+  max-width: 600px;
+  min-width: 300px;
 }
 
 .why-work-with-us-image {
