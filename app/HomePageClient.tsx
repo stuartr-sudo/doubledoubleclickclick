@@ -625,23 +625,29 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 <p className="testimonial-quote">{testimonial.quote}</p>
                 <div className="testimonial-author">
                   <div className="testimonial-author-image">
-                    {testimonial.author_image ? (
-                      <Image
+                    {testimonial.author_image && testimonial.author_image.trim() ? (
+                      <img
                         src={testimonial.author_image}
                         alt={testimonial.author_name}
                         width={56}
                         height={56}
                         loading="lazy"
-                        style={{ objectFit: 'cover', borderRadius: '50%' }}
+                        style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
+                        onError={(e) => {
+                          // Hide broken image and show placeholder
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                          const placeholder = target.parentElement?.querySelector('.testimonial-author-placeholder') as HTMLElement
+                          if (placeholder) placeholder.style.display = 'flex'
+                        }}
                       />
-                    ) : (
-                      <div className="testimonial-author-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5"/>
-                          <path d="M6 21C6 17.6863 8.68629 15 12 15C15.3137 15 18 17.6863 18 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                        </svg>
-                      </div>
-                    )}
+                    ) : null}
+                    <div className="testimonial-author-placeholder" style={{ display: testimonial.author_image && testimonial.author_image.trim() ? 'none' : 'flex' }}>
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M6 21C6 17.6863 8.68629 15 12 15C15.3137 15 18 17.6863 18 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    </div>
                   </div>
                   <div className="testimonial-author-info">
                     <div className="testimonial-author-name">{testimonial.author_name}</div>
