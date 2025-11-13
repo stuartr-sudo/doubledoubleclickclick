@@ -1025,35 +1025,44 @@ img {
   gap: var(--spacing-md);
 }
 
-.why-work-with-us-icon-wrapper {
-  width: 80px;
-  height: 80px;
-  background: var(--color-primary);
-  border-radius: 8px;
+.why-work-with-us-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-light);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
 }
 
-.why-work-with-us-icon {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-}
-
-.why-work-with-us-icon-placeholder {
-  width: 48px;
-  height: 48px;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.why-work-with-us-icon-placeholder svg {
+.why-work-with-us-image img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.why-work-with-us-image-placeholder {
+  width: 55%;
+  max-width: 140px;
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.why-work-with-us-image-placeholder svg {
+  width: 100%;
+  height: 100%;
+}
+
+.why-work-with-us-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
 .why-work-with-us-card-title {

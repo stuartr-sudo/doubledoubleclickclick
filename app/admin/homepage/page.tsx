@@ -19,6 +19,7 @@ interface WhyWorkWithUsItem {
   link_text: string
   link_url: string
   icon?: string
+  image?: string
 }
 
 interface TestimonialItem {
@@ -183,9 +184,9 @@ export default function HomepageEditorPage() {
     why_work_with_us_subtitle: 'We strive to deliver value to our clients',
     why_work_with_us_description: 'We are dedicated to providing the highest level of service, delivering innovative solutions, and exceeding expectations in everything we do.',
     why_work_with_us_items: [
-      { id: '1', title: 'Proven track record', description: 'We have helped countless businesses overcome challenges.', link_text: 'Our track record', link_url: '#', icon: '' },
-      { id: '2', title: 'Collaborative approach', description: 'We ensure transparency throughout the process.', link_text: 'Our process', link_url: '#', icon: '' },
-      { id: '3', title: 'Innovative solutions', description: 'We leverage the latest technologies to deliver solutions.', link_text: 'Our solutions', link_url: '#', icon: '' }
+      { id: '1', title: 'Proven track record', description: 'We have helped countless businesses overcome challenges.', link_text: 'Our track record', link_url: '#', image: '' },
+      { id: '2', title: 'Collaborative approach', description: 'We ensure transparency throughout the process.', link_text: 'Our process', link_url: '#', image: '' },
+      { id: '3', title: 'Innovative solutions', description: 'We leverage the latest technologies to deliver solutions.', link_text: 'Our solutions', link_url: '#', image: '' }
     ],
     why_work_with_us_bg_color: '#ffffff',
     faq_items: [
@@ -254,7 +255,12 @@ export default function HomepageEditorPage() {
           ...data,
           tech_carousel_items: Array.isArray(data.tech_carousel_items) ? data.tech_carousel_items : prev.tech_carousel_items,
           how_it_works_steps: Array.isArray(data.how_it_works_steps) ? data.how_it_works_steps : prev.how_it_works_steps,
-          why_work_with_us_items: Array.isArray(data.why_work_with_us_items) ? data.why_work_with_us_items : prev.why_work_with_us_items,
+          why_work_with_us_items: Array.isArray(data.why_work_with_us_items)
+            ? data.why_work_with_us_items.map((item: WhyWorkWithUsItem) => ({
+                ...item,
+                image: item.image || item.icon || ''
+              }))
+            : prev.why_work_with_us_items,
           faq_items: Array.isArray(data.faq_items) ? data.faq_items : prev.faq_items
         }))
         
@@ -301,16 +307,18 @@ export default function HomepageEditorPage() {
   }
 
   // Why Work With Us handlers
-  const handleWhyWorkWithUsChange = (index: number, field: 'title' | 'description' | 'link_text' | 'link_url', value: string) => {
+  const handleWhyWorkWithUsChange = (
+    index: number,
+    field: 'title' | 'description' | 'link_text' | 'link_url' | 'image',
+    value: string
+  ) => {
     const newItems = [...(formData.why_work_with_us_items || [])]
     newItems[index] = { ...newItems[index], [field]: value }
     setFormData(prev => ({ ...prev, why_work_with_us_items: newItems }))
   }
 
-  const handleWhyWorkWithUsIconChange = (index: number, url: string) => {
-    const newItems = [...(formData.why_work_with_us_items || [])]
-    newItems[index] = { ...newItems[index], icon: url }
-    setFormData(prev => ({ ...prev, why_work_with_us_items: newItems }))
+  const handleWhyWorkWithUsImageChange = (index: number, url: string) => {
+    handleWhyWorkWithUsChange(index, 'image', url)
   }
 
   const addWhyWorkWithUsItem = () => {
@@ -318,7 +326,7 @@ export default function HomepageEditorPage() {
       ...prev,
       why_work_with_us_items: [
         ...(prev.why_work_with_us_items || []),
-        { id: String(Date.now()), title: '', description: '', link_text: '', link_url: '#', icon: '' }
+        { id: String(Date.now()), title: '', description: '', link_text: '', link_url: '#', image: '' }
       ]
     }))
   }
@@ -1370,9 +1378,9 @@ export default function HomepageEditorPage() {
 
                   <div className="form-group">
                     <ImageUpload
-                      value={item.icon || ''}
-                      onChange={(url) => handleWhyWorkWithUsIconChange(index, url)}
-                      label="Icon"
+                      value={item.image || ''}
+                      onChange={(url) => handleWhyWorkWithUsImageChange(index, url)}
+                      label="Card Image"
                       folder="why-work-with-us"
                       defaultPromptProvider={aiProvider}
                       defaultPromptModel={aiModel}
