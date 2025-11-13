@@ -206,11 +206,14 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const whyWorkWithUsTitle = homepageContent?.why_work_with_us_title || 'Why Work With Us'
   const whyWorkWithUsSubtitle = homepageContent?.why_work_with_us_subtitle || 'We strive to deliver value to our clients'
   const whyWorkWithUsDescription = homepageContent?.why_work_with_us_description || 'We are dedicated to providing the highest level of service, delivering innovative solutions, and exceeding expectations in everything we do.'
-  const whyWorkWithUsItems = homepageContent?.why_work_with_us_items || [
+  const whyWorkWithUsItems = (homepageContent?.why_work_with_us_items || [
     { id: '1', title: 'Proven track record', description: 'We have helped countless businesses overcome challenges.', image: '' },
     { id: '2', title: 'Collaborative approach', description: 'We ensure transparency throughout the process.', image: '' },
     { id: '3', title: 'Innovative solutions', description: 'We leverage the latest technologies to deliver solutions.', image: '' }
-  ]
+  ]).map((item: any) => ({
+    ...item,
+    image: item.image || item.icon || ''
+  }))
   const techCarouselBgColor = homepageContent?.tech_carousel_bg_color || '#ffffff'
   const howItWorksBgColor = homepageContent?.how_it_works_bg_color || '#ffffff'
   const whyWorkWithUsBgColor = homepageContent?.why_work_with_us_bg_color || '#ffffff'

@@ -253,7 +253,10 @@ export default function HomepageEditorPage() {
           tech_carousel_items: Array.isArray(data.tech_carousel_items) ? data.tech_carousel_items : prev.tech_carousel_items,
           how_it_works_steps: Array.isArray(data.how_it_works_steps) ? data.how_it_works_steps : prev.how_it_works_steps,
           why_work_with_us_items: Array.isArray(data.why_work_with_us_items)
-            ? data.why_work_with_us_items
+            ? data.why_work_with_us_items.map((item: any) => ({
+                ...item,
+                image: item.image || item.icon || ''
+              }))
             : prev.why_work_with_us_items,
           faq_items: Array.isArray(data.faq_items) ? data.faq_items : prev.faq_items
         }))
