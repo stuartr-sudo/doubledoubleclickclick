@@ -351,7 +351,17 @@ img {
 
 .tech-carousel-header {
   margin-bottom: var(--spacing-xl);
-  text-align: center;
+  text-align: left;
+}
+
+.section-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0;
+  text-align: left;
 }
 
 .tech-carousel-wrapper {
@@ -1185,15 +1195,12 @@ img {
 }
 
 .why-work-with-us-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: var(--spacing-3xl);
 }
 
 .why-work-with-us-label-line {
-  width: 60px;
-  height: 2px;
-  background: var(--color-primary);
-  margin: 0 auto var(--spacing-sm);
+  display: none;
 }
 
 .why-work-with-us-label {
@@ -1204,6 +1211,7 @@ img {
   margin-bottom: var(--spacing-md);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  text-align: left;
 }
 
 .why-work-with-us-title {
@@ -1310,21 +1318,18 @@ img {
 }
 
 .faq-label {
-  display: inline-flex;
-  align-items: center;
+  display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-primary);
   margin-bottom: var(--spacing-md);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: left;
 }
 
 .faq-label::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  margin-right: var(--spacing-sm);
+  display: none;
 }
 
 .faq-title {
@@ -1430,26 +1435,23 @@ img {
 }
 
 .testimonials-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-3xl);
   margin-bottom: var(--spacing-3xl);
+  text-align: left;
 }
 
 .testimonials-label {
-  display: inline-flex;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--color-primary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding-top: 0.25rem;
-  flex-shrink: 0;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--spacing-md);
+  text-align: left;
 }
 
 .testimonials-header-content {
-  flex: 1;
+  text-align: left;
   max-width: 800px;
 }
 
