@@ -123,6 +123,7 @@ interface HomepageContent {
   services_section_description?: string
   services_items?: ServiceItem[]
   services_bg_color?: string
+  blog_grid_title?: string
   blog_grid_bg_color?: string
   quiz_cta_bg_color?: string
   about_title?: string
@@ -234,6 +235,7 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   ]
   const servicesBgColor = homepageContent?.services_bg_color || '#ffffff'
   const blogGridBgColor = homepageContent?.blog_grid_bg_color || '#ffffff'
+  const blogGridTitle = homepageContent?.blog_grid_title || 'Latest from the blog'
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
@@ -617,6 +619,9 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
       {latestPosts && latestPosts.length > 0 && (
         <section className="blog-grid-section" style={{ background: blogGridBgColor }}>
           <div className="blog-grid-container">
+            <div className="blog-grid-header">
+              <h2 className="blog-grid-title">{blogGridTitle}</h2>
+            </div>
             <div className="blog-grid-3x2">
               {latestPosts.slice(0, 6).map((post) => (
                 <article key={post.id} className="blog-card">

@@ -85,6 +85,7 @@ interface HomepageContent {
   services_section_description?: string
   services_items?: ServiceItem[]
   services_bg_color?: string
+  blog_grid_title?: string
   blog_grid_bg_color?: string
   quiz_cta_bg_color?: string
 }
@@ -213,6 +214,7 @@ export default function HomepageEditorPage() {
       { id: '3', title: 'Seasonal planting', image: '', link_url: '#' }
     ],
     services_bg_color: '#ffffff',
+    blog_grid_title: 'Latest from the blog',
     blog_grid_bg_color: '#ffffff',
     quiz_cta_bg_color: '#ffffff'
   })
@@ -1761,6 +1763,24 @@ export default function HomepageEditorPage() {
               ))}
             </div>
           </div>
+
+        {/* Blog Section */}
+        <div className="form-section">
+          <div className="form-section-header">
+            <h2 className="form-section-title">Blog Section</h2>
+          </div>
+
+          <div className="form-group">
+            <TextEnhancer
+              value={formData.blog_grid_title || ''}
+              onChange={(value) => setFormData({ ...formData, blog_grid_title: value })}
+              fieldType="blog_grid_title"
+              label="Section Title"
+              defaultProvider={aiProvider}
+              defaultModel={aiModel}
+            />
+          </div>
+        </div>
 
           {/* Additional Background Colors */}
           <div className="form-section">
