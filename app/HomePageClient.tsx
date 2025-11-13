@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import MobileMenu from '@/components/MobileMenu'
 import SubscribeHero from '@/components/SubscribeHero'
 import HowItWorks from '@/components/HowItWorks'
@@ -236,6 +237,8 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
+  const [quizWebsite, setQuizWebsite] = useState('')
+  const router = useRouter()
 
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -243,6 +246,22 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index)
+  }
+
+  const handleQuizSubmit = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault()
+    const trimmed = quizWebsite.trim()
+    if (!trimmed) {
+      alert('Please enter your website URL first.')
+      return
+    }
+
+    const destination = quizFormCtaLink || '/quiz'
+    const separator = destination.includes('?') ? '&' : '?'
+    const href = `${destination}${separator}website=${encodeURIComponent(trimmed)}`
+
+    setQuizWebsite('')
+    router.push(href)
   }
 
   const faqItems = [
@@ -389,28 +408,32 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
         <div className="quiz-cta-container">
           <h2 className="quiz-cta-title">{quizFormTitle}</h2>
           <p className="quiz-cta-subtitle" dangerouslySetInnerHTML={{ __html: quizFormDescription }} />
-          <div className="quiz-cta-form">
+          <form className="quiz-cta-form" onSubmit={handleQuizSubmit}>
             <input 
               type="url" 
               placeholder={quizFormPlaceholder} 
               className="quiz-cta-input"
+              value={quizWebsite}
+              onChange={(e) => setQuizWebsite(e.target.value)}
             />
-            <Link href={quizFormCtaLink} className="quiz-cta-button">{quizFormCtaText}</Link>
-          </div>
+            <button type="submit" className="quiz-cta-button">{quizFormCtaText}</button>
+          </form>
         </div>
       </section>
       <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
         <div className="quiz-cta-container">
           <h2 className="quiz-cta-title">{quizFormTitle}</h2>
           <p className="quiz-cta-subtitle" dangerouslySetInnerHTML={{ __html: quizFormDescription }} />
-          <div className="quiz-cta-form">
+          <form className="quiz-cta-form" onSubmit={handleQuizSubmit}>
             <input 
               type="url" 
               placeholder={quizFormPlaceholder} 
               className="quiz-cta-input"
+              value={quizWebsite}
+              onChange={(e) => setQuizWebsite(e.target.value)}
             />
-            <Link href={quizFormCtaLink} className="quiz-cta-button">{quizFormCtaText}</Link>
-          </div>
+            <button type="submit" className="quiz-cta-button">{quizFormCtaText}</button>
+          </form>
         </div>
       </section>
 
