@@ -755,20 +755,20 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       )}
 
       {/* Quiz CTA Section - Bottom */}
-      <section className="quiz-cta-section">
+      <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
         <div className="quiz-cta-container">
-          <h2 className="quiz-cta-title">Want More SEO Traffic?</h2>
-          <p className="quiz-cta-subtitle">
-            Answer 5 quick questions and I will give you a step-by-step <strong>7-week action plan</strong> showing you exactly what you need to do to get more traffic.
-          </p>
-          <div className="quiz-cta-form">
+          <h2 className="quiz-cta-title">{quizFormTitle}</h2>
+          <p className="quiz-cta-subtitle" dangerouslySetInnerHTML={{ __html: quizFormDescription }} />
+          <form className="quiz-cta-form" onSubmit={handleQuizSubmit}>
             <input 
               type="url" 
-              placeholder="What is the URL of your website?" 
+              placeholder={quizFormPlaceholder} 
               className="quiz-cta-input"
+              value={quizWebsite}
+              onChange={(e) => setQuizWebsite(e.target.value)}
             />
-            <Link href={quizCTALink} className="quiz-cta-button">NEXT</Link>
-          </div>
+            <button type="submit" className="quiz-cta-button">{quizFormCtaText}</button>
+          </form>
         </div>
       </section>
 
