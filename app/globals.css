@@ -1083,29 +1083,6 @@ img {
   flex: 1;
 }
 
-.why-work-with-us-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  color: var(--color-primary);
-  font-weight: 500;
-  text-decoration: none;
-  margin-top: var(--spacing-sm);
-  transition: gap 0.2s ease;
-}
-
-.why-work-with-us-link:hover {
-  gap: var(--spacing-sm);
-}
-
-.why-work-with-us-link-arrow {
-  transition: transform 0.2s ease;
-}
-
-.why-work-with-us-link:hover .why-work-with-us-link-arrow {
-  transform: translateX(4px);
-}
-
 /* FAQ Section */
 .faq-section {
   padding: var(--spacing-3xl) var(--spacing-2xl);

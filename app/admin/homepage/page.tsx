@@ -16,9 +16,6 @@ interface WhyWorkWithUsItem {
   id: string
   title: string
   description: string
-  link_text: string
-  link_url: string
-  icon?: string
   image?: string
 }
 
@@ -184,9 +181,9 @@ export default function HomepageEditorPage() {
     why_work_with_us_subtitle: 'We strive to deliver value to our clients',
     why_work_with_us_description: 'We are dedicated to providing the highest level of service, delivering innovative solutions, and exceeding expectations in everything we do.',
     why_work_with_us_items: [
-      { id: '1', title: 'Proven track record', description: 'We have helped countless businesses overcome challenges.', link_text: 'Our track record', link_url: '#', image: '' },
-      { id: '2', title: 'Collaborative approach', description: 'We ensure transparency throughout the process.', link_text: 'Our process', link_url: '#', image: '' },
-      { id: '3', title: 'Innovative solutions', description: 'We leverage the latest technologies to deliver solutions.', link_text: 'Our solutions', link_url: '#', image: '' }
+      { id: '1', title: 'Proven track record', description: 'We have helped countless businesses overcome challenges.', image: '' },
+      { id: '2', title: 'Collaborative approach', description: 'We ensure transparency throughout the process.', image: '' },
+      { id: '3', title: 'Innovative solutions', description: 'We leverage the latest technologies to deliver solutions.', image: '' }
     ],
     why_work_with_us_bg_color: '#ffffff',
     faq_items: [
@@ -256,10 +253,7 @@ export default function HomepageEditorPage() {
           tech_carousel_items: Array.isArray(data.tech_carousel_items) ? data.tech_carousel_items : prev.tech_carousel_items,
           how_it_works_steps: Array.isArray(data.how_it_works_steps) ? data.how_it_works_steps : prev.how_it_works_steps,
           why_work_with_us_items: Array.isArray(data.why_work_with_us_items)
-            ? data.why_work_with_us_items.map((item: WhyWorkWithUsItem) => ({
-                ...item,
-                image: item.image || item.icon || ''
-              }))
+            ? data.why_work_with_us_items
             : prev.why_work_with_us_items,
           faq_items: Array.isArray(data.faq_items) ? data.faq_items : prev.faq_items
         }))
@@ -309,7 +303,7 @@ export default function HomepageEditorPage() {
   // Why Work With Us handlers
   const handleWhyWorkWithUsChange = (
     index: number,
-    field: 'title' | 'description' | 'link_text' | 'link_url' | 'image',
+    field: 'title' | 'description',
     value: string
   ) => {
     const newItems = [...(formData.why_work_with_us_items || [])]
@@ -318,7 +312,9 @@ export default function HomepageEditorPage() {
   }
 
   const handleWhyWorkWithUsImageChange = (index: number, url: string) => {
-    handleWhyWorkWithUsChange(index, 'image', url)
+    const newItems = [...(formData.why_work_with_us_items || [])]
+    newItems[index] = { ...newItems[index], image: url }
+    setFormData(prev => ({ ...prev, why_work_with_us_items: newItems }))
   }
 
   const addWhyWorkWithUsItem = () => {
@@ -326,7 +322,7 @@ export default function HomepageEditorPage() {
       ...prev,
       why_work_with_us_items: [
         ...(prev.why_work_with_us_items || []),
-        { id: String(Date.now()), title: '', description: '', link_text: '', link_url: '#', image: '' }
+        { id: String(Date.now()), title: '', description: '', image: '' }
       ]
     }))
   }
@@ -1409,28 +1405,6 @@ export default function HomepageEditorPage() {
                       defaultProvider={aiProvider}
                       defaultModel={aiModel}
                     />
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Link Text</label>
-                      <input
-                        type="text"
-                        value={item.link_text}
-                        onChange={(e) => handleWhyWorkWithUsChange(index, 'link_text', e.target.value)}
-                        placeholder="Our track record"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Link URL</label>
-                      <input
-                        type="text"
-                        value={item.link_url}
-                        onChange={(e) => handleWhyWorkWithUsChange(index, 'link_url', e.target.value)}
-                        placeholder="# or /page"
-                      />
-                    </div>
                   </div>
                 </div>
               ))}
