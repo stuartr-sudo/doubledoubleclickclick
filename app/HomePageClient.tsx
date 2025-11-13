@@ -267,28 +267,34 @@ export default function HomePageClient({ latestPosts, homepageContent }: HomePag
     router.push(href)
   }
 
-  const faqItems = [
+  const faqItems = homepageContent?.faq_items || [
     {
+      id: '1',
       question: 'How does your consulting process work?',
       answer: 'Our consulting process begins with a comprehensive analysis of your current LLM visibility. We assess how AI systems understand and rank your brand, then create a customized strategy to improve your positioning. Throughout the process, we provide ongoing guidance and optimization to ensure long-term success.'
     },
     {
+      id: '2',
       question: 'What industries do you specialize in?',
       answer: 'We work with brands across various industries, from technology and SaaS to e-commerce, healthcare, finance, and professional services. Our approach is tailored to each industry\'s unique challenges and opportunities in AI-powered search.'
     },
     {
+      id: '3',
       question: 'How long does it take to see results?',
       answer: 'Results can vary depending on your current visibility and the scope of optimization needed. Typically, you\'ll start seeing improvements in LLM rankings within 4-8 weeks, with more significant gains appearing over 3-6 months as AI systems index and understand your optimized content.'
     },
     {
+      id: '4',
       question: 'Do you offer one-time consultations?',
       answer: 'Yes, we offer both one-time consultations and ongoing partnerships. A one-time consultation provides you with a strategic roadmap and actionable recommendations, while ongoing partnerships include continuous optimization, monitoring, and support.'
     },
     {
+      id: '5',
       question: 'Can small businesses afford your services?',
       answer: 'Absolutely. We offer flexible pricing options designed to accommodate businesses of all sizes. Our services are structured to provide value at every level, from startups to enterprise organizations. Contact us to discuss a solution that fits your budget.'
     },
     {
+      id: '6',
       question: 'How do I get started?',
       answer: 'Getting started is simple. Take our 12-step quiz to see where you\'re missing out on LLM visibility, or reach out directly through our contact form. We\'ll schedule a consultation to discuss your goals and create a customized plan for your brand.'
     }
