@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Force dynamic rendering for this API route
+// Force this route to always run dynamically (no static optimization)
 export const dynamic = 'force-dynamic'
 
-// Enable CORS and allow all origins for this API route
+// Basic CORS support so the admin UI can call this API safely
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
@@ -18,18 +18,22 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, aspect_ratio, num_images, enhance_prompt, folder, prompt_provider, prompt_model } = await request.json()
+    const {
+      prompt,
+      aspect_ratio,
+      num_images,
+      enhance_prompt,
+      folder,
+      prompt_provider,
+      prompt_model,
+    } = await request.json()
 
-    if (!prompt) {
+    if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json(
         { success: false, error: 'Prompt is required' },
-        { 
+        {
           status: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          },
+          headers: corsHeaders(),
         }
       )
     }
@@ -39,46 +43,40 @@ export async function POST(request: NextRequest) {
       console.error('FAL_KEY not configured in environment variables')
       return NextResponse.json(
         { success: false, error: 'FAL_KEY not configured' },
-        { 
+        {
           status: 500,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          },
+          headers: corsHeaders(),
         }
       )
     }
 
-    // Enhance prompt if requested
-    let finalPrompt = prompt
+    // Optionally enhance the prompt with an LLM before calling fal.ai
+    let finalPrompt: string = prompt
     if (enhance_prompt) {
       try {
-        // If a provider/model is specified, use it; otherwise use simple enhancer
         if (prompt_provider) {
           finalPrompt = await enhanceWithProvider(prompt, prompt_provider, prompt_model)
         } else {
           finalPrompt = await enhancePrompt(prompt)
         }
-      } catch (enhanceError) {
-        console.error('Prompt enhancement error:', enhanceError)
-        // Continue with original prompt if enhancement fails
-        console.warn('Falling back to original prompt due to enhancement error')
+      } catch (err) {
+        console.error('Prompt enhancement error:', err)
+        // Fall back to the original prompt if enhancement fails
         finalPrompt = prompt
       }
     }
 
-    // Call fal.ai Nano Banana endpoint with WebP format for optimization
+    // Call fal.ai Nano Banana endpoint – this is where images are generated
     const response = await fetch('https://fal.run/fal-ai/nano-banana', {
       method: 'POST',
       headers: {
-        'Authorization': `Key ${FAL_KEY}`,
+        Authorization: `Key ${FAL_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         prompt: finalPrompt,
         num_images: num_images || 1,
-        output_format: 'webp', // WebP for better compression and faster loading
+        output_format: 'webp', // optimized format for web
         aspect_ratio: aspect_ratio || '16:9',
         sync_mode: false,
       }),
@@ -87,70 +85,71 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('fal.ai error:', response.status, errorText)
+
+      // Bubble up fal.ai status (e.g. 403) so the client can see the real error
       return NextResponse.json(
         { success: false, error: 'Image generation failed', details: errorText },
-        { 
+        {
           status: response.status,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          },
+          headers: corsHeaders(),
         }
       )
     }
 
-    const result = await response.json()
+    const result = (await response.json()) as { images?: Array<{ url: string }>; description?: string }
 
-    // Upload generated images to Supabase Storage for better performance and permanence
+    // Upload generated images to Supabase Storage so they are cached & on your domain
     const uploadedImages = await uploadImagesToSupabase(result.images || [], folder || 'ai-generated')
 
-    // Return the optimized image URLs from Supabase
-    return NextResponse.json({
-      success: true,
-      images: uploadedImages,
-      description: result.description || '',
-      enhanced_prompt: enhance_prompt ? finalPrompt : null,
-    }, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+    return NextResponse.json(
+      {
+        success: true,
+        images: uploadedImages,
+        description: result.description || '',
+        enhanced_prompt: enhance_prompt ? finalPrompt : null,
       },
-    })
+      {
+        headers: corsHeaders(),
+      }
+    )
   } catch (error) {
     console.error('Error generating image:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to generate image',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { 
+      {
         status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
+        headers: corsHeaders(),
       }
     )
   }
 }
 
-// Enhance prompt using selected LLM provider (OpenAI/Claude/Gemini)
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
+}
+
+// Enhance prompt using the selected LLM provider (OpenAI / Claude / Gemini)
 async function enhanceWithProvider(prompt: string, provider: string, model?: string): Promise<string> {
-  const system = 'You are a helpful creative director. Improve the following image prompt with concrete visual details, lighting, composition, camera angle, and style. Keep it concise and suitable for an image model. Return ONLY the enhanced prompt.'
+  const system =
+    'You are a helpful creative director. Improve the following image prompt with concrete visual details, lighting, composition, camera angle, and style. Keep it concise and suitable for an image model. Return ONLY the enhanced prompt.'
+
   if (provider === 'openai') {
     const apiKey = process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY
     if (!apiKey) throw new Error('OpenAI API key not configured')
-    
-    // Validate model ID - use fallback if invalid
+
     const validModel = model || 'gpt-4o-mini'
-    
+
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: validModel,
         messages: [
@@ -161,10 +160,12 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
         max_tokens: 300,
       }),
     })
+
     if (!resp.ok) {
       const text = await resp.text()
       throw new Error(`OpenAI error (${resp.status}): ${text}`)
     }
+
     const data = await resp.json()
     return (data.choices?.[0]?.message?.content || prompt).trim()
   }
@@ -172,13 +173,16 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
   if (provider === 'claude') {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) throw new Error('Anthropic API key not configured')
-    
-    // Validate model ID - use fallback if invalid
+
     const validModel = model || 'claude-3-5-sonnet-20241022'
-    
+
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         model: validModel,
         system,
@@ -186,10 +190,12 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
         messages: [{ role: 'user', content: prompt }],
       }),
     })
+
     if (!resp.ok) {
       const text = await resp.text()
       throw new Error(`Claude error (${resp.status}): ${text}`)
     }
+
     const data = await resp.json()
     return (data.content?.[0]?.text || prompt).trim()
   }
@@ -197,40 +203,41 @@ async function enhanceWithProvider(prompt: string, provider: string, model?: str
   if (provider === 'gemini') {
     const apiKey = process.env.GOOGLE_AI_API_KEY
     if (!apiKey) throw new Error('Google AI API key not configured')
-    
-    // Validate model ID - use fallback if invalid
+
     const validModel = model || 'gemini-1.5-flash'
-    
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${validModel}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${system}\n\n${prompt}` }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 300 },
-      }),
-    })
+
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${validModel}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${system}\n\n${prompt}` }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 300 },
+        }),
+      }
+    )
+
     if (!resp.ok) {
       const text = await resp.text()
       throw new Error(`Gemini error (${resp.status}): ${text}`)
     }
+
     const data = await resp.json()
     return (data.candidates?.[0]?.content?.parts?.[0]?.text || prompt).trim()
   }
 
-  // Fallback to simple enhancer
+  // Fallback – simple enhancement if provider is not recognised
   return enhancePrompt(prompt)
 }
 
-// Upload images to Supabase Storage for permanent hosting and better performance
-async function uploadImagesToSupabase(
-  images: Array<{ url: string }>,
-  folder: string
-): Promise<Array<{ url: string }>> {
+// Upload images from fal.ai to Supabase Storage for permanent hosting & caching
+async function uploadImagesToSupabase(images: Array<{ url: string }>, folder: string): Promise<Array<{ url: string }>> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseKey) {
-    console.warn('Supabase not configured, returning original URLs')
+    console.warn('Supabase not configured, returning original image URLs')
     return images
   }
 
@@ -239,22 +246,19 @@ async function uploadImagesToSupabase(
 
   for (const image of images) {
     try {
-      // Fetch the image from fal.ai
       const imageResponse = await fetch(image.url)
       const imageBuffer = await imageResponse.arrayBuffer()
       const imageBlob = new Blob([imageBuffer], { type: 'image/webp' })
 
-      // Generate a unique filename
       const timestamp = Date.now()
-      const random = Math.random().toString(36).substring(7)
+      const random = Math.random().toString(36).slice(2)
       const filename = `${folder}/${timestamp}-${random}.webp`
 
-      // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('images')
         .upload(filename, imageBlob, {
           contentType: 'image/webp',
-          cacheControl: '31536000', // Cache for 1 year (optimized for performance)
+          cacheControl: '31536000',
           upsert: false,
         })
 
@@ -265,15 +269,10 @@ async function uploadImagesToSupabase(
         continue
       }
 
-      // Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('images')
-        .getPublicUrl(data.path)
-
+      const { data: urlData } = supabase.storage.from('images').getPublicUrl(data.path)
       uploadedImages.push({ url: urlData.publicUrl })
-    } catch (error) {
-      console.error('Error uploading image to Supabase:', error)
-      // Fall back to original URL
+    } catch (err) {
+      console.error('Error uploading image to Supabase:', err)
       uploadedImages.push(image)
     }
   }
@@ -281,9 +280,8 @@ async function uploadImagesToSupabase(
   return uploadedImages
 }
 
-// Simple prompt enhancement function
+// Simple prompt enhancement if no external provider is used
 async function enhancePrompt(prompt: string): Promise<string> {
-  // Add professional photography/design keywords to enhance the prompt
   const enhancements = [
     'professional photography',
     'high quality',
@@ -291,11 +289,9 @@ async function enhancePrompt(prompt: string): Promise<string> {
     'sharp focus',
     'studio lighting',
     '8k resolution',
-    'photorealistic',
   ]
 
-  // Check if prompt already has quality descriptors
-  const hasQualityDescriptor = enhancements.some(enhancement =>
+  const hasQualityDescriptor = enhancements.some((enhancement) =>
     prompt.toLowerCase().includes(enhancement.toLowerCase())
   )
 
@@ -303,7 +299,7 @@ async function enhancePrompt(prompt: string): Promise<string> {
     return prompt
   }
 
-  // Add quality descriptors
   return `${prompt}, professional photography, high quality, detailed, sharp focus, 8k resolution`
 }
+
 
