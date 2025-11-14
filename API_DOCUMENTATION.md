@@ -1,6 +1,6 @@
 # Blog API Documentation
 
-Complete API documentation for the DoubleClicker blog system.
+Complete API documentation for the SEWO blog system.
 
 ## Base URL
 

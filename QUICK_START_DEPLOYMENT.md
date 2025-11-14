@@ -1,6 +1,6 @@
 # 🚀 Quick Start: Deploy in 10 Minutes
 
-The absolute fastest way to get your DoubleClicker website live.
+The absolute fastest way to get your SEWO website live.
 
 ---
 
@@ -33,10 +33,10 @@ cd /Users/stuarta/Documents/GitHub/doubleclicker-1
 # Initialize and push
 git init
 git add .
-git commit -m "Initial commit: DoubleClicker website"
+git commit -m "Initial commit: SEWO website"
 
 # Create repo on GitHub.com first, then:
-git remote add origin https://github.com/YOUR_USERNAME/doubleclicker-website.git
+git remote add origin https://github.com/YOUR_USERNAME/sewo-website.git
 git branch -M main
 git push -u origin main
 ```
@@ -53,7 +53,7 @@ git push -u origin main
 2. **Sign up with GitHub** (click "Continue with GitHub")
 3. **Import your repository:**
    - Click "Add New" → "Project"
-   - Select `doubleclicker-website`
+   - Select `sewo-website`
    - Click "Import"
 4. **Add Environment Variables:**
    

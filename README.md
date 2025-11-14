@@ -1,6 +1,6 @@
-# DoubleClicker - LLM Ranking Website
+# SEWO - LLM Ranking Website
 
-Professional website and blog system for DoubleClicker, helping brands rank in AI LLMs.
+Professional website and blog system for SEWO, helping brands rank in AI LLMs.
 
 ## 🚀 Live Site
 
@@ -447,14 +447,14 @@ npm run build
 ## 📞 Support
 
 - **Issues:** Create a GitHub issue
-- **Email:** hello@doubleclicker.com
+- **Email:** hello@sewo.io
 - **Docs:** See documentation files above
 
 ---
 
 ## 📄 License
 
-Proprietary - © 2025 DoubleClicker. All rights reserved.
+Proprietary - © 2025 SEWO. All rights reserved.
 
 ---
 
@@ -468,6 +468,6 @@ Proprietary - © 2025 DoubleClicker. All rights reserved.
 
 ---
 
-**Made with ❤️ by DoubleClicker**
+**Made with ❤️ by SEWO**
 
 Ready to rank in LLMs? Let's go! 🚀

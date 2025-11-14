@@ -215,7 +215,7 @@ export default function AgenciesPage() {
             </div>
             <div className="tier-benefit-card">
               <h3>White-Label Reporting</h3>
-              <p>Brand reports with your agency&apos;s logo and colors. Present professional insights to clients without any DoubleClicker branding.</p>
+              <p>Brand reports with your agency&apos;s logo and colors. Present professional insights to clients without any SEWO branding.</p>
             </div>
             <div className="tier-benefit-card">
               <h3>Priority Support</h3>

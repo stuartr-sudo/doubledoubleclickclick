@@ -1,6 +1,6 @@
-# DoubleClicker Deployment Guide
+# SEWO Deployment Guide
 
-Complete guide to deploying your DoubleClicker website to Vercel and connecting your Namecheap domain.
+Complete guide to deploying your SEWO website to Vercel and connecting your Namecheap domain.
 
 ---
 
@@ -23,8 +23,8 @@ Complete guide to deploying your DoubleClicker website to Vercel and connecting 
 1. **Go to GitHub.com** and sign in
 2. **Create a new repository:**
    - Click "+" → "New repository"
-   - Name: `doubleclicker-website` (or your preferred name)
-   - Description: "DoubleClicker - LLM Ranking Website"
+   - Name: `sewo-website` (or your preferred name)
+   - Description: "SEWO - LLM Ranking Website"
    - Keep it **Private** (or Public if you prefer)
    - **Do NOT** initialize with README (we already have files)
    - Click **"Create repository"**
@@ -41,10 +41,10 @@ git init
 git add .
 
 # Commit
-git commit -m "Initial commit: DoubleClicker website with blog and admin"
+git commit -m "Initial commit: SEWO website with blog and admin"
 
 # Add remote (replace YOUR_USERNAME with your GitHub username)
-git remote add origin https://github.com/YOUR_USERNAME/doubleclicker-website.git
+git remote add origin https://github.com/YOUR_USERNAME/sewo-website.git
 
 # Push to GitHub
 git branch -M main
@@ -68,11 +68,11 @@ Vercel is the best hosting platform for Next.js (it's made by the same team). **
 3. **Import your repository:**
    - Click **"Add New"** → **"Project"**
    - Select **"Import Git Repository"**
-   - Find `doubleclicker-website` (or your repo name)
+   - Find `sewo-website` (or your repo name)
    - Click **"Import"**
 
 4. **Configure project settings:**
-   - **Project Name:** `doubleclicker` (or your preference)
+   - **Project Name:** `sewo` (or your preference)
    - **Framework Preset:** Next.js (should auto-detect)
    - **Root Directory:** `./` (leave as default)
    - **Build Command:** `npm run build` (default)
@@ -94,7 +94,7 @@ NEXT_PUBLIC_SITE_URL=https://your-project.vercel.app
 - Copy **"Project URL"** → paste as `NEXT_PUBLIC_SUPABASE_URL`
 - Copy **"anon public"** key → paste as `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-For `NEXT_PUBLIC_SITE_URL`, you can temporarily use the Vercel URL (e.g., `https://doubleclicker.vercel.app`), then update it after connecting your custom domain.
+For `NEXT_PUBLIC_SITE_URL`, you can temporarily use the Vercel URL (e.g., `https://sewo.vercel.app`), then update it after connecting your custom domain.
 
 6. **Click "Deploy"**
 
@@ -486,7 +486,7 @@ supabase db restore backup.sql
 
 ## 🎊 Congratulations!
 
-Your DoubleClicker website is now live and accessible to the world!
+Your SEWO website is now live and accessible to the world!
 
 **Your Live URLs:**
 - Website: `https://yourdomain.com`

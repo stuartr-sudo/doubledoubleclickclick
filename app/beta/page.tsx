@@ -66,7 +66,7 @@ export default function BetaPage() {
               <Link href="/" className="back-link">
                 ← Back to Home
               </Link>
-              <h1 className="tier-page-title">DoubleClicker — LLM Visibility (Beta)</h1>
+              <h1 className="tier-page-title">SEWO — LLM Visibility (Beta)</h1>
               <p className="tier-page-subtitle">
                 Plan, publish, and monitor content for AI ranking. Limited beta access for qualified brands.
               </p>

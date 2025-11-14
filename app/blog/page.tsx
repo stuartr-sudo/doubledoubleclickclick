@@ -117,7 +117,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         <div className="container">
           <nav className="nav">
             <Link href="/" className="logo">
-              DoubleClicker
+              SEWO
             </Link>
             <div className="nav-links">
               <Link href="/">Home</Link>
@@ -132,7 +132,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         <div className="container">
           <h1 className="page-title">Blog</h1>
           <p className="page-description">
-            Discover insights, tips, and updates from DoubleClicker
+            Discover insights, tips, and updates from SEWO
           </p>
           <nav className="blog-category-nav">
             <Link href="/blog" className={selectedCategory === 'All' ? 'is-active' : ''}>
@@ -294,7 +294,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       {/* Footer */}
       <footer className="footer">
         <div className="container">
-          <p>&copy; {new Date().getFullYear()} DoubleClicker. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} SEWO. All rights reserved.</p>
         </div>
       </footer>
     </main>

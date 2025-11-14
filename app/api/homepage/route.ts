@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       // Create new - explicitly include logo_text
       const insertData = {
         ...body,
-        logo_text: body.logo_text || 'DoubleClicker', // Default if not provided
+        logo_text: body.logo_text || 'SEWO', // Default if not provided
       }
       
       const { data, error } = await supabase

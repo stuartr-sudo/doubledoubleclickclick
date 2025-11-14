@@ -1,6 +1,6 @@
 # 🚀 Deployment Checklist
 
-Quick checklist to deploy DoubleClicker to production.
+Quick checklist to deploy SEWO to production.
 
 ---
 
@@ -27,7 +27,7 @@ cd /Users/stuarta/Documents/GitHub/doubleclicker-1
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/doubleclicker-website.git
+git remote add origin https://github.com/YOUR_USERNAME/sewo-website.git
 git push -u origin main
 ```
 

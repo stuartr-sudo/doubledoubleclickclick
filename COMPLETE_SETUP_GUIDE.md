@@ -1,4 +1,4 @@
-# Complete Setup Guide - DoubleClicker Blog System
+# Complete Setup Guide - SEWO Blog System
 
 ## 🎯 What You Have Now
 

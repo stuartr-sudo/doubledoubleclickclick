@@ -152,14 +152,14 @@ export default function HomepageEditorPage() {
   const [aiModel, setAiModel] = useState<string>(AI_PROVIDERS.openai.default)
   const [formData, setFormData] = useState<HomepageContent>({
     logo_image: '',
-    logo_text: 'DoubleClicker',
+    logo_text: 'SEWO',
     hero_title: 'Make Your Brand the Answer AI Suggests',
     hero_description: 'Hello, I\'m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let\'s create!',
     hero_image: '',
     hero_cta_text: 'Get Started',
     hero_cta_link: '#contact',
     hero_footer_cta_text: 'Get Started',
-    hero_footer_cta_link: 'mailto:hello@doubleclicker.com',
+    hero_footer_cta_link: 'mailto:hello@sewo.io',
     hero_bg_gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     hero_text_color: '#ffffff',
     hero_cta_bg_color: '#000000',
@@ -667,7 +667,7 @@ export default function HomepageEditorPage() {
                 name="logo_text"
                 value={formData.logo_text}
                 onChange={handleChange}
-                placeholder="DoubleClicker"
+                placeholder="SEWO"
               />
               <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
                 Text to display if no logo image is set (fallback)

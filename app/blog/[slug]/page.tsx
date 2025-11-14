@@ -139,7 +139,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
         <div className="container">
           <nav className="nav">
             <Link href="/" className="logo">
-              DoubleClicker
+              SEWO
             </Link>
             <div className="nav-links">
               <Link href="/">Home</Link>
@@ -200,7 +200,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       {/* Footer */}
       <footer className="footer">
         <div className="container">
-          <p>&copy; {new Date().getFullYear()} DoubleClicker. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} SEWO. All rights reserved.</p>
         </div>
       </footer>
     </main>

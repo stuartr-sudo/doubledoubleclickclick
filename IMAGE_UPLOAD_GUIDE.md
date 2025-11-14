@@ -1,6 +1,6 @@
 # Image Upload & Management Guide
 
-Complete guide for uploading and managing images in your DoubleClicker blog.
+Complete guide for uploading and managing images in your SEWO blog.
 
 ## Setup Required
 
