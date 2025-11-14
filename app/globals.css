@@ -2251,7 +2251,8 @@ img {
   display: flex;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-xl);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: space-between;
 }
 
 .wizard-step {
