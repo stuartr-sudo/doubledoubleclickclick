@@ -2,102 +2,59 @@
 
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 
 export default function LeadCaptureContent() {
   const searchParams = useSearchParams()
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    company: '',
-    type: ''
-  })
+  const type = searchParams.get('type') || ''
 
-  useEffect(() => {
-    const name = searchParams.get('name') || ''
-    const email = searchParams.get('email') || ''
-    const company = searchParams.get('company') || ''
-    const type = searchParams.get('type') || ''
-    
-    setFormData({ name, email, company, type })
-  }, [searchParams])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Here you would send to your API/backend
-    // For now, just show success message
-    alert('Thank you! We will contact you soon.')
-  }
-
-  const tierName = formData.type === 'agencies' ? 'Agencies' : formData.type === 'enterprise' ? 'Enterprise' : ''
+  const tierName =
+    type === 'agencies'
+      ? 'Agencies'
+      : type === 'enterprise'
+      ? 'Enterprise'
+      : type === 'beta'
+      ? 'Beta Program'
+      : 'SEWO'
 
   return (
     <main>
       <section className="lead-capture-hero">
         <div className="lead-capture-container">
-          <h1 className="lead-capture-title">Thank You for Your Interest</h1>
+          <h1 className="lead-capture-title">Thank You</h1>
           <p className="lead-capture-subtitle">
-            {tierName ? `We've received your ${tierName} inquiry.` : "We've received your inquiry."} Our team will contact you shortly to discuss your needs.
+            {tierName === 'SEWO'
+              ? "We've received your inquiry and will be in touch shortly."
+              : `We've received your ${tierName} inquiry. Our team will be in touch shortly with next steps.`}
           </p>
         </div>
       </section>
 
       <section className="lead-capture-form-section">
         <div className="lead-capture-form-container">
-          <h2 className="section-label">Confirm Your Information</h2>
-          <form onSubmit={handleSubmit} className="lead-capture-form">
-            <div className="form-group">
-              <label htmlFor="name">Name *</label>
-              <input
-                type="text"
-                id="name"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="email">Email *</label>
-              <input
-                type="email"
-                id="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="company">{formData.type === 'enterprise' ? 'Company Name' : 'Agency Name'} *</label>
-              <input
-                type="text"
-                id="company"
-                required
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              />
-            </div>
-            {formData.type && (
-              <div className="form-group">
-                <label>Plan Type</label>
-                <input
-                  type="text"
-                  value={tierName}
-                  disabled
-                  className="disabled-input"
-                />
-              </div>
-            )}
-            <button type="submit" className="btn-pricing">
-              Confirm & Submit
-            </button>
-          </form>
-          <div className="lead-capture-footer">
-            <Link href="/" className="back-link">← Back to Home</Link>
+          <h2 className="section-label">What Happens Next</h2>
+          <div className="lead-capture-thankyou-body">
+            <p>
+              We&apos;re reviewing your details and will respond within <strong>1–2 business days</strong> with a short set
+              of follow‑up questions and a time to connect.
+            </p>
+            <p>
+              In the meantime, you can explore our latest thinking on ranking in AI assistants and LLMs, or reply directly
+              to our confirmation email with any extra context you want to share.
+            </p>
+          </div>
+
+          <div className="lead-capture-actions">
+            <Link href="/blog" className="btn btn-primary">
+              Read the Blog
+            </Link>
+            <Link href="/" className="btn btn-secondary">
+              Back to Homepage
+            </Link>
           </div>
         </div>
       </section>
     </main>
   )
 }
+
 

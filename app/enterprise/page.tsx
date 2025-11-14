@@ -18,10 +18,30 @@ export default function EnterprisePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    
-    // Here you would typically send to your API/backend
-    // For now, redirect to lead capture page
-    router.push(`/lead-capture?type=enterprise&name=${encodeURIComponent(formData.name)}&email=${encodeURIComponent(formData.email)}&company=${encodeURIComponent(formData.company)}`)
+
+    try {
+      await fetch('/api/lead-capture', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          company: formData.company,
+          website: formData.website,
+          message: formData.message,
+          plan_type: 'enterprise',
+          source: 'enterprise-page',
+        }),
+      })
+    } catch (error) {
+      console.error('Failed to submit lead capture:', error)
+      // Still redirect to thank-you even on API error
+    } finally {
+      setIsSubmitting(false)
+      router.push('/lead-capture?type=enterprise')
+    }
   }
 
   return (
