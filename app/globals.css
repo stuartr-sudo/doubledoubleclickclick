@@ -2134,6 +2134,26 @@ img {
   border-bottom: 1px solid var(--color-border);
 }
 
+.tier-page-hero--with-form {
+  padding-bottom: var(--spacing-xl);
+}
+
+.tier-page-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--spacing-3xl);
+  align-items: flex-start;
+}
+
+.tier-page-hero-copy {
+  max-width: 640px;
+}
+
+.tier-page-hero-form {
+  max-width: 480px;
+  margin-left: auto;
+}
+
 .tier-page-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -2272,6 +2292,15 @@ img {
 }
 
 @media (max-width: 768px) {
+  .tier-page-hero-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2xl);
+  }
+
+  .tier-page-hero-form {
+    margin: 0;
+  }
+
   .wizard-nav {
     justify-content: space-between;
   }
