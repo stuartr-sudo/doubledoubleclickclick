@@ -4785,14 +4785,14 @@ img {
 
 .hiw-step-image img {
   width: 100%;
-  max-width: 320px;
+  max-width: 480px;
   height: auto;
   object-fit: contain;
 }
 
 .hiw-step-image-placeholder {
   width: 100%;
-  max-width: 320px;
+  max-width: 480px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -7722,14 +7722,14 @@ img {
 
 .hiw-step-image img {
   width: 100%;
-  max-width: 320px;
+  max-width: 480px;
   height: auto;
   object-fit: contain;
 }
 
 .hiw-step-image-placeholder {
   width: 100%;
-  max-width: 320px;
+  max-width: 480px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
