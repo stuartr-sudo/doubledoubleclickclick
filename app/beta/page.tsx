@@ -13,7 +13,8 @@ export default function BetaPage() {
     website: '',
     budgetRange: '',
     aiContentLevel: '',
-    notes: '',
+    brandInfo: '',
+    goals: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [step, setStep] = useState(1)
@@ -40,7 +41,7 @@ export default function BetaPage() {
           website: formData.website,
           message: `Budget range: ${formData.budgetRange || 'n/a'}\nAI content level: ${
             formData.aiContentLevel || 'n/a'
-          }\nNotes: ${formData.notes || 'n/a'}`,
+          }\nBrand info: ${formData.brandInfo || 'n/a'}\nGoals: ${formData.goals || 'n/a'}`,
           plan_type: 'beta',
           source: 'beta-page',
         }),
@@ -53,17 +54,179 @@ export default function BetaPage() {
     }
   }
 
+  const isStep1Valid = formData.name.trim() !== '' && formData.email.trim() !== ''
+  const isStep2Valid = formData.company.trim() !== ''
+
   return (
     <main>
-      <section className="tier-page-hero">
+      <section className="tier-page-hero tier-page-hero--with-form">
         <div className="tier-page-container">
-          <Link href="/" className="back-link">
-            ← Back to Home
-          </Link>
-          <h1 className="tier-page-title">DoubleClicker — LLM Visibility (Beta)</h1>
-          <p className="tier-page-subtitle">
-            Plan, publish, and monitor content for AI ranking. Limited beta access for qualified brands.
-          </p>
+          <div className="tier-page-hero-grid">
+            <div className="tier-page-hero-copy">
+              <Link href="/" className="back-link">
+                ← Back to Home
+              </Link>
+              <h1 className="tier-page-title">DoubleClicker — LLM Visibility (Beta)</h1>
+              <p className="tier-page-subtitle">
+                Plan, publish, and monitor content for AI ranking. Limited beta access for qualified brands.
+              </p>
+            </div>
+
+            <div className="tier-page-hero-form">
+              <h2 className="section-label">Apply for Beta</h2>
+              <p className="tier-contact-description">
+                Tell us a little about your brand so we can make sure the beta is a good fit for your stage and resources.
+              </p>
+              <form onSubmit={handleSubmit} className="tier-contact-form">
+                <div className="wizard-steps">
+                  <div className={`wizard-step ${step === 1 ? 'wizard-step-active' : ''}`}>
+                    <div className="wizard-step-number">1</div>
+                    <span className="wizard-step-label">Contact</span>
+                  </div>
+                  <div className="wizard-step-connector"></div>
+                  <div className={`wizard-step ${step === 2 ? 'wizard-step-active' : ''}`}>
+                    <div className="wizard-step-number">2</div>
+                    <span className="wizard-step-label">Brand</span>
+                  </div>
+                  <div className="wizard-step-connector"></div>
+                  <div className={`wizard-step ${step === 3 ? 'wizard-step-active' : ''}`}>
+                    <div className="wizard-step-number">3</div>
+                    <span className="wizard-step-label">Budget & AI</span>
+                  </div>
+                </div>
+
+                <div className="wizard-form-content">
+                  {step === 1 && (
+                    <>
+                      <div className="form-group">
+                        <label htmlFor="name">Name *</label>
+                        <input
+                          type="text"
+                          id="name"
+                          required
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="email">Email *</label>
+                        <input
+                          type="email"
+                          id="email"
+                          required
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {step === 2 && (
+                    <>
+                      <div className="form-group">
+                        <label htmlFor="company">Brand / Company Name *</label>
+                        <input
+                          type="text"
+                          id="company"
+                          required
+                          value={formData.company}
+                          onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="website">Website</label>
+                        <input
+                          type="url"
+                          id="website"
+                          value={formData.website}
+                          onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="brandInfo">Tell us about your brand and what you do</label>
+                        <textarea
+                          id="brandInfo"
+                          rows={4}
+                          value={formData.brandInfo}
+                          onChange={(e) => setFormData({ ...formData, brandInfo: e.target.value })}
+                          placeholder="What industry are you in? What products or services do you offer?"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {step === 3 && (
+                    <>
+                      <div className="form-group">
+                        <label htmlFor="budgetRange">Monthly budget for AI content &amp; visibility *</label>
+                        <select
+                          id="budgetRange"
+                          required
+                          value={formData.budgetRange}
+                          onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
+                        >
+                          <option value="">Select a range</option>
+                          <option value="<2k">&lt; $2k / month</option>
+                          <option value="2-5k">$2k – $5k / month</option>
+                          <option value="5-15k">$5k – $15k / month</option>
+                          <option value="15k+">$15k+ / month</option>
+                          <option value="unsure">Not sure yet</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="aiContentLevel">Current level of AI content optimization *</label>
+                        <select
+                          id="aiContentLevel"
+                          required
+                          value={formData.aiContentLevel}
+                          onChange={(e) => setFormData({ ...formData, aiContentLevel: e.target.value })}
+                        >
+                          <option value="">Select one</option>
+                          <option value="none">None</option>
+                          <option value="not-much">Not much</option>
+                          <option value="some">Some content</option>
+                          <option value="a-lot">A lot of content</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="goals">What do you want this beta to achieve for your brand?</label>
+                        <textarea
+                          id="goals"
+                          rows={4}
+                          value={formData.goals}
+                          onChange={(e) => setFormData({ ...formData, goals: e.target.value })}
+                          placeholder="What are your goals? What challenges are you hoping to solve?"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="wizard-navigation">
+                  {step > 1 && (
+                    <button type="button" onClick={prevStep} className="btn btn-secondary">
+                      ← Back
+                    </button>
+                  )}
+                  {step < totalSteps && (
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      className="btn btn-primary"
+                      disabled={!isStep1Valid && step === 1 || !isStep2Valid && step === 2}
+                    >
+                      Next →
+                    </button>
+                  )}
+                  {step === totalSteps && (
+                    <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                      {isSubmitting ? 'Submitting…' : 'Submit Application'}
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -86,8 +249,6 @@ export default function BetaPage() {
           </div>
         </div>
       </section>
-
-      {/* Application form now appears in the hero section above; this section is no longer needed */}
     </main>
   )
 }
