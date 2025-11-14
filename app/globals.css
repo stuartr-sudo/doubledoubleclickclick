@@ -2343,10 +2343,122 @@ img {
   margin: 0;
 }
 
+/* Mobile Card View */
+.leads-cards-wrapper {
+  display: none;
+  margin-top: var(--spacing-xl);
+  gap: var(--spacing-lg);
+}
+
+.lead-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.lead-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lead-card-date {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.lead-card-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lead-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.lead-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.lead-card-field--full {
+  margin-top: var(--spacing-xs);
+}
+
+.lead-card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-light);
+}
+
+.lead-card-value {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.lead-card-link {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.lead-card-link:hover {
+  text-decoration: underline;
+}
+
+.leads-message--card {
+  background: var(--color-bg-light);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Mobile Responsive */
 @media (max-width: 768px) {
-  .leads-table th,
-  .leads-table td {
-    padding: 0.5rem 0.5rem;
+  .leads-table-wrapper {
+    display: none;
+  }
+
+  .leads-cards-wrapper {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .lead-card {
+    padding: var(--spacing-md);
+  }
+
+  .lead-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-xs);
+  }
+}
+
+@media (min-width: 769px) {
+  .leads-cards-wrapper {
+    display: none;
   }
 }
 

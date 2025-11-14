@@ -98,6 +98,9 @@ export default function AdminPageWrapper() {
               <Link href="/admin/homepage" className="btn btn-secondary">
                 Edit Homepage
               </Link>
+              <Link href="/admin/leads" className="btn btn-secondary">
+                Leads
+              </Link>
               <Link href="/admin/new" className="btn btn-primary">
                 New Post
               </Link>
