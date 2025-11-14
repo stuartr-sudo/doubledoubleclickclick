@@ -1,7 +1,6 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 
 export default function LeadCaptureContent() {
   const searchParams = useSearchParams()
@@ -30,7 +29,7 @@ export default function LeadCaptureContent() {
       </section>
 
       <section className="lead-capture-form-section">
-        <div className="lead-capture-form-container">
+        <div className="lead-capture-form-container lead-capture-card">
           <h2 className="section-label">What Happens Next</h2>
           <div className="lead-capture-thankyou-body">
             <p>
@@ -38,18 +37,9 @@ export default function LeadCaptureContent() {
               of follow‑up questions and a time to connect.
             </p>
             <p>
-              In the meantime, you can explore our latest thinking on ranking in AI assistants and LLMs, or reply directly
-              to our confirmation email with any extra context you want to share.
+              In the meantime, keep an eye on your inbox for a confirmation email. You can reply directly to that message
+              with any extra context or questions you want to share.
             </p>
-          </div>
-
-          <div className="lead-capture-actions">
-            <Link href="/blog" className="btn btn-primary">
-              Read the Blog
-            </Link>
-            <Link href="/" className="btn btn-secondary">
-              Back to Homepage
-            </Link>
           </div>
         </div>
       </section>
