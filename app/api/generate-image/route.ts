@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
 
 // Enable CORS and allow all origins for this API route
 export async function OPTIONS() {
