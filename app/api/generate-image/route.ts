@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Enable CORS and allow all origins for this API route
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { prompt, aspect_ratio, num_images, enhance_prompt, folder, prompt_provider, prompt_model } = await request.json()
@@ -8,15 +24,30 @@ export async function POST(request: NextRequest) {
     if (!prompt) {
       return NextResponse.json(
         { success: false, error: 'Prompt is required' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        }
       )
     }
 
     const FAL_KEY = process.env.FAL_KEY
     if (!FAL_KEY) {
+      console.error('FAL_KEY not configured in environment variables')
       return NextResponse.json(
         { success: false, error: 'FAL_KEY not configured' },
-        { status: 500 }
+        { 
+          status: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        }
       )
     }
 
@@ -56,10 +87,17 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('fal.ai error:', errorText)
+      console.error('fal.ai error:', response.status, errorText)
       return NextResponse.json(
         { success: false, error: 'Image generation failed', details: errorText },
-        { status: response.status }
+        { 
+          status: response.status,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        }
       )
     }
 
@@ -74,6 +112,12 @@ export async function POST(request: NextRequest) {
       images: uploadedImages,
       description: result.description || '',
       enhanced_prompt: enhance_prompt ? finalPrompt : null,
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
     })
   } catch (error) {
     console.error('Error generating image:', error)
@@ -83,7 +127,14 @@ export async function POST(request: NextRequest) {
         error: 'Failed to generate image',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      }
     )
   }
 }
