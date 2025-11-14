@@ -2307,6 +2307,49 @@ img {
   }
 }
 
+/* Leads admin table */
+.leads-table-wrapper {
+  margin-top: var(--spacing-xl);
+  overflow-x: auto;
+}
+
+.leads-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.leads-table th,
+.leads-table td {
+  padding: 0.75rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.leads-table th {
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-light);
+}
+
+.leads-message {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .leads-table th,
+  .leads-table td {
+    padding: 0.5rem 0.5rem;
+  }
+}
+
 .form-group {
   margin-bottom: var(--spacing-lg);
 }
