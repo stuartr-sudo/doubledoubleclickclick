@@ -11,7 +11,9 @@ export default function EnterprisePage() {
     email: '',
     company: '',
     website: '',
-    message: ''
+    message: '',
+    budgetRange: '',
+    aiContentLevel: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -30,7 +32,10 @@ export default function EnterprisePage() {
           email: formData.email,
           company: formData.company,
           website: formData.website,
-          message: formData.message,
+          message:
+            `Budget range: ${formData.budgetRange || 'n/a'}\n` +
+            `AI content level: ${formData.aiContentLevel || 'n/a'}\n` +
+            `Notes: ${formData.message || 'n/a'}`,
           plan_type: 'enterprise',
           source: 'enterprise-page',
         }),
@@ -143,7 +148,38 @@ export default function EnterprisePage() {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="message">Message</label>
+              <label htmlFor="budgetRange">Estimated monthly budget for AI content &amp; visibility *</label>
+              <select
+                id="budgetRange"
+                required
+                value={formData.budgetRange}
+                onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
+              >
+                <option value="">Select a range</option>
+                <option value="<10k">&lt; $10k / month</option>
+                <option value="10-25k">$10k – $25k / month</option>
+                <option value="25-75k">$25k – $75k / month</option>
+                <option value="75k+">$75k+ / month</option>
+                <option value="unsure">Not sure yet</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="aiContentLevel">Current level of AI content optimization *</label>
+              <select
+                id="aiContentLevel"
+                required
+                value={formData.aiContentLevel}
+                onChange={(e) => setFormData({ ...formData, aiContentLevel: e.target.value })}
+              >
+                <option value="">Select one</option>
+                <option value="none">None</option>
+                <option value="not-much">Not much</option>
+                <option value="some">Some content and pilots</option>
+                <option value="a-lot">A lot of content and active programs</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="message">How is AI content currently owned or managed inside your org?</label>
               <textarea
                 id="message"
                 rows={4}

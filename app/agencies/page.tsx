@@ -11,7 +11,9 @@ export default function AgenciesPage() {
     email: '',
     company: '',
     website: '',
-    message: ''
+    message: '',
+    budgetRange: '',
+    aiContentLevel: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -30,7 +32,10 @@ export default function AgenciesPage() {
           email: formData.email,
           company: formData.company,
           website: formData.website,
-          message: formData.message,
+          message:
+            `Budget range: ${formData.budgetRange || 'n/a'}\n` +
+            `AI content level: ${formData.aiContentLevel || 'n/a'}\n` +
+            `Notes: ${formData.message || 'n/a'}`,
           plan_type: 'agencies',
           source: 'agencies-page',
         }),
@@ -135,7 +140,38 @@ export default function AgenciesPage() {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="message">Message</label>
+              <label htmlFor="budgetRange">Typical monthly retainer per client *</label>
+              <select
+                id="budgetRange"
+                required
+                value={formData.budgetRange}
+                onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
+              >
+                <option value="">Select a range</option>
+                <option value="<2k">&lt; $2k / client / month</option>
+                <option value="2-5k">$2k – $5k / client / month</option>
+                <option value="5-15k">$5k – $15k / client / month</option>
+                <option value="15k+">$15k+ / client / month</option>
+                <option value="mixed">Mix of smaller and larger retainers</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="aiContentLevel">Current level of AI content optimization *</label>
+              <select
+                id="aiContentLevel"
+                required
+                value={formData.aiContentLevel}
+                onChange={(e) => setFormData({ ...formData, aiContentLevel: e.target.value })}
+              >
+                <option value="">Select one</option>
+                <option value="none">None</option>
+                <option value="not-much">Not much</option>
+                <option value="some">Some content</option>
+                <option value="a-lot">A lot of client content</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="message">Anything else we should know about your clients or services?</label>
               <textarea
                 id="message"
                 rows={4}
