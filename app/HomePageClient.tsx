@@ -101,6 +101,7 @@ interface HomepageContent {
   hero_text_color?: string
   hero_cta_bg_color?: string
   hero_cta_text_color?: string
+  quiz_cta_border_color?: string
   quiz_title?: string
   quiz_description?: string
   quiz_cta_text?: string
@@ -188,6 +189,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const heroTextColor = homepageContent?.hero_text_color || '#ffffff'
   const heroCTABgColor = homepageContent?.hero_cta_bg_color || '#000000'
   const heroCTATextColor = homepageContent?.hero_cta_text_color || '#ffffff'
+  const quizCTABorderColor = homepageContent?.quiz_cta_border_color || '#000000'
   const quizTitle = homepageContent?.quiz_title || 'Take the 12-Step Quiz'
   const quizDescription = homepageContent?.quiz_description || 'See where you&apos;re missing out on LLM visibility. Get personalized insights in minutes.'
   const quizCTAText = homepageContent?.quiz_cta_text || 'Start Quiz'
@@ -377,7 +379,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   className="quiz-cta-button"
                   style={{
                     backgroundColor: heroCTABgColor,
-                    color: heroCTATextColor
+                    color: heroCTATextColor,
+                    borderColor: quizCTABorderColor
                   }}
                 >
                   {quizCTAText}

@@ -59,6 +59,7 @@ interface HomepageContent {
   hero_text_color?: string
   hero_cta_bg_color?: string
   hero_cta_text_color?: string
+  quiz_cta_border_color?: string
   quiz_title?: string
   quiz_description?: string
   quiz_cta_text?: string
@@ -164,6 +165,7 @@ export default function HomepageEditorPage() {
     hero_text_color: '#ffffff',
     hero_cta_bg_color: '#000000',
     hero_cta_text_color: '#ffffff',
+    quiz_cta_border_color: '#000000',
     quiz_title: 'Take the 12-Step Quiz',
     quiz_description: 'See where you\'re missing out on LLM visibility. Get personalized insights in minutes.',
     quiz_cta_text: 'Start Quiz',
@@ -952,6 +954,27 @@ export default function HomepageEditorPage() {
                     value={formData.hero_cta_text_color || '#ffffff'}
                     onChange={(e) => setFormData({...formData, hero_cta_text_color: e.target.value})}
                     placeholder="#ffffff"
+                    style={{ flex: 1 }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="quiz_cta_border_color">Quiz Button Border Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="quiz_cta_border_color"
+                    name="quiz_cta_border_color"
+                    value={formData.quiz_cta_border_color || '#000000'}
+                    onChange={handleChange}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.quiz_cta_border_color || '#000000'}
+                    onChange={(e) => setFormData({...formData, quiz_cta_border_color: e.target.value})}
+                    placeholder="#000000"
                     style={{ flex: 1 }}
                   />
                 </div>

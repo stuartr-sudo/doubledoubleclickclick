@@ -322,7 +322,7 @@ img {
   font-weight: 600;
   transition: all 0.3s ease;
   width: fit-content;
-  border: none;
+  border: 2px solid;
   margin-top: var(--spacing-sm);
 }
 
