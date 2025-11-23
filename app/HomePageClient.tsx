@@ -433,20 +433,28 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       borderRadius: '50%',
                       animation: 'spin 1s linear infinite'
                     }}></div>
-                    <style jsx>{`
-                      @keyframes spin {
-                        to { transform: rotate(360deg); }
-                      }
-                    `}</style>
+                    <style dangerouslySetInnerHTML={{
+                      __html: `
+                        @keyframes spin {
+                          to { transform: rotate(360deg); }
+                        }
+                      `
+                    }} />
                   </div>
 
-                  <style jsx>{`
-                    div::-webkit-scrollbar {
-                      display: none;
-                    }
-                  `}</style>
+                  <style dangerouslySetInnerHTML={{
+                    __html: `
+                      .scrollbar-hide::-webkit-scrollbar {
+                        display: none;
+                      }
+                      .scrollbar-hide {
+                        -ms-overflow-style: none;
+                        scrollbar-width: none;
+                      }
+                    `
+                  }} />
                   <div 
-                    className="relative z-10"
+                    className="relative z-10 scrollbar-hide"
                     data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_hide_header=1&sa_hide_footer=1" 
                     data-sa-view="inline" 
                     style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
