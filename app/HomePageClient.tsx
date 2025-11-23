@@ -400,24 +400,56 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 </div>
                 
                 <div 
-                  className="w-full" 
+                  className="w-full relative" 
                   style={{ 
                     display: showQuiz ? 'block' : 'none',
                     maxHeight: '80vh',
                     overflowY: 'auto',
                     scrollbarWidth: 'none', /* Firefox */
-                    msOverflowStyle: 'none'  /* IE and Edge */
+                    msOverflowStyle: 'none',  /* IE and Edge */
+                    minHeight: '400px' /* Reserve space for loading */
                   }}
                 >
+                  {/* Loading State */}
+                  <div 
+                    className="absolute inset-0 flex items-center justify-center bg-white/50 z-0"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" style={{
+                      width: '48px',
+                      height: '48px',
+                      border: '3px solid rgba(0,0,0,0.1)',
+                      borderTopColor: heroCTABgColor,
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }}></div>
+                    <style jsx>{`
+                      @keyframes spin {
+                        to { transform: rotate(360deg); }
+                      }
+                    `}</style>
+                  </div>
+
                   <style jsx>{`
                     div::-webkit-scrollbar {
                       display: none;
                     }
                   `}</style>
                   <div 
+                    className="relative z-10"
                     data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_hide_header=1&sa_hide_footer=1" 
                     data-sa-view="inline" 
-                    style={{ maxWidth: '100%', width: '100%' }} 
+                    style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
                     data-sa-auto-height="1"
                   ></div>
                 </div>
