@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import Script from 'next/script'
 
 // Dynamic imports for code splitting - load below-the-fold components lazily
 const MobileMenu = dynamic(() => import('@/components/MobileMenu'), { ssr: false })
@@ -270,6 +271,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
   const [quizWebsite, setQuizWebsite] = useState('')
+  const [showQuiz, setShowQuiz] = useState(false)
   const router = useRouter()
 
   const handleMenuToggle = () => {
@@ -331,6 +333,11 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
   return (
     <main>
+      <Script 
+        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=O0cx2c" 
+        strategy="afterInteractive"
+      />
+
       {/* Hero Section - Stripe-style Design */}
       <section className="hero-stripe">
         {/* Hamburger Menu - Inside Hero Container */}
@@ -368,26 +375,52 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             {/* Right Column - Quiz CTA */}
             <div className="hero-stripe-right">
               <div className="hero-quiz-cta">
-                <div className="quiz-badge">
-                  <span className="quiz-steps">{quizSteps}</span>
-                  <span className="quiz-badge-text">{quizBadgeText}</span>
+                <div style={{ display: showQuiz ? 'none' : 'block' }}>
+                  <div className="quiz-badge">
+                    <span className="quiz-steps">{quizSteps}</span>
+                    <span className="quiz-badge-text">{quizBadgeText}</span>
+                  </div>
+                  <h2 className="quiz-title">{quizTitle}</h2>
+                  <p className="quiz-description">{quizDescription}</p>
+                  <button 
+                    onClick={() => setShowQuiz(true)}
+                    className="quiz-cta-button"
+                    style={{
+                      backgroundColor: heroCTABgColor,
+                      color: heroCTATextColor,
+                      borderColor: quizCTABorderColor,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {quizCTAText}
+                    <svg className="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
                 </div>
-                <h2 className="quiz-title">{quizTitle}</h2>
-                <p className="quiz-description">{quizDescription}</p>
-                <Link 
-                  href={quizCTALink} 
-                  className="quiz-cta-button"
-                  style={{
-                    backgroundColor: heroCTABgColor,
-                    color: heroCTATextColor,
-                    borderColor: quizCTABorderColor
+                
+                <div 
+                  className="w-full" 
+                  style={{ 
+                    display: showQuiz ? 'block' : 'none',
+                    maxHeight: '80vh',
+                    overflowY: 'auto',
+                    scrollbarWidth: 'none', /* Firefox */
+                    msOverflowStyle: 'none'  /* IE and Edge */
                   }}
                 >
-                  {quizCTAText}
-                  <svg className="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </Link>
+                  <style jsx>{`
+                    div::-webkit-scrollbar {
+                      display: none;
+                    }
+                  `}</style>
+                  <div 
+                    data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_hide_header=1&sa_hide_footer=1" 
+                    data-sa-view="inline" 
+                    style={{ maxWidth: '100%', width: '100%' }} 
+                    data-sa-auto-height="1"
+                  ></div>
+                </div>
               </div>
             </div>
           </div>
