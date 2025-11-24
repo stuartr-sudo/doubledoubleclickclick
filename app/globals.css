@@ -10854,7 +10854,7 @@ img {
 
 @media (max-width: 1024px) {
   .hero-stripe-right.quiz-open {
-    padding: 0 !important;
+    padding: 20px !important;
   }
 }
 
@@ -10877,12 +10877,5 @@ img {
 @media (min-width: 1025px) {
   .hero-stripe-right.quiz-open iframe {
     width: 100% !important;
-  }
-}
-
-/* Quiz padding on desktop only */
-@media (min-width: 1025px) {
-  .quiz-content-wrapper {
-    padding-top: 100px;
   }
 }
