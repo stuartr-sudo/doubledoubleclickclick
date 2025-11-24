@@ -10857,3 +10857,18 @@ img {
     padding: 0 !important;
   }
 }
+
+/* Desktop styles for quiz expansion */
+@media (min-width: 1025px) {
+  .hero-stripe-right.quiz-open {
+    padding: 0 !important;
+    height: 100vh;
+    min-height: 100vh;
+    align-items: stretch !important;
+  }
+  
+  .hero-stripe-right.quiz-open .hero-quiz-cta {
+    max-width: 100% !important;
+    height: 100%;
+  }
+}

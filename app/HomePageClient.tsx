@@ -451,14 +451,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 </div>
                 
                 <div 
-                  className="w-full relative" 
+                  className="w-full relative h-full" 
                   style={{ 
                     display: showQuiz ? 'block' : 'none',
-                    maxHeight: '80vh',
+                    height: '100%',
                     overflowY: 'auto',
                     scrollbarWidth: 'none', /* Firefox */
                     msOverflowStyle: 'none',  /* IE and Edge */
-                    minHeight: '400px' /* Reserve space for loading */
                   }}
                 >
                   {/* Loading State */}
@@ -507,12 +506,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       }
                     `
                   }} />
-                  <div ref={quizContainerRef}>
+                  <div ref={quizContainerRef} className="h-full">
                     <div 
-                      className="relative z-10 scrollbar-hide"
+                      className="relative z-10 scrollbar-hide h-full"
                       data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_hide_header=1&sa_hide_footer=1" 
                       data-sa-view="inline" 
-                      style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
+                      style={{ maxWidth: '100%', width: '100%', background: 'transparent', height: '100%' }} 
                       data-sa-auto-height="1"
                     ></div>
                   </div>
