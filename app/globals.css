@@ -10851,3 +10851,9 @@ img {
   }
 }
 
+
+@media (max-width: 1024px) {
+  .hero-stripe-right.quiz-open {
+    padding: 0 !important;
+  }
+}

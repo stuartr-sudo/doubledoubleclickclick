@@ -424,7 +424,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             </div>
 
             {/* Right Column - Quiz CTA */}
-            <div className="hero-stripe-right">
+            <div className={`hero-stripe-right ${showQuiz ? 'quiz-open' : ''}`}>
               <div className="hero-quiz-cta">
                 <div style={{ display: showQuiz ? 'none' : 'block' }}>
                   <div className="quiz-badge">
