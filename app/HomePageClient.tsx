@@ -385,7 +385,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   return (
     <main>
       <Script 
-        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=Nk5dYA" 
+        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=O0cx2c" 
         strategy="afterInteractive"
       />
 
@@ -450,55 +450,72 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   </button>
                 </div>
                 
-                {/* Container that is ALWAYS in the DOM but hidden until showQuiz is true */}
                 <div 
+                  className="w-full relative h-full" 
                   style={{ 
                     display: showQuiz ? 'block' : 'none',
-                    width: '100%',
-                    height: '100%'
+                    height: '100%',
+                    overflowY: 'auto',
+                    scrollbarWidth: 'none', /* Firefox */
+                    msOverflowStyle: 'none',  /* IE and Edge */
                   }}
                 >
-                  <div ref={quizContainerRef}>
+                  {/* Loading State */}
+                  {!isQuizLoaded && (
                     <div 
-                      className="relative z-10"
-                      data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/?sa_target=_top" 
+                      className="absolute inset-0 flex items-center justify-center bg-white z-20"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 20,
+                        backgroundColor: '#ffffff'
+                      }}
+                    >
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" style={{
+                        width: '48px',
+                        height: '48px',
+                        border: '3px solid rgba(0,0,0,0.1)',
+                        borderTopColor: heroCTABgColor,
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
+                      <style dangerouslySetInnerHTML={{
+                        __html: `
+                          @keyframes spin {
+                            to { transform: rotate(360deg); }
+                          }
+                        `
+                      }} />
+                    </div>
+                  )}
+
+                  <style dangerouslySetInnerHTML={{
+                    __html: `
+                      .scrollbar-hide::-webkit-scrollbar {
+                        display: none;
+                      }
+                      .scrollbar-hide {
+                        -ms-overflow-style: none;
+                        scrollbar-width: none;
+                      }
+                    `
+                  }} />
+                  <div ref={quizContainerRef} className="h-full">
+                    <div 
+                      className="relative z-10 scrollbar-hide h-full"
+                      data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_hide_header=1&sa_hide_footer=1" 
                       data-sa-view="inline" 
-                      style={{ maxWidth: '100%', width: '100%' }} 
+                      style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
                       data-sa-auto-height="1"
                     ></div>
                   </div>
                 </div>
-
-                {/* Loading Spinner - Only show when quiz is requested but not yet loaded */}
-                {showQuiz && !isQuizLoaded && (
-                  <div 
-                    className="absolute inset-0 flex items-center justify-center bg-white z-20"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      zIndex: 50
-                    }}
-                  >
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" style={{
-                      width: '48px',
-                      height: '48px',
-                      border: '3px solid rgba(0,0,0,0.1)',
-                      borderTopColor: heroCTABgColor,
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }}></div>
-                    <style dangerouslySetInnerHTML={{
-                      __html: `
-                        @keyframes spin {
-                          to { transform: rotate(360deg); }
-                        }
-                      `
-                    }} />
-                  </div>
-                )}
               </div>
             </div>
           </div>
