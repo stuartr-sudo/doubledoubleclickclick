@@ -51,18 +51,19 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
       </button>
 
       <nav className="mobile-menu-nav">
-        <Link href="/blog" className="mobile-menu-link" onClick={onClose}>
+        {/* Blog temporarily hidden */}
+        {/* <Link href="/blog" className="mobile-menu-link" onClick={onClose}>
           Blog
-        </Link>
-        <a href="#contact" className="mobile-menu-link" onClick={handleLinkClick}>
+        </Link> */}
+        <Link href="/contact" className="mobile-menu-link" onClick={onClose}>
           Contact
-        </a>
+        </Link>
         <a href="#services" className="mobile-menu-link" onClick={handleLinkClick}>
           Services
         </a>
-        <a href="#privacy" className="mobile-menu-link" onClick={handleLinkClick}>
+        <Link href="/privacy" className="mobile-menu-link" onClick={onClose}>
           Privacy
-        </a>
+        </Link>
       </nav>
     </div>
   )

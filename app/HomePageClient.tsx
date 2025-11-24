@@ -269,6 +269,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const [showBottomQuiz, setShowBottomQuiz] = useState(false)
   const [isQuizLoaded, setIsQuizLoaded] = useState(false)
   const quizContainerRef = useRef<HTMLDivElement>(null)
+  const midQuizRef = useRef<HTMLDivElement>(null)
+  const bottomQuizRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -319,6 +321,19 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       return () => clearTimeout(timer)
     }
   }, [showQuiz, isQuizLoaded])
+
+  // Smoothly scroll inline quiz blocks into view when they open
+  useEffect(() => {
+    if (showMidQuiz && midQuizRef.current) {
+      midQuizRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [showMidQuiz])
+
+  useEffect(() => {
+    if (showBottomQuiz && bottomQuizRef.current) {
+      bottomQuizRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [showBottomQuiz])
 
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -634,6 +649,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </button>
           <div
             className="quiz-inline-container"
+            ref={midQuizRef}
             data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
             data-sa-view="inline"
             data-sa-auto-height="1"
@@ -808,7 +824,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       </section>
 
       {/* Services Section */}
-      <section className="services-showcase-section" style={{ background: servicesBgColor }}>
+      <section id="services" className="services-showcase-section" style={{ background: servicesBgColor }}>
         <div className="services-showcase-container">
           <div className="services-showcase-header">
             <h2 className="services-showcase-title">{servicesSectionTitle}</h2>
@@ -921,6 +937,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </button>
           <div
             className="quiz-inline-container"
+            ref={bottomQuizRef}
             data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
             data-sa-view="inline"
             data-sa-auto-height="1"
