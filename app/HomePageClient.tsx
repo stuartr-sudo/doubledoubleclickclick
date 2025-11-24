@@ -506,7 +506,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       }
                     `
                   }} />
-                  <div ref={quizContainerRef} className="h-full" style={{ paddingTop: '80px' }}>
+                  <div ref={quizContainerRef} className="h-full" style={{ paddingTop: '100px' }}>
                     <div 
                       className="relative z-10 scrollbar-hide h-full"
                       data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top" 
