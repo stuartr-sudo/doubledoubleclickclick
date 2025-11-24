@@ -4922,11 +4922,11 @@ img {
   }
 
   .hero-stripe-title {
-    font-size: clamp(2rem, 9vw, 3.5rem);
+    font-size: clamp(3rem, 12vw, 4rem);
   }
 
   .hero-stripe-description {
-    font-size: clamp(1rem, 4vw, 1.125rem);
+    font-size: clamp(1.25rem, 5vw, 1.5rem);
   }
 
   .hero-stripe-left {
@@ -7859,11 +7859,11 @@ img {
   }
 
   .hero-stripe-title {
-    font-size: clamp(2rem, 9vw, 3.5rem);
+    font-size: clamp(3rem, 12vw, 4rem);
   }
 
   .hero-stripe-description {
-    font-size: clamp(1rem, 4vw, 1.125rem);
+    font-size: clamp(1.25rem, 5vw, 1.5rem);
   }
 
   .hero-stripe-left {
@@ -10796,11 +10796,11 @@ img {
   }
 
   .hero-stripe-title {
-    font-size: clamp(2rem, 9vw, 3.5rem);
+    font-size: clamp(3rem, 12vw, 4rem);
   }
 
   .hero-stripe-description {
-    font-size: clamp(1rem, 4vw, 1.125rem);
+    font-size: clamp(1.25rem, 5vw, 1.5rem);
   }
 
   .hero-stripe-left {
