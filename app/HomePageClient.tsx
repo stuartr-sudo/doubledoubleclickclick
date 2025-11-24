@@ -451,9 +451,9 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 </div>
                 
                 <div 
-                  className="w-full relative h-full" 
+                  className="w-full relative h-full flex flex-col justify-center" 
                   style={{ 
-                    display: showQuiz ? 'block' : 'none',
+                    display: showQuiz ? 'flex' : 'none',
                     height: '100%',
                     overflowY: 'auto',
                     scrollbarWidth: 'none', /* Firefox */
@@ -506,9 +506,9 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       }
                     `
                   }} />
-                  <div ref={quizContainerRef} className="h-full">
+                  <div ref={quizContainerRef} className="w-full">
                     <div 
-                      className="relative z-10 scrollbar-hide h-full"
+                      className="relative z-10 scrollbar-hide"
                       data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top" 
                       data-sa-view="inline" 
                       style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
