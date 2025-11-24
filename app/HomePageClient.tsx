@@ -504,9 +504,18 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                         -ms-overflow-style: none;
                         scrollbar-width: none;
                       }
+                      .quiz-content-wrapper {
+                        height: 100%;
+                        padding-top: 100px;
+                      }
+                      @media (max-width: 1024px) {
+                        .quiz-content-wrapper {
+                          padding-top: 0 !important;
+                        }
+                      }
                     `
                   }} />
-                  <div ref={quizContainerRef} className="h-full quiz-content-wrapper">
+                  <div ref={quizContainerRef} className="quiz-content-wrapper">
                     <div 
                       className="relative z-10 scrollbar-hide h-full"
                       data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top" 
