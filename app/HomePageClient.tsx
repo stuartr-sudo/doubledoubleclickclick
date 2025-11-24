@@ -392,9 +392,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       {/* Hero Section - Stripe-style Design */}
       <section className="hero-stripe">
         {/* Hamburger Menu - Inside Hero Container */}
-        <div className="absolute top-4 left-4 z-50 font-bold text-xl tracking-tight md:hidden" style={{ color: heroTextColor }}>
-          SEWO
-        </div>
         <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
