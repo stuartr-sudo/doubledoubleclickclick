@@ -424,7 +424,10 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             </div>
 
             {/* Right Column - Quiz CTA */}
-            <div className={`hero-stripe-right ${showQuiz ? 'quiz-open' : ''}`}>
+            <div 
+              className={`hero-stripe-right ${showQuiz ? 'quiz-open' : ''}`}
+              style={showQuiz ? { background: heroBgGradient } : undefined}
+            >
               <div className="hero-quiz-cta">
                 <div style={{ display: showQuiz ? 'none' : 'block' }}>
                   <div className="quiz-badge">
