@@ -10879,3 +10879,10 @@ img {
     width: 100% !important;
   }
 }
+
+/* Quiz padding on desktop only */
+@media (min-width: 1025px) {
+  .quiz-content-wrapper {
+    padding-top: 100px;
+  }
+}
