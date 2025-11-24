@@ -511,7 +511,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       className="relative z-10 scrollbar-hide h-full"
                       data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_hide_header=1&sa_hide_footer=1" 
                       data-sa-view="inline" 
-                      style={{ maxWidth: '100%', width: '100%', background: 'transparent', height: '100%' }} 
+                      style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
+                      data-sa-auto-height="1"
                     ></div>
                   </div>
                 </div>

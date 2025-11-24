@@ -10876,8 +10876,6 @@ img {
 /* Force iframe full height and override ScoreApp styles */
 @media (min-width: 1025px) {
   .hero-stripe-right.quiz-open iframe {
-    height: 100% !important;
-    min-height: 100% !important;
     width: 100% !important;
   }
 }
