@@ -54,9 +54,24 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     }
   }
 
+  const title = post.meta_title || post.title
+  const description = post.meta_description || ''
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
+  
   return {
-    title: post.meta_title || post.title,
-    description: post.meta_description || '',
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'article',
+      url: `${baseUrl}/blog/${params.slug}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
   }
 }
 
@@ -132,8 +147,37 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     }
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
+  
+  // JSON-LD structured data for the article
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.meta_description || '',
+    image: post.featured_image || '',
+    datePublished: post.created_date,
+    dateModified: post.updated_date || post.created_date,
+    author: {
+      '@type': 'Organization',
+      name: 'SEWO',
+      url: baseUrl,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'SEWO',
+      url: baseUrl,
+    },
+  }
+
   return (
     <main>
+      {/* JSON-LD for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      
       {/* Header */}
       <header className="header">
         <div className="container">

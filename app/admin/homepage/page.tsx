@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ImageUpload from '@/components/ImageUpload'
 import TextEnhancer from '@/components/TextEnhancer'
+import { AdminAuthCheck } from '@/components/AdminAuthCheck'
 
 interface FAQItem {
   id: string
@@ -103,7 +104,7 @@ interface HomepageContent {
   quiz_cta_bg_color?: string
 }
 
-export default function HomepageEditorPage() {
+function HomepageEditorPageInner() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -2043,6 +2044,14 @@ export default function HomepageEditorPage() {
         </form>
       </div>
     </main>
+  )
+}
+
+export default function HomepageEditorPage() {
+  return (
+    <AdminAuthCheck>
+      <HomepageEditorPageInner />
+    </AdminAuthCheck>
   )
 }
 

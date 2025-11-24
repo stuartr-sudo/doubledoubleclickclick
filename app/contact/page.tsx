@@ -1,8 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function ContactPage() {
+  // Set document title for SEO (since we can't use metadata export in client component)
+  useEffect(() => {
+    document.title = 'Contact Us | SEWO'
+  }, [])
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')

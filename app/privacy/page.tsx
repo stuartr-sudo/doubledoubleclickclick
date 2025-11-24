@@ -1,4 +1,11 @@
+import type { Metadata } from 'next'
+
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'Privacy policy for SEWO - Learn how we handle your data.',
+}
 
 export default function PrivacyPage() {
   return (

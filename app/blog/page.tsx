@@ -7,6 +7,16 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Blog | SEWO - Get Found Everywhere',
   description: 'Expert insights on LLM ranking, AI search optimization, and making your brand the answer AI suggests.',
+  openGraph: {
+    title: 'Blog | SEWO',
+    description: 'Expert insights on LLM ranking, AI search optimization, and making your brand the answer AI suggests.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Blog | SEWO',
+    description: 'Expert insights on LLM ranking and AI search optimization.',
+  },
 }
 
 // Force dynamic rendering

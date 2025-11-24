@@ -1,5 +1,10 @@
 import AdminPageWrapper from './AdminPageWrapper'
+import { AdminProtected } from '@/components/AdminProtected'
 
 export default function AdminPage() {
-  return <AdminPageWrapper />
+  return (
+    <AdminProtected>
+      <AdminPageWrapper />
+    </AdminProtected>
+  )
 }

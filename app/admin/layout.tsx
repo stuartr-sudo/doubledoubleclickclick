@@ -1,8 +1,7 @@
 import { ReactNode } from 'react'
-import { AdminProtected } from '@/components/AdminProtected'
 
+// Layout for /admin routes. Protection is applied per-page so that /admin/login
+// remains accessible and does not get caught in a redirect loop.
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  // Protect all /admin routes behind the existing admin login/session system.
-  // This does not touch the public homepage in any way.
-  return <AdminProtected>{children}</AdminProtected>
+  return <>{children}</>
 }

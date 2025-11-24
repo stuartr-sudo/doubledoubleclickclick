@@ -1,9 +1,25 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import HomePageClient from './HomePageClient'
+import type { Metadata } from 'next'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'SEWO - Get Found Everywhere | LLM Ranking & AI Search Optimization',
+  description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search results. Get discovered by ChatGPT, Claude, Gemini & more.',
+  openGraph: {
+    title: 'SEWO - Get Found Everywhere',
+    description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SEWO - Get Found Everywhere',
+    description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization.',
+  },
+}
 
 export default async function HomePage() {
   const supabase = await createClient()

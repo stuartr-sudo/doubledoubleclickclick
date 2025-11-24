@@ -388,8 +388,29 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     }
   ]
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sewo.io'
+  
+  // JSON-LD structured data for Organization
+  const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'SEWO',
+    url: baseUrl,
+    logo: logoImage || `${baseUrl}/logo.png`,
+    description: 'Expert LLM ranking optimization to boost your visibility in AI-powered search',
+    sameAs: [
+      // Add social media URLs here if available
+    ],
+  }
+
   return (
     <main>
+      {/* JSON-LD for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      
       <Script 
         src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=PtHIIH" 
         strategy="afterInteractive"

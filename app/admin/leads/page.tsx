@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { AdminProtected } from '@/components/AdminProtected'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,7 @@ interface LeadCapture {
   created_at: string
 }
 
-export default async function LeadsAdminPage() {
+async function LeadsAdminPageInner() {
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -160,6 +161,14 @@ export default async function LeadsAdminPage() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function LeadsAdminPage() {
+  return (
+    <AdminProtected>
+      <LeadsAdminPageInner />
+    </AdminProtected>
   )
 }
 
