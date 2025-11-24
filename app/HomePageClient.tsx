@@ -194,14 +194,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const quizTitle = homepageContent?.quiz_title || 'Take the 12-Step Quiz'
   const quizDescription = homepageContent?.quiz_description || 'See where you&apos;re missing out on LLM visibility. Get personalized insights in minutes.'
   const quizCTAText = homepageContent?.quiz_cta_text || 'Start Quiz'
-  const quizCTALink = homepageContent?.quiz_cta_link || '/quiz'
   const quizSteps = homepageContent?.quiz_steps || '12'
   const quizBadgeText = homepageContent?.quiz_badge_text || 'Steps'
-  const quizFormTitle = homepageContent?.quiz_form_title || 'Want More SEO Traffic?'
-  const quizFormDescription = homepageContent?.quiz_form_description || 'Answer 5 quick questions and I will give you a step-by-step 7-week action plan showing you exactly what you need to do to get more traffic.'
-  const quizFormPlaceholder = homepageContent?.quiz_form_placeholder || 'What is the URL of your website?'
-  const quizFormCtaText = homepageContent?.quiz_form_cta_text || 'NEXT'
-  const quizFormCtaLink = homepageContent?.quiz_form_cta_link || '/quiz'
   const techCarouselTitle = homepageContent?.tech_carousel_title || 'Technology we work with'
   const techCarouselItems = homepageContent?.tech_carousel_items || [
     { id: '1', name: 'ChatGPT', icon: '' },
@@ -270,8 +264,9 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
-  const [quizWebsite, setQuizWebsite] = useState('')
   const [showQuiz, setShowQuiz] = useState(false)
+  const [showMidQuiz, setShowMidQuiz] = useState(false)
+  const [showBottomQuiz, setShowBottomQuiz] = useState(false)
   const [isQuizLoaded, setIsQuizLoaded] = useState(false)
   const quizContainerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -333,20 +328,16 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     setOpenFaqIndex(openFaqIndex === index ? null : index)
   }
 
-  const handleQuizSubmit = (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault()
-    const trimmed = quizWebsite.trim()
-    if (!trimmed) {
-      alert('Please enter your website URL first.')
-      return
-    }
+  const openHeroQuiz = () => {
+    setShowQuiz(true)
+  }
 
-    const destination = quizFormCtaLink || '/quiz'
-    const separator = destination.includes('?') ? '&' : '?'
-    const href = `${destination}${separator}website=${encodeURIComponent(trimmed)}`
+  const openMidQuiz = () => {
+    setShowMidQuiz(true)
+  }
 
-    setQuizWebsite('')
-    router.push(href)
+  const openBottomQuiz = () => {
+    setShowBottomQuiz(true)
   }
 
   const faqItems = homepageContent?.faq_items || [
@@ -434,7 +425,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <h2 className="quiz-title">{quizTitle}</h2>
                   <p className="quiz-description">{quizDescription}</p>
                   <button 
-                    onClick={() => setShowQuiz(true)}
+                    onClick={openHeroQuiz}
                     className="quiz-cta-button"
                     style={{
                       backgroundColor: heroCTABgColor,
@@ -626,18 +617,34 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       {/* Quiz CTA Section */}
       <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
         <div className="quiz-cta-container">
-          <h2 className="quiz-cta-title">{quizFormTitle}</h2>
-          <p className="quiz-cta-subtitle" dangerouslySetInnerHTML={{ __html: quizFormDescription }} />
-          <form className="quiz-cta-form" onSubmit={handleQuizSubmit}>
-            <input 
-              type="url" 
-              placeholder={quizFormPlaceholder} 
-              className="quiz-cta-input"
-              value={quizWebsite}
-              onChange={(e) => setQuizWebsite(e.target.value)}
-            />
-            <button type="submit" className="quiz-cta-button">{quizFormCtaText}</button>
-          </form>
+          <h2 className="quiz-cta-title">Take the Quiz</h2>
+          <p className="quiz-cta-subtitle">{quizDescription}</p>
+          <button
+            type="button"
+            className="quiz-cta-button"
+            onClick={openMidQuiz}
+            style={{
+              backgroundColor: heroCTABgColor,
+              color: heroCTATextColor,
+              borderColor: quizCTABorderColor,
+              cursor: 'pointer'
+            }}
+          >
+            {quizCTAText}
+          </button>
+          <div
+            className="quiz-inline-container"
+            data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
+            data-sa-view="inline"
+            data-sa-auto-height="1"
+            style={{
+              maxWidth: '100%',
+              width: '100%',
+              background: 'transparent',
+              marginTop: '24px',
+              display: showMidQuiz ? 'block' : 'none'
+            }}
+          ></div>
         </div>
       </section>
       {/* Why Work With Us Section */}
@@ -897,18 +904,34 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       {/* Quiz CTA Section - Bottom */}
       <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
         <div className="quiz-cta-container">
-          <h2 className="quiz-cta-title">{quizFormTitle}</h2>
-          <p className="quiz-cta-subtitle" dangerouslySetInnerHTML={{ __html: quizFormDescription }} />
-          <form className="quiz-cta-form" onSubmit={handleQuizSubmit}>
-            <input 
-              type="url" 
-              placeholder={quizFormPlaceholder} 
-              className="quiz-cta-input"
-              value={quizWebsite}
-              onChange={(e) => setQuizWebsite(e.target.value)}
-            />
-            <button type="submit" className="quiz-cta-button">{quizFormCtaText}</button>
-          </form>
+          <h2 className="quiz-cta-title">Take the Quiz</h2>
+          <p className="quiz-cta-subtitle">{quizDescription}</p>
+          <button
+            type="button"
+            className="quiz-cta-button"
+            onClick={openBottomQuiz}
+            style={{
+              backgroundColor: heroCTABgColor,
+              color: heroCTATextColor,
+              borderColor: quizCTABorderColor,
+              cursor: 'pointer'
+            }}
+          >
+            {quizCTAText}
+          </button>
+          <div
+            className="quiz-inline-container"
+            data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
+            data-sa-view="inline"
+            data-sa-auto-height="1"
+            style={{
+              maxWidth: '100%',
+              width: '100%',
+              background: 'transparent',
+              marginTop: '24px',
+              display: showBottomQuiz ? 'block' : 'none'
+            }}
+          ></div>
         </div>
       </section>
 
