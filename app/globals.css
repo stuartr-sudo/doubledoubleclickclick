@@ -351,7 +351,7 @@ img {
 
 .tech-carousel-header {
   margin-bottom: var(--spacing-xl);
-  text-align: left;
+  text-align: center;
 }
 
 .section-label {
@@ -361,7 +361,7 @@ img {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin: 0;
-  text-align: left;
+  text-align: center;
 }
 
 .tech-carousel-wrapper {
