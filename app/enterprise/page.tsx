@@ -40,7 +40,7 @@ export default function EnterprisePage() {
           website: formData.website,
           message:
             `Budget range: ${formData.budgetRange || 'n/a'}\n` +
-            `AI content level: ${formData.aiContentLevel || 'n/a'}\n` +
+            `Ai content level: ${formData.aiContentLevel || 'n/a'}\n` +
             `Notes: ${formData.message || 'n/a'}`,
           plan_type: 'enterprise',
           source: 'enterprise-page',
@@ -70,7 +70,7 @@ export default function EnterprisePage() {
           <div className="tier-page-hero-form tier-contact-form">
             <h2 className="section-label">Contact Sales</h2>
             <p className="tier-contact-description">
-              Tell us how you&apos;re thinking about AI content today so we can tailor a conversation to your team, stack, and
+              Tell us how you&apos;re thinking about Ai content today so we can tailor a conversation to your team, stack, and
               governance requirements.
             </p>
 
@@ -86,7 +86,7 @@ export default function EnterprisePage() {
                 </div>
                 <div className={`wizard-step ${step >= 3 ? 'wizard-step--active' : ''}`}>
                   <span className="wizard-step-number">3</span>
-                  <span className="wizard-step-label">Budget &amp; AI</span>
+                  <span className="wizard-step-label">Budget &amp; Ai</span>
                 </div>
               </div>
 
@@ -137,7 +137,7 @@ export default function EnterprisePage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="message">How is AI content currently owned or managed inside your org?</label>
+                    <label htmlFor="message">How is Ai content currently owned or managed inside your org?</label>
                     <textarea
                       id="message"
                       rows={4}
@@ -151,7 +151,7 @@ export default function EnterprisePage() {
               {step === 3 && (
                 <>
                   <div className="form-group">
-                    <label htmlFor="budgetRange">Estimated monthly budget for AI content &amp; visibility *</label>
+                    <label htmlFor="budgetRange">Estimated monthly budget for Ai content &amp; visibility *</label>
                     <select
                       id="budgetRange"
                       required
@@ -167,7 +167,7 @@ export default function EnterprisePage() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label htmlFor="aiContentLevel">Current level of AI content optimization *</label>
+                    <label htmlFor="aiContentLevel">Current level of Ai content optimization *</label>
                     <select
                       id="aiContentLevel"
                       required

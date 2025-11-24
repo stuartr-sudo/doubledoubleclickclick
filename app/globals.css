@@ -2293,17 +2293,84 @@ img {
 }
 
 @media (max-width: 768px) {
+  .tier-page-hero {
+    padding: var(--spacing-xl) 0;
+  }
+
   .tier-page-hero-grid {
     grid-template-columns: 1fr;
     gap: var(--spacing-2xl);
+    max-width: 100%;
+    padding: 0 var(--spacing-md);
+  }
+
+  .tier-page-container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .tier-page-hero-copy {
+    max-width: 100%;
+  }
+
+  .tier-page-subtitle {
+    font-size: 1.25rem;
+    line-height: 1.7;
   }
 
   .tier-page-hero-form {
     margin: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .tier-contact-form {
+    padding: var(--spacing-lg);
+    text-align: center;
+  }
+
+  .tier-contact-form h2,
+  .tier-contact-form .section-label {
+    text-align: center;
+  }
+
+  .tier-contact-description {
+    font-size: 1.125rem;
+    text-align: center;
+  }
+
+  .wizard-steps {
+    justify-content: center;
   }
 
   .wizard-nav {
     justify-content: space-between;
+  }
+
+  .tier-benefits-section {
+    padding: var(--spacing-xl) var(--spacing-md);
+  }
+
+  .tier-benefits-container {
+    max-width: 100%;
+  }
+
+  .tier-benefits-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .tier-benefit-card {
+    padding: var(--spacing-md);
+  }
+
+  .tier-benefit-card h3 {
+    font-size: 1.25rem;
+  }
+
+  .tier-benefit-card p {
+    font-size: 1.125rem;
+    line-height: 1.7;
   }
 }
 

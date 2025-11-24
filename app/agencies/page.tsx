@@ -40,7 +40,7 @@ export default function AgenciesPage() {
           website: formData.website,
           message:
             `Budget range: ${formData.budgetRange || 'n/a'}\n` +
-            `AI content level: ${formData.aiContentLevel || 'n/a'}\n` +
+            `Ai content level: ${formData.aiContentLevel || 'n/a'}\n` +
             `Notes: ${formData.message || 'n/a'}`,
           plan_type: 'agencies',
           source: 'agencies-page',
@@ -63,7 +63,7 @@ export default function AgenciesPage() {
             <Link href="/" className="back-link">← Back to Home</Link>
             <h1 className="tier-page-title">Agencies</h1>
             <p className="tier-page-subtitle">
-              Tailored solutions for agencies managing multiple client websites. Scale your LLM optimization services with our comprehensive platform.
+              Tailored solutions for agencies managing multiple client websites. Scale your Ai optimization services with our comprehensive platform.
             </p>
           </div>
 
@@ -85,7 +85,7 @@ export default function AgenciesPage() {
                 </div>
                 <div className={`wizard-step ${step >= 3 ? 'wizard-step--active' : ''}`}>
                   <span className="wizard-step-number">3</span>
-                  <span className="wizard-step-label">Budget &amp; AI</span>
+                  <span className="wizard-step-label">Budget &amp; Ai</span>
                 </div>
               </div>
 
@@ -166,7 +166,7 @@ export default function AgenciesPage() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label htmlFor="aiContentLevel">Current level of AI content optimization *</label>
+                    <label htmlFor="aiContentLevel">Current level of Ai content optimization *</label>
                     <select
                       id="aiContentLevel"
                       required
