@@ -391,6 +391,14 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
       {/* Hero Section - Stripe-style Design */}
       <section className="hero-stripe">
+        {/* Logo/Title Overlay */}
+        <div className="absolute top-6 left-8 z-50 flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity no-underline">
+            <span className="text-xl font-bold tracking-tight">SEWO</span>
+            <span className="text-sm font-medium opacity-80 hidden sm:inline-block">Get Found Everywhere</span>
+          </Link>
+        </div>
+
         {/* Hamburger Menu - Inside Hero Container */}
         <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
