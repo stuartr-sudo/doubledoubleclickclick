@@ -10877,5 +10877,6 @@ img {
 @media (min-width: 1025px) {
   .hero-stripe-right.quiz-open iframe {
     width: 100% !important;
+    min-height: 100% !important;
   }
 }
