@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { trackServicePageView, trackFormSubmission, trackWizardStep, trackFormStart } from '@/lib/analytics'
 
 export default function EnterprisePage() {
   const router = useRouter()
@@ -17,8 +18,29 @@ export default function EnterprisePage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [step, setStep] = useState(1)
+  const [formStarted, setFormStarted] = useState(false)
 
   const totalSteps = 3
+
+  // Track page view on mount
+  useEffect(() => {
+    trackServicePageView('enterprise')
+  }, [])
+
+  // Track when user starts filling form
+  useEffect(() => {
+    if (!formStarted && (formData.name || formData.email)) {
+      setFormStarted(true)
+      trackFormStart('enterprise')
+    }
+  }, [formData.name, formData.email, formStarted])
+
+  // Track wizard step progress
+  useEffect(() => {
+    if (step > 1) {
+      trackWizardStep('enterprise', step, totalSteps)
+    }
+  }, [step])
 
   const nextStep = () => setStep((s) => Math.min(totalSteps, s + 1))
   const prevStep = () => setStep((s) => Math.max(1, s - 1))
@@ -28,7 +50,7 @@ export default function EnterprisePage() {
     setIsSubmitting(true)
 
     try {
-      await fetch('/api/lead-capture', {
+      const res = await fetch('/api/lead-capture', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -46,9 +68,11 @@ export default function EnterprisePage() {
           source: 'enterprise-page',
         }),
       })
+      
+      trackFormSubmission('enterprise', res.ok)
     } catch (error) {
       console.error('Failed to submit lead capture:', error)
-      // Still redirect to thank-you even on API error
+      trackFormSubmission('enterprise', false)
     } finally {
       setIsSubmitting(false)
       router.push('/lead-capture?type=enterprise')

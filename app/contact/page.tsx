@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { trackFormSubmission, trackFormStart } from '@/lib/analytics'
 
 export default function ContactPage() {
   const [name, setName] = useState('')
@@ -9,6 +10,15 @@ export default function ContactPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [formStarted, setFormStarted] = useState(false)
+
+  // Track when user starts filling form
+  useEffect(() => {
+    if (!formStarted && (name || email || message)) {
+      setFormStarted(true)
+      trackFormStart('contact')
+    }
+  }, [name, email, message, formStarted])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,12 +47,14 @@ export default function ContactPage() {
         throw new Error(data.error || 'Failed to submit form.')
       }
 
+      trackFormSubmission('contact', true)
       setSubmitted(true)
       setName('')
       setEmail('')
       setMessage('')
     } catch (err) {
       console.error('Contact form error:', err)
+      trackFormSubmission('contact', false)
       setError('Something went wrong. Please try again.')
     } finally {
       setSubmitting(false)

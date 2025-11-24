@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
+import { trackQuizStart, trackScrollDepth, trackCTAClick } from '@/lib/analytics'
 
 // Dynamic imports for code splitting - load below-the-fold components lazily
 const MobileMenu = dynamic(() => import('@/components/MobileMenu'), { ssr: false })
@@ -335,6 +336,38 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     }
   }, [showBottomQuiz])
 
+  // Track scroll depth for homepage engagement
+  useEffect(() => {
+    const scrollDepths = { 25: false, 50: false, 75: false, 100: false }
+    
+    const handleScroll = () => {
+      const windowHeight = window.innerHeight
+      const documentHeight = document.documentElement.scrollHeight
+      const scrollTop = window.scrollY
+      const scrollPercent = ((scrollTop + windowHeight) / documentHeight) * 100
+
+      if (scrollPercent >= 25 && !scrollDepths[25]) {
+        scrollDepths[25] = true
+        trackScrollDepth(25, '/')
+      }
+      if (scrollPercent >= 50 && !scrollDepths[50]) {
+        scrollDepths[50] = true
+        trackScrollDepth(50, '/')
+      }
+      if (scrollPercent >= 75 && !scrollDepths[75]) {
+        scrollDepths[75] = true
+        trackScrollDepth(75, '/')
+      }
+      if (scrollPercent >= 100 && !scrollDepths[100]) {
+        scrollDepths[100] = true
+        trackScrollDepth(100, '/')
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen)
   }
@@ -345,14 +378,17 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
   const openHeroQuiz = () => {
     setShowQuiz(true)
+    trackQuizStart('hero')
   }
 
   const openMidQuiz = () => {
     setShowMidQuiz(true)
+    trackQuizStart('mid')
   }
 
   const openBottomQuiz = () => {
     setShowBottomQuiz(true)
+    trackQuizStart('bottom')
   }
 
   const faqItems = homepageContent?.faq_items || [

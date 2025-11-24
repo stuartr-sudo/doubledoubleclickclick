@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import BlogCarousel from '@/components/BlogCarousel'
+import BlogTracker from '@/components/BlogTracker'
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   let post = null
@@ -172,6 +173,9 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
   return (
     <main>
+      {/* Analytics Tracking */}
+      <BlogTracker slug={post.slug} title={post.title} category={post.category} />
+      
       {/* JSON-LD for SEO */}
       <script
         type="application/ld+json"
