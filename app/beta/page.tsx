@@ -39,7 +39,7 @@ export default function BetaPage() {
           email: formData.email,
           company: formData.company,
           website: formData.website,
-          message: `Budget range: ${formData.budgetRange || 'n/a'}\nAI content level: ${
+          message: `Budget range: ${formData.budgetRange || 'n/a'}\nAi content level: ${
             formData.aiContentLevel || 'n/a'
           }\nBrand info: ${formData.brandInfo || 'n/a'}\nGoals: ${formData.goals || 'n/a'}`,
           plan_type: 'beta',
@@ -66,9 +66,9 @@ export default function BetaPage() {
               <Link href="/" className="back-link">
                 ← Back to Home
               </Link>
-              <h1 className="tier-page-title">SEWO — LLM Visibility (Beta)</h1>
+              <h1 className="tier-page-title">SEWO — Ai Visibility (Beta)</h1>
               <p className="tier-page-subtitle">
-                Plan, publish, and monitor content for AI ranking. Limited beta access for qualified brands.
+                Plan, publish, and monitor content for Ai ranking. Limited beta access for qualified brands.
               </p>
             </div>
 
@@ -91,7 +91,7 @@ export default function BetaPage() {
                   <div className="wizard-step-connector"></div>
                   <div className={`wizard-step ${step === 3 ? 'wizard-step-active' : ''}`}>
                     <div className="wizard-step-number">3</div>
-                    <span className="wizard-step-label">Budget & AI</span>
+                    <span className="wizard-step-label">Budget & Ai</span>
                   </div>
                 </div>
 
@@ -158,7 +158,7 @@ export default function BetaPage() {
                   {step === 3 && (
                     <>
                       <div className="form-group">
-                        <label htmlFor="budgetRange">Monthly budget for AI content &amp; visibility *</label>
+                        <label htmlFor="budgetRange">Monthly budget for Ai content &amp; visibility *</label>
                         <select
                           id="budgetRange"
                           required
@@ -174,7 +174,7 @@ export default function BetaPage() {
                         </select>
                       </div>
                       <div className="form-group">
-                        <label htmlFor="aiContentLevel">Current level of AI content optimization *</label>
+                        <label htmlFor="aiContentLevel">Current level of Ai content optimization *</label>
                         <select
                           id="aiContentLevel"
                           required
@@ -236,7 +236,7 @@ export default function BetaPage() {
           <div className="tier-benefits-grid">
             <div className="tier-benefit-card">
               <h3>Research</h3>
-              <p>Discover AI questions and gaps where your brand can legitimately rank and be recommended.</p>
+              <p>Discover Ai questions and gaps where your brand can legitimately rank and be recommended.</p>
             </div>
             <div className="tier-benefit-card">
               <h3>Workflow</h3>
@@ -244,7 +244,7 @@ export default function BetaPage() {
             </div>
             <div className="tier-benefit-card">
               <h3>Monitoring</h3>
-              <p>Track your visibility across assistants and LLM surfaces, then iterate based on real query data.</p>
+              <p>Track your visibility across assistants and Ai surfaces, then iterate based on real query data.</p>
             </div>
           </div>
         </div>
