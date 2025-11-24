@@ -2,22 +2,99 @@
 
 import { useState, useEffect } from 'react'
 
+// EU/EEA countries + UK that require GDPR consent
+const EU_COUNTRIES = [
+  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 
+  'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 
+  'SE', 'GB', 'IS', 'LI', 'NO', 'CH'
+]
+
 export default function CookieConsent() {
   const [showBanner, setShowBanner] = useState(false)
   const [consentGiven, setConsentGiven] = useState(false)
+  const [isEUUser, setIsEUUser] = useState<boolean | null>(null)
 
   useEffect(() => {
-    // Check if user has already made a choice
-    const consent = localStorage.getItem('cookie-consent')
-    
-    if (consent === null) {
-      // No choice made yet, show banner after 1 second
-      const timer = setTimeout(() => setShowBanner(true), 1000)
-      return () => clearTimeout(timer)
-    } else if (consent === 'accepted') {
-      setConsentGiven(true)
-      loadAnalytics()
+    const checkLocationAndConsent = async () => {
+      // First, check if user has already made a choice
+      const consent = localStorage.getItem('cookie-consent')
+      
+      // Check if we've already determined location
+      const cachedLocation = localStorage.getItem('user-region')
+      
+      if (cachedLocation) {
+        const isEU = cachedLocation === 'EU'
+        setIsEUUser(isEU)
+        
+        if (!isEU) {
+          // US/non-EU user - automatically grant consent
+          localStorage.setItem('cookie-consent', 'auto-accepted')
+          setConsentGiven(true)
+          loadAnalytics()
+          return
+        }
+        
+        // EU user - check consent
+        if (consent === null) {
+          const timer = setTimeout(() => setShowBanner(true), 1000)
+          return () => clearTimeout(timer)
+        } else if (consent === 'accepted' || consent === 'auto-accepted') {
+          setConsentGiven(true)
+          loadAnalytics()
+        }
+        return
+      }
+
+      // Detect user location via timezone as fallback
+      try {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+        
+        // Try to get more accurate location via CloudFlare headers (if available)
+        // This works automatically on Vercel/CloudFlare deployments
+        const response = await fetch('https://cloudflare-dns.com/dns-query?name=whoami.cloudflare&type=A', {
+          headers: { 'Accept': 'application/dns-json' }
+        }).catch(() => null)
+
+        // Fallback: Detect by timezone
+        const euTimezones = [
+          'Europe/', 'Atlantic/Reykjavik', 'Atlantic/Canary', 'Atlantic/Faroe', 
+          'Atlantic/Madeira', 'Atlantic/Azores'
+        ]
+        
+        const isEU = euTimezones.some(tz => timezone.startsWith(tz))
+        setIsEUUser(isEU)
+        localStorage.setItem('user-region', isEU ? 'EU' : 'non-EU')
+
+        if (!isEU) {
+          // US/non-EU user - automatically accept
+          localStorage.setItem('cookie-consent', 'auto-accepted')
+          setConsentGiven(true)
+          loadAnalytics()
+        } else {
+          // EU user - check consent
+          if (consent === null) {
+            const timer = setTimeout(() => setShowBanner(true), 1000)
+            return () => clearTimeout(timer)
+          } else if (consent === 'accepted' || consent === 'auto-accepted') {
+            setConsentGiven(true)
+            loadAnalytics()
+          }
+        }
+      } catch (error) {
+        console.error('Error detecting location:', error)
+        // If detection fails, show banner to be safe (GDPR compliance)
+        setIsEUUser(true)
+        if (consent === null) {
+          const timer = setTimeout(() => setShowBanner(true), 1000)
+          return () => clearTimeout(timer)
+        } else if (consent === 'accepted' || consent === 'auto-accepted') {
+          setConsentGiven(true)
+          loadAnalytics()
+        }
+      }
     }
+
+    checkLocationAndConsent()
   }, [])
 
   const loadAnalytics = () => {
