@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { trackFormStart, trackFormSubmission } from '@/lib/analytics'
 
 interface QuestionsDiscoveryProps {
@@ -46,6 +46,14 @@ export default function QuestionsDiscovery({
       return () => clearInterval(interval)
     }
   }, [isLoading, aiFacts.length])
+
+  // Send email once questions are loaded and we're on step 3
+  useEffect(() => {
+    if (step === 3 && questions.length > 0 && email.trim() && !emailSent) {
+      console.log('Triggering email send from useEffect')
+      sendQuestionsEmail()
+    }
+  }, [step, questions.length, email, emailSent, sendQuestionsEmail])
 
   const handleKeywordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,13 +154,8 @@ export default function QuestionsDiscovery({
         }
       }
 
-      // Move to results
+      // Move to results (email will be sent by useEffect when questions are ready)
       setStep(3)
-      
-      // Send email with questions after we have them
-      if (questions.length > 0) {
-        sendQuestionsEmail()
-      }
       
       trackFormSubmission('questions_discovery', 'success')
     } catch (err: any) {
@@ -164,8 +167,14 @@ export default function QuestionsDiscovery({
     }
   }
 
-  const sendQuestionsEmail = async () => {
+  const sendQuestionsEmail = useCallback(async () => {
+    if (!email.trim() || !keyword.trim() || questions.length === 0) {
+      console.log('Skipping email send: missing data', { email: !!email, keyword: !!keyword, questionsCount: questions.length })
+      return
+    }
+
     try {
+      console.log('Sending email to:', email.trim(), 'with', questions.length, 'questions')
       const res = await fetch('/api/send-questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,15 +186,17 @@ export default function QuestionsDiscovery({
       })
 
       if (res.ok) {
+        const data = await res.json()
         setEmailSent(true)
-        console.log('Questions emailed successfully')
+        console.log('Questions emailed successfully:', data)
       } else {
-        console.error('Failed to send email')
+        const errorData = await res.json()
+        console.error('Failed to send email:', errorData)
       }
     } catch (error) {
       console.error('Error sending email:', error)
     }
-  }
+  }, [email, keyword, questions])
 
   const copyQuestion = async (question: string, index: number) => {
     try {
