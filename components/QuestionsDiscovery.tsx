@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { trackFormStart, trackFormSubmission } from '@/lib/analytics'
 
 interface QuestionsDiscoveryProps {
@@ -35,6 +35,19 @@ export default function QuestionsDiscovery({
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [emailSent, setEmailSent] = useState(false)
   const [currentFactIndex, setCurrentFactIndex] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to center when step changes
+  useEffect(() => {
+    if (step === 2 && containerRef.current) {
+      setTimeout(() => {
+        containerRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        })
+      }, 100)
+    }
+  }, [step])
 
   // Cycle through AI facts every 3 seconds while loading
   useEffect(() => {
@@ -221,7 +234,7 @@ export default function QuestionsDiscovery({
   }
 
   return (
-    <div className="quiz-inline-container">
+    <div className="quiz-inline-container" ref={containerRef}>
       <style dangerouslySetInnerHTML={{
         __html: `
           @keyframes fadeInSlide {
@@ -370,7 +383,7 @@ export default function QuestionsDiscovery({
                     margin: '0 0 1rem 0',
                     fontStyle: 'italic'
                   }}>
-                    ✉️ Your personalized report will be sent directly to your inbox in seconds
+                    Your personalized report will be sent directly to your inbox in seconds
                   </p>
                 </div>
                 <input
@@ -414,7 +427,7 @@ export default function QuestionsDiscovery({
                   {error}
                 </p>
               )}
-              {email.trim() && (
+              {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && (
                 <button
                   type="submit"
                   className="btn btn-primary"
