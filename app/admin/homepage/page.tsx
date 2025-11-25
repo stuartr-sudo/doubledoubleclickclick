@@ -75,6 +75,11 @@ interface HomepageContent {
   questions_discovery_title?: string
   questions_discovery_description?: string
   questions_discovery_cta_text?: string
+  ai_fact_1?: string
+  ai_fact_2?: string
+  ai_fact_3?: string
+  ai_fact_4?: string
+  ai_fact_5?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   tech_carousel_bg_color?: string
@@ -184,6 +189,11 @@ function HomepageEditorPageInner() {
     questions_discovery_title: 'See What Questions Your Prospects Are Asking',
     questions_discovery_description: 'Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.',
     questions_discovery_cta_text: 'Book a Discovery Call',
+    ai_fact_1: 'Did you know? Over 85% of consumers use AI-powered search before making purchase decisions.',
+    ai_fact_2: 'ChatGPT reaches 100 million users in just 2 months - the fastest growing app in history.',
+    ai_fact_3: 'Brands optimized for AI discovery see up to 300% more referral traffic.',
+    ai_fact_4: 'By 2025, 50% of all searches will be conducted through AI assistants.',
+    ai_fact_5: 'AI citations drive 4x higher conversion rates than traditional search results.',
     tech_carousel_title: 'Technology we work with',
     tech_carousel_items: [
       { id: '1', name: 'ChatGPT', icon: '' },
@@ -1119,6 +1129,80 @@ function HomepageEditorPageInner() {
               <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
                 The button text shown after questions are displayed (links to /book-call)
               </p>
+            </div>
+
+            <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid #e5e7eb' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: '#1f2937' }}>
+                Loading State AI Facts
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem' }}>
+                These facts cycle through while waiting for questions to load (5-10 seconds)
+              </p>
+
+              <div className="form-group">
+                <label htmlFor="ai_fact_1">AI Fact 1</label>
+                <textarea
+                  id="ai_fact_1"
+                  name="ai_fact_1"
+                  value={formData.ai_fact_1 || ''}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="Did you know? Over 85% of consumers use AI-powered search..."
+                  style={{ width: '100%', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="ai_fact_2">AI Fact 2</label>
+                <textarea
+                  id="ai_fact_2"
+                  name="ai_fact_2"
+                  value={formData.ai_fact_2 || ''}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="ChatGPT reaches 100 million users in just 2 months..."
+                  style={{ width: '100%', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="ai_fact_3">AI Fact 3</label>
+                <textarea
+                  id="ai_fact_3"
+                  name="ai_fact_3"
+                  value={formData.ai_fact_3 || ''}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="Brands optimized for AI discovery see up to 300% more referral traffic..."
+                  style={{ width: '100%', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="ai_fact_4">AI Fact 4</label>
+                <textarea
+                  id="ai_fact_4"
+                  name="ai_fact_4"
+                  value={formData.ai_fact_4 || ''}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="By 2025, 50% of all searches will be conducted through AI assistants..."
+                  style={{ width: '100%', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="ai_fact_5">AI Fact 5</label>
+                <textarea
+                  id="ai_fact_5"
+                  name="ai_fact_5"
+                  value={formData.ai_fact_5 || ''}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="AI citations drive 4x higher conversion rates than traditional search results..."
+                  style={{ width: '100%', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+              </div>
             </div>
           </div>
 

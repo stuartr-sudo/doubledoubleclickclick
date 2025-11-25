@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { trackFormStart, trackFormSubmission } from '@/lib/analytics'
 
 interface QuestionsDiscoveryProps {
@@ -8,13 +8,21 @@ interface QuestionsDiscoveryProps {
   title?: string
   description?: string
   ctaText?: string
+  aiFacts?: string[]
 }
 
 export default function QuestionsDiscovery({ 
   onClose,
   title = 'See What Questions Your Prospects Are Asking',
   description = 'Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.',
-  ctaText = 'Book a Discovery Call'
+  ctaText = 'Book a Discovery Call',
+  aiFacts = [
+    'Did you know? Over 85% of consumers use AI-powered search before making purchase decisions.',
+    'ChatGPT reaches 100 million users in just 2 months - the fastest growing app in history.',
+    'Brands optimized for AI discovery see up to 300% more referral traffic.',
+    'By 2025, 50% of all searches will be conducted through AI assistants.',
+    'AI citations drive 4x higher conversion rates than traditional search results.'
+  ]
 }: QuestionsDiscoveryProps) {
   const [step, setStep] = useState(1)
   const [keyword, setKeyword] = useState('')
@@ -26,6 +34,18 @@ export default function QuestionsDiscovery({
   const [apiCallStarted, setApiCallStarted] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [emailSent, setEmailSent] = useState(false)
+  const [currentFactIndex, setCurrentFactIndex] = useState(0)
+
+  // Cycle through AI facts every 3 seconds while loading
+  useEffect(() => {
+    if (isLoading && aiFacts.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentFactIndex((prevIndex) => (prevIndex + 1) % aiFacts.length)
+      }, 3000) // Change fact every 3 seconds
+
+      return () => clearInterval(interval)
+    }
+  }, [isLoading, aiFacts.length])
 
   const handleKeywordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -202,8 +222,19 @@ export default function QuestionsDiscovery({
               transform: translateY(0);
             }
           }
+          @keyframes spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
+          }
           .quiz-step {
             animation: fadeInSlide 0.4s ease-out;
+          }
+          .loading-spinner {
+            animation: spin 1s linear infinite;
           }
         `
       }} />
@@ -300,10 +331,51 @@ export default function QuestionsDiscovery({
                 {isSubmitting ? 'Saving...' : 'Show Me the Questions'}
               </button>
             </form>
-            {isLoading && (
-              <p style={{ textAlign: 'center', marginTop: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-                🔍 Analyzing questions in the background...
-              </p>
+            {isLoading && aiFacts.length > 0 && (
+              <div style={{ 
+                marginTop: '2rem', 
+                padding: '1.5rem', 
+                backgroundColor: '#f0f9ff', 
+                borderRadius: '12px',
+                border: '2px solid #3b82f6',
+                textAlign: 'center',
+                minHeight: '120px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  color: '#3b82f6',
+                  fontWeight: 600,
+                  fontSize: '0.875rem'
+                }}>
+                  <div className="loading-spinner" style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #3b82f6',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                  Analyzing questions...
+                </div>
+                <p style={{ 
+                  margin: 0, 
+                  color: '#1e293b', 
+                  fontSize: '0.95rem', 
+                  lineHeight: 1.6,
+                  fontStyle: 'italic',
+                  transition: 'opacity 0.5s ease-in-out',
+                  maxWidth: '90%'
+                }}>
+                  💡 {aiFacts[currentFactIndex]}
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -312,9 +384,46 @@ export default function QuestionsDiscovery({
         {step === 3 && (
           <div className="quiz-step">
             {isLoading ? (
-              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
-                <p style={{ color: '#64748b' }}>Finalizing your questions report...</p>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '2rem 1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1.5rem'
+              }}>
+                <div className="spinner" style={{ 
+                  margin: '0 auto',
+                  width: '40px',
+                  height: '40px',
+                  border: '4px solid #e5e7eb',
+                  borderTopColor: '#3b82f6',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                <p style={{ color: '#64748b', fontWeight: 600 }}>Finalizing your questions report...</p>
+                {aiFacts.length > 0 && (
+                  <div style={{ 
+                    marginTop: '1rem', 
+                    padding: '1.5rem', 
+                    backgroundColor: '#f0f9ff', 
+                    borderRadius: '12px',
+                    border: '2px solid #3b82f6',
+                    maxWidth: '500px',
+                    width: '100%'
+                  }}>
+                    <p style={{ 
+                      margin: 0, 
+                      color: '#1e293b', 
+                      fontSize: '0.95rem', 
+                      lineHeight: 1.6,
+                      fontStyle: 'italic',
+                      transition: 'opacity 0.5s ease-in-out'
+                    }}>
+                      💡 {aiFacts[currentFactIndex]}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : questions.length > 0 ? (
               <>

@@ -119,6 +119,11 @@ interface HomepageContent {
   questions_discovery_title?: string
   questions_discovery_description?: string
   questions_discovery_cta_text?: string
+  ai_fact_1?: string
+  ai_fact_2?: string
+  ai_fact_3?: string
+  ai_fact_4?: string
+  ai_fact_5?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   tech_carousel_bg_color?: string
@@ -572,6 +577,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       title={homepageContent?.questions_discovery_title}
                       description={homepageContent?.questions_discovery_description}
                       ctaText={homepageContent?.questions_discovery_cta_text}
+                      aiFacts={[
+                        homepageContent?.ai_fact_1,
+                        homepageContent?.ai_fact_2,
+                        homepageContent?.ai_fact_3,
+                        homepageContent?.ai_fact_4,
+                        homepageContent?.ai_fact_5,
+                      ].filter(Boolean) as string[]}
                     />
                   </>
                 )}
