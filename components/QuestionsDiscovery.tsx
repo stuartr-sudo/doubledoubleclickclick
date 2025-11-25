@@ -308,9 +308,9 @@ export default function QuestionsDiscovery({
                 style={{ 
                   width: '100%', 
                   marginTop: '0.5rem',
-                  backgroundColor: '#000000',
+                  backgroundImage: primaryGradient || 'linear-gradient(135deg, #22c1c3 0%, #3b82f6 100%)',
                   color: '#ffffff',
-                  borderColor: '#000000'
+                  borderColor: 'transparent'
                 }}
               >
                 Continue
@@ -636,11 +636,26 @@ export default function QuestionsDiscovery({
                 </div>
                 <div style={{ textAlign: 'center', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
                   <p style={{ marginBottom: '1rem', color: '#64748b' }}>
-                    Want help answering these questions to boost your Ai visibility?
+                    Book a Discovery call and we&apos;ll show you exactly how to answer these questions to boost your Ai visibility.
                   </p>
                   <a 
                     href="/book-call" 
                     className="btn btn-primary"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '1rem 2.5rem',
+                      borderRadius: '999px',
+                      backgroundImage: primaryGradient || 'linear-gradient(135deg, #22c1c3 0%, #3b82f6 100%)',
+                      border: 'none',
+                      color: '#ffffff',
+                      fontWeight: 700,
+                      fontSize: '1rem',
+                      letterSpacing: '0.02em',
+                      boxShadow: '0 12px 30px rgba(37, 99, 235, 0.35)',
+                      textDecoration: 'none',
+                    }}
                     onClick={() => {
                       if (typeof window !== 'undefined' && window.gtag) {
                         window.gtag('event', 'book_call_click', {
