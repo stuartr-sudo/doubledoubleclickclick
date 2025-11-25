@@ -280,6 +280,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const [showBottomQuiz, setShowBottomQuiz] = useState(false)
   const [isQuizLoaded, setIsQuizLoaded] = useState(false)
   const quizContainerRef = useRef<HTMLDivElement>(null)
+  const heroQuizRef = useRef<HTMLDivElement>(null)
   const midQuizRef = useRef<HTMLDivElement>(null)
   const bottomQuizRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -368,6 +369,15 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       return () => clearTimeout(timer)
     }
   }, [showQuiz, isQuizLoaded])
+
+  // Auto-center hero quiz when opened
+  useEffect(() => {
+    if (showQuiz && heroQuizRef.current) {
+      setTimeout(() => {
+        heroQuizRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+    }
+  }, [showQuiz])
 
   // Smoothly scroll inline quiz blocks into view when they open
   useEffect(() => {
@@ -539,7 +549,10 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             </div>
 
             {/* Right Column - A/B Test: Quiz vs Questions Discovery */}
-            <div className={`hero-stripe-right ${(showQuiz || showQuestionsDiscovery) ? 'quiz-open' : ''}`}>
+            <div
+              ref={heroQuizRef}
+              className={`hero-stripe-right ${(showQuiz || showQuestionsDiscovery) ? 'quiz-open' : ''}`}
+            >
               <div className="hero-quiz-cta">
                 {/* Variant A: Quiz CTA (50%) */}
                 {heroVariant === 'quiz' && (
