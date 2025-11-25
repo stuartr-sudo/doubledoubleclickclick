@@ -167,9 +167,6 @@ export default function QuestionsDiscovery({
             </p>
             <form onSubmit={handleKeywordSubmit}>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label htmlFor="keyword" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                  Your Keyword
-                </label>
                 <input
                   type="text"
                   id="keyword"
@@ -217,9 +214,6 @@ export default function QuestionsDiscovery({
             </p>
             <form onSubmit={handleEmailSubmit}>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                  Your Email
-                </label>
                 <input
                   type="email"
                   id="email"
