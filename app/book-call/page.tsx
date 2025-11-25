@@ -88,7 +88,7 @@ export default function BookCallPage() {
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                Review your current AI visibility
+                Review your current Ai visibility
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>

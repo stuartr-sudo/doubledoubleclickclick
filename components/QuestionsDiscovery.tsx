@@ -108,7 +108,8 @@ export default function QuestionsDiscovery({
       })
 
       if (!res.ok) {
-        throw new Error('Failed to save email')
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to save email')
       }
 
       // Wait for questions to finish loading if still processing
@@ -126,9 +127,9 @@ export default function QuestionsDiscovery({
       // Move to results
       setStep(3)
       trackFormSubmission('questions_discovery', 'success')
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving email:', err)
-      setError('Unable to save email. Please try again.')
+      setError(err.message || 'Unable to save email. Please try again.')
       trackFormSubmission('questions_discovery', 'error')
     } finally {
       setIsSubmitting(false)

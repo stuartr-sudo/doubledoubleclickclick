@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getClientIP, isRateLimited, checkEmailExists } from '@/lib/spam-protection'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,9 +17,30 @@ export async function POST(request: NextRequest) {
       source,
     } = body || {}
 
-    if (!name || !email) {
+    if (!email) {
       return NextResponse.json(
-        { success: false, error: 'Name and email are required' },
+        { success: false, error: 'Email is required' },
+        { status: 400 }
+      )
+    }
+
+    // Get client IP address
+    const ipAddress = getClientIP(request)
+
+    // Check rate limiting by IP (max 1 submission per hour per IP per source)
+    const rateLimitKey = `${ipAddress}:${source || 'default'}`
+    if (isRateLimited(rateLimitKey)) {
+      return NextResponse.json(
+        { success: false, error: 'Too many submissions. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
+    // Check if email already exists for this source
+    const emailExists = await checkEmailExists(email, source || 'default')
+    if (emailExists) {
+      return NextResponse.json(
+        { success: false, error: 'This email has already been submitted.' },
         { status: 400 }
       )
     }
@@ -37,13 +59,14 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     const { error } = await supabase.from('lead_captures').insert({
-      name,
+      name: name || 'Questions Discovery Lead',
       email,
       company: company || null,
       website: website || null,
       message: message || null,
       plan_type: plan_type || null,
       source: source || null,
+      ip_address: ipAddress,
     })
 
     if (error) {
