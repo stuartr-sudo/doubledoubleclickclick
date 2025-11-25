@@ -564,10 +564,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       <span className="quiz-steps">⚡ 2 Minutes</span>
                       <span className="quiz-badge-text">Questions Discovery</span>
                     </div>
-                    <h2 className="quiz-title">{homepageContent?.questions_discovery_title || 'See What Questions Your Prospects Are Asking'}</h2>
-                    <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
-                      {homepageContent?.questions_discovery_description || 'Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.'}
-                    </p>
                     <QuestionsDiscovery 
                       onClose={() => setShowQuestionsDiscovery(false)}
                       title={homepageContent?.questions_discovery_title}
