@@ -427,26 +427,20 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
   const openHeroQuiz = () => {
     setShowParticles(true)
-    setTimeout(() => {
-      setShowQuiz(true)
-      trackQuizStart('hero')
-    }, 500)
+    setShowQuiz(true)
+    trackQuizStart('hero')
   }
 
   const openMidQuiz = () => {
     setShowParticles(true)
-    setTimeout(() => {
-      setShowMidQuiz(true)
-      trackQuizStart('mid')
-    }, 500)
+    setShowMidQuiz(true)
+    trackQuizStart('mid')
   }
 
   const openBottomQuiz = () => {
     setShowParticles(true)
-    setTimeout(() => {
-      setShowBottomQuiz(true)
-      trackQuizStart('bottom')
-    }, 500)
+    setShowBottomQuiz(true)
+    trackQuizStart('bottom')
   }
 
   const faqItems = homepageContent?.faq_items || [
