@@ -895,58 +895,60 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           <div className="testimonials-grid">
             {testimonialsItems.map((testimonial) => (
               <div key={testimonial.id} className="testimonial-card">
-                <div className="testimonial-rating">
-                  {[...Array(5)].map((_, index) => (
-                    <svg
-                      key={index}
-                      className={`star ${index < testimonial.rating ? 'star-filled' : 'star-empty'}`}
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M10 1L12.5 7.5L19 8.5L14.5 13L15.5 19L10 16L4.5 19L5.5 13L1 8.5L7.5 7.5L10 1Z"
-                        fill={index < testimonial.rating ? '#FFB800' : '#E0E0E0'}
-                        stroke={index < testimonial.rating ? '#FFB800' : '#E0E0E0'}
-                        strokeWidth="1"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ))}
-                </div>
-                <p className="testimonial-quote">{testimonial.quote}</p>
-                <div className="testimonial-author">
-                  <div className="testimonial-author-image">
-                    {testimonial.author_image && testimonial.author_image.trim() ? (
-                      <img
-                        src={testimonial.author_image}
-                        alt={testimonial.author_name}
-                        width={56}
-                        height={56}
-                        loading="lazy"
-                        style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
-                        onError={(e) => {
-                          // Hide broken image and show placeholder
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                          const placeholder = target.parentElement?.querySelector('.testimonial-author-placeholder') as HTMLElement
-                          if (placeholder) placeholder.style.display = 'flex'
-                        }}
-                      />
-                    ) : null}
-                    <div className="testimonial-author-placeholder" style={{ display: testimonial.author_image && testimonial.author_image.trim() ? 'none' : 'flex' }}>
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5"/>
-                        <path d="M6 21C6 17.6863 8.68629 15 12 15C15.3137 15 18 17.6863 18 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <div className="testimonial-card-inner">
+                  <div className="testimonial-rating">
+                    {[...Array(5)].map((_, index) => (
+                      <svg
+                        key={index}
+                        className={`star ${index < testimonial.rating ? 'star-filled' : 'star-empty'}`}
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M10 1L12.5 7.5L19 8.5L14.5 13L15.5 19L10 16L4.5 19L5.5 13L1 8.5L7.5 7.5L10 1Z"
+                          fill={index < testimonial.rating ? '#FFB800' : '#E0E0E0'}
+                          stroke={index < testimonial.rating ? '#FFB800' : '#E0E0E0'}
+                          strokeWidth="1"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
-                    </div>
+                    ))}
                   </div>
-                  <div className="testimonial-author-info">
-                    <div className="testimonial-author-name">{testimonial.author_name}</div>
-                    <div className="testimonial-author-title">{testimonial.author_company}</div>
+                  <p className="testimonial-quote">{testimonial.quote}</p>
+                  <div className="testimonial-author">
+                    <div className="testimonial-author-image">
+                      {testimonial.author_image && testimonial.author_image.trim() ? (
+                        <img
+                          src={testimonial.author_image}
+                          alt={testimonial.author_name}
+                          width={56}
+                          height={56}
+                          loading="lazy"
+                          style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
+                          onError={(e) => {
+                            // Hide broken image and show placeholder
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            const placeholder = target.parentElement?.querySelector('.testimonial-author-placeholder') as HTMLElement
+                            if (placeholder) placeholder.style.display = 'flex'
+                          }}
+                        />
+                      ) : null}
+                      <div className="testimonial-author-placeholder" style={{ display: testimonial.author_image && testimonial.author_image.trim() ? 'none' : 'flex' }}>
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                          <path d="M6 21C6 17.6863 8.68629 15 12 15C15.3137 15 18 17.6863 18 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="testimonial-author-info">
+                      <div className="testimonial-author-name">{testimonial.author_name}</div>
+                      <div className="testimonial-author-title">{testimonial.author_company}</div>
+                    </div>
                   </div>
                 </div>
               </div>

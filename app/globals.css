@@ -1471,24 +1471,38 @@ img {
 
 .testimonials-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-2xl);
+  perspective: 1200px; /* enables 3D tilt feeling */
 }
 
 .testimonial-card {
+  position: relative;
+  border-radius: 18px;
+  transform-style: preserve-3d;
+}
+
+.testimonial-card-inner {
   background: white;
-  border-radius: 12px;
+  border-radius: 18px;
   padding: var(--spacing-2xl);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  transform-origin: center;
+  transform-style: preserve-3d;
+  transition: transform 0.35s ease, box-shadow 0.35s ease, background 0.35s ease;
 }
 
 .testimonial-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.testimonial-card:hover .testimonial-card-inner {
+  transform: rotateX(6deg) rotateY(-6deg) translateY(-4px);
+  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.18);
+  background: radial-gradient(circle at top left, #eff6ff 0, #ffffff 45%);
 }
 
 .testimonial-rating {
@@ -1505,11 +1519,17 @@ img {
 }
 
 .testimonial-quote {
-  font-size: 1.125rem;
+  font-size: 1.1rem;
   line-height: 1.7;
   color: var(--color-text);
   margin: 0;
   flex: 1;
+  transition: transform 0.35s ease, color 0.35s ease;
+}
+
+.testimonial-card:hover .testimonial-quote {
+  transform: translateZ(12px);
+  color: #0f172a;
 }
 
 .testimonial-author {
@@ -1571,18 +1591,13 @@ img {
 /* Responsive Testimonials */
 @media (max-width: 1024px) {
   .testimonials-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .testimonials-section {
     padding: var(--spacing-2xl) var(--spacing-lg);
-  }
-
-  .testimonials-header {
-    flex-direction: column;
-    gap: var(--spacing-lg);
   }
 
   .testimonials-title {
