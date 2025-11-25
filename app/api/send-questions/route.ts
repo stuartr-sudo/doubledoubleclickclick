@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
                 .map(
                   (q: string, i: number) => `
                 <div style="margin-bottom: 15px; padding: 15px; background-color: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 6px;">
-                  <div style="display: flex; align-items: start; gap: 12px;">
-                    <span style="background-color: #3b82f6; color: #ffffff; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="background-color: #3b82f6; color: #ffffff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; line-height: 1;">
                       ${i + 1}
                     </span>
                     <p style="margin: 0; color: #334155; font-size: 15px; line-height: 1.6;">
