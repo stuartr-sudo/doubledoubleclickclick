@@ -356,23 +356,13 @@ export default function QuestionsDiscovery({
                     }
                   `
                 }} />
-                <div style={{ marginBottom: '1rem' }}>
-                  <label 
-                    htmlFor="email" 
-                    className="email-pulse-label"
-                    style={{ 
-                      display: 'block',
-                      fontSize: '1.1rem',
-                      fontWeight: 700,
-                      color: '#1e293b',
-                      marginBottom: '0.5rem',
-                      letterSpacing: '-0.01em',
-                      textAlign: 'left',
-                    }}
-                  >
-                    Enter Your Best Email Address
-                  </label>
-                </div>
+                {/* Keep an accessible label but hide it visually */}
+                <label 
+                  htmlFor="email" 
+                  className="sr-only"
+                >
+                  Email address
+                </label>
                 <input
                   type="email"
                   id="email"
