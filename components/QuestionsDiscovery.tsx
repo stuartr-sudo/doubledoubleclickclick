@@ -214,7 +214,7 @@ export default function QuestionsDiscovery({
             <h3 className="quiz-title">
               {title}
             </h3>
-            <p className="quiz-description">
+            <p className="quiz-description" style={{ marginBottom: '2rem' }}>
               {description}
             </p>
             <form onSubmit={handleKeywordSubmit}>
