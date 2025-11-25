@@ -9,6 +9,7 @@ interface QuestionsDiscoveryProps {
   description?: string
   ctaText?: string
   aiFacts?: string[]
+  primaryGradient?: string
 }
 
 export default function QuestionsDiscovery({ 
@@ -22,7 +23,8 @@ export default function QuestionsDiscovery({
     'Brands optimized for AI discovery see up to 300% more referral traffic.',
     'By 2025, 50% of all searches will be conducted through AI assistants.',
     'AI citations drive 4x higher conversion rates than traditional search results.'
-  ]
+  ],
+  primaryGradient
 }: QuestionsDiscoveryProps) {
   const [step, setStep] = useState(1)
   const [keyword, setKeyword] = useState('')
@@ -416,7 +418,7 @@ export default function QuestionsDiscovery({
                     fontSize: '1.125rem',
                     fontWeight: 700,
                     borderRadius: '12px',
-                    backgroundColor: '#3b82f6',
+                    backgroundImage: primaryGradient || 'linear-gradient(135deg, #22c1c3 0%, #3b82f6 100%)',
                     border: 'none',
                     cursor: isSubmitting ? 'not-allowed' : 'pointer',
                     opacity: isSubmitting ? 0.7 : 1,
