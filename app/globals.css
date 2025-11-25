@@ -1195,7 +1195,7 @@ img {
 }
 
 .why-work-with-us-container {
-  max-width: 1400px;
+  max-width: 1100px; /* center content tighter on desktop */
   margin: 0 auto;
   padding: 0 var(--container-padding);
 }
@@ -1204,7 +1204,7 @@ img {
   display: flex;
   gap: var(--spacing-lg); /* tighter space between text and image */
   align-items: center;
-  justify-content: flex-start; /* remove extra whitespace between columns */
+  justify-content: center; /* center text+image as a block */
 }
 
 .why-work-with-us-text-content {
