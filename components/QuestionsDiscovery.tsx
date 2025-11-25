@@ -289,8 +289,14 @@ export default function QuestionsDiscovery({
               )}
               <button
                 type="submit"
-                className="btn btn-primary"
-                style={{ width: '100%', marginTop: '0.5rem' }}
+                className="quiz-cta-button"
+                style={{ 
+                  width: '100%', 
+                  marginTop: '0.5rem',
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
+                  borderColor: '#000000'
+                }}
               >
                 Continue
               </button>
