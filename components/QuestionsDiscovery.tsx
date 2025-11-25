@@ -334,14 +334,16 @@ export default function QuestionsDiscovery({
                   {error}
                 </p>
               )}
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={isSubmitting}
-                style={{ width: '100%', marginTop: '0.5rem' }}
-              >
-                {isSubmitting ? 'Saving...' : 'Show Me the Questions'}
-              </button>
+              {email.trim() && (
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isSubmitting}
+                  style={{ width: '100%', marginTop: '0.5rem' }}
+                >
+                  {isSubmitting ? 'Saving...' : 'Show Me the Questions'}
+                </button>
+              )}
             </form>
             {isLoading && aiFacts.length > 0 && (
               <div style={{ 
