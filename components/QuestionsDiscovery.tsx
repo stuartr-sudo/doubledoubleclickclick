@@ -159,10 +159,10 @@ export default function QuestionsDiscovery({
         {/* Step 1: Keyword Input */}
         {step === 1 && (
           <div className="quiz-step">
-            <h3 className="quiz-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
+            <h3 className="quiz-title">
               {title}
             </h3>
-            <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
+            <p className="quiz-description">
               {description}
             </p>
             <form onSubmit={handleKeywordSubmit}>
@@ -209,10 +209,10 @@ export default function QuestionsDiscovery({
         {/* Step 2: Email Capture (while API processes) */}
         {step === 2 && (
           <div className="quiz-step">
-            <h3 className="quiz-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
+            <h3 className="quiz-title">
               Get Your Questions Report
             </h3>
-            <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
+            <p className="quiz-description">
               We&apos;re analyzing questions for <strong>{keyword}</strong>. Enter your email to receive the results.
             </p>
             <form onSubmit={handleEmailSubmit}>
