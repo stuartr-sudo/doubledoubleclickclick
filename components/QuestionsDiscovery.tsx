@@ -15,39 +15,58 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [apiCallStarted, setApiCallStarted] = useState(false)
 
   const handleKeywordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!keyword.trim()) {
+    const trimmedKeyword = keyword.trim()
+    if (!trimmedKeyword) {
       setError('Please enter a keyword')
       return
     }
 
+    // Prevent duplicate submissions
+    if (apiCallStarted) {
+      console.log('API call already in progress, ignoring duplicate submission')
+      return
+    }
+
     setError('')
+    setApiCallStarted(true)
     trackFormStart('questions_discovery')
+
+    console.log('Starting DataForSEO API call for keyword:', trimmedKeyword)
 
     // Move to step 2 immediately for better UX
     setStep(2)
     setIsLoading(true)
 
     try {
-      // Start API call in background
+      // Make API call and WAIT for completion
+      console.log('Fetching questions from DataForSEO...')
       const response = await fetch('/api/questions-discovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword: keyword.trim() }),
+        body: JSON.stringify({ keyword: trimmedKeyword }),
       })
 
       const data = await response.json()
+      console.log('DataForSEO API response:', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch questions')
       }
 
-      setQuestions(data.questions || [])
+      const fetchedQuestions = data.questions || []
+      console.log(`Successfully fetched ${fetchedQuestions.length} questions`)
+      setQuestions(fetchedQuestions)
       setIsLoading(false)
-    } catch (err) {
+      
+      if (fetchedQuestions.length === 0) {
+        setError('No questions found for this keyword. Try a different one.')
+      }
+    } catch (err: any) {
       console.error('Error fetching questions:', err)
       setError('Unable to fetch questions. Please try again.')
       setIsLoading(false)
