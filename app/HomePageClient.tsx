@@ -806,18 +806,18 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             <h2 className="why-work-with-us-title">{whyWorkWithUsSubtitle}</h2>
             <p className="why-work-with-us-description">{whyWorkWithUsDescription}</p>
           </div>
-          <div className="why-work-with-us-grid">
-            {whyWorkWithUsItems.map((item) => (
-              <div key={item.id} className="why-work-with-us-card">
+          {whyWorkWithUsItems.length > 0 && (
+            <div className="why-work-with-us-grid">
+              <div className="why-work-with-us-card">
                 <div className="why-work-with-us-image">
-                  {item.image ? (
+                  {whyWorkWithUsItems[0].image ? (
                     <Image 
-                      src={item.image} 
-                      alt={item.title} 
-                      width={600}
-                      height={600}
+                      src={whyWorkWithUsItems[0].image} 
+                      alt={whyWorkWithUsItems[0].title} 
+                      width={400}
+                      height={400}
                       loading="lazy"
-                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                      style={{ objectFit: 'contain', width: '100%', height: '100%' }}
                     />
                   ) : (
                     <div className="why-work-with-us-image-placeholder">
@@ -831,12 +831,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   )}
                 </div>
                 <div className="why-work-with-us-card-content">
-                  <h3 className="why-work-with-us-card-title">{item.title}</h3>
-                  <p className="why-work-with-us-card-description">{item.description}</p>
+                  <h3 className="why-work-with-us-card-title">{whyWorkWithUsItems[0].title}</h3>
+                  <p className="why-work-with-us-card-description">{whyWorkWithUsItems[0].description}</p>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
