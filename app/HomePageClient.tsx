@@ -564,8 +564,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 {heroVariant === 'questions' && !showQuestionsDiscovery && (
                   <>
                     <div className="quiz-badge">
-                      <span className="quiz-steps">⚡ 2 Minutes</span>
-                      <span className="quiz-badge-text">Questions Discovery</span>
+                      <span className="quiz-steps">⚡ 2 Minute</span>
+                      <span className="quiz-badge-text">Question Discovery</span>
                     </div>
                     <QuestionsDiscovery 
                       onClose={() => setShowQuestionsDiscovery(false)}
