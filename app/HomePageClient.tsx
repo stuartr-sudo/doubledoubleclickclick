@@ -370,12 +370,19 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     }
   }, [showQuiz, isQuizLoaded])
 
-  // Auto-center hero quiz when opened
+  // Auto-center hero quiz when opened (top CTA)
   useEffect(() => {
-    if (showQuiz && heroQuizRef.current) {
+    if (showQuiz && quizContainerRef.current) {
       setTimeout(() => {
-        heroQuizRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 100)
+        const el = quizContainerRef.current
+        const rect = el.getBoundingClientRect()
+        const absoluteTop = rect.top + window.scrollY
+        const targetScroll = absoluteTop + rect.height / 2 - window.innerHeight / 2
+        window.scrollTo({
+          top: Math.max(targetScroll, 0),
+          behavior: 'smooth',
+        })
+      }, 150)
     }
   }, [showQuiz])
 
