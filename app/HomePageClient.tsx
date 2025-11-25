@@ -13,6 +13,7 @@ const MobileMenu = dynamic(() => import('@/components/MobileMenu'), { ssr: false
 const SubscribeHero = dynamic(() => import('@/components/SubscribeHero'), { ssr: false })
 const HowItWorks = dynamic(() => import('@/components/HowItWorks'), { ssr: true })
 const QuestionsDiscovery = dynamic(() => import('@/components/QuestionsDiscovery'), { ssr: false })
+const ParticleAnimation = dynamic(() => import('@/components/ParticleAnimation'), { ssr: false })
 
 interface Service {
   id: string
@@ -287,6 +288,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const [heroVariant, setHeroVariant] = useState<'quiz' | 'questions'>('quiz')
   const [showQuestionsDiscovery, setShowQuestionsDiscovery] = useState(false)
   const [isClient, setIsClient] = useState(false)
+  const [showParticles, setShowParticles] = useState(false)
 
   useEffect(() => {
     // Set isClient to true to indicate we're on the client
@@ -424,18 +426,27 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   }
 
   const openHeroQuiz = () => {
-    setShowQuiz(true)
-    trackQuizStart('hero')
-    }
+    setShowParticles(true)
+    setTimeout(() => {
+      setShowQuiz(true)
+      trackQuizStart('hero')
+    }, 500)
+  }
 
   const openMidQuiz = () => {
-    setShowMidQuiz(true)
-    trackQuizStart('mid')
+    setShowParticles(true)
+    setTimeout(() => {
+      setShowMidQuiz(true)
+      trackQuizStart('mid')
+    }, 500)
   }
 
   const openBottomQuiz = () => {
-    setShowBottomQuiz(true)
-    trackQuizStart('bottom')
+    setShowParticles(true)
+    setTimeout(() => {
+      setShowBottomQuiz(true)
+      trackQuizStart('bottom')
+    }, 500)
   }
 
   const faqItems = homepageContent?.faq_items || [
@@ -1097,6 +1108,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       <Suspense fallback={null}>
         <MobileMenu isOpen={isMenuOpen} onClose={handleMenuToggle} />
       </Suspense>
+
+      {/* Particle Animation */}
+      <ParticleAnimation 
+        isActive={showParticles} 
+        onComplete={() => setShowParticles(false)} 
+      />
     </main>
   )
 }

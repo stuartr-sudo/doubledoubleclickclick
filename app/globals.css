@@ -1230,17 +1230,16 @@ img {
 }
 
 .why-work-with-us-grid {
-  display: grid;
-  grid-template-columns: 450px 1fr;
+  display: flex;
   gap: var(--spacing-3xl);
   align-items: center;
 }
 
 .why-work-with-us-card {
-  display: grid;
-  grid-template-columns: subgrid;
-  grid-column: 1 / -1;
+  display: flex;
   gap: var(--spacing-3xl);
+  align-items: center;
+  width: 100%;
 }
 
 .why-work-with-us-image {
@@ -1306,12 +1305,12 @@ img {
   }
 
   .why-work-with-us-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     gap: var(--spacing-xl);
   }
 
   .why-work-with-us-card {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     gap: var(--spacing-xl);
   }
 
