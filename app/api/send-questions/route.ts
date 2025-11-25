@@ -3,8 +3,6 @@ import { Resend } from 'resend'
 
 export const dynamic = 'force-dynamic'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(request: NextRequest) {
   try {
     const { email, keyword, questions } = await request.json()
@@ -23,6 +21,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Initialize Resend with API key at runtime
+    const resend = new Resend(process.env.RESEND_API_KEY)
 
     // Create HTML email content
     const htmlContent = `
