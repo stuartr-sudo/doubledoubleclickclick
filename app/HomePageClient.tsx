@@ -553,7 +553,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                     </div>
                     <h2 className="quiz-title">See What Questions Your Prospects Are Asking</h2>
                     <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
-                      Discover the top questions people ask about your industry. Answer them before your competitors do.
+                      Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.
                     </p>
                     <QuestionsDiscovery onClose={() => setShowQuestionsDiscovery(false)} />
                   </>

@@ -9,18 +9,18 @@ interface QuestionsDiscoveryProps {
 
 export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps) {
   const [step, setStep] = useState(1)
-  const [domain, setDomain] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [email, setEmail] = useState('')
   const [questions, setQuestions] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleDomainSubmit = async (e: React.FormEvent) => {
+  const handleKeywordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!domain.trim()) {
-      setError('Please enter a domain')
+    if (!keyword.trim()) {
+      setError('Please enter a keyword')
       return
     }
 
@@ -33,7 +33,7 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
       const response = fetch('/api/questions-discovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: domain.trim() }),
+        body: JSON.stringify({ keyword: keyword.trim() }),
       })
 
       // Immediately move to step 2 (email capture) while API processes
@@ -74,9 +74,10 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          name: keyword.trim(), // Use keyword as name for now
           email: email.trim(),
-          type: 'questions_discovery',
-          domain: domain.trim(),
+          source: 'questions_discovery',
+          website: keyword.trim(), // Store keyword in website field for reference
         }),
       })
 
@@ -111,29 +112,29 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
   return (
     <div className="quiz-inline-container">
       <div className="quiz-inline-wrapper">
-        {/* Step 1: Domain Input */}
+        {/* Step 1: Keyword Input */}
         {step === 1 && (
           <div className="quiz-step">
             <h3 className="quiz-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
               Discover Questions Your Prospects Are Asking
             </h3>
             <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
-              Enter your domain and we&apos;ll show you the top questions people are asking about your industry.
+              Enter a keyword and we&apos;ll show you the top questions people are asking about it.
             </p>
-            <form onSubmit={handleDomainSubmit}>
+            <form onSubmit={handleKeywordSubmit}>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label htmlFor="domain" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                  Your Domain
+                <label htmlFor="keyword" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                  Your Keyword
                 </label>
                 <input
                   type="text"
-                  id="domain"
-                  value={domain}
+                  id="keyword"
+                  value={keyword}
                   onChange={(e) => {
-                    setDomain(e.target.value)
+                    setKeyword(e.target.value)
                     setError('') // Clear error when user types
                   }}
-                  placeholder="example.com"
+                  placeholder="e.g. AI marketing, SaaS tools"
                   className="form-control"
                   style={{
                     width: '100%',
@@ -168,7 +169,7 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
               Get Your Questions Report
             </h3>
             <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
-              We&apos;re analyzing questions for <strong>{domain}</strong>. Enter your email to receive the results.
+              We&apos;re analyzing questions for <strong>{keyword}</strong>. Enter your email to receive the results.
             </p>
             <form onSubmit={handleEmailSubmit}>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
@@ -228,7 +229,7 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
             ) : questions.length > 0 ? (
               <>
                 <h3 className="quiz-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-                  Top Questions About {domain}
+                  Top Questions About {keyword}
                 </h3>
                 <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
                   Here are the questions your prospects are asking. Answer these before your competitors do!
@@ -282,15 +283,15 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
             ) : (
               <div style={{ textAlign: 'center', padding: '2rem 0' }}>
                 <p style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>
-                  No questions found for {domain}
+                  No questions found for {keyword}
                 </p>
                 <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
-                  We couldn&apos;t find any questions for this domain. Try a different keyword or domain.
+                  We couldn&apos;t find any questions for this keyword. Try a different keyword.
                 </p>
                 <button
                   onClick={() => {
                     setStep(1)
-                    setDomain('')
+                    setKeyword('')
                     setEmail('')
                     setQuestions([])
                     setError('')

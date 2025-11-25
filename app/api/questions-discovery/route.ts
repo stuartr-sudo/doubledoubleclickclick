@@ -1,37 +1,88 @@
 import { NextResponse } from 'next/server'
 
-interface DataForSEOTaskResponse {
-  tasks: Array<{
-    id: string
-    status_code: number
-  }>
-}
+export const dynamic = 'force-dynamic'
 
-interface DataForSEOResultResponse {
-  tasks: Array<{
-    result: Array<{
-      items: Array<{
-        type: string
-        title?: string
-        description?: string
-        questions?: string[]
-        people_also_ask?: Array<{
-          title: string
-          expanded_element?: Array<{
-            description?: string
-          }>
-        }>
-      }>
-    }>
-  }>
+// Function to extract all keywords from DataForSEO response (based on n8n workflow)
+function extractAllKeywords(inputData: any) {
+  const allKeywords: Array<{
+    keyword: string
+    type: string
+    seed_question: string | null
+    main_keyword: string
+  }> = []
+
+  try {
+    const tasks = inputData.tasks || []
+    if (tasks.length === 0) {
+      throw new Error('No tasks found in response')
+    }
+
+    const task = tasks[0]
+    const taskResults = task.result || []
+    if (taskResults.length === 0) {
+      throw new Error('No results found in task')
+    }
+
+    const result = taskResults[0]
+    const items = result.items || []
+    const mainKeyword = result.keyword || ''
+
+    // Process each item type
+    items.forEach((item: any) => {
+      // Extract People Also Ask
+      if (item.type === 'people_also_ask' && item.items) {
+        item.items.forEach((paaItem: any) => {
+          allKeywords.push({
+            keyword: paaItem.title || '',
+            type: 'people_also_ask',
+            seed_question: paaItem.seed_question || null,
+            main_keyword: mainKeyword,
+          })
+        })
+      }
+
+      // Extract People Also Search
+      if (item.type === 'people_also_search' && item.items) {
+        item.items.forEach((term: any) => {
+          if (term && typeof term === 'string' && !term.includes('View 3+ more')) {
+            allKeywords.push({
+              keyword: term,
+              type: 'people_also_search',
+              seed_question: null,
+              main_keyword: mainKeyword,
+            })
+          }
+        })
+      }
+
+      // Extract Related Searches
+      if (item.type === 'related_searches' && item.items) {
+        item.items.forEach((term: any) => {
+          if (term && typeof term === 'string') {
+            allKeywords.push({
+              keyword: term,
+              type: 'related_searches',
+              seed_question: null,
+              main_keyword: mainKeyword,
+            })
+          }
+        })
+      }
+    })
+  } catch (error: any) {
+    console.error('Error extracting keywords:', error.message)
+    return []
+  }
+
+  return allKeywords
 }
 
 export async function POST(request: Request) {
   try {
-    const { domain } = await request.json()
+    const { keyword } = await request.json()
 
-    if (!domain) {
-      return NextResponse.json({ error: 'Domain is required' }, { status: 400 })
+    if (!keyword) {
+      return NextResponse.json({ error: 'Keyword is required' }, { status: 400 })
     }
 
     // DataForSEO credentials
@@ -48,7 +99,7 @@ export async function POST(request: Request) {
     const auth = Buffer.from(`${username}:${password}`).toString('base64')
 
     // Step 1: Create task
-    console.log('Creating DataForSEO task for domain:', domain)
+    console.log('Creating DataForSEO task for keyword:', keyword)
     const taskResponse = await fetch(
       'https://api.dataforseo.com/v3/serp/google/organic/task_post',
       {
@@ -61,7 +112,7 @@ export async function POST(request: Request) {
           {
             language_name: 'English',
             location_name: 'United States',
-            keyword: domain,
+            keyword: keyword,
             people_also_ask_click_depth: 4,
             priority: 1,
           },
@@ -78,7 +129,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const taskData: DataForSEOTaskResponse = await taskResponse.json()
+    const taskData: any = await taskResponse.json()
     const taskId = taskData.tasks?.[0]?.id
 
     if (!taskId) {
@@ -115,32 +166,38 @@ export async function POST(request: Request) {
       )
     }
 
-    const resultData: DataForSEOResultResponse = await resultResponse.json()
+    const resultData: any = await resultResponse.json()
 
-    // Extract "People Also Ask" questions
-    const questions: string[] = []
-    const items = resultData.tasks?.[0]?.result?.[0]?.items || []
+    // Extract all keywords using the n8n logic
+    const allKeywords = extractAllKeywords(resultData)
 
-    for (const item of items) {
-      if (item.type === 'people_also_ask' && item.people_also_ask) {
-        for (const paa of item.people_also_ask) {
-          if (paa.title && questions.length < 10) {
-            questions.push(paa.title)
-          }
-        }
-      }
-    }
+    console.log(`Total keywords extracted: ${allKeywords.length}`)
+    
+    // Log summary by type
+    const typeCounts: Record<string, number> = {}
+    allKeywords.forEach(item => {
+      typeCounts[item.type] = (typeCounts[item.type] || 0) + 1
+    })
+    console.log('Keywords by type:', typeCounts)
 
-    console.log('Found questions:', questions.length)
+    // For now, return just the "People Also Ask" questions for the UI
+    const paaQuestions = allKeywords
+      .filter(item => item.type === 'people_also_ask')
+      .map(item => item.keyword)
+      .slice(0, 10)
 
-    if (questions.length === 0) {
+    if (paaQuestions.length === 0) {
       return NextResponse.json(
-        { error: 'No questions found for this domain', questions: [] },
+        { error: 'No questions found for this keyword', questions: [] },
         { status: 200 }
       )
     }
 
-    return NextResponse.json({ questions: questions.slice(0, 10) })
+    return NextResponse.json({ 
+      questions: paaQuestions,
+      allKeywords: allKeywords, // Include all extracted data for future use
+      summary: typeCounts
+    })
   } catch (error) {
     console.error('Error in questions discovery:', error)
     return NextResponse.json(
@@ -149,4 +206,3 @@ export async function POST(request: Request) {
     )
   }
 }
-
