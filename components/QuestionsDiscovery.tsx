@@ -301,26 +301,60 @@ export default function QuestionsDiscovery({
         {/* Step 2: Email Capture (while API processes) */}
         {step === 2 && (
           <div className="quiz-step">
-            <h3 className="quiz-title">
-              Get Your Questions Report
+            <h3 className="quiz-title" style={{ textAlign: 'center', marginBottom: '1rem' }}>
+              📬 Your Questions Report is Being Prepared
             </h3>
-            <p className="quiz-description">
-              We&apos;re analyzing questions for <strong>{keyword}</strong>. Enter your email to receive the results.
+            <p className="quiz-description" style={{ 
+              textAlign: 'center', 
+              fontSize: '1.125rem',
+              marginBottom: '2rem',
+              color: '#1e293b'
+            }}>
+              We&apos;re analyzing questions for <strong style={{ color: '#3b82f6' }}>{keyword}</strong>.<br/>
+              Enter your <strong>best email address</strong> to receive the full report directly to your inbox.
             </p>
             <form onSubmit={handleEmailSubmit}>
-              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <div className="form-group email-pulse-wrapper" style={{ marginBottom: '1.5rem', position: 'relative' }}>
+                <style dangerouslySetInnerHTML={{
+                  __html: `
+                    @keyframes emailPulse {
+                      0%, 100% {
+                        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15), 0 0 0 0 rgba(59, 130, 246, 0.4);
+                      }
+                      50% {
+                        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3), 0 0 0 8px rgba(59, 130, 246, 0);
+                      }
+                    }
+                    @keyframes labelPulse {
+                      0%, 100% { transform: scale(1); }
+                      50% { transform: scale(1.02); }
+                    }
+                    .email-pulse-input {
+                      animation: emailPulse 2s ease-in-out infinite;
+                    }
+                    .email-pulse-label {
+                      animation: labelPulse 2s ease-in-out infinite;
+                    }
+                  `
+                }} />
                 <label 
                   htmlFor="email" 
+                  className="email-pulse-label"
                   style={{ 
-                    display: 'block',
-                    fontSize: '1.125rem',
-                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.25rem',
+                    fontWeight: 700,
                     color: '#1e293b',
-                    marginBottom: '0.75rem',
-                    letterSpacing: '-0.01em'
+                    marginBottom: '1rem',
+                    letterSpacing: '-0.01em',
+                    textAlign: 'center',
+                    gap: '0.5rem'
                   }}
                 >
-                  📧 Enter Your Email Address
+                  <span style={{ fontSize: '1.5rem' }}>📧</span>
+                  <span>Enter Your Best Email Address</span>
                 </label>
                 <input
                   type="email"
@@ -330,39 +364,54 @@ export default function QuestionsDiscovery({
                     setEmail(e.target.value)
                     setError('') // Clear error when user types
                   }}
-                  placeholder="your.email@example.com"
-                  className="form-control"
+                  placeholder="your.best.email@example.com"
+                  className="form-control email-pulse-input"
                   style={{
                     width: '100%',
-                    padding: '1.25rem 1rem',
-                    fontSize: '1.125rem',
+                    padding: '1.5rem 1.25rem',
+                    fontSize: '1.25rem',
                     borderRadius: '12px',
                     border: '3px solid #3b82f6',
                     outline: 'none',
                     transition: 'all 0.2s ease',
                     backgroundColor: '#ffffff',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)',
-                    fontWeight: 500
+                    fontWeight: 500,
+                    textAlign: 'center'
                   }}
                   onFocus={(e) => {
                     e.target.style.borderColor = '#2563eb'
-                    e.target.style.boxShadow = '0 4px 20px rgba(37, 99, 235, 0.25)'
+                    e.target.style.animation = 'none'
+                    e.target.style.boxShadow = '0 4px 24px rgba(37, 99, 235, 0.4)'
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = '#3b82f6'
-                    e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.15)'
+                    e.target.style.animation = 'emailPulse 2s ease-in-out infinite'
                   }}
                   required
                   autoComplete="email"
+                  autoFocus
                 />
-                <p style={{ 
-                  fontSize: '0.875rem', 
-                  color: '#64748b', 
-                  marginTop: '0.5rem',
-                  marginBottom: 0 
+                <div style={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  backgroundColor: '#f0f9ff',
+                  borderRadius: '8px',
+                  border: '2px solid #3b82f6',
                 }}>
-                  We&apos;ll email your personalized questions report instantly
-                </p>
+                  <span style={{ fontSize: '1.25rem' }}>📨</span>
+                  <p style={{ 
+                    fontSize: '1rem', 
+                    color: '#1e293b', 
+                    margin: 0,
+                    fontWeight: 600
+                  }}>
+                    Results will be <strong style={{ color: '#3b82f6' }}>emailed directly to your inbox</strong> in seconds!
+                  </p>
+                </div>
               </div>
               {error && (
                 <p style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.875rem' }}>
