@@ -72,6 +72,9 @@ interface HomepageContent {
   quiz_form_placeholder?: string
   quiz_form_cta_text?: string
   quiz_form_cta_link?: string
+  questions_discovery_title?: string
+  questions_discovery_description?: string
+  questions_discovery_cta_text?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   tech_carousel_bg_color?: string
@@ -178,6 +181,9 @@ function HomepageEditorPageInner() {
     quiz_form_placeholder: 'What is the URL of your website?',
     quiz_form_cta_text: 'NEXT',
     quiz_form_cta_link: '/quiz',
+    questions_discovery_title: 'See What Questions Your Prospects Are Asking',
+    questions_discovery_description: 'Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.',
+    questions_discovery_cta_text: 'Book a Discovery Call',
     tech_carousel_title: 'Technology we work with',
     tech_carousel_items: [
       { id: '1', name: 'ChatGPT', icon: '' },
@@ -1065,6 +1071,54 @@ function HomepageEditorPageInner() {
                   placeholder="/quiz"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Questions Discovery Section */}
+          <div className="form-section">
+            <h3>Questions Discovery (A/B Test Variant)</h3>
+            <p style={{ color: '#666', marginBottom: '1rem' }}>
+              This content is used for the &quot;Questions Discovery&quot; A/B test variant in the hero section. 
+              50% of visitors will see this instead of the quiz.
+            </p>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.questions_discovery_title || ''}
+                onChange={(value) => setFormData({...formData, questions_discovery_title: value})}
+                fieldType="questions_discovery_title"
+                label="Questions Discovery Title"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.questions_discovery_description || ''}
+                onChange={(value) => setFormData({...formData, questions_discovery_description: value})}
+                fieldType="questions_discovery_description"
+                label="Questions Discovery Description"
+                multiline={true}
+                rows={3}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="questions_discovery_cta_text">Results CTA Button Text</label>
+              <input
+                type="text"
+                id="questions_discovery_cta_text"
+                name="questions_discovery_cta_text"
+                value={formData.questions_discovery_cta_text || ''}
+                onChange={handleChange}
+                placeholder="Book a Discovery Call"
+              />
+              <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                The button text shown after questions are displayed (links to /book-call)
+              </p>
             </div>
           </div>
 

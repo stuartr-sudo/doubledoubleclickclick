@@ -116,6 +116,9 @@ interface HomepageContent {
   quiz_form_placeholder?: string
   quiz_form_cta_text?: string
   quiz_form_cta_link?: string
+  questions_discovery_title?: string
+  questions_discovery_description?: string
+  questions_discovery_cta_text?: string
   tech_carousel_title?: string
   tech_carousel_items?: Array<{ id: string; name: string; icon?: string }>
   tech_carousel_bg_color?: string
@@ -276,33 +279,39 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const router = useRouter()
 
   // A/B Test: 50% Quiz vs 50% Questions Discovery
-  // Initialize variant from localStorage immediately to prevent flicker
-  const getInitialVariant = (): 'quiz' | 'questions' => {
-    if (typeof window === 'undefined') return 'quiz'
-    const storedVariant = localStorage.getItem('hero_ab_test_variant')
-    if (storedVariant === 'quiz' || storedVariant === 'questions') {
-      return storedVariant
-    }
-    // Assign random variant (50/50 split)
-    const variant = Math.random() < 0.5 ? 'quiz' : 'questions'
-    localStorage.setItem('hero_ab_test_variant', variant)
-    return variant
-  }
-
-  const [heroVariant, setHeroVariant] = useState<'quiz' | 'questions'>(getInitialVariant)
+  const [heroVariant, setHeroVariant] = useState<'quiz' | 'questions'>('quiz')
   const [showQuestionsDiscovery, setShowQuestionsDiscovery] = useState(false)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    // Track A/B test assignment only on first visit
-    const tracked = sessionStorage.getItem('ab_test_tracked')
-    if (!tracked && typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'ab_test_assigned', {
-        variant: heroVariant,
-        test_name: 'hero_quiz_vs_questions',
-      })
-      sessionStorage.setItem('ab_test_tracked', 'true')
+    // Set isClient to true to indicate we're on the client
+    setIsClient(true)
+    
+    // Check localStorage for variant
+    const storedVariant = localStorage.getItem('hero_ab_test_variant')
+    if (storedVariant === 'quiz' || storedVariant === 'questions') {
+      setHeroVariant(storedVariant)
+    } else {
+      // Assign random variant (50/50 split)
+      const variant = Math.random() < 0.5 ? 'quiz' : 'questions'
+      setHeroVariant(variant)
+      localStorage.setItem('hero_ab_test_variant', variant)
     }
   }, [])
+
+  useEffect(() => {
+    // Track A/B test assignment only once
+    if (isClient) {
+      const tracked = sessionStorage.getItem('ab_test_tracked')
+      if (!tracked && typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'ab_test_assigned', {
+          variant: heroVariant,
+          test_name: 'hero_quiz_vs_questions',
+        })
+        sessionStorage.setItem('ab_test_tracked', 'true')
+      }
+    }
+  }, [heroVariant, isClient])
 
   useEffect(() => {
     const container = quizContainerRef.current
@@ -555,11 +564,16 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       <span className="quiz-steps">⚡ 2 Minutes</span>
                       <span className="quiz-badge-text">Questions Discovery</span>
                     </div>
-                    <h2 className="quiz-title">See What Questions Your Prospects Are Asking</h2>
+                    <h2 className="quiz-title">{homepageContent?.questions_discovery_title || 'See What Questions Your Prospects Are Asking'}</h2>
                     <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
-                      Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.
+                      {homepageContent?.questions_discovery_description || 'Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.'}
                     </p>
-                    <QuestionsDiscovery onClose={() => setShowQuestionsDiscovery(false)} />
+                    <QuestionsDiscovery 
+                      onClose={() => setShowQuestionsDiscovery(false)}
+                      title={homepageContent?.questions_discovery_title}
+                      description={homepageContent?.questions_discovery_description}
+                      ctaText={homepageContent?.questions_discovery_cta_text}
+                    />
                   </>
                 )}
                 

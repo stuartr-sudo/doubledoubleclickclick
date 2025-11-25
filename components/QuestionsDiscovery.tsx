@@ -5,9 +5,17 @@ import { trackFormStart, trackFormSubmission } from '@/lib/analytics'
 
 interface QuestionsDiscoveryProps {
   onClose?: () => void
+  title?: string
+  description?: string
+  ctaText?: string
 }
 
-export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps) {
+export default function QuestionsDiscovery({ 
+  onClose,
+  title = 'See What Questions Your Prospects Are Asking',
+  description = 'Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.',
+  ctaText = 'Book a Discovery Call'
+}: QuestionsDiscoveryProps) {
   const [step, setStep] = useState(1)
   const [keyword, setKeyword] = useState('')
   const [email, setEmail] = useState('')
@@ -151,10 +159,10 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
         {step === 1 && (
           <div className="quiz-step">
             <h3 className="quiz-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-              Discover Questions Your Prospects Are Asking
+              {title}
             </h3>
             <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
-              Enter a keyword and we&apos;ll show you the top questions people are asking about it.
+              {description}
             </p>
             <form onSubmit={handleKeywordSubmit}>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
@@ -317,7 +325,7 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
                       }
                     }}
                   >
-                    Book a Discovery Call
+                    {ctaText}
                   </a>
                 </div>
               </>

@@ -19,7 +19,7 @@ export default function BookCallPage() {
       {/* Load Calendly widget script */}
       <Script
         src="https://assets.calendly.com/assets/external/widget.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
       />
 
       <div style={{ 
@@ -59,13 +59,10 @@ export default function BookCallPage() {
           {/* Calendly Embed */}
           <div 
             className="calendly-inline-widget" 
-            data-url="https://calendly.com/stuartr-sewo/llm-optimization?hide_gdpr_banner=1&primary_color=3b82f6"
+            data-url="https://calendly.com/stuartr-sewo/llm-optimization"
             style={{ 
               minWidth: '320px', 
               height: '700px',
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             }}
           />
           
