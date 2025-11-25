@@ -375,6 +375,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     if (showQuiz && quizContainerRef.current) {
       setTimeout(() => {
         const el = quizContainerRef.current
+        if (!el) return
         const rect = el.getBoundingClientRect()
         const absoluteTop = rect.top + window.scrollY
         const targetScroll = absoluteTop + rect.height / 2 - window.innerHeight / 2
