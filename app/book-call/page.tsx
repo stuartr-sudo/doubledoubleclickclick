@@ -90,7 +90,7 @@ export default function BookCallPage() {
               marginBottom: '1rem',
               color: '#1e293b',
             }}>
-              Book Your LLM Optimization Discovery Call
+              Book Your Ai Optimization Discovery Call
             </h1>
             <p style={{ 
               fontSize: '1.125rem', 
