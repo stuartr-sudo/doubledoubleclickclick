@@ -308,7 +308,20 @@ export default function QuestionsDiscovery({
               We&apos;re analyzing questions for <strong>{keyword}</strong>. Enter your email to receive the results.
             </p>
             <form onSubmit={handleEmailSubmit}>
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label 
+                  htmlFor="email" 
+                  style={{ 
+                    display: 'block',
+                    fontSize: '1.125rem',
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    marginBottom: '0.75rem',
+                    letterSpacing: '-0.01em'
+                  }}
+                >
+                  📧 Enter Your Email Address
+                </label>
                 <input
                   type="email"
                   id="email"
@@ -317,17 +330,39 @@ export default function QuestionsDiscovery({
                     setEmail(e.target.value)
                     setError('') // Clear error when user types
                   }}
-                  placeholder="you@example.com"
+                  placeholder="your.email@example.com"
                   className="form-control"
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
-                    fontSize: '1rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
+                    padding: '1.25rem 1rem',
+                    fontSize: '1.125rem',
+                    borderRadius: '12px',
+                    border: '3px solid #3b82f6',
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)',
+                    fontWeight: 500
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563eb'
+                    e.target.style.boxShadow = '0 4px 20px rgba(37, 99, 235, 0.25)'
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#3b82f6'
+                    e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.15)'
                   }}
                   required
+                  autoComplete="email"
                 />
+                <p style={{ 
+                  fontSize: '0.875rem', 
+                  color: '#64748b', 
+                  marginTop: '0.5rem',
+                  marginBottom: 0 
+                }}>
+                  We&apos;ll email your personalized questions report instantly
+                </p>
               </div>
               {error && (
                 <p style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.875rem' }}>
@@ -339,9 +374,35 @@ export default function QuestionsDiscovery({
                   type="submit"
                   className="btn btn-primary"
                   disabled={isSubmitting}
-                  style={{ width: '100%', marginTop: '0.5rem' }}
+                  style={{ 
+                    width: '100%', 
+                    marginTop: '1rem',
+                    padding: '1.25rem 2rem',
+                    fontSize: '1.125rem',
+                    fontWeight: 700,
+                    borderRadius: '12px',
+                    backgroundColor: '#3b82f6',
+                    border: 'none',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.7 : 1,
+                    boxShadow: isSubmitting ? 'none' : '0 4px 20px rgba(59, 130, 246, 0.4)',
+                    transition: 'all 0.2s ease',
+                    letterSpacing: '0.02em'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSubmitting) {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 30px rgba(59, 130, 246, 0.5)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSubmitting) {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(59, 130, 246, 0.4)'
+                    }
+                  }}
                 >
-                  {isSubmitting ? 'Saving...' : 'Show Me the Questions'}
+                  {isSubmitting ? '⏳ Saving...' : '🚀 Show Me the Questions'}
                 </button>
               )}
             </form>
