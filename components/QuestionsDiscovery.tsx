@@ -398,25 +398,44 @@ export default function QuestionsDiscovery({
                   autoFocus
                 />
                 <div style={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  marginTop: '1rem',
-                  padding: '1rem',
-                  backgroundColor: '#f0f9ff',
-                  borderRadius: '8px',
-                  border: '2px solid #3b82f6',
+                  marginTop: '1.5rem',
+                  padding: '1.25rem',
+                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                  borderRadius: '12px',
+                  borderLeft: '4px solid #3b82f6',
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)',
                 }}>
-                  <span style={{ fontSize: '1.25rem' }}>📨</span>
-                  <p style={{ 
-                    fontSize: '1rem', 
-                    color: '#1e293b', 
-                    margin: 0,
-                    fontWeight: 600
+                  <div style={{ 
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem',
                   }}>
-                    Results will be <strong style={{ color: '#3b82f6' }}>emailed directly to your inbox</strong> in seconds!
-                  </p>
+                    <span style={{ 
+                      fontSize: '1.5rem',
+                      lineHeight: 1,
+                      marginTop: '2px'
+                    }}>✉️</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ 
+                        fontSize: '0.875rem', 
+                        color: '#64748b',
+                        margin: '0 0 0.25rem 0',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Instant Delivery
+                      </p>
+                      <p style={{ 
+                        fontSize: '1rem', 
+                        color: '#1e293b', 
+                        margin: 0,
+                        lineHeight: 1.5
+                      }}>
+                        Your personalized questions report will be sent directly to your inbox in seconds
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
               {error && (
