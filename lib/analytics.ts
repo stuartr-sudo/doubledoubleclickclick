@@ -36,18 +36,20 @@ export const trackQuizView = (location: 'hero' | 'mid' | 'bottom') => {
 
 // Form submissions
 export const trackFormSubmission = (
-  formType: 'contact' | 'agencies' | 'enterprise' | 'beta' | 'subscribe',
-  success: boolean
+  formType: 'contact' | 'agencies' | 'enterprise' | 'beta' | 'subscribe' | 'questions_discovery',
+  success: boolean | string,
+  metadata?: Record<string, any>
 ) => {
   trackEvent('form_submission', {
     form_type: formType,
-    submission_status: success ? 'success' : 'error',
+    submission_status: typeof success === 'boolean' ? (success ? 'success' : 'error') : success,
     engagement_type: 'high_intent',
+    ...metadata,
   })
 }
 
 export const trackFormStart = (
-  formType: 'contact' | 'agencies' | 'enterprise' | 'beta' | 'subscribe'
+  formType: 'contact' | 'agencies' | 'enterprise' | 'beta' | 'subscribe' | 'questions_discovery'
 ) => {
   trackEvent('form_start', {
     form_type: formType,
