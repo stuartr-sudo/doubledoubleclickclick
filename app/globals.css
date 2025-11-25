@@ -10946,11 +10946,13 @@ img {
     height: 100vh;
     min-height: 100vh;
     align-items: stretch !important;
+    justify-content: center !important; /* Center the quiz content */
   }
   
   .hero-stripe-right.quiz-open .hero-quiz-cta {
     max-width: 100% !important;
     height: 100%;
+    padding-left: 0 !important; /* Remove ultra-wide padding when quiz is open */
   }
 }
 
