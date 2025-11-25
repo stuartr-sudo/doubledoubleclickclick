@@ -811,43 +811,36 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       {/* Why Work With Us Section */}
       <section className="why-work-with-us-section" style={{ background: whyWorkWithUsBgColor }}>
         <div className="why-work-with-us-container">
-          <div className="why-work-with-us-header">
-            <div className="why-work-with-us-label-line"></div>
-            <span className="why-work-with-us-label">{whyWorkWithUsTitle}</span>
-            <h2 className="why-work-with-us-title">{whyWorkWithUsSubtitle}</h2>
-            <p className="why-work-with-us-description">{whyWorkWithUsDescription}</p>
-          </div>
-          {whyWorkWithUsItems.length > 0 && (
-            <div className="why-work-with-us-grid">
-              <div className="why-work-with-us-card">
-                <div className="why-work-with-us-image">
-                  {whyWorkWithUsItems[0].image ? (
-                    <Image 
-                      src={whyWorkWithUsItems[0].image} 
-                      alt={whyWorkWithUsItems[0].title} 
-                      width={400}
-                      height={400}
-                      loading="lazy"
-                      style={{ objectFit: 'contain', width: '100%', height: '100%' }}
-                    />
-                  ) : (
-                    <div className="why-work-with-us-image-placeholder">
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div className="why-work-with-us-card-content">
-                  <h3 className="why-work-with-us-card-title">{whyWorkWithUsItems[0].title}</h3>
-                  <p className="why-work-with-us-card-description">{whyWorkWithUsItems[0].description}</p>
-                </div>
-              </div>
+          <div className="why-work-with-us-grid">
+            <div className="why-work-with-us-text-content">
+              <span className="why-work-with-us-label">{whyWorkWithUsTitle}</span>
+              <h2 className="why-work-with-us-title">{whyWorkWithUsSubtitle}</h2>
+              <p className="why-work-with-us-description">{whyWorkWithUsDescription}</p>
             </div>
-          )}
+            {whyWorkWithUsItems.length > 0 && (
+              <div className="why-work-with-us-image">
+                {whyWorkWithUsItems[0].image ? (
+                  <Image 
+                    src={whyWorkWithUsItems[0].image} 
+                    alt={whyWorkWithUsItems[0].title} 
+                    width={450}
+                    height={450}
+                    loading="lazy"
+                    style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+                  />
+                ) : (
+                  <div className="why-work-with-us-image-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                    </svg>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
