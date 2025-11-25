@@ -1202,7 +1202,7 @@ img {
 
 .why-work-with-us-grid {
   display: flex;
-  gap: var(--spacing-3xl);
+  gap: var(--spacing-xl);
   align-items: center;
   justify-content: space-between;
 }
