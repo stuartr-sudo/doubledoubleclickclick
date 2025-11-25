@@ -24,6 +24,8 @@ export default function QuestionsDiscovery({
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [apiCallStarted, setApiCallStarted] = useState(false)
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
 
   const handleKeywordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,6 +128,12 @@ export default function QuestionsDiscovery({
 
       // Move to results
       setStep(3)
+      
+      // Send email with questions after we have them
+      if (questions.length > 0) {
+        sendQuestionsEmail()
+      }
+      
       trackFormSubmission('questions_discovery', 'success')
     } catch (err: any) {
       console.error('Error saving email:', err)
@@ -133,6 +141,50 @@ export default function QuestionsDiscovery({
       trackFormSubmission('questions_discovery', 'error')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const sendQuestionsEmail = async () => {
+    try {
+      const res = await fetch('/api/send-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          keyword: keyword.trim(),
+          questions: questions,
+        }),
+      })
+
+      if (res.ok) {
+        setEmailSent(true)
+        console.log('Questions emailed successfully')
+      } else {
+        console.error('Failed to send email')
+      }
+    } catch (error) {
+      console.error('Error sending email:', error)
+    }
+  }
+
+  const copyQuestion = async (question: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(question)
+      setCopiedIndex(index)
+      setTimeout(() => setCopiedIndex(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const copyAllQuestions = async () => {
+    try {
+      const allQuestions = questions.map((q, i) => `${i + 1}. ${q}`).join('\n\n')
+      await navigator.clipboard.writeText(allQuestions)
+      setCopiedIndex(-1) // Use -1 to indicate "all copied"
+      setTimeout(() => setCopiedIndex(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
     }
   }
 
@@ -266,40 +318,97 @@ export default function QuestionsDiscovery({
               </div>
             ) : questions.length > 0 ? (
               <>
-                {/* Hide intro text to save space on desktop */}
+                {/* Email sent confirmation */}
+                {emailSent && (
+                  <div style={{ 
+                    marginBottom: '1rem', 
+                    padding: '0.75rem', 
+                    backgroundColor: '#f0fdf4', 
+                    border: '1px solid #86efac',
+                    borderRadius: '8px',
+                    color: '#166534',
+                    fontSize: '0.875rem',
+                    textAlign: 'center'
+                  }}>
+                    ✓ Questions emailed to {email}
+                  </div>
+                )}
+                
+                {/* Copy All Button */}
+                <div style={{ marginBottom: '1rem', textAlign: 'right' }}>
+                  <button
+                    onClick={copyAllQuestions}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      fontSize: '0.875rem',
+                      backgroundColor: copiedIndex === -1 ? '#10b981' : '#ffffff',
+                      color: copiedIndex === -1 ? '#ffffff' : '#64748b',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {copiedIndex === -1 ? '✓ Copied All!' : '📋 Copy All Questions'}
+                  </button>
+                </div>
+
+                {/* Questions List */}
                 <div style={{ marginBottom: '1rem' }}>
                   {questions.map((question, index) => (
                     <div
                       key={index}
+                      onClick={() => copyQuestion(question, index)}
                       style={{
                         padding: '1rem',
                         marginBottom: '0.75rem',
-                        backgroundColor: '#f8fafc',
+                        backgroundColor: copiedIndex === index ? '#f0fdf4' : '#f8fafc',
                         borderRadius: '8px',
-                        borderLeft: '4px solid #3b82f6',
+                        borderLeft: `4px solid ${copiedIndex === index ? '#10b981' : '#3b82f6'}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (copiedIndex !== index) {
+                          e.currentTarget.style.backgroundColor = '#f1f5f9'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (copiedIndex !== index) {
+                          e.currentTarget.style.backgroundColor = '#f8fafc'
+                        }
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
-                        <span
-                          style={{
-                            backgroundColor: '#3b82f6',
-                            color: '#fff',
-                            borderRadius: '50%',
-                            width: '24px',
-                            height: '24px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {index + 1}
+                      <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem', flex: 1 }}>
+                          <span
+                            style={{
+                              backgroundColor: copiedIndex === index ? '#10b981' : '#3b82f6',
+                              color: '#fff',
+                              borderRadius: '50%',
+                              width: '24px',
+                              height: '24px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {copiedIndex === index ? '✓' : index + 1}
+                          </span>
+                          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.5, flex: 1 }}>
+                            {question}
+                          </p>
+                        </div>
+                        <span style={{ 
+                          fontSize: '1.25rem', 
+                          color: '#94a3b8',
+                          flexShrink: 0 
+                        }}>
+                          {copiedIndex === index ? '✓' : '📋'}
                         </span>
-                        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.5 }}>
-                          {question}
-                        </p>
                       </div>
                     </div>
                   ))}
