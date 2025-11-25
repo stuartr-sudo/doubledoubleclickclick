@@ -343,25 +343,36 @@ export default function QuestionsDiscovery({
                     }
                   `
                 }} />
-                <label 
-                  htmlFor="email" 
-                  className="email-pulse-label"
-                  style={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.25rem',
-                    fontWeight: 700,
-                    color: '#1e293b',
-                    marginBottom: '1rem',
-                    letterSpacing: '-0.01em',
+                <div style={{ marginBottom: '1rem' }}>
+                  <label 
+                    htmlFor="email" 
+                    className="email-pulse-label"
+                    style={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.25rem',
+                      fontWeight: 700,
+                      color: '#1e293b',
+                      marginBottom: '0.5rem',
+                      letterSpacing: '-0.01em',
+                      textAlign: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.5rem' }}>📧</span>
+                    <span>Enter Your Best Email Address</span>
+                  </label>
+                  <p style={{ 
                     textAlign: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <span style={{ fontSize: '1.5rem' }}>📧</span>
-                  <span>Enter Your Best Email Address</span>
-                </label>
+                    fontSize: '0.875rem',
+                    color: '#64748b',
+                    margin: '0 0 1rem 0',
+                    fontStyle: 'italic'
+                  }}>
+                    ✉️ Your personalized report will be sent directly to your inbox in seconds
+                  </p>
+                </div>
                 <input
                   type="email"
                   id="email"
@@ -397,46 +408,6 @@ export default function QuestionsDiscovery({
                   autoComplete="email"
                   autoFocus
                 />
-                <div style={{ 
-                  marginTop: '1.5rem',
-                  padding: '1.25rem',
-                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                  borderRadius: '12px',
-                  borderLeft: '4px solid #3b82f6',
-                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)',
-                }}>
-                  <div style={{ 
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.75rem',
-                  }}>
-                    <span style={{ 
-                      fontSize: '1.5rem',
-                      lineHeight: 1,
-                      marginTop: '2px'
-                    }}>✉️</span>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ 
-                        fontSize: '0.875rem', 
-                        color: '#64748b',
-                        margin: '0 0 0.25rem 0',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        Instant Delivery
-                      </p>
-                      <p style={{ 
-                        fontSize: '1rem', 
-                        color: '#1e293b', 
-                        margin: 0,
-                        lineHeight: 1.5
-                      }}>
-                        Your personalized questions report will be sent directly to your inbox in seconds
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
               {error && (
                 <p style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.875rem' }}>
