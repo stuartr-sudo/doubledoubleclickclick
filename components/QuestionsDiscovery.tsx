@@ -129,7 +129,10 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
                   type="text"
                   id="domain"
                   value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
+                  onChange={(e) => {
+                    setDomain(e.target.value)
+                    setError('') // Clear error when user types
+                  }}
                   placeholder="example.com"
                   className="form-control"
                   style={{
@@ -176,7 +179,10 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
                   type="email"
                   id="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setError('') // Clear error when user types
+                  }}
                   placeholder="you@example.com"
                   className="form-control"
                   style={{

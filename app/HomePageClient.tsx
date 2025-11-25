@@ -407,16 +407,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     trackQuizStart('hero')
   }
 
-  const openHeroQuestionsDiscovery = () => {
-    setShowQuestionsDiscovery(true)
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'questions_discovery_start', {
-        location: 'hero',
-        variant: heroVariant,
-      })
-    }
-  }
-
   const openMidQuiz = () => {
     setShowMidQuiz(true)
     trackQuizStart('mid')
@@ -554,34 +544,18 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   </>
                 )}
 
-                {/* Variant B: Questions Discovery CTA (50%) */}
-                {heroVariant === 'questions' && (
+                {/* Variant B: Questions Discovery - Always Show Form (50%) */}
+                {heroVariant === 'questions' && !showQuestionsDiscovery && (
                   <>
-                    <div style={{ display: showQuestionsDiscovery ? 'none' : 'block' }}>
-                      <div className="quiz-badge">
-                        <span className="quiz-steps">⚡ 2 Minutes</span>
-                        <span className="quiz-badge-text">Questions Discovery</span>
-                      </div>
-                      <h2 className="quiz-title">See What Questions Your Prospects Are Asking</h2>
-                      <p className="quiz-description">
-                        Discover the top questions people ask about your industry. Answer them before your competitors do.
-                      </p>
-                      <button 
-                        onClick={openHeroQuestionsDiscovery}
-                        className="quiz-cta-button"
-                        style={{
-                          backgroundColor: heroCTABgColor,
-                          color: heroCTATextColor,
-                          borderColor: quizCTABorderColor,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Discover Questions
-                        <svg className="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
+                    <div className="quiz-badge">
+                      <span className="quiz-steps">⚡ 2 Minutes</span>
+                      <span className="quiz-badge-text">Questions Discovery</span>
                     </div>
+                    <h2 className="quiz-title">See What Questions Your Prospects Are Asking</h2>
+                    <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
+                      Discover the top questions people ask about your industry. Answer them before your competitors do.
+                    </p>
+                    <QuestionsDiscovery onClose={() => setShowQuestionsDiscovery(false)} />
                   </>
                 )}
                 
@@ -659,9 +633,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                         style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
                         data-sa-auto-height="1"
                       ></div>
-                    )}
-                    {heroVariant === 'questions' && showQuestionsDiscovery && (
-                      <QuestionsDiscovery onClose={() => setShowQuestionsDiscovery(false)} />
                     )}
                   </div>
                 </div>
