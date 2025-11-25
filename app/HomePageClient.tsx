@@ -386,10 +386,20 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     }
   }, [showQuiz])
 
-  // Smoothly scroll inline quiz blocks into view when they open
+  // Smoothly scroll inline (middle) quiz into true center when it opens
   useEffect(() => {
     if (showMidQuiz && midQuizRef.current) {
-      midQuizRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => {
+        const el = midQuizRef.current
+        if (!el) return
+        const rect = el.getBoundingClientRect()
+        const absoluteTop = rect.top + window.scrollY
+        const targetScroll = absoluteTop + rect.height / 2 - window.innerHeight / 2
+        window.scrollTo({
+          top: Math.max(targetScroll, 0),
+          behavior: 'smooth',
+        })
+      }, 150)
     }
   }, [showMidQuiz])
 
