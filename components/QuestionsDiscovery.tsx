@@ -47,6 +47,38 @@ export default function QuestionsDiscovery({
     }
   }, [isLoading, aiFacts.length])
 
+  // Define sendQuestionsEmail function
+  const sendQuestionsEmail = useCallback(async () => {
+    if (!email.trim() || !keyword.trim() || questions.length === 0) {
+      console.log('Skipping email send: missing data', { email: !!email, keyword: !!keyword, questionsCount: questions.length })
+      return
+    }
+
+    try {
+      console.log('Sending email to:', email.trim(), 'with', questions.length, 'questions')
+      const res = await fetch('/api/send-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          keyword: keyword.trim(),
+          questions: questions,
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setEmailSent(true)
+        console.log('Questions emailed successfully:', data)
+      } else {
+        const errorData = await res.json()
+        console.error('Failed to send email:', errorData)
+      }
+    } catch (error) {
+      console.error('Error sending email:', error)
+    }
+  }, [email, keyword, questions])
+
   // Send email once questions are loaded and we're on step 3
   useEffect(() => {
     if (step === 3 && questions.length > 0 && email.trim() && !emailSent) {
@@ -166,37 +198,6 @@ export default function QuestionsDiscovery({
       setIsSubmitting(false)
     }
   }
-
-  const sendQuestionsEmail = useCallback(async () => {
-    if (!email.trim() || !keyword.trim() || questions.length === 0) {
-      console.log('Skipping email send: missing data', { email: !!email, keyword: !!keyword, questionsCount: questions.length })
-      return
-    }
-
-    try {
-      console.log('Sending email to:', email.trim(), 'with', questions.length, 'questions')
-      const res = await fetch('/api/send-questions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim(),
-          keyword: keyword.trim(),
-          questions: questions,
-        }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setEmailSent(true)
-        console.log('Questions emailed successfully:', data)
-      } else {
-        const errorData = await res.json()
-        console.error('Failed to send email:', errorData)
-      }
-    } catch (error) {
-      console.error('Error sending email:', error)
-    }
-  }, [email, keyword, questions])
 
   const copyQuestion = async (question: string, index: number) => {
     try {
