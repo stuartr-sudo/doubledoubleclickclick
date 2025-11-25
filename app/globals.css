@@ -182,8 +182,6 @@ img {
   grid-template-columns: 1fr 1fr;
   width: 100%;
   min-height: 100%;
-  max-width: 1920px; /* Limit max width on ultra-wide screens */
-  margin: 0 auto; /* Center the grid */
 }
 
 /* Left Column - Gradient Background with Content */
@@ -10960,5 +10958,24 @@ img {
 @media (min-width: 1025px) {
   .hero-stripe-right.quiz-open iframe {
     width: 100% !important;
+  }
+}
+
+/* Ultra-wide screen optimization (>1920px) - Keep backgrounds full width, constrain content */
+@media (min-width: 1921px) {
+  .hero-stripe-left {
+    justify-content: flex-end;
+  }
+  
+  .hero-stripe-left-inner {
+    padding-right: calc((100vw - 1920px) / 4);
+  }
+  
+  .hero-stripe-right {
+    justify-content: flex-start;
+  }
+  
+  .hero-quiz-cta {
+    padding-left: calc((100vw - 1920px) / 4);
   }
 }
