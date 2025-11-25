@@ -361,30 +361,17 @@ export default function QuestionsDiscovery({
                     htmlFor="email" 
                     className="email-pulse-label"
                     style={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.25rem',
+                      display: 'block',
+                      fontSize: '1.1rem',
                       fontWeight: 700,
                       color: '#1e293b',
                       marginBottom: '0.5rem',
                       letterSpacing: '-0.01em',
-                      textAlign: 'center',
-                      gap: '0.5rem'
+                      textAlign: 'left',
                     }}
                   >
-                    <span style={{ fontSize: '1.5rem' }}>📧</span>
-                    <span>Enter Your Best Email Address</span>
+                    Enter Your Best Email Address
                   </label>
-                  <p style={{ 
-                    textAlign: 'center',
-                    fontSize: '0.875rem',
-                    color: '#64748b',
-                    margin: '0 0 1rem 0',
-                    fontStyle: 'italic'
-                  }}>
-                    Your personalized report will be sent directly to your inbox in seconds
-                  </p>
                 </div>
                 <input
                   type="email"

@@ -1202,9 +1202,9 @@ img {
 
 .why-work-with-us-grid {
   display: flex;
-  gap: var(--spacing-xl);
+  gap: var(--spacing-lg); /* tighter space between text and image */
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start; /* remove extra whitespace between columns */
 }
 
 .why-work-with-us-text-content {
