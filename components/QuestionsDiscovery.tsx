@@ -9,7 +9,8 @@ interface QuestionsDiscoveryProps {
   description?: string
   ctaText?: string
   aiFacts?: string[]
-  primaryGradient?: string
+  buttonBgColor?: string
+  buttonTextColor?: string
 }
 
 export default function QuestionsDiscovery({ 
@@ -24,7 +25,8 @@ export default function QuestionsDiscovery({
     'By 2025, 50% of all searches will be conducted through AI assistants.',
     'AI citations drive 4x higher conversion rates than traditional search results.'
   ],
-  primaryGradient
+  buttonBgColor = '#29F5F0',
+  buttonTextColor = '#ffffff'
 }: QuestionsDiscoveryProps) {
   const [step, setStep] = useState(1)
   const [keyword, setKeyword] = useState('')
@@ -308,8 +310,8 @@ export default function QuestionsDiscovery({
                 style={{ 
                   width: '100%', 
                   marginTop: '0.5rem',
-                  backgroundImage: primaryGradient || 'linear-gradient(135deg, #22c1c3 0%, #3b82f6 100%)',
-                  color: '#ffffff',
+                  backgroundColor: buttonBgColor,
+                  color: buttonTextColor,
                   borderColor: 'transparent'
                 }}
               >
@@ -418,7 +420,7 @@ export default function QuestionsDiscovery({
                     fontSize: '1.125rem',
                     fontWeight: 700,
                     borderRadius: '12px',
-                    backgroundImage: primaryGradient || 'linear-gradient(135deg, #22c1c3 0%, #3b82f6 100%)',
+                    backgroundColor: buttonBgColor,
                     border: 'none',
                     cursor: isSubmitting ? 'not-allowed' : 'pointer',
                     opacity: isSubmitting ? 0.7 : 1,
@@ -647,9 +649,9 @@ export default function QuestionsDiscovery({
                       justifyContent: 'center',
                       padding: '1rem 2.5rem',
                       borderRadius: '999px',
-                      backgroundImage: primaryGradient || 'linear-gradient(135deg, #22c1c3 0%, #3b82f6 100%)',
+                      backgroundColor: buttonBgColor,
                       border: 'none',
-                      color: '#ffffff',
+                      color: buttonTextColor,
                       fontWeight: 700,
                       fontSize: '1rem',
                       letterSpacing: '0.02em',

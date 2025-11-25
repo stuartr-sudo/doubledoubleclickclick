@@ -589,7 +589,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                         homepageContent?.ai_fact_4,
                         homepageContent?.ai_fact_5,
                       ].filter(Boolean) as string[]}
-                      primaryGradient={heroBgGradient}
+                      buttonBgColor={heroCTABgColor}
+                      buttonTextColor={heroCTATextColor}
                     />
                   </>
                 )}
