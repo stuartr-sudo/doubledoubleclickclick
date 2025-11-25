@@ -10980,4 +10980,13 @@ img {
   .hero-quiz-cta {
     padding-left: calc((100vw - 1920px) / 4);
   }
+  
+  /* Remove padding when quiz is open on ultra-wide screens */
+  .hero-stripe-right.quiz-open {
+    justify-content: center !important;
+  }
+  
+  .hero-stripe-right.quiz-open .hero-quiz-cta {
+    padding-left: 0 !important;
+  }
 }
