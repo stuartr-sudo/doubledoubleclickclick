@@ -426,7 +426,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const openHeroQuiz = () => {
     setShowQuiz(true)
     trackQuizStart('hero')
-  }
+    }
 
   const openMidQuiz = () => {
     setShowMidQuiz(true)
@@ -539,29 +539,29 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 {/* Variant A: Quiz CTA (50%) */}
                 {heroVariant === 'quiz' && (
                   <>
-                    <div style={{ display: showQuiz ? 'none' : 'block' }}>
-                      <div className="quiz-badge">
-                        <span className="quiz-steps">{quizSteps}</span>
-                        <span className="quiz-badge-text">{quizBadgeText}</span>
-                      </div>
-                      <h2 className="quiz-title">{quizTitle}</h2>
-                      <p className="quiz-description">{quizDescription}</p>
-                      <button 
+                <div style={{ display: showQuiz ? 'none' : 'block' }}>
+                  <div className="quiz-badge">
+                    <span className="quiz-steps">{quizSteps}</span>
+                    <span className="quiz-badge-text">{quizBadgeText}</span>
+                  </div>
+                  <h2 className="quiz-title">{quizTitle}</h2>
+                  <p className="quiz-description">{quizDescription}</p>
+                  <button 
                         onClick={openHeroQuiz}
-                        className="quiz-cta-button"
-                        style={{
-                          backgroundColor: heroCTABgColor,
-                          color: heroCTATextColor,
-                          borderColor: quizCTABorderColor,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {quizCTAText}
-                        <svg className="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
-                    </div>
+                    className="quiz-cta-button"
+                    style={{
+                      backgroundColor: heroCTABgColor,
+                      color: heroCTATextColor,
+                      borderColor: quizCTABorderColor,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {quizCTAText}
+                    <svg className="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
                   </>
                 )}
 
@@ -655,13 +655,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   }} />
                   <div ref={quizContainerRef} className="quiz-content-wrapper">
                     {heroVariant === 'quiz' && (
-                      <div 
-                        className="relative z-10 scrollbar-hide h-full"
-                        data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top" 
-                        data-sa-view="inline" 
-                        style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
-                        data-sa-auto-height="1"
-                      ></div>
+                    <div 
+                      className="relative z-10 scrollbar-hide h-full"
+                      data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top" 
+                      data-sa-view="inline" 
+                      style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
+                      data-sa-auto-height="1"
+                    ></div>
                     )}
                   </div>
                 </div>

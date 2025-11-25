@@ -58,7 +58,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const title = post.meta_title || post.title
   const description = post.meta_description || ''
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
-  
+
   return {
     title,
     description,
