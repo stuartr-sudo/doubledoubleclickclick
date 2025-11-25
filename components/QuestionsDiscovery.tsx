@@ -24,26 +24,24 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
       return
     }
 
-    setIsLoading(true)
     setError('')
     trackFormStart('questions_discovery')
 
+    // Move to step 2 immediately for better UX
+    setStep(2)
+    setIsLoading(true)
+
     try {
       // Start API call in background
-      const response = fetch('/api/questions-discovery', {
+      const response = await fetch('/api/questions-discovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keyword: keyword.trim() }),
       })
 
-      // Immediately move to step 2 (email capture) while API processes
-      setStep(2)
+      const data = await response.json()
 
-      // Wait for API response
-      const res = await response
-      const data = await res.json()
-
-      if (!res.ok) {
+      if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch questions')
       }
 
@@ -53,6 +51,7 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
       console.error('Error fetching questions:', err)
       setError('Unable to fetch questions. Please try again.')
       setIsLoading(false)
+      // Stay on step 2 but show error - user can still enter email
       trackFormSubmission('questions_discovery', 'error')
     }
   }
@@ -111,6 +110,23 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
 
   return (
     <div className="quiz-inline-container">
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes fadeInSlide {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .quiz-step {
+            animation: fadeInSlide 0.4s ease-out;
+          }
+        `
+      }} />
       <div className="quiz-inline-wrapper">
         {/* Step 1: Keyword Input */}
         {step === 1 && (
