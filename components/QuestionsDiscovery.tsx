@@ -263,13 +263,8 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
               </div>
             ) : questions.length > 0 ? (
               <>
-                <h3 className="quiz-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-                  Top Questions About {keyword}
-                </h3>
-                <p className="quiz-description" style={{ marginBottom: '1.5rem' }}>
-                  Here are the questions your prospects are asking. Answer these before your competitors do!
-                </p>
-                <div style={{ marginBottom: '2rem' }}>
+                {/* Hide intro text to save space on desktop */}
+                <div style={{ marginBottom: '1rem' }}>
                   {questions.map((question, index) => (
                     <div
                       key={index}
@@ -310,8 +305,19 @@ export default function QuestionsDiscovery({ onClose }: QuestionsDiscoveryProps)
                   <p style={{ marginBottom: '1rem', color: '#64748b' }}>
                     Want help answering these questions to boost your Ai visibility?
                   </p>
-                  <a href="/contact" className="btn btn-primary">
-                    Get Started
+                  <a 
+                    href="/book-call" 
+                    className="btn btn-primary"
+                    onClick={() => {
+                      if (typeof window !== 'undefined' && window.gtag) {
+                        window.gtag('event', 'book_call_click', {
+                          source: 'questions_discovery',
+                          keyword: keyword,
+                        })
+                      }
+                    }}
+                  >
+                    Book a Discovery Call
                   </a>
                 </div>
               </>

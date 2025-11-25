@@ -276,27 +276,31 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const router = useRouter()
 
   // A/B Test: 50% Quiz vs 50% Questions Discovery
-  const [heroVariant, setHeroVariant] = useState<'quiz' | 'questions'>('quiz')
+  // Initialize variant from localStorage immediately to prevent flicker
+  const getInitialVariant = (): 'quiz' | 'questions' => {
+    if (typeof window === 'undefined') return 'quiz'
+    const storedVariant = localStorage.getItem('hero_ab_test_variant')
+    if (storedVariant === 'quiz' || storedVariant === 'questions') {
+      return storedVariant
+    }
+    // Assign random variant (50/50 split)
+    const variant = Math.random() < 0.5 ? 'quiz' : 'questions'
+    localStorage.setItem('hero_ab_test_variant', variant)
+    return variant
+  }
+
+  const [heroVariant, setHeroVariant] = useState<'quiz' | 'questions'>(getInitialVariant)
   const [showQuestionsDiscovery, setShowQuestionsDiscovery] = useState(false)
 
   useEffect(() => {
-    // Check if user already has a variant assigned
-    const storedVariant = localStorage.getItem('hero_ab_test_variant')
-    if (storedVariant === 'quiz' || storedVariant === 'questions') {
-      setHeroVariant(storedVariant)
-    } else {
-      // Assign random variant (50/50 split)
-      const variant = Math.random() < 0.5 ? 'quiz' : 'questions'
-      setHeroVariant(variant)
-      localStorage.setItem('hero_ab_test_variant', variant)
-      
-      // Track A/B test assignment
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('event', 'ab_test_assigned', {
-          variant: variant,
-          test_name: 'hero_quiz_vs_questions',
-        })
-      }
+    // Track A/B test assignment only on first visit
+    const tracked = sessionStorage.getItem('ab_test_tracked')
+    if (!tracked && typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'ab_test_assigned', {
+        variant: heroVariant,
+        test_name: 'hero_quiz_vs_questions',
+      })
+      sessionStorage.setItem('ab_test_tracked', 'true')
     }
   }, [])
 
