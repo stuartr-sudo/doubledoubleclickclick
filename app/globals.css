@@ -1185,13 +1185,14 @@ img {
 
 /* Why Work With Us Section */
 .why-work-with-us-section {
-  padding: var(--spacing-xl) var(--spacing-lg);
+  padding: var(--spacing-3xl) var(--spacing-2xl);
   background: var(--color-bg);
 }
 
 .why-work-with-us-container {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0 var(--container-padding);
 }
 
 .why-work-with-us-grid {
@@ -1232,8 +1233,8 @@ img {
 }
 
 .why-work-with-us-image {
-  width: 450px;
-  height: 450px;
+  width: 350px;
+  height: 350px;
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid var(--color-border);
@@ -1269,7 +1270,7 @@ img {
 /* Mobile responsiveness */
 @media (max-width: 1024px) {
   .why-work-with-us-section {
-    padding: var(--spacing-lg) var(--spacing-md);
+    padding: var(--spacing-2xl) var(--spacing-lg);
   }
 
   .why-work-with-us-grid {
@@ -1283,8 +1284,8 @@ img {
   }
 
   .why-work-with-us-image {
-    width: 300px;
-    height: 300px;
+    width: 250px;
+    height: 250px;
     order: -1;
   }
 
