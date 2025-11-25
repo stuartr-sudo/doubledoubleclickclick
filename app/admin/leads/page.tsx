@@ -164,10 +164,10 @@ async function LeadsAdminPageInner() {
   )
 }
 
-export default function LeadsAdminPage() {
+export default async function LeadsAdminPage() {
   return (
     <AdminProtected>
-      <LeadsAdminPageInner />
+      {await LeadsAdminPageInner()}
     </AdminProtected>
   )
 }
