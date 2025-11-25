@@ -12,7 +12,7 @@
 Add this to your `.env.local` file:
 
 ```bash
-RESEND_API_KEY=re_TafUuHVc_2xuavK69nsDeiSjVkicZrTtW
+RESEND_API_KEY=your_resend_api_key_here
 ```
 
 ### Vercel Production:
@@ -21,10 +21,12 @@ RESEND_API_KEY=re_TafUuHVc_2xuavK69nsDeiSjVkicZrTtW
 3. Go to **Settings** → **Environment Variables**
 4. Add new variable:
    - **Name**: `RESEND_API_KEY`
-   - **Value**: `re_TafUuHVc_2xuavK69nsDeiSjVkicZrTtW`
+   - **Value**: `your_resend_api_key_here` (get from https://resend.com/api-keys)
    - **Environment**: Select all (Production, Preview, Development)
 5. Click **Save**
 6. **Redeploy** your project for changes to take effect
+
+⚠️ **IMPORTANT**: Never commit your actual API key to git! Always use placeholder text in documentation.
 
 ## 🎨 Features:
 
