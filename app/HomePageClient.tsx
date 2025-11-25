@@ -371,7 +371,10 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
   useEffect(() => {
     if (showBottomQuiz && bottomQuizRef.current) {
-      bottomQuizRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Add a small delay to ensure the quiz container is visible before scrolling
+      setTimeout(() => {
+        bottomQuizRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
     }
   }, [showBottomQuiz])
 
