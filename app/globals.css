@@ -11014,3 +11014,61 @@ img {
     padding-left: 0 !important;
   }
 }
+
+/* Landing Pages Styles */
+.landing-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.landing-page-hero {
+  text-align: center;
+  padding: var(--spacing-3xl) var(--container-padding) var(--spacing-xl);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.landing-page-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text);
+}
+
+.landing-page-description {
+  font-size: clamp(1.125rem, 1.5vw, 1.375rem);
+  line-height: 1.7;
+  color: var(--color-text-light);
+  margin-bottom: 0;
+}
+
+.landing-page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-xl) var(--container-padding);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.quiz-embed-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .landing-page-hero {
+    padding: var(--spacing-2xl) var(--container-padding) var(--spacing-lg);
+  }
+
+  .landing-page-content {
+    padding: var(--spacing-lg) var(--container-padding);
+  }
+}

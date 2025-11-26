@@ -42,6 +42,22 @@ export async function GET() {
     <priority>0.9</priority>
   </url>
 
+  <!-- Quiz Landing Page - AI visibility assessment -->
+  <url>
+    <loc>${baseUrl}/quiz</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Find Questions Landing Page - Keyword question discovery tool -->
+  <url>
+    <loc>${baseUrl}/find-questions</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
 </urlset>`
 
   return new NextResponse(sitemap, {

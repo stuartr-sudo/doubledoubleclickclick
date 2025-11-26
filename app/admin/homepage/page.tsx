@@ -110,6 +110,10 @@ interface HomepageContent {
   proof_results_items?: ProofResultItem[]
   proof_results_bg_color?: string
   quiz_cta_bg_color?: string
+  quiz_landing_title?: string
+  quiz_landing_description?: string
+  find_questions_title?: string
+  find_questions_description?: string
 }
 
 function HomepageEditorPageInner() {
@@ -2120,6 +2124,78 @@ function HomepageEditorPageInner() {
             />
           </div>
         </div>
+
+          {/* Landing Pages */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">Landing Pages</h2>
+              <p style={{ color: '#666', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                Content for dedicated landing pages: /quiz and /find-questions
+              </p>
+            </div>
+
+            {/* Quiz Landing Page */}
+            <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #e5e7eb' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: '#1f2937' }}>
+                Quiz Landing Page (/quiz)
+              </h3>
+              
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.quiz_landing_title || ''}
+                  onChange={(value) => setFormData({...formData, quiz_landing_title: value})}
+                  fieldType="quiz_landing_title"
+                  label="Page Title"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.quiz_landing_description || ''}
+                  onChange={(value) => setFormData({...formData, quiz_landing_description: value})}
+                  fieldType="quiz_landing_description"
+                  label="Page Description"
+                  multiline={true}
+                  rows={3}
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+            </div>
+
+            {/* Find Questions Landing Page */}
+            <div>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', color: '#1f2937' }}>
+                Find Questions Landing Page (/find-questions)
+              </h3>
+              
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.find_questions_title || ''}
+                  onChange={(value) => setFormData({...formData, find_questions_title: value})}
+                  fieldType="find_questions_title"
+                  label="Page Title"
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <TextEnhancer
+                  value={formData.find_questions_description || ''}
+                  onChange={(value) => setFormData({...formData, find_questions_description: value})}
+                  fieldType="find_questions_description"
+                  label="Page Description"
+                  multiline={true}
+                  rows={3}
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Additional Background Colors */}
           <div className="form-section">
