@@ -6,9 +6,10 @@ import Link from 'next/link'
 interface MobileMenuProps {
   isOpen: boolean
   onClose: () => void
+  blogVisible?: boolean
 }
 
-export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
+export default function MobileMenu({ isOpen, onClose, blogVisible = true }: MobileMenuProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -51,10 +52,11 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
       </button>
 
       <nav className="mobile-menu-nav">
-        {/* Blog temporarily hidden */}
-        {/* <Link href="/blog" className="mobile-menu-link" onClick={onClose}>
-          Blog
-        </Link> */}
+        {blogVisible && (
+          <Link href="/blog" className="mobile-menu-link" onClick={onClose}>
+            Blog
+          </Link>
+        )}
         <Link href="/contact" className="mobile-menu-link" onClick={onClose}>
           Contact
         </Link>

@@ -1128,7 +1128,11 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
       {/* Mobile Menu Component */}
       <Suspense fallback={null}>
-        <MobileMenu isOpen={isMenuOpen} onClose={handleMenuToggle} />
+        <MobileMenu 
+          isOpen={isMenuOpen} 
+          onClose={handleMenuToggle} 
+          blogVisible={blogSectionVisible}
+        />
       </Suspense>
 
       {/* Particle Animation */}

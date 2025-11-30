@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const body = await request.json()
 
-    const { title, content, meta_description, meta_title, slug, tags, featured_image, status = 'draft' } = body
+    const { title, content, meta_description, meta_title, slug, tags, featured_image, status = 'draft', category, author } = body
 
     // Validate required fields
     if (!title || !content) {
@@ -34,6 +34,8 @@ export async function POST(request: Request) {
         tags: tags || [],
         featured_image,
         status,
+        category,
+        author,
         published_date: status === 'published' ? new Date().toISOString() : null,
       })
       .select()
