@@ -57,22 +57,23 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     }
   }
 
-  const title = post.meta_title || post.title
+  // SEO: Use meta_title for <title> tag if available, otherwise fallback to regular title
+  const seoTitle = post.meta_title || post.title
   const description = post.meta_description || ''
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
 
   return {
-    title,
+    title: seoTitle,
     description,
     openGraph: {
-      title,
+      title: seoTitle,
       description,
       type: 'article',
       url: `${baseUrl}/blog/${params.slug}`,
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: seoTitle,
       description,
     },
   }
@@ -244,6 +245,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             <Link href="/blog" className="back-link">
               ← Back to Blog
             </Link>
+            {/* Main title - displays post.title (NOT meta_title) */}
             <h1 className="blog-post-title">{post.title}</h1>
             <div className="blog-post-meta">
               <time dateTime={post.created_date}>
