@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 
+// Blog Quiz CTA Component - Matches homepage design
 interface BlogQuizCTAProps {
   quizCtaBgColor?: string
   quizDescription?: string
