@@ -161,24 +161,54 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
   
   // JSON-LD structured data for the article
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: post.title,
-    description: post.meta_description || '',
-    image: post.featured_image || '',
-    datePublished: post.created_date,
-    dateModified: post.updated_date || post.created_date,
-    author: {
-      '@type': 'Organization',
-      name: 'SEWO',
-      url: baseUrl,
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'SEWO',
-      url: baseUrl,
-    },
+  // Use generated_llm_schema if provided, otherwise create default schema
+  let jsonLd
+  if (post.generated_llm_schema) {
+    try {
+      jsonLd = JSON.parse(post.generated_llm_schema)
+    } catch (e) {
+      console.error('Error parsing generated_llm_schema:', e)
+      // Fallback to default schema
+      jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: post.title,
+        description: post.meta_description || '',
+        image: post.featured_image || '',
+        datePublished: post.created_date,
+        dateModified: post.updated_date || post.created_date,
+        author: {
+          '@type': 'Organization',
+          name: post.author || 'SEWO',
+          url: baseUrl,
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: 'SEWO',
+          url: baseUrl,
+        },
+      }
+    }
+  } else {
+    jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: post.title,
+      description: post.meta_description || '',
+      image: post.featured_image || '',
+      datePublished: post.created_date,
+      dateModified: post.updated_date || post.created_date,
+      author: {
+        '@type': 'Organization',
+        name: post.author || 'SEWO',
+        url: baseUrl,
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: 'SEWO',
+        url: baseUrl,
+      },
+    }
   }
 
   return (
