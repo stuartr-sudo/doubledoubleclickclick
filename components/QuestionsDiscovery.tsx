@@ -295,8 +295,8 @@ export default function QuestionsDiscovery({
             <p className="quiz-description" style={{ marginBottom: '2rem' }}>
               {description}
             </p>
-            <form onSubmit={handleKeywordSubmit}>
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <form onSubmit={handleKeywordSubmit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div className="form-group" style={{ marginBottom: '0.5rem', width: '100%' }}>
                 <input
                   type="text"
                   id="keyword"
@@ -313,12 +313,13 @@ export default function QuestionsDiscovery({
                     fontSize: '1rem',
                     borderRadius: '8px',
                     border: '1px solid #cbd5e1',
+                    textAlign: 'center'
                   }}
                   required
                 />
               </div>
               {error && (
-                <p style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.875rem' }}>
+                <p style={{ color: '#ef4444', marginBottom: '0.5rem', fontSize: '0.875rem', textAlign: 'center' }}>
                   {error}
                 </p>
               )}
@@ -327,10 +328,11 @@ export default function QuestionsDiscovery({
                 className="quiz-cta-button"
                 style={{ 
                   width: '100%', 
-                  marginTop: '0.5rem',
+                  marginTop: '0.25rem',
                   backgroundColor: buttonBgColor,
                   color: buttonTextColor,
-                  borderColor: 'transparent'
+                  borderColor: 'transparent',
+                  justifyContent: 'center'
                 }}
               >
                 Continue

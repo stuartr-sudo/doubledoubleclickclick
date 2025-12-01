@@ -94,9 +94,6 @@ export default function BlogQuizCTA({
         <div
           className="quiz-inline-container"
           ref={quizRef}
-          data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
-          data-sa-view="inline"
-          data-sa-auto-height="1"
           style={{
             maxWidth: '100%',
             width: '100%',
@@ -104,7 +101,15 @@ export default function BlogQuizCTA({
             marginTop: '24px',
             display: showQuiz ? 'block' : 'none'
           }}
-        ></div>
+        >
+          {showQuiz && (
+            <iframe
+              src="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
+              style={{ width: '100%', border: '0', minHeight: '900px', background: 'transparent' }}
+              loading="lazy"
+            />
+          )}
+        </div>
       </div>
     </section>
   )

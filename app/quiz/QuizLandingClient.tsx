@@ -45,19 +45,12 @@ export default function QuizLandingClient({
       </div>
       
       <div className="landing-page-content" ref={quizContainerRef}>
-        <div 
-          className="quiz-embed-container"
-          data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top" 
-          data-sa-view="inline" 
-          style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
-          data-sa-auto-height="1"
-        ></div>
+        <iframe
+          src="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
+          style={{ maxWidth: '100%', width: '100%', border: '0', minHeight: '900px', background: 'transparent' }}
+          loading="lazy"
+        />
       </div>
-
-      <Script
-        src="https://cdn.scoreapp.com/scoreapp.js"
-        strategy="lazyOnload"
-      />
     </div>
   )
 }

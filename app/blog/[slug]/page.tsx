@@ -292,12 +292,6 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
         quizCTABorderColor={homepageContent?.quiz_cta_border_color || '#000000'}
       />
 
-      {/* ScoreApp Quiz Script */}
-      <Script
-        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=PtHIIH"
-        strategy="afterInteractive"
-      />
-
       {/* Blog Carousel */}
       <BlogCarousel />
 

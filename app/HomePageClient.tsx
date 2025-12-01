@@ -291,6 +291,30 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const [isClient, setIsClient] = useState(false)
   const [showParticles, setShowParticles] = useState(false)
 
+  // Helper to ensure ScoreApp iframe exists even if their embed script fails
+  const ensureScoreAppIframe = useCallback((root: HTMLDivElement | null) => {
+    if (!root) return
+
+    // If an iframe already exists, nothing to do
+    const existingIframe = root.querySelector('iframe')
+    if (existingIframe) return
+
+    // Find the ScoreApp placeholder with data-sa-url
+    const placeholder = root.querySelector('[data-sa-url]') as HTMLElement | null
+    const url = placeholder?.getAttribute('data-sa-url')
+    if (!placeholder || !url) return
+
+    const iframe = document.createElement('iframe')
+    iframe.src = url
+    iframe.style.width = '100%'
+    iframe.style.border = '0'
+    iframe.style.background = 'transparent'
+    iframe.setAttribute('loading', 'lazy')
+    iframe.setAttribute('allowTransparency', 'true')
+
+    placeholder.appendChild(iframe)
+  }, [])
+
   useEffect(() => {
     // Set isClient to true to indicate we're on the client
     setIsClient(true)
@@ -360,7 +384,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     observer.observe(container, { childList: true, subtree: true })
 
     return () => observer.disconnect()
-  }, [])
+  }, [isQuizLoaded])
 
   // Force hide spinner after a timeout once quiz is shown, just in case
   useEffect(() => {
@@ -369,6 +393,39 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       return () => clearTimeout(timer)
     }
   }, [showQuiz, isQuizLoaded])
+
+  // Fallback: if ScoreApp script doesn't inject the iframe, create it manually
+  useEffect(() => {
+    if (!showQuiz) return
+
+    const timeout = setTimeout(() => {
+      ensureScoreAppIframe(quizContainerRef.current)
+    }, 800)
+
+    return () => clearTimeout(timeout)
+  }, [showQuiz, ensureScoreAppIframe])
+
+  // Ensure inline (middle) quiz always has iframe when opened
+  useEffect(() => {
+    if (!showMidQuiz) return
+
+    const timeout = setTimeout(() => {
+      ensureScoreAppIframe(midQuizRef.current as HTMLDivElement | null)
+    }, 800)
+
+    return () => clearTimeout(timeout)
+  }, [showMidQuiz, ensureScoreAppIframe])
+
+  // Ensure bottom quiz always has iframe when opened
+  useEffect(() => {
+    if (!showBottomQuiz) return
+
+    const timeout = setTimeout(() => {
+      ensureScoreAppIframe(bottomQuizRef.current as HTMLDivElement | null)
+    }, 800)
+
+    return () => clearTimeout(timeout)
+  }, [showBottomQuiz, ensureScoreAppIframe])
 
   // Auto-center hero quiz when opened (top CTA)
   useEffect(() => {
@@ -527,21 +584,45 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       
-      <Script 
-        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=PtHIIH" 
-        strategy="afterInteractive"
-      />
-
       {/* Hero Section - Stripe-style Design */}
       <section className="hero-stripe">
-        {/* Hamburger Menu - Inside Hero Container */}
-        <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
-            <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-            <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
-          </svg>
-        </button>
+        {/* Top Navigation Bar */}
+        <header className="site-header">
+          <div className="site-header-left">
+            <Link href="/" className="site-logo">
+              {logoImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoImage} alt={logoText} className="site-logo-image" />
+              ) : (
+                <span className="site-logo-text">{logoText}</span>
+              )}
+            </Link>
+          </div>
+          <nav className="site-header-nav">
+            {blogSectionVisible && (
+              <Link href="/blog" className="site-header-link">
+                Blog
+              </Link>
+            )}
+            <a href="#services" className="site-header-link">
+              Services
+            </a>
+            <Link href="/contact" className="site-header-link">
+              Contact
+            </Link>
+            <Link href="/privacy" className="site-header-link">
+              Privacy
+            </Link>
+          </nav>
+          {/* Mobile Hamburger Menu */}
+          <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+        </header>
 
         {/* Main Content */}
         <div className="hero-stripe-content">
@@ -569,7 +650,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             {/* Right Column - A/B Test: Quiz vs Questions Discovery */}
             <div
               ref={heroQuizRef}
-              className={`hero-stripe-right ${(showQuiz || showQuestionsDiscovery) ? 'quiz-open' : ''}`}
+              className={`hero-stripe-right ${(showQuiz || showQuestionsDiscovery) ? 'quiz-open' : ''} ${heroVariant === 'questions' && !showQuiz && !showQuestionsDiscovery ? 'questions-variant' : ''}`}
             >
               <div className="hero-quiz-cta">
                 {/* Variant A: Quiz CTA (50%) */}
@@ -693,13 +774,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   }} />
                   <div ref={quizContainerRef} className="quiz-content-wrapper">
                     {heroVariant === 'quiz' && (
-                    <div 
-                      className="relative z-10 scrollbar-hide h-full"
-                      data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top" 
-                      data-sa-view="inline" 
-                      style={{ maxWidth: '100%', width: '100%', background: 'transparent' }} 
-                      data-sa-auto-height="1"
-                    ></div>
+                      <iframe
+                        src="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
+                        style={{ width: '100%', border: '0', minHeight: '900px', background: 'transparent' }}
+                        loading="lazy"
+                        onLoad={() => setIsQuizLoaded(true)}
+                      />
                     )}
                   </div>
                 </div>
@@ -822,9 +902,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           <div
             className="quiz-inline-container"
             ref={midQuizRef}
-            data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
-            data-sa-view="inline"
-            data-sa-auto-height="1"
             style={{
               maxWidth: '100%',
               width: '100%',
@@ -832,7 +909,15 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               marginTop: '24px',
               display: showMidQuiz ? 'block' : 'none'
             }}
-          ></div>
+          >
+            {showMidQuiz && (
+              <iframe
+                src="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
+                style={{ width: '100%', border: '0', minHeight: '900px', background: 'transparent' }}
+                loading="lazy"
+              />
+            )}
+          </div>
         </div>
       </section>
       {/* Why Work With Us Section */}

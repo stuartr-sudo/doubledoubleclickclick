@@ -64,12 +64,6 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
 
   return (
     <main>
-      {/* ScoreApp Quiz Script */}
-      <Script
-        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=PtHIIH"
-        strategy="afterInteractive"
-      />
-
       {/* Header */}
       <header className="header">
         <div className="container">
