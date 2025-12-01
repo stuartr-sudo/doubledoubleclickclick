@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+// Force dynamic rendering and disable caching
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET /api/blog/[id] - Get a single blog post by ID
 export async function GET(
   request: Request,
