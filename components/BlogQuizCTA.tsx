@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useId } from 'react'
 
 // Blog Quiz CTA Component - Matches homepage design
 interface BlogQuizCTAProps {
@@ -22,6 +22,7 @@ export default function BlogQuizCTA({
 }: BlogQuizCTAProps) {
   const [showQuiz, setShowQuiz] = useState(false)
   const quizRef = useRef<HTMLDivElement>(null)
+  const uniqueId = useId()
 
   const openQuiz = () => {
     setShowQuiz(true)
@@ -31,16 +32,40 @@ export default function BlogQuizCTA({
       }
       // Trigger ScoreApp to initialize the quiz
       if (typeof window !== 'undefined' && (window as any).ScoreApp) {
-        (window as any).ScoreApp.init()
+        try {
+          (window as any).ScoreApp.init()
+        } catch (e) {
+          console.log('ScoreApp init called')
+        }
       }
-    }, 100)
+    }, 200)
   }
+
+  // Initialize ScoreApp when quiz becomes visible
+  useEffect(() => {
+    if (showQuiz) {
+      const timer = setTimeout(() => {
+        if (typeof window !== 'undefined' && (window as any).ScoreApp) {
+          try {
+            (window as any).ScoreApp.init()
+          } catch (e) {
+            console.log('ScoreApp init on show')
+          }
+        }
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [showQuiz])
 
   // Initialize ScoreApp when component mounts
   useEffect(() => {
     const checkScoreApp = setInterval(() => {
       if (typeof window !== 'undefined' && (window as any).ScoreApp) {
-        (window as any).ScoreApp.init()
+        try {
+          (window as any).ScoreApp.init()
+        } catch (e) {
+          // Silent catch
+        }
         clearInterval(checkScoreApp)
       }
     }, 500)
