@@ -156,7 +156,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       {/* Blog Header */}
       <section className="blog-header">
         <div className="container">
-          <h1 className="page-title">Search Everywhere Blog</h1>
+          Search Everywhere Blog
         </div>
       </section>
 
