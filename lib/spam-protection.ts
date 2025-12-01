@@ -44,15 +44,15 @@ export function isRateLimited(identifier: string): boolean {
   return false
 }
 
-export async function checkEmailExists(email: string, source: string): Promise<boolean> {
+export async function checkEmailExists(email: string, source?: string): Promise<boolean> {
   try {
     const supabase = getSupabaseClient()
     
+    // Check if email exists GLOBALLY (across all sources) to prevent duplicates
     const { data, error } = await supabase
       .from('lead_captures')
       .select('id')
       .eq('email', email)
-      .eq('source', source)
       .limit(1)
     
     if (error) {

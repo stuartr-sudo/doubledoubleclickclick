@@ -36,11 +36,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if email already exists for this source
-    const emailExists = await checkEmailExists(email, source || 'default')
+    // Check if email already exists (globally across all sources)
+    const emailExists = await checkEmailExists(email)
     if (emailExists) {
       return NextResponse.json(
-        { success: false, error: 'This email has already been submitted.' },
+        { success: false, error: 'This email has already been registered. Each email can only be used once.' },
         { status: 400 }
       )
     }
