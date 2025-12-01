@@ -46,32 +46,38 @@ export async function POST(request: Request) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
 
-    // Build insert data object with all fields
-    const insertData: any = {
+    // Build data object with all fields
+    const postData: any = {
       title: title.trim(),
       content,
       slug: postSlug,
       status,
       published_date: status === 'published' ? new Date().toISOString() : null,
+      updated_date: new Date().toISOString(),
       user_name: user_name || 'api'
     }
 
     // Add optional fields only if provided
-    if (category) insertData.category = category
-    if (tags) insertData.tags = tags
-    if (featured_image) insertData.featured_image = featured_image
-    if (author) insertData.author = author
-    if (meta_title) insertData.meta_title = meta_title
-    if (meta_description) insertData.meta_description = meta_description
-    if (focus_keyword) insertData.focus_keyword = focus_keyword
-    if (excerpt) insertData.excerpt = excerpt
-    if (generated_llm_schema) insertData.generated_llm_schema = generated_llm_schema
-    if (typeof export_seo_as_tags === 'boolean') insertData.export_seo_as_tags = export_seo_as_tags
+    if (category) postData.category = category
+    if (tags) postData.tags = tags
+    if (featured_image) postData.featured_image = featured_image
+    if (author) postData.author = author
+    if (meta_title) postData.meta_title = meta_title
+    if (meta_description) postData.meta_description = meta_description
+    if (focus_keyword) postData.focus_keyword = focus_keyword
+    if (excerpt) postData.excerpt = excerpt
+    if (generated_llm_schema) postData.generated_llm_schema = generated_llm_schema
+    if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
 
-    // Insert blog post
+    // UPSERT: Insert if new, update if slug already exists
+    // This is atomic and prevents duplicates at the database level
+    // The slug column MUST have a UNIQUE constraint for this to work properly
     const { data, error } = await supabase
       .from('blog_posts')
-      .insert(insertData)
+      .upsert(postData, { 
+        onConflict: 'slug',
+        ignoreDuplicates: false 
+      })
       .select()
       .single()
 
@@ -129,7 +135,20 @@ export async function GET(request: Request) {
       )
     }
 
-    return NextResponse.json({ success: true, data }, { status: 200 })
+    // De-duplicate by slug so we never show multiple versions of the same post.
+    // Because we ordered by created_date DESC, the first instance per slug
+    // will be the newest one.
+    const uniqueBySlug = new Map<string, any>()
+    for (const post of data || []) {
+      const key = post.slug || post.id
+      if (!uniqueBySlug.has(key)) {
+        uniqueBySlug.set(key, post)
+      }
+    }
+
+    const deduped = Array.from(uniqueBySlug.values())
+
+    return NextResponse.json({ success: true, data: deduped }, { status: 200 })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
