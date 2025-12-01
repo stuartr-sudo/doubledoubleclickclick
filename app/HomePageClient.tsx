@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, memo, lazy, Suspense, useEffect, useRef } from 'react'
+import { useState, memo, lazy, Suspense, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
