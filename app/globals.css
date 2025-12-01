@@ -11086,3 +11086,106 @@ img {
   margin: 0 auto;
   min-height: 600px;
 }
+
+/* Elegant Blog Card Redesign - Divi Style */
+.blog-grid-cards .blog-card {
+  background: #fff;
+  border-radius: 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: none;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.blog-grid-cards .blog-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+.blog-grid-cards .blog-card-image {
+  height: 350px;
+  aspect-ratio: unset;
+  background: #f8f8f8;
+}
+
+.blog-grid-cards .blog-card-image img {
+  transition: transform 0.4s ease;
+}
+
+.blog-grid-cards .blog-card:hover .blog-card-image img {
+  transform: scale(1.08);
+}
+
+.blog-grid-cards .blog-card-content {
+  padding: 2.5rem 2rem;
+  background: #fff;
+}
+
+.blog-grid-cards .blog-card-title {
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  color: #2b2b2b;
+}
+
+.blog-grid-cards .blog-card-title a {
+  color: #2b2b2b;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.blog-grid-cards .blog-card-title a:hover {
+  color: #555;
+}
+
+.blog-grid-cards .blog-card-excerpt {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: #888;
+  margin-bottom: 1.5rem;
+}
+
+.blog-grid-cards .blog-card-meta {
+  font-size: 0.875rem;
+  color: #aaa;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+  margin-top: auto;
+}
+
+.blog-grid-cards .tag-pill {
+  background: #f0f0f0;
+  color: #666;
+  border: none;
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Blog Header Update */
+.blog-header {
+  padding: 4rem 0 3rem;
+  text-align: center;
+  background: #fafafa;
+}
+
+.blog-header .page-title {
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: #2b2b2b;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+/* Blog Posts Section Spacing */
+.blog-posts {
+  padding: 4rem 0;
+  background: #fff;
+}
+
+.blog-posts .blog-grid {
+  margin-bottom: 3rem;
+}

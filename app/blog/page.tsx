@@ -156,24 +156,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       {/* Blog Header */}
       <section className="blog-header">
         <div className="container">
-          <h1 className="page-title">Blog</h1>
-          <p className="page-description">
-            Discover insights, tips, and updates from SEWO
-          </p>
-          <nav className="blog-category-nav">
-            <Link href="/blog" className={selectedCategory === 'All' ? 'is-active' : ''}>
-              All
-            </Link>
-            {uniqueCategories.map((category) => (
-              <Link
-                href={`/blog?category=${encodeURIComponent(category as string)}`}
-                key={category}
-                className={selectedCategory === category ? 'is-active' : ''}
-              >
-                {category}
-              </Link>
-            ))}
-          </nav>
+          <h1 className="page-title">Search Everywhere Blog</h1>
         </div>
       </section>
 
@@ -204,17 +187,15 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
                     <div className="blog-grid blog-grid-cards">
                       {chunk.map((post) => (
                         <article key={post.id} className="blog-card">
-                          {post.featured_image && (
-                            <div className="blog-card-image">
-                              <img 
-                                src={post.featured_image} 
-                                alt={post.title}
-                                loading="lazy"
-                                width={400}
-                                height={250}
-                              />
-                            </div>
-                          )}
+                          <div className="blog-card-image">
+                            <img 
+                              src={post.featured_image || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1600&auto=format&fit=crop'} 
+                              alt={post.title}
+                              loading="lazy"
+                              width={400}
+                              height={350}
+                            />
+                          </div>
                           <div className="blog-card-content">
                             <div className="blog-card-top">
                               {post.category && <span className="tag-pill">{post.category}</span>}
@@ -230,9 +211,9 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
                             <div className="blog-card-meta">
                               <time dateTime={post.created_date}>
                                 {new Date(post.created_date).toLocaleDateString('en-US', {
-                                  year: 'numeric',
                                   month: 'long',
-                                  day: 'numeric'
+                                  day: 'numeric',
+                                  year: 'numeric'
                                 })}
                               </time>
                             </div>
