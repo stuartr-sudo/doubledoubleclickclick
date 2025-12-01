@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import HomePageClient from './HomePageClient'
+import BlogCarousel from '@/components/BlogCarousel'
 import type { Metadata } from 'next'
 
 // Force dynamic rendering
@@ -73,5 +74,10 @@ export default async function HomePage() {
 
   const latest = latestPosts && latestPosts.length > 0 ? latestPosts : demoLatest
 
-  return <HomePageClient latestPosts={latest} homepageContent={homepageContent} />
+  return (
+    <>
+      <HomePageClient latestPosts={latest} homepageContent={homepageContent} />
+      <BlogCarousel />
+    </>
+  )
 }

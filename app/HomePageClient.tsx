@@ -14,7 +14,6 @@ const SubscribeHero = dynamic(() => import('@/components/SubscribeHero'), { ssr:
 const HowItWorks = dynamic(() => import('@/components/HowItWorks'), { ssr: true })
 const QuestionsDiscovery = dynamic(() => import('@/components/QuestionsDiscovery'), { ssr: false })
 const ParticleAnimation = dynamic(() => import('@/components/ParticleAnimation'), { ssr: false })
-const BlogCarousel = dynamic(() => import('@/components/BlogCarousel'), { ssr: true })
 
 interface Service {
   id: string
@@ -1119,11 +1118,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           ></div>
         </div>
       </section>
-
-      {/* Blog Carousel */}
-      <Suspense fallback={null}>
-        <BlogCarousel />
-      </Suspense>
 
       {/* Footer */}
       <footer className="footer">
