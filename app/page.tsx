@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import HomePageClient from './HomePageClient'
-import BlogCarousel from '@/components/BlogCarousel'
 import type { Metadata } from 'next'
 
 // Force dynamic rendering
@@ -42,10 +41,5 @@ export default async function HomePage() {
   // Only use real posts from database
   const latest = latestPosts || []
 
-  return (
-    <>
-      <HomePageClient latestPosts={latest} homepageContent={homepageContent} />
-      <BlogCarousel />
-    </>
-  )
+  return <HomePageClient latestPosts={latest} homepageContent={homepageContent} />
 }
