@@ -1084,40 +1084,10 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </section>
       )}
 
-      {/* Quiz CTA Section - Bottom */}
-      <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
-        <div className="quiz-cta-container">
-          <h2 className="quiz-cta-title">Take the Quiz</h2>
-          <p className="quiz-cta-subtitle">{quizDescription}</p>
-          <button
-            type="button"
-            className="quiz-cta-button"
-            onClick={openBottomQuiz}
-            style={{
-              backgroundColor: heroCTABgColor,
-              color: heroCTATextColor,
-              borderColor: quizCTABorderColor,
-              cursor: 'pointer'
-            }}
-          >
-            {quizCTAText}
-          </button>
-          <div
-            className="quiz-inline-container"
-            ref={bottomQuizRef}
-            data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
-            data-sa-view="inline"
-            data-sa-auto-height="1"
-            style={{
-              maxWidth: '100%',
-              width: '100%',
-              background: 'transparent',
-              marginTop: '24px',
-              display: showBottomQuiz ? 'block' : 'none'
-            }}
-          ></div>
-        </div>
-      </section>
+      {/* Get Questions Section - Bottom */}
+      <Suspense fallback={<div style={{ padding: '4rem 0', textAlign: 'center' }}>Loading...</div>}>
+        <QuestionsDiscovery />
+      </Suspense>
 
       {/* Footer */}
       <footer className="footer">

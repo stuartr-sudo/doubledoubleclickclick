@@ -39,6 +39,7 @@ export default function QuestionsDiscovery({
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [emailSent, setEmailSent] = useState(false)
   const [currentFactIndex, setCurrentFactIndex] = useState(0)
+  const [countdown, setCountdown] = useState(20)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to center when step changes
@@ -52,6 +53,23 @@ export default function QuestionsDiscovery({
       }, 100)
     }
   }, [step])
+
+  // Countdown timer - resets when loading starts
+  useEffect(() => {
+    if (isLoading) {
+      setCountdown(20) // Reset to 20 seconds
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000) // Decrease every second
+
+      return () => clearInterval(interval)
+    }
+  }, [isLoading])
 
   // Cycle through AI facts every 3 seconds while loading
   useEffect(() => {
@@ -453,13 +471,24 @@ export default function QuestionsDiscovery({
                 borderRadius: '12px',
                 border: '2px solid #3b82f6',
                 textAlign: 'center',
-                minHeight: '120px',
+                minHeight: '140px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
                 alignItems: 'center',
                 gap: '1rem'
               }}>
+                {/* Countdown Timer */}
+                <div style={{
+                  fontSize: '2rem',
+                  fontWeight: 700,
+                  color: '#3b82f6',
+                  fontFamily: 'monospace',
+                  animation: countdown <= 5 ? 'pulse 1s ease-in-out infinite' : 'none'
+                }}>
+                  {countdown}s
+                </div>
+                
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -506,6 +535,17 @@ export default function QuestionsDiscovery({
                 alignItems: 'center',
                 gap: '1.5rem'
               }}>
+                {/* Countdown Timer */}
+                <div style={{
+                  fontSize: '3rem',
+                  fontWeight: 700,
+                  color: '#3b82f6',
+                  fontFamily: 'monospace',
+                  animation: countdown <= 5 ? 'pulse 1s ease-in-out infinite' : 'none'
+                }}>
+                  {countdown}s
+                </div>
+                
                 <div className="spinner" style={{ 
                   margin: '0 auto',
                   width: '40px',
