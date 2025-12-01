@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import SubscribeHero from '@/components/SubscribeHero'
 import BlogCarousel from '@/components/BlogCarousel'
+import BlogQuizCTA from '@/components/BlogQuizCTA'
+import Script from 'next/script'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 
@@ -24,9 +25,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function BlogPage({ searchParams }: { searchParams?: { category?: string } }) {
   let posts = null
+  let homepageContent = null
   
   try {
     const supabase = await createClient()
+    
     // Fetch all published blog posts
     const { data } = await supabase
       .from('blog_posts')
@@ -34,6 +37,13 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       .eq('status', 'published')
       .order('created_date', { ascending: false })
     posts = data
+
+    // Fetch homepage content for quiz styling
+    const { data: contentData } = await supabase
+      .from('homepage_content')
+      .select('quiz_cta_bg_color, quiz_description, quiz_cta_text, hero_cta_bg_color, hero_cta_text_color, quiz_cta_border_color')
+      .single()
+    homepageContent = contentData
   } catch (error) {
     console.error('Error fetching blog posts:', error)
     // Will fall back to demo posts
@@ -292,8 +302,21 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         </div>
       </section>
 
-      {/* Subscribe Hero */}
-      <SubscribeHero source="blog" />
+      {/* Quiz CTA Section */}
+      <BlogQuizCTA
+        quizCtaBgColor={homepageContent?.quiz_cta_bg_color || '#f8f9fa'}
+        quizDescription={homepageContent?.quiz_description || 'Discover how visible your brand is to AI assistants like ChatGPT, Claude, and Gemini in just 3 minutes.'}
+        quizCTAText={homepageContent?.quiz_cta_text || 'Start Quiz →'}
+        heroCTABgColor={homepageContent?.hero_cta_bg_color || '#000000'}
+        heroCTATextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
+        quizCTABorderColor={homepageContent?.quiz_cta_border_color || '#000000'}
+      />
+
+      {/* ScoreApp Quiz Script */}
+      <Script
+        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=PtHIIH"
+        strategy="afterInteractive"
+      />
 
       {/* Blog Carousel */}
       <BlogCarousel />
