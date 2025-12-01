@@ -132,6 +132,12 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
 
   return (
     <main>
+      {/* ScoreApp Quiz Script */}
+      <Script
+        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=PtHIIH"
+        strategy="afterInteractive"
+      />
+
       {/* Header */}
       <header className="header">
         <div className="container">
@@ -171,138 +177,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         </div>
       </section>
 
-      {/* Featured Article */}
-      <section className="featured-article">
-        <div className="container">
-          {filteredPosts && filteredPosts.length > 0 && (
-            <article className="featured-card">
-              <div className="featured-content">
-                <div className="featured-meta">
-                  {filteredPosts[0].category && <span className="tag-pill">{filteredPosts[0].category}</span>}
-                  <time dateTime={filteredPosts[0].created_date}>
-                    {new Date(filteredPosts[0].created_date).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </time>
-                </div>
-                <h2 className="featured-title">
-                  <Link href={`/blog/${filteredPosts[0].slug || filteredPosts[0].id}`}>
-                    {filteredPosts[0].title}
-                  </Link>
-                </h2>
-                {filteredPosts[0].meta_description && (
-                  <p className="featured-excerpt">{filteredPosts[0].meta_description}</p>
-                )}
-              </div>
-              <div className="featured-image">
-                {filteredPosts[0].featured_image && (
-                  <img
-                    src={filteredPosts[0].featured_image}
-                    alt={filteredPosts[0].title}
-                    loading="eager"
-                    width={800}
-                    height={500}
-                  />
-                )}
-              </div>
-            </article>
-          )}
-        </div>
-      </section>
-
-      {/* Blog Posts */}
-      <section className="blog-posts">
-        <div className="container">
-          {filteredPosts && filteredPosts.length > 0 ? (
-            <div className="blog-grid blog-grid-cards">
-              {filteredPosts.slice(1).map((post) => (
-                <article key={post.id} className="blog-card">
-                  {post.featured_image && (
-                    <div className="blog-card-image">
-                      <img 
-                        src={post.featured_image} 
-                        alt={post.title}
-                        loading="lazy"
-                        width={400}
-                        height={250}
-                      />
-                    </div>
-                  )}
-                  <div className="blog-card-content">
-                    <div className="blog-card-top">
-                      {post.category && <span className="tag-pill">{post.category}</span>}
-                    </div>
-                    <h2 className="blog-card-title">
-                      <Link href={`/blog/${post.slug || post.id}`}>
-                        {post.title}
-                      </Link>
-                    </h2>
-                    {post.meta_description && (
-                      <p className="blog-card-excerpt">{post.meta_description}</p>
-                    )}
-                    <div className="blog-card-meta">
-                      <time dateTime={post.created_date}>
-                        {new Date(post.created_date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </time>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <p>No blog posts yet. Check back soon!</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* More topics that may interest you */}
-      <section className="more-topics">
-        <div className="container">
-          <div className="more-topics-header">
-            <h2 className="section-label">More topics that may interest you</h2>
-            <Link href="/blog" className="view-all-link">View all →</Link>
-          </div>
-          <div className="topics-grid">
-            {(postsData || [])
-              .filter((p) => p.category)
-              .reduce((acc: any[], p) => {
-                // Keep only the first post we encounter for each category
-                if (!acc.find((x) => x.category === p.category)) acc.push(p)
-                return acc
-              }, [])
-              .slice(0, 3)
-              .map((p) => (
-                <Link
-                  href={`/blog?category=${encodeURIComponent(p.category as string)}`}
-                  key={p.id}
-                  className="topic-card"
-                >
-                  <div className="topic-card-image">
-                    {p.featured_image ? (
-                      <img src={p.featured_image} alt={p.category || 'Topic'} loading="lazy" width={400} height={250} />
-                    ) : (
-                      <div className="topic-card-placeholder" />
-                    )}
-                  </div>
-                  <div className="topic-card-content">
-                    <span className="tag-pill">{p.category}</span>
-                    <h3 className="topic-card-title">{p.title}</h3>
-                  </div>
-                </Link>
-              ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Quiz CTA Section */}
+      {/* Quiz CTA Section - Top */}
       <BlogQuizCTA
         quizCtaBgColor={homepageContent?.quiz_cta_bg_color || '#f8f9fa'}
         quizDescription={homepageContent?.quiz_description || 'Discover how visible your brand is to AI assistants like ChatGPT, Claude, and Gemini in just 3 minutes.'}
@@ -312,11 +187,82 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         quizCTABorderColor={homepageContent?.quiz_cta_border_color || '#000000'}
       />
 
-      {/* ScoreApp Quiz Script */}
-      <Script
-        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=PtHIIH"
-        strategy="afterInteractive"
-      />
+      {/* Blog Posts */}
+      <section className="blog-posts">
+        <div className="container">
+          {filteredPosts && filteredPosts.length > 0 ? (
+            <>
+              {/* Split posts into chunks of 3 for the layout */}
+              {Array.from({ length: Math.ceil(filteredPosts.length / 3) }).map((_, chunkIndex) => {
+                const startIndex = chunkIndex * 3
+                const endIndex = startIndex + 3
+                const chunk = filteredPosts.slice(startIndex, endIndex)
+                
+                return (
+                  <div key={chunkIndex}>
+                    {/* 3-column grid */}
+                    <div className="blog-grid blog-grid-cards">
+                      {chunk.map((post) => (
+                        <article key={post.id} className="blog-card">
+                          {post.featured_image && (
+                            <div className="blog-card-image">
+                              <img 
+                                src={post.featured_image} 
+                                alt={post.title}
+                                loading="lazy"
+                                width={400}
+                                height={250}
+                              />
+                            </div>
+                          )}
+                          <div className="blog-card-content">
+                            <div className="blog-card-top">
+                              {post.category && <span className="tag-pill">{post.category}</span>}
+                            </div>
+                            <h2 className="blog-card-title">
+                              <Link href={`/blog/${post.slug || post.id}`}>
+                                {post.title}
+                              </Link>
+                            </h2>
+                            {post.meta_description && (
+                              <p className="blog-card-excerpt">{post.meta_description}</p>
+                            )}
+                            <div className="blog-card-meta">
+                              <time dateTime={post.created_date}>
+                                {new Date(post.created_date).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </time>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                    
+                    {/* Quiz CTA after first 3 posts */}
+                    {chunkIndex === 0 && filteredPosts.length > 3 && (
+                      <BlogQuizCTA
+                        quizCtaBgColor={homepageContent?.quiz_cta_bg_color || '#f8f9fa'}
+                        quizDescription={homepageContent?.quiz_description || 'Discover how visible your brand is to AI assistants like ChatGPT, Claude, and Gemini in just 3 minutes.'}
+                        quizCTAText={homepageContent?.quiz_cta_text || 'Start Quiz →'}
+                        heroCTABgColor={homepageContent?.hero_cta_bg_color || '#000000'}
+                        heroCTATextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
+                        quizCTABorderColor={homepageContent?.quiz_cta_border_color || '#000000'}
+                      />
+                    )}
+                  </div>
+                )
+              })}
+            </>
+          ) : (
+            <div className="empty-state">
+              <p>No blog posts yet. Check back soon!</p>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Blog Carousel */}
       <BlogCarousel />
