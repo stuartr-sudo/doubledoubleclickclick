@@ -153,13 +153,6 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         </div>
       </header>
 
-      {/* Blog Header */}
-      <section className="blog-header">
-        <div className="container">
-          Search Everywhere Blog
-        </div>
-      </section>
-
       {/* Quiz CTA Section - Top */}
       <BlogQuizCTA
         quizCtaBgColor={homepageContent?.quiz_cta_bg_color || '#f8f9fa'}
