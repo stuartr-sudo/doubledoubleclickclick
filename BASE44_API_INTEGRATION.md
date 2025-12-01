@@ -100,6 +100,11 @@ All fields from Base44 are supported:
 - **`category`** (string): Category name for grouping posts
 - **`tags`** (array of strings): Tags for categorization
 - **`featured_image`** (string): URL to featured/hero image
+  - **Recommended dimensions**: 1200x630px (1.9:1 ratio) for optimal display
+  - **Format**: JPG, PNG, or WebP
+  - **File size**: Keep under 500KB for fast loading
+  - The image will be displayed at 175px height on blog listing page
+  - Full-size on individual blog post pages
 - **`author`** (string): Author name
 
 #### SEO Metadata Fields
@@ -297,7 +302,7 @@ Your `blog_posts` table now has these columns:
 | `status` | TEXT | "published", "draft", or "active" |
 | `category` | TEXT | Category name |
 | `tags` | TEXT[] | Array of tags |
-| `featured_image` | TEXT | Image URL |
+| `featured_image` | TEXT | Image URL (recommended: 1200x630px) |
 | `author` | TEXT | Author name |
 | `meta_title` | TEXT | SEO title |
 | `meta_description` | TEXT | SEO description |
@@ -309,6 +314,35 @@ Your `blog_posts` table now has these columns:
 | `created_date` | TIMESTAMPTZ | Auto-set creation date |
 | `updated_date` | TIMESTAMPTZ | Auto-updated timestamp |
 | `published_date` | TIMESTAMPTZ | Set when status="published" |
+
+## Featured Image Best Practices
+
+### Optimal Dimensions
+- **Recommended size**: 1200x630px (1.9:1 aspect ratio)
+- **Minimum size**: 600x315px
+- **Maximum size**: 2400x1260px
+
+### File Format & Size
+- **Formats**: JPG (best for photos), PNG (best for graphics with transparency), WebP (best compression)
+- **File size**: Keep under 500KB for fast page loading
+- **Compression**: Use tools like TinyPNG, ImageOptim, or Squoosh to optimize
+
+### Display Behavior
+- **Blog listing page**: Images display at 175px height with automatic width scaling
+- **Individual blog post**: Full-size image displayed (responsive)
+- **Fallback**: If no image provided, a default placeholder is shown
+
+### Image URLs
+- **Supabase Storage**: `https://[project-id].supabase.co/storage/v1/object/public/[bucket]/[filename]`
+- **External URLs**: Any publicly accessible HTTPS URL
+- **CDN Recommended**: Use a CDN for faster global delivery
+
+### Example Optimization Workflow
+1. Export image at 1200x630px
+2. Compress to under 500KB using TinyPNG
+3. Upload to Supabase Storage or your CDN
+4. Get public URL
+5. Include URL in `featured_image` field when posting via API
 
 ## Troubleshooting
 
