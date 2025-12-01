@@ -147,64 +147,17 @@ img {
   margin: 0;
 }
 
-/* Top navigation bar */
-.site-header {
-  width: 100%;
-  padding: var(--spacing-lg) var(--spacing-2xl);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-  z-index: 20;
-}
-
-.site-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-decoration: none;
-}
-
-.site-logo-text {
-  font-weight: 800;
-  font-size: 1.25rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-primary);
-}
-
-.site-logo-image {
-  height: 32px;
-  width: auto;
-}
-
-.site-header-nav {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.site-header-link {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--color-text);
-  text-decoration: none;
-  opacity: 0.9;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.site-header-link:hover {
-  opacity: 1;
-  transform: translateY(-1px);
-}
-
-/* Hamburger Menu - shown on mobile only */
+/* Hamburger Menu - Positioned inside hero container */
 .hero-menu-icon {
+  position: absolute;
+  top: var(--spacing-lg);
+  right: var(--spacing-2xl);
+  z-index: 100;
   border: none;
   cursor: pointer;
   color: var(--color-primary);
   padding: 8px;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   transition: opacity 0.2s;

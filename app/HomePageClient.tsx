@@ -586,43 +586,14 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       
       {/* Hero Section - Stripe-style Design */}
       <section className="hero-stripe">
-        {/* Top Navigation Bar */}
-        <header className="site-header">
-          <div className="site-header-left">
-            <Link href="/" className="site-logo">
-              {logoImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoImage} alt={logoText} className="site-logo-image" />
-              ) : (
-                <span className="site-logo-text">{logoText}</span>
-              )}
-            </Link>
-          </div>
-          <nav className="site-header-nav">
-            {blogSectionVisible && (
-              <Link href="/blog" className="site-header-link">
-                Blog
-              </Link>
-            )}
-            <a href="#services" className="site-header-link">
-              Services
-            </a>
-            <Link href="/contact" className="site-header-link">
-              Contact
-            </Link>
-            <Link href="/privacy" className="site-header-link">
-              Privacy
-            </Link>
-          </nav>
-          {/* Mobile Hamburger Menu */}
-          <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
-              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-              <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
-            </svg>
-          </button>
-        </header>
+        {/* Hamburger Menu - Inside Hero Container */}
+        <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+          </svg>
+        </button>
 
         {/* Main Content */}
         <div className="hero-stripe-content">
