@@ -3855,13 +3855,16 @@ img {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--color-border);
-  max-height: 150px;
+  max-width: 500px;
+  max-height: 500px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .blog-post-image img {
-  width: 100%;
-  height: 150px;
-  max-height: 150px;
+  width: 500px;
+  height: 500px;
+  max-width: 100%;
   object-fit: cover;
   display: block;
 }
@@ -4601,16 +4604,17 @@ img {
 }
 
 .blog-post-image {
-  margin: var(--spacing-xl) 0;
+  margin: var(--spacing-xl) auto;
   border-radius: 12px;
   overflow: hidden;
-  max-height: 150px;
+  max-width: 500px;
+  max-height: 500px;
 }
 
 .blog-post-image img {
-  width: 100%;
-  height: 150px;
-  max-height: 150px;
+  width: 500px;
+  height: 500px;
+  max-width: 100%;
   object-fit: cover;
 }
 
@@ -6858,13 +6862,16 @@ img {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--color-border);
-  max-height: 150px;
+  max-width: 500px;
+  max-height: 500px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .blog-post-image img {
-  width: 100%;
-  height: 150px;
-  max-height: 150px;
+  width: 500px;
+  height: 500px;
+  max-width: 100%;
   object-fit: cover;
   display: block;
 }
@@ -7589,16 +7596,17 @@ img {
 }
 
 .blog-post-image {
-  margin: var(--spacing-xl) 0;
+  margin: var(--spacing-xl) auto;
   border-radius: 12px;
   overflow: hidden;
-  max-height: 150px;
+  max-width: 500px;
+  max-height: 500px;
 }
 
 .blog-post-image img {
-  width: 100%;
-  height: 150px;
-  max-height: 150px;
+  width: 500px;
+  height: 500px;
+  max-width: 100%;
   object-fit: cover;
 }
 
@@ -9844,13 +9852,16 @@ img {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--color-border);
-  max-height: 150px;
+  max-width: 500px;
+  max-height: 500px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .blog-post-image img {
-  width: 100%;
-  height: 150px;
-  max-height: 150px;
+  width: 500px;
+  height: 500px;
+  max-width: 100%;
   object-fit: cover;
   display: block;
 }
@@ -10575,16 +10586,17 @@ img {
 }
 
 .blog-post-image {
-  margin: var(--spacing-xl) 0;
+  margin: var(--spacing-xl) auto;
   border-radius: 12px;
   overflow: hidden;
-  max-height: 150px;
+  max-width: 500px;
+  max-height: 500px;
 }
 
 .blog-post-image img {
-  width: 100%;
-  height: 150px;
-  max-height: 150px;
+  width: 500px;
+  height: 500px;
+  max-width: 100%;
   object-fit: cover;
 }
 
