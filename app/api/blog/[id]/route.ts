@@ -1,34 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-export async function PUT(request: Request) {
+// GET /api/blog/[id] - Get a single blog post by ID
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const supabase = await createClient()
-    const body = await request.json()
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Post ID is required' },
-        { status: 400 }
-      )
-    }
+    const { id } = params
 
     const { data, error } = await supabase
       .from('blog_posts')
-      .update({
-        ...body,
-        updated_date: new Date().toISOString(),
-      })
+      .select('*')
       .eq('id', id)
-      .select()
       .single()
 
-    if (error) {
+    if (error || !data) {
       return NextResponse.json(
-        { error: 'Failed to update blog post', details: error.message },
-        { status: 500 }
+        { success: false, error: 'Blog post not found' },
+        { status: 404 }
       )
     }
 
@@ -36,24 +27,111 @@ export async function PUT(request: Request) {
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
 
-export async function DELETE(request: Request) {
+// PUT /api/blog/[id] - Update a blog post by ID
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const supabase = await createClient()
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
+    const { id } = params
+    const body = await request.json()
 
-    if (!id) {
+    const { 
+      title, 
+      content, 
+      slug, 
+      status, 
+      category, 
+      tags, 
+      featured_image,
+      author,
+      meta_title,
+      meta_description,
+      focus_keyword,
+      excerpt,
+      generated_llm_schema,
+      export_seo_as_tags,
+      user_name
+    } = body
+
+    // Build update data object
+    const updateData: any = {}
+    
+    if (title !== undefined) updateData.title = title.trim()
+    if (content !== undefined) updateData.content = content
+    if (slug !== undefined) updateData.slug = slug
+    if (status !== undefined) {
+      updateData.status = status
+      // Update published_date if changing to published
+      if (status === 'published') {
+        updateData.published_date = new Date().toISOString()
+      }
+    }
+    if (category !== undefined) updateData.category = category
+    if (tags !== undefined) updateData.tags = tags
+    if (featured_image !== undefined) updateData.featured_image = featured_image
+    if (author !== undefined) updateData.author = author
+    if (meta_title !== undefined) updateData.meta_title = meta_title
+    if (meta_description !== undefined) updateData.meta_description = meta_description
+    if (focus_keyword !== undefined) updateData.focus_keyword = focus_keyword
+    if (excerpt !== undefined) updateData.excerpt = excerpt
+    if (generated_llm_schema !== undefined) updateData.generated_llm_schema = generated_llm_schema
+    if (export_seo_as_tags !== undefined) updateData.export_seo_as_tags = export_seo_as_tags
+    if (user_name !== undefined) updateData.user_name = user_name
+
+    // Always update the updated_date
+    updateData.updated_date = new Date().toISOString()
+
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Supabase error:', error)
       return NextResponse.json(
-        { error: 'Post ID is required' },
-        { status: 400 }
+        { success: false, error: 'Failed to update blog post', details: error.message },
+        { status: 500 }
       )
     }
+
+    return NextResponse.json({ 
+      success: true, 
+      data: {
+        id: data.id,
+        title: data.title,
+        slug: data.slug,
+        status: data.status,
+        updated_date: data.updated_date,
+        user_name: data.user_name
+      }
+    }, { status: 200 })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE /api/blog/[id] - Delete a blog post by ID
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = await createClient()
+    const { id } = params
 
     const { error } = await supabase
       .from('blog_posts')
@@ -61,19 +139,22 @@ export async function DELETE(request: Request) {
       .eq('id', id)
 
     if (error) {
+      console.error('Supabase error:', error)
       return NextResponse.json(
-        { error: 'Failed to delete blog post', details: error.message },
+        { success: false, error: 'Failed to delete blog post', details: error.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ success: true }, { status: 200 })
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Blog post deleted successfully' 
+    }, { status: 200 })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
-
