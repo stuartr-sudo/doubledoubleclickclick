@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import BlogCarousel from '@/components/BlogCarousel'
 import BlogQuizCTA from '@/components/BlogQuizCTA'
+import QuestionsDiscovery from '@/components/QuestionsDiscovery'
 import Script from 'next/script'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
@@ -171,6 +172,9 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
 
       {/* Blog Carousel */}
       <BlogCarousel />
+
+      {/* Get Questions Section */}
+      <QuestionsDiscovery />
 
       {/* Footer */}
       <footer className="footer">
