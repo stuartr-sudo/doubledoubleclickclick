@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import Script from 'next/script'
 import BlogCarousel from '@/components/BlogCarousel'
 import BlogTracker from '@/components/BlogTracker'
+import BlogQuizCTA from '@/components/BlogQuizCTA'
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   let post = null
@@ -79,6 +80,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 export default async function BlogPostPage({ params }: { params: { slug: string } }) {
   let post = null
+  let homepageContent = null
 
   try {
     const supabase = await createClient()
@@ -89,6 +91,13 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       .eq('status', 'published')
       .single()
     post = data
+
+    // Fetch homepage content for quiz styling
+    const { data: hpContent } = await supabase
+      .from('homepage_content')
+      .select('quiz_cta_bg_color, quiz_description, quiz_cta_text, hero_cta_bg_color, hero_cta_text_color, quiz_cta_border_color')
+      .single()
+    homepageContent = hpContent
   } catch (error) {
     console.error('Error fetching post:', error)
   }
@@ -244,24 +253,14 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       </article>
 
       {/* Quiz CTA Section */}
-      <section className="blog-quiz-cta-section">
-        <div className="blog-quiz-cta-container">
-          <h2 className="blog-quiz-cta-title">Ready to Get Found by AI?</h2>
-          <p className="blog-quiz-cta-subtitle">Take our 3-minute quiz to discover your AI visibility score and learn how to rank in ChatGPT, Claude, and other AI assistants.</p>
-          <div
-            className="blog-quiz-embed"
-            data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
-            data-sa-view="inline"
-            data-sa-auto-height="1"
-            style={{
-              maxWidth: '100%',
-              width: '100%',
-              background: 'transparent',
-              marginTop: '32px'
-            }}
-          ></div>
-        </div>
-      </section>
+      <BlogQuizCTA
+        quizCtaBgColor={homepageContent?.quiz_cta_bg_color || '#f8f9fa'}
+        quizDescription={homepageContent?.quiz_description || 'Discover how visible your brand is to AI assistants like ChatGPT, Claude, and Gemini in just 3 minutes.'}
+        quizCTAText={homepageContent?.quiz_cta_text || 'Start Quiz →'}
+        heroCTABgColor={homepageContent?.hero_cta_bg_color || '#000000'}
+        heroCTATextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
+        quizCTABorderColor={homepageContent?.quiz_cta_border_color || '#000000'}
+      />
 
       {/* ScoreApp Quiz Script */}
       <Script
