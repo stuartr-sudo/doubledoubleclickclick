@@ -264,8 +264,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
       {/* ScoreApp Quiz Script */}
       <Script
-        src="https://cdn.scoreapp.com/scoreapp.js"
-        strategy="lazyOnload"
+        src="https://static.scoreapp.com/js/integration/v1/embedding.js?v=PtHIIH"
+        strategy="afterInteractive"
       />
 
       {/* Blog Carousel */}
