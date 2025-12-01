@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
 // Blog Quiz CTA Component - Matches homepage design
 interface BlogQuizCTAProps {
@@ -29,8 +29,24 @@ export default function BlogQuizCTA({
       if (quizRef.current) {
         quizRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
+      // Trigger ScoreApp to initialize the quiz
+      if (typeof window !== 'undefined' && (window as any).ScoreApp) {
+        (window as any).ScoreApp.init()
+      }
     }, 100)
   }
+
+  // Initialize ScoreApp when component mounts
+  useEffect(() => {
+    const checkScoreApp = setInterval(() => {
+      if (typeof window !== 'undefined' && (window as any).ScoreApp) {
+        (window as any).ScoreApp.init()
+        clearInterval(checkScoreApp)
+      }
+    }, 500)
+
+    return () => clearInterval(checkScoreApp)
+  }, [])
 
   return (
     <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
