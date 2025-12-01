@@ -157,9 +157,6 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
                 {category}
               </Link>
             ))}
-            <Link href="/subscribe" className="btn-subscribe">
-              Subscribe
-            </Link>
           </nav>
         </div>
       </section>

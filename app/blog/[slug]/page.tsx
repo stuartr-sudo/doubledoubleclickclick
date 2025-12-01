@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import BlogCarousel from '@/components/BlogCarousel'
 import BlogTracker from '@/components/BlogTracker'
 
@@ -241,6 +242,32 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           />
         </div>
       </article>
+
+      {/* Quiz CTA Section */}
+      <section className="blog-quiz-cta-section">
+        <div className="blog-quiz-cta-container">
+          <h2 className="blog-quiz-cta-title">Ready to Get Found by AI?</h2>
+          <p className="blog-quiz-cta-subtitle">Take our 3-minute quiz to discover your AI visibility score and learn how to rank in ChatGPT, Claude, and other AI assistants.</p>
+          <div
+            className="blog-quiz-embed"
+            data-sa-url="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
+            data-sa-view="inline"
+            data-sa-auto-height="1"
+            style={{
+              maxWidth: '100%',
+              width: '100%',
+              background: 'transparent',
+              marginTop: '32px'
+            }}
+          ></div>
+        </div>
+      </section>
+
+      {/* ScoreApp Quiz Script */}
+      <Script
+        src="https://cdn.scoreapp.com/scoreapp.js"
+        strategy="lazyOnload"
+      />
 
       {/* Blog Carousel */}
       <BlogCarousel />
