@@ -27,7 +27,8 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
   const fetchPost = async () => {
     try {
       const res = await fetch(`/api/blog/${params.id}`)
-      const post = await res.json()
+      const result = await res.json()
+      const post = result.data || result // Handle both wrapped and unwrapped responses
       setFormData({
         title: post.title || '',
         slug: post.slug || '',
