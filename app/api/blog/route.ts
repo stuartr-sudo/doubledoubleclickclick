@@ -32,20 +32,41 @@ export async function POST(request: Request) {
       user_name
     } = body
 
-    // Validate required fields
+    // STRICT validation - reject incomplete requests
     if (!title || !content) {
+      console.error('[BLOG API] ❌ REJECTED: Missing required fields')
+      console.error('[BLOG API] Has title?', !!title)
+      console.error('[BLOG API] Has content?', !!content)
       return NextResponse.json(
         { success: false, error: 'Title and content are required' },
         { status: 400 }
       )
     }
 
-    // Log what Base44 is sending
+    // Validate content is not empty
+    if (content.trim().length < 50) {
+      console.error('[BLOG API] ❌ REJECTED: Content too short (must be at least 50 chars)')
+      console.error('[BLOG API] Content length:', content.trim().length)
+      return NextResponse.json(
+        { success: false, error: 'Content must be at least 50 characters' },
+        { status: 400 }
+      )
+    }
+
+    // Log EVERYTHING Base44 is sending
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('[BLOG API] INCOMING FROM BASE44:')
     console.log('  title:', title)
+    console.log('  title length:', title?.length || 0)
     console.log('  meta_title:', meta_title)
     console.log('  slug:', slug)
+    console.log('  content length:', content?.length || 0)
+    console.log('  status:', status)
+    console.log('  category:', category)
+    console.log('  tags:', tags)
+    console.log('  featured_image:', featured_image ? 'YES' : 'NO')
+    console.log('  author:', author)
+    console.log('  excerpt length:', excerpt?.length || 0)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
     // Generate slug if not provided
@@ -77,7 +98,7 @@ export async function POST(request: Request) {
     if (generated_llm_schema) postData.generated_llm_schema = generated_llm_schema
     if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
 
-    // CRITICAL: Check if post with this slug already exists
+    // CRITICAL: Check if post with this slug OR similar title already exists
     const { data: existingPost, error: checkError } = await supabase
       .from('blog_posts')
       .select('id, slug, title, created_date')
@@ -86,6 +107,68 @@ export async function POST(request: Request) {
 
     if (checkError) {
       console.error('[BLOG API] Error checking for existing post:', checkError)
+    }
+
+    // ADDITIONAL CHECK: Look for posts with very similar titles (prevent duplicates with different slugs)
+    if (!existingPost) {
+      const { data: similarPosts } = await supabase
+        .from('blog_posts')
+        .select('id, slug, title')
+        .ilike('title', `%${title.substring(0, 30)}%`)
+        .limit(5)
+
+      if (similarPosts && similarPosts.length > 0) {
+        console.warn('[BLOG API] ⚠️  Found posts with similar titles:')
+        similarPosts.forEach(p => {
+          console.warn(`  - ID: ${p.id}, Title: ${p.title}, Slug: ${p.slug}`)
+        })
+        
+        // Check if any is an exact match
+        const exactMatch = similarPosts.find(p => 
+          p.title.trim().toLowerCase() === title.trim().toLowerCase()
+        )
+        
+        if (exactMatch) {
+          console.log('[BLOG API] EXACT TITLE MATCH FOUND - Will UPDATE instead of creating duplicate')
+          console.log(`[BLOG API] UPDATING existing post: ${exactMatch.id} (exact title match)`)
+          
+          const updateData = { ...postData }
+          delete updateData.created_date // Don't update created date
+          
+          const { data, error } = await supabase
+            .from('blog_posts')
+            .update(updateData)
+            .eq('id', exactMatch.id)
+            .select()
+            .single()
+
+          if (error) {
+            console.error('[BLOG API] Update error:', error)
+            return NextResponse.json(
+              { success: false, error: 'Failed to update blog post', details: error.message },
+              { status: 500 }
+            )
+          }
+
+          console.log(`[BLOG API] Successfully UPDATED post ${exactMatch.id} (title match)`)
+          return NextResponse.json({ 
+            success: true, 
+            data: {
+              id: data.id,
+              slug: data.slug,
+              title: data.title,
+              meta_title: data.meta_title,
+              status: data.status,
+              created_date: data.created_date,
+              message: 'Post updated successfully (matched by title)',
+              _debug: {
+                matched_by: 'exact_title',
+                original_post_id: exactMatch.id
+              }
+            }
+          }, { status: 200 })
+        }
+      }
     }
 
     if (existingPost) {
