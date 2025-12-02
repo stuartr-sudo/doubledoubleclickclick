@@ -187,7 +187,7 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
         })
         
         // Check if any is an exact match
-        const exactMatch = similarPosts.find(p => 
+        const exactMatch = similarPosts.find((p: any) => 
           p.title.trim().toLowerCase() === title.trim().toLowerCase()
         )
         
