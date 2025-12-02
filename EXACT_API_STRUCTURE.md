@@ -12,10 +12,10 @@
 
 ```json
 {
-  "title": "AI Optimization for Brand Growth",
-  "meta_title": "What is AI Optimization? A Complete Guide to Brand Growth Strategies | SEWO",
+  "title": "What is AI Optimization? A Complete Guide to Brand Growth Strategies | SEWO",
+  "meta_title": "AI Optimization for Brand Growth",
   "slug": "ai-optimization-for-brand-growth",
-  "content": "<h1 style=\"text-align: center;\">AI Optimization for Brand Growth</h1><p>Your full HTML content here...</p>",
+  "content": "<h1 style=\"text-align: center;\">What is AI Optimization? A Complete Guide to Brand Growth Strategies | SEWO</h1><p>Your full HTML content here...</p>",
   "status": "published",
   "category": "Marketing",
   "tags": ["ai", "seo", "marketing"],
@@ -38,7 +38,7 @@
 
 | Field | Type | Example | What It's Used For |
 |-------|------|---------|-------------------|
-| `title` | string | `"AI Optimization for Brand Growth"` | **H1 heading on page** (what users see) |
+| `title` | string | `"What is AI Optimization? A Complete Guide to Brand Growth Strategies | SEWO"` | **H1 heading on page** (what users see - long SEO title) |
 | `content` | string | `"<h1>...</h1><p>Full HTML...</p>"` | **Body content** (must be ≥ 50 chars) |
 
 ### OPTIONAL FIELDS (Can be omitted or null)
@@ -47,7 +47,7 @@
 |-------|------|---------|-------------------|
 | `slug` | string | `"ai-optimization-for-brand-growth"` | URL slug (auto-generated from title if missing) |
 | `status` | string | `"published"` or `"draft"` | Publication status (default: "draft") |
-| `meta_title` | string | `"What is AI Optimization? | SEWO"` | **Browser tab / SEO title** (NOT displayed as H1) |
+| `meta_title` | string | `"AI Optimization for Brand Growth"` | **Browser tab / SEO title** (short version, NOT displayed as H1) |
 | `meta_description` | string | `"Learn about AI optimization..."` | SEO meta description |
 | `category` | string | `"Marketing"` | Post category |
 | `tags` | array | `["ai", "seo"]` | Array of tag strings |
@@ -66,16 +66,17 @@
 ### Rule #1: `title` vs `meta_title`
 
 **`title` = What users see on the page (H1 heading)**
-- ✅ Short, clean, readable
+- ✅ Long, SEO-optimized, can include brand name
+- ✅ Example: `"What is AI Optimization? A Complete Guide to Brand Growth Strategies | SEWO"`
+- ✅ Can include "| Brand Name"
+- ✅ This is what shows as the main heading
+
+**`meta_title` = What Google/browser tab sees (SEO only)**
+- ✅ Short, clean version
 - ✅ Example: `"AI Optimization for Brand Growth"`
 - ❌ DON'T include "| Brand Name" here
 - ❌ DON'T make it super long
-
-**`meta_title` = What Google/browser tab sees (SEO only)**
-- ✅ Can be longer, include brand name
-- ✅ Example: `"What is AI Optimization? A Complete Guide | SEWO"`
-- ✅ Can include "| Brand Name"
-- ✅ Optimized for search engines
+- ✅ Used for browser tab and search results
 
 **THEY MUST BE DIFFERENT!**
 
@@ -130,10 +131,10 @@
 
 ```json
 {
-  "title": "AI Optimization for Brand Growth",
-  "meta_title": "What is AI Optimization? A Complete Guide to Brand Growth Strategies | SEWO",
+  "title": "What is AI Optimization? A Complete Guide to Brand Growth Strategies | SEWO",
+  "meta_title": "AI Optimization for Brand Growth",
   "slug": "ai-optimization-for-brand-growth",
-  "content": "<h1 style=\"text-align: center;\">AI Optimization for Brand Growth</h1><p>Artificial intelligence is transforming how brands grow and engage with customers. This comprehensive guide covers everything you need to know about AI optimization.</p><h2>What is AI Optimization?</h2><p>AI optimization involves using artificial intelligence tools to improve your brand's visibility, automate processes, and enhance customer experiences.</p>",
+  "content": "<h1 style=\"text-align: center;\">What is AI Optimization? A Complete Guide to Brand Growth Strategies | SEWO</h1><p>Artificial intelligence is transforming how brands grow and engage with customers. This comprehensive guide covers everything you need to know about AI optimization.</p><h2>What is AI Optimization?</h2><p>AI optimization involves using artificial intelligence tools to improve your brand's visibility, automate processes, and enhance customer experiences.</p>",
   "status": "published",
   "category": "Marketing",
   "tags": ["ai", "seo", "marketing", "brand-growth"],
@@ -149,8 +150,8 @@
 
 **Result:**
 - ✅ Post created with all fields populated
-- ✅ `title` = "AI Optimization for Brand Growth" (H1 on page)
-- ✅ `meta_title` = "What is AI Optimization? A Complete Guide..." (browser tab)
+- ✅ `title` = "What is AI Optimization? A Complete Guide..." (H1 on page)
+- ✅ `meta_title` = "AI Optimization for Brand Growth" (browser tab)
 - ✅ `slug` = "ai-optimization-for-brand-growth" (URL)
 - ✅ All other fields stored correctly
 
@@ -158,8 +159,8 @@
 
 ```json
 {
-  "title": "AI Optimization for Brand Growth - Updated",
-  "meta_title": "What is AI Optimization? Updated Guide | SEWO",
+  "title": "What is AI Optimization? Updated Guide to Brand Growth Strategies | SEWO",
+  "meta_title": "AI Optimization for Brand Growth - Updated",
   "slug": "ai-optimization-for-brand-growth",
   "content": "<h1>Updated content here...</h1><p>This is the updated version.</p>",
   "status": "published"
@@ -180,16 +181,16 @@
 ❌ **WRONG:**
 ```json
 {
-  "title": "What is AI Optimization? A Complete Guide | SEWO",
-  "meta_title": "AI Optimization for Brand Growth"
+  "title": "AI Optimization for Brand Growth",
+  "meta_title": "What is AI Optimization? A Complete Guide | SEWO"
 }
 ```
 
 ✅ **CORRECT:**
 ```json
 {
-  "title": "AI Optimization for Brand Growth",
-  "meta_title": "What is AI Optimization? A Complete Guide | SEWO"
+  "title": "What is AI Optimization? A Complete Guide to Brand Growth Strategies | SEWO",
+  "meta_title": "AI Optimization for Brand Growth"
 }
 ```
 
@@ -290,10 +291,10 @@ curl -X POST https://sewo.io/api/blog \
 
 Before sending the API request, verify:
 
-- [ ] `title` is short and clean (NOT the SEO title)
-- [ ] `meta_title` is the SEO-optimized version (can include "| Brand")
+- [ ] `title` is the long SEO-optimized version (can include "| Brand")
+- [ ] `meta_title` is short and clean (NOT the long SEO title)
 - [ ] `content` is at least 50 characters
-- [ ] `slug` matches the `title` (or let it auto-generate)
+- [ ] `slug` matches the short version (or let it auto-generate)
 - [ ] `status` is "published" or "draft"
 - [ ] All other fields are optional (can be omitted)
 
@@ -305,10 +306,10 @@ Before sending the API request, verify:
 
 ```json
 {
-  "title": "Short Display Title",
-  "meta_title": "Long SEO Title | Brand Name",
+  "title": "Long SEO Title | Brand Name",
+  "meta_title": "Short Display Title",
   "slug": "short-display-title",
-  "content": "<h1>Title</h1><p>Full content here (≥50 chars)...</p>",
+  "content": "<h1>Long SEO Title | Brand Name</h1><p>Full content here (≥50 chars)...</p>",
   "status": "published"
 }
 ```
