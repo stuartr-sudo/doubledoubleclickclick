@@ -40,6 +40,14 @@ export async function POST(request: Request) {
       )
     }
 
+    // Log what Base44 is sending
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('[BLOG API] INCOMING FROM BASE44:')
+    console.log('  title:', title)
+    console.log('  meta_title:', meta_title)
+    console.log('  slug:', slug)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
     // Generate slug if not provided
     const postSlug = slug || title
       .toLowerCase()
@@ -100,15 +108,31 @@ export async function POST(request: Request) {
       }
 
       console.log(`[BLOG API] Successfully UPDATED post ${existingPost.id}`)
+      console.log('[BLOG API] STORED IN DATABASE:')
+      console.log('  title:', data.title)
+      console.log('  meta_title:', data.meta_title)
+      
+      // Validation warning
+      if (data.title === data.meta_title && data.meta_title) {
+        console.warn('[BLOG API] ⚠️  WARNING: title and meta_title are identical!')
+        console.warn('[BLOG API] ⚠️  title should be clean, meta_title should be SEO-optimized')
+      }
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      
       return NextResponse.json({ 
         success: true, 
         data: {
           id: data.id,
           slug: data.slug,
           title: data.title,
+          meta_title: data.meta_title,
           status: data.status,
           created_date: data.created_date,
-          message: 'Post updated successfully'
+          message: 'Post updated successfully',
+          _debug: {
+            title_for_display: data.title,
+            meta_title_for_seo: data.meta_title || data.title
+          }
         }
       }, { status: 200 })
     }
@@ -130,16 +154,31 @@ export async function POST(request: Request) {
     }
 
     console.log(`[BLOG API] Successfully INSERTED new post ${data.id}`)
+    console.log('[BLOG API] STORED IN DATABASE:')
+    console.log('  title:', data.title)
+    console.log('  meta_title:', data.meta_title)
+    
+    // Validation warning
+    if (data.title === data.meta_title && data.meta_title) {
+      console.warn('[BLOG API] ⚠️  WARNING: title and meta_title are identical!')
+      console.warn('[BLOG API] ⚠️  title should be clean, meta_title should be SEO-optimized')
+    }
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
     return NextResponse.json({ 
       success: true, 
       data: {
         id: data.id,
         title: data.title,
+        meta_title: data.meta_title,
         slug: data.slug,
         status: data.status,
         created_date: data.created_date,
-        user_name: data.user_name
+        user_name: data.user_name,
+        _debug: {
+          title_for_display: data.title,
+          meta_title_for_seo: data.meta_title || data.title
+        }
       }
     }, { status: 201 })
   } catch (error) {
