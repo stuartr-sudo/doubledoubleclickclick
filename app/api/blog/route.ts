@@ -69,25 +69,67 @@ export async function POST(request: Request) {
     if (generated_llm_schema) postData.generated_llm_schema = generated_llm_schema
     if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
 
-    // UPSERT: Insert if new, update if slug already exists
-    // This is atomic and prevents duplicates at the database level
-    // The slug column MUST have a UNIQUE constraint for this to work properly
+    // CRITICAL: Check if post with this slug already exists
+    const { data: existingPost, error: checkError } = await supabase
+      .from('blog_posts')
+      .select('id, slug, title, created_date')
+      .eq('slug', postSlug)
+      .maybeSingle()
+
+    if (checkError) {
+      console.error('[BLOG API] Error checking for existing post:', checkError)
+    }
+
+    if (existingPost) {
+      console.log(`[BLOG API] UPDATING existing post: ${existingPost.id} (slug: ${postSlug})`)
+      
+      // UPDATE existing post
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .update(postData)
+        .eq('id', existingPost.id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[BLOG API] Update error:', error)
+        return NextResponse.json(
+          { success: false, error: 'Failed to update blog post', details: error.message },
+          { status: 500 }
+        )
+      }
+
+      console.log(`[BLOG API] Successfully UPDATED post ${existingPost.id}`)
+      return NextResponse.json({ 
+        success: true, 
+        data: {
+          id: data.id,
+          slug: data.slug,
+          title: data.title,
+          status: data.status,
+          created_date: data.created_date,
+          message: 'Post updated successfully'
+        }
+      }, { status: 200 })
+    }
+
+    // INSERT new post
+    console.log(`[BLOG API] INSERTING new post with slug: ${postSlug}`)
     const { data, error } = await supabase
       .from('blog_posts')
-      .upsert(postData, { 
-        onConflict: 'slug',
-        ignoreDuplicates: false 
-      })
+      .insert(postData)
       .select()
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('[BLOG API] Insert error:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to create blog post', details: error.message },
         { status: 500 }
       )
     }
+
+    console.log(`[BLOG API] Successfully INSERTED new post ${data.id}`)
 
     return NextResponse.json({ 
       success: true, 
