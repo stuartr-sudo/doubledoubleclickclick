@@ -182,7 +182,7 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
 
       if (similarPosts && similarPosts.length > 0) {
         console.warn('[BLOG API] ⚠️  Found posts with similar titles:')
-        similarPosts.forEach(p => {
+        similarPosts.forEach((p: any) => {
           console.warn(`  - ID: ${p.id}, Title: ${p.title}, Slug: ${p.slug}`)
         })
         
