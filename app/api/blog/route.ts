@@ -5,10 +5,53 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+// In-memory lock to prevent duplicate processing
+const processingLocks = new Map<string, Promise<any>>()
+
 export async function POST(request: Request) {
+  const requestId = `${Date.now()}-${Math.random()}`
+  
   try {
     const supabase = await createClient()
     const body = await request.json()
+    
+    // Create a unique key for this request based on slug or title
+    const requestKey = body.slug || body.title?.toLowerCase().trim() || requestId
+    
+    // Check if this exact request is already being processed
+    if (processingLocks.has(requestKey)) {
+      console.warn(`[BLOG API] ⚠️  Request already processing for key: ${requestKey}`)
+      console.warn(`[BLOG API] ⚠️  Waiting for existing request to complete...`)
+      const existingResult = await processingLocks.get(requestKey)
+      return existingResult
+    }
+    
+    // Create a promise for this request and store it
+    const processRequest = async () => {
+      try {
+        return await processBlogPost(supabase, body, requestId)
+      } finally {
+        // Clean up lock after 5 seconds
+        setTimeout(() => {
+          processingLocks.delete(requestKey)
+        }, 5000)
+      }
+    }
+    
+    const requestPromise = processRequest()
+    processingLocks.set(requestKey, requestPromise)
+    
+    return await requestPromise
+  } catch (error) {
+    console.error('[BLOG API] FATAL ERROR:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error', details: String(error) },
+      { status: 500 }
+    )
+  }
+}
+
+async function processBlogPost(supabase: any, body: any, requestId: string) {
 
     const { 
       // Core content
@@ -31,6 +74,9 @@ export async function POST(request: Request) {
       // User association
       user_name
     } = body
+    
+    console.log(`[BLOG API] Request ID: ${requestId}`)
+    console.log(`[BLOG API] Processing request for slug: ${slug || 'auto-generated'}`)
 
     // STRICT validation - reject incomplete requests
     if (!title || !content) {
@@ -75,9 +121,21 @@ export async function POST(request: Request) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
 
-    // Build data object with all fields
+    // CRITICAL: Ensure title and meta_title are NOT swapped
+    // If meta_title is shorter than title, they might be swapped
+    const finalTitle = title.trim()
+    const finalMetaTitle = meta_title?.trim() || null
+    
+    // Validation: If meta_title looks like it should be the title (shorter, cleaner), warn
+    if (finalMetaTitle && finalMetaTitle.length < finalTitle.length && finalTitle.includes('|')) {
+      console.warn('[BLOG API] ⚠️  WARNING: Title contains "|" which suggests it might be meta_title')
+      console.warn('[BLOG API] ⚠️  Title:', finalTitle)
+      console.warn('[BLOG API] ⚠️  Meta Title:', finalMetaTitle)
+    }
+    
+    // Build data object with all fields - USE title AS TITLE, NEVER meta_title
     const postData: any = {
-      title: title.trim(),
+      title: finalTitle,  // ALWAYS use title field for title column
       content,
       slug: postSlug,
       status,
@@ -85,13 +143,18 @@ export async function POST(request: Request) {
       updated_date: new Date().toISOString(),
       user_name: user_name || 'api'
     }
+    
+    console.log('[BLOG API] FINAL DATA TO STORE:')
+    console.log('  title (for display):', postData.title)
+    console.log('  meta_title (for SEO):', finalMetaTitle || '(none)')
+    console.log('  content length:', postData.content?.length || 0)
 
     // Add optional fields only if provided
     if (category) postData.category = category
     if (tags) postData.tags = tags
     if (featured_image) postData.featured_image = featured_image
     if (author) postData.author = author
-    if (meta_title) postData.meta_title = meta_title
+    if (finalMetaTitle) postData.meta_title = finalMetaTitle  // Use validated meta_title
     if (meta_description) postData.meta_description = meta_description
     if (focus_keyword) postData.focus_keyword = focus_keyword
     if (excerpt) postData.excerpt = excerpt
@@ -220,8 +283,58 @@ export async function POST(request: Request) {
       }, { status: 200 })
     }
 
-    // INSERT new post
+    // FINAL CHECK: One more time, make absolutely sure this post doesn't exist
+    // This prevents race conditions where two requests arrive simultaneously
+    const { data: finalCheck } = await supabase
+      .from('blog_posts')
+      .select('id, slug, title')
+      .eq('slug', postSlug)
+      .maybeSingle()
+    
+    if (finalCheck) {
+      console.log(`[BLOG API] ⚠️  FINAL CHECK: Post with slug "${postSlug}" already exists!`)
+      console.log(`[BLOG API] ⚠️  Existing post ID: ${finalCheck.id}, Title: "${finalCheck.title}"`)
+      console.log(`[BLOG API] ⚠️  UPDATING instead of creating duplicate`)
+      
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .update(postData)
+        .eq('id', finalCheck.id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[BLOG API] Final update error:', error)
+        return NextResponse.json(
+          { success: false, error: 'Failed to update blog post', details: error.message },
+          { status: 500 }
+        )
+      }
+
+      console.log(`[BLOG API] Successfully UPDATED post ${finalCheck.id} (final check)`)
+      return NextResponse.json({ 
+        success: true, 
+        data: {
+          id: data.id,
+          slug: data.slug,
+          title: data.title,
+          meta_title: data.meta_title,
+          status: data.status,
+          created_date: data.created_date,
+          message: 'Post updated successfully (final check prevented duplicate)',
+          _debug: {
+            prevented_duplicate: true,
+            matched_by: 'slug',
+            original_post_id: finalCheck.id
+          }
+        }
+      }, { status: 200 })
+    }
+    
+    // INSERT new post (only if final check confirms it doesn't exist)
     console.log(`[BLOG API] INSERTING new post with slug: ${postSlug}`)
+    console.log(`[BLOG API] Final check confirmed: No existing post with this slug`)
+    
     const { data, error } = await supabase
       .from('blog_posts')
       .insert(postData)
@@ -264,13 +377,6 @@ export async function POST(request: Request) {
         }
       }
     }, { status: 201 })
-  } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
 }
 
 export async function GET(request: Request) {
