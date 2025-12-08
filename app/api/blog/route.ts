@@ -5,9 +5,6 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-// In-memory lock to prevent duplicate processing
-const processingLocks = new Map<string, Promise<any>>()
-
 export async function POST(request: Request) {
   const requestId = `${Date.now()}-${Math.random()}`
   
@@ -15,33 +12,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const body = await request.json()
     
-    // Create a unique key for this request based on slug or title
-    const requestKey = body.slug || body.title?.toLowerCase().trim() || requestId
-    
-    // Check if this exact request is already being processed
-    if (processingLocks.has(requestKey)) {
-      console.warn(`[BLOG API] ⚠️  Request already processing for key: ${requestKey}`)
-      console.warn(`[BLOG API] ⚠️  Waiting for existing request to complete...`)
-      const existingResult = await processingLocks.get(requestKey)
-      return existingResult
-    }
-    
-    // Create a promise for this request and store it
-    const processRequest = async () => {
-      try {
-        return await processBlogPost(supabase, body, requestId)
-      } finally {
-        // Clean up lock after 5 seconds
-        setTimeout(() => {
-          processingLocks.delete(requestKey)
-        }, 5000)
-      }
-    }
-    
-    const requestPromise = processRequest()
-    processingLocks.set(requestKey, requestPromise)
-    
-    return await requestPromise
+    return await processBlogPost(supabase, body, requestId)
   } catch (error) {
     console.error('[BLOG API] FATAL ERROR:', error)
     return NextResponse.json(
@@ -115,14 +86,17 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     console.log('  excerpt length:', excerpt?.length || 0)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
-    // Generate slug if not provided
-    const postSlug = slug || title
-      .toLowerCase()
+    // Generate slug if not provided - ALWAYS use a consistent method
+    // Use a normalized version of the title to prevent slight variations creating duplicates
+    const normalizedTitle = title.trim().toLowerCase()
+    const postSlug = slug || normalizedTitle
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
+      .substring(0, 100) // Limit slug length
+    
+    console.log('[BLOG API] Generated slug:', postSlug)
 
     // CRITICAL: Ensure title and meta_title are NOT swapped
-    // If meta_title is shorter than title, they might be swapped
     const finalTitle = title.trim()
     const finalMetaTitle = meta_title?.trim() || null
     
@@ -131,6 +105,24 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
       console.warn('[BLOG API] ⚠️  WARNING: Title contains "|" which suggests it might be meta_title')
       console.warn('[BLOG API] ⚠️  Title:', finalTitle)
       console.warn('[BLOG API] ⚠️  Meta Title:', finalMetaTitle)
+    }
+    
+    // ANTI-DUPLICATE PROTECTION: Use PostgreSQL advisory lock
+    // This prevents race conditions across multiple serverless instances
+    const slugHash = postSlug.split('').reduce((acc, char) => {
+      return ((acc << 5) - acc) + char.charCodeAt(0) | 0
+    }, 0)
+    const lockId = Math.abs(slugHash) % 2147483647 // Postgres bigint max
+    
+    console.log(`[BLOG API] Acquiring advisory lock: ${lockId} for slug: ${postSlug}`)
+    
+    // Acquire lock - this blocks across ALL serverless instances
+    const { error: lockError } = await supabase.rpc('pg_advisory_lock', { 
+      lock_id: lockId 
+    }).select().single().catch(() => ({ error: null }))
+    
+    if (lockError) {
+      console.warn('[BLOG API] Could not acquire advisory lock (RPC not available), proceeding anyway')
     }
     
     // Build data object with all fields - USE title AS TITLE, NEVER meta_title
@@ -287,96 +279,191 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     // This prevents race conditions where two requests arrive simultaneously
     const { data: finalCheck } = await supabase
       .from('blog_posts')
-      .select('id, slug, title')
+      .select('id, slug, title, content')
       .eq('slug', postSlug)
       .maybeSingle()
     
-    if (finalCheck) {
-      console.log(`[BLOG API] ⚠️  FINAL CHECK: Post with slug "${postSlug}" already exists!`)
-      console.log(`[BLOG API] ⚠️  Existing post ID: ${finalCheck.id}, Title: "${finalCheck.title}"`)
-      console.log(`[BLOG API] ⚠️  UPDATING instead of creating duplicate`)
+    try {
+      if (finalCheck) {
+        console.log(`[BLOG API] ⚠️  FINAL CHECK: Post with slug "${postSlug}" already exists!`)
+        console.log(`[BLOG API] ⚠️  Existing post ID: ${finalCheck.id}, Title: "${finalCheck.title}"`)
+        console.log(`[BLOG API] ⚠️  UPDATING instead of creating duplicate`)
+        
+        const { data, error } = await supabase
+          .from('blog_posts')
+          .update(postData)
+          .eq('id', finalCheck.id)
+          .select()
+          .single()
+
+        if (error) {
+          console.error('[BLOG API] Final update error:', error)
+          return NextResponse.json(
+            { success: false, error: 'Failed to update blog post', details: error.message },
+            { status: 500 }
+          )
+        }
+
+        console.log(`[BLOG API] Successfully UPDATED post ${finalCheck.id} (final check)`)
+        return NextResponse.json({ 
+          success: true, 
+          data: {
+            id: data.id,
+            slug: data.slug,
+            title: data.title,
+            meta_title: data.meta_title,
+            status: data.status,
+            created_date: data.created_date,
+            message: 'Post updated successfully (final check prevented duplicate)',
+            _debug: {
+              prevented_duplicate: true,
+              matched_by: 'slug',
+              original_post_id: finalCheck.id
+            }
+          }
+        }, { status: 200 })
+      }
       
+      // INSERT new post (only if final check confirms it doesn't exist)
+      console.log(`[BLOG API] INSERTING new post with slug: ${postSlug}`)
+      console.log(`[BLOG API] Final check confirmed: No existing post with this slug`)
+      
+      // Use INSERT with ON CONFLICT DO UPDATE to handle race conditions at DB level
       const { data, error } = await supabase
         .from('blog_posts')
-        .update(postData)
-        .eq('id', finalCheck.id)
+        .upsert(
+          postData,
+          { 
+            onConflict: 'slug',
+            ignoreDuplicates: false
+          }
+        )
         .select()
         .single()
 
       if (error) {
-        console.error('[BLOG API] Final update error:', error)
-        return NextResponse.json(
-          { success: false, error: 'Failed to update blog post', details: error.message },
-          { status: 500 }
-        )
+        console.error('[BLOG API] Upsert error:', error)
+        
+        // Check if error is from our duplicate prevention trigger
+        const errorMsg = error.message || String(error)
+        if (errorMsg.includes('DUPLICATE_POST:')) {
+          const duplicateIdMatch = errorMsg.match(/DUPLICATE_POST:([a-f0-9-]+)/)
+          if (duplicateIdMatch) {
+            const existingId = duplicateIdMatch[1]
+            console.log(`[BLOG API] 🛡️  DUPLICATE PREVENTED BY TRIGGER: Updating existing post ${existingId}`)
+            
+            // Update the existing post instead
+            const { data: updateData, error: updateError } = await supabase
+              .from('blog_posts')
+              .update(postData)
+              .eq('id', existingId)
+              .select()
+              .single()
+            
+            if (updateError) {
+              console.error('[BLOG API] Update after trigger error:', updateError)
+              return NextResponse.json(
+                { success: false, error: 'Failed to update existing blog post', details: updateError.message },
+                { status: 500 }
+              )
+            }
+            
+            console.log(`[BLOG API] ✅ Successfully UPDATED post ${existingId} (trigger prevented duplicate)`)
+            return NextResponse.json({ 
+              success: true, 
+              data: {
+                id: updateData.id,
+                title: updateData.title,
+                meta_title: updateData.meta_title,
+                slug: updateData.slug,
+                status: updateData.status,
+                created_date: updateData.created_date,
+                user_name: updateData.user_name,
+                message: 'Post updated (duplicate prevented by database trigger)',
+                _debug: {
+                  title_for_display: updateData.title,
+                  meta_title_for_seo: updateData.meta_title || updateData.title,
+                  method: 'trigger_prevention_update',
+                  prevented_duplicate: true
+                }
+              }
+            }, { status: 200 })
+          }
+        }
+        
+        // If upsert failed due to missing unique constraint, try traditional insert
+        const { data: insertData, error: insertError } = await supabase
+          .from('blog_posts')
+          .insert(postData)
+          .select()
+          .single()
+        
+        if (insertError) {
+          console.error('[BLOG API] Insert error:', insertError)
+          return NextResponse.json(
+            { success: false, error: 'Failed to create blog post', details: insertError.message },
+            { status: 500 }
+          )
+        }
+        
+        console.log(`[BLOG API] Successfully INSERTED new post ${insertData.id} (fallback)`)
+        return NextResponse.json({ 
+          success: true, 
+          data: {
+            id: insertData.id,
+            title: insertData.title,
+            meta_title: insertData.meta_title,
+            slug: insertData.slug,
+            status: insertData.status,
+            created_date: insertData.created_date,
+            user_name: insertData.user_name,
+            _debug: {
+              title_for_display: insertData.title,
+              meta_title_for_seo: insertData.meta_title || insertData.title,
+              method: 'insert_fallback'
+            }
+          }
+        }, { status: 201 })
       }
 
-      console.log(`[BLOG API] Successfully UPDATED post ${finalCheck.id} (final check)`)
+      console.log(`[BLOG API] Successfully UPSERTED post ${data.id}`)
+      console.log('[BLOG API] STORED IN DATABASE:')
+      console.log('  title:', data.title)
+      console.log('  meta_title:', data.meta_title)
+      
+      // Validation warning
+      if (data.title === data.meta_title && data.meta_title) {
+        console.warn('[BLOG API] ⚠️  WARNING: title and meta_title are identical!')
+        console.warn('[BLOG API] ⚠️  title should be clean, meta_title should be SEO-optimized')
+      }
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
       return NextResponse.json({ 
         success: true, 
         data: {
           id: data.id,
-          slug: data.slug,
           title: data.title,
           meta_title: data.meta_title,
+          slug: data.slug,
           status: data.status,
           created_date: data.created_date,
-          message: 'Post updated successfully (final check prevented duplicate)',
+          user_name: data.user_name,
           _debug: {
-            prevented_duplicate: true,
-            matched_by: 'slug',
-            original_post_id: finalCheck.id
+            title_for_display: data.title,
+            meta_title_for_seo: data.meta_title || data.title,
+            method: 'upsert'
           }
         }
-      }, { status: 200 })
-    }
-    
-    // INSERT new post (only if final check confirms it doesn't exist)
-    console.log(`[BLOG API] INSERTING new post with slug: ${postSlug}`)
-    console.log(`[BLOG API] Final check confirmed: No existing post with this slug`)
-    
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .insert(postData)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('[BLOG API] Insert error:', error)
-      return NextResponse.json(
-        { success: false, error: 'Failed to create blog post', details: error.message },
-        { status: 500 }
-      )
-    }
-
-    console.log(`[BLOG API] Successfully INSERTED new post ${data.id}`)
-    console.log('[BLOG API] STORED IN DATABASE:')
-    console.log('  title:', data.title)
-    console.log('  meta_title:', data.meta_title)
-    
-    // Validation warning
-    if (data.title === data.meta_title && data.meta_title) {
-      console.warn('[BLOG API] ⚠️  WARNING: title and meta_title are identical!')
-      console.warn('[BLOG API] ⚠️  title should be clean, meta_title should be SEO-optimized')
-    }
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
-    return NextResponse.json({ 
-      success: true, 
-      data: {
-        id: data.id,
-        title: data.title,
-        meta_title: data.meta_title,
-        slug: data.slug,
-        status: data.status,
-        created_date: data.created_date,
-        user_name: data.user_name,
-        _debug: {
-          title_for_display: data.title,
-          meta_title_for_seo: data.meta_title || data.title
-        }
+      }, { status: 201 })
+    } finally {
+      // Release the advisory lock
+      if (!lockError) {
+        await supabase.rpc('pg_advisory_unlock', { 
+          lock_id: lockId 
+        }).catch(() => {})
+        console.log(`[BLOG API] Released advisory lock: ${lockId}`)
       }
-    }, { status: 201 })
+    }
 }
 
 export async function GET(request: Request) {
