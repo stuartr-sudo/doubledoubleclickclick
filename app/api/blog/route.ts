@@ -143,12 +143,14 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     console.log(`[BLOG API] Acquiring advisory lock: ${lockId} for slug: ${postSlug}`)
     
     // Acquire lock - this blocks across ALL serverless instances
-    const { error: lockError } = await supabase.rpc('pg_advisory_lock', { 
-      lock_id: lockId 
-    }).select().single().catch(() => ({ error: null }))
-    
-    if (lockError) {
-      console.warn('[BLOG API] Could not acquire advisory lock (RPC not available), proceeding anyway')
+    try {
+      await supabase.rpc('pg_advisory_lock', { 
+        lock_id: lockId 
+      })
+      console.log(`[BLOG API] ✅ Acquired advisory lock: ${lockId}`)
+    } catch (lockError) {
+      console.warn('[BLOG API] ⚠️  Could not acquire advisory lock (RPC not available), proceeding anyway')
+      console.warn('[BLOG API] ⚠️  Run migration to enable advisory locks')
     }
     
     // Build data object with all fields - USE title AS TITLE, NEVER meta_title
@@ -550,11 +552,13 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
       }, { status: 201 })
     } finally {
       // Release the advisory lock
-      if (!lockError) {
+      try {
         await supabase.rpc('pg_advisory_unlock', { 
           lock_id: lockId 
-        }).catch(() => {})
+        })
         console.log(`[BLOG API] Released advisory lock: ${lockId}`)
+      } catch (err) {
+        // Ignore unlock errors
       }
     }
 }
