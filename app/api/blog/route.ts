@@ -163,11 +163,19 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     }
     
     // Store external ID if provided (PRIMARY identifier from Base44)
+    // Only add if the column exists (after migration is run)
     if (externalId) {
-      postData.external_id = externalId
-      console.log('[BLOG API] 🔑 Base44 postId detected:', externalId)
-      console.log('[BLOG API] 🔑 This will be used as PRIMARY identifier for updates')
-      console.log('[BLOG API] 🔑 Even if slug/title changes, we will UPDATE this article')
+      try {
+        postData.external_id = externalId
+        console.log('[BLOG API] 🔑 Base44 postId detected:', externalId)
+        console.log('[BLOG API] 🔑 This will be used as PRIMARY identifier for updates')
+        console.log('[BLOG API] 🔑 Even if slug/title changes, we will UPDATE this article')
+      } catch (err) {
+        console.warn('[BLOG API] ⚠️  Could not set external_id - column may not exist')
+        console.warn('[BLOG API] ⚠️  Run the database migration to enable this feature')
+        // Don't include external_id in postData if column doesn't exist
+        delete postData.external_id
+      }
     } else {
       console.warn('[BLOG API] ⚠️  No postId provided - falling back to slug matching')
       console.warn('[BLOG API] ⚠️  Base44 should send "postId" field to prevent duplicates')
@@ -197,43 +205,55 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     
     if (externalId) {
       console.log(`[BLOG API] 🔍 Checking for existing post by external_id: ${externalId}`)
-      const { data, error: extCheckError } = await supabase
-        .from('blog_posts')
-        .select('id, slug, title, created_date, external_id')
-        .eq('external_id', externalId)
-        .maybeSingle()
       
-      if (extCheckError) {
-        console.error('[BLOG API] Error checking by external_id:', extCheckError)
-      }
-      
-      if (data) {
-        existingPost = data
-        matchedBy = 'external_id'
-        console.log(`[BLOG API] ✅ FOUND existing post by external_id: ${data.id}`)
-        console.log(`[BLOG API] ✅ This is the SAME article, will UPDATE`)
-      } else {
-        console.log(`[BLOG API] ❌ No post found with external_id: ${externalId}`)
+      try {
+        const { data, error: extCheckError } = await supabase
+          .from('blog_posts')
+          .select('id, slug, title, created_date, external_id')
+          .eq('external_id', externalId)
+          .maybeSingle()
+        
+        if (extCheckError) {
+          console.error('[BLOG API] Error checking by external_id:', extCheckError)
+          console.warn('[BLOG API] ⚠️  external_id column may not exist yet - run migration!')
+          // Don't fail, just continue to slug-based matching
+        } else if (data) {
+          existingPost = data
+          matchedBy = 'external_id'
+          console.log(`[BLOG API] ✅ FOUND existing post by external_id: ${data.id}`)
+          console.log(`[BLOG API] ✅ This is the SAME article, will UPDATE`)
+        } else {
+          console.log(`[BLOG API] ❌ No post found with external_id: ${externalId}`)
+        }
+      } catch (err) {
+        console.error('[BLOG API] Exception checking external_id:', err)
+        console.warn('[BLOG API] ⚠️  Falling back to slug-based matching')
+        // Continue to slug-based matching
       }
     }
     
     // SECONDARY: Check by slug if no external ID match
     if (!existingPost) {
       console.log(`[BLOG API] 🔍 Checking for existing post by slug: ${postSlug}`)
-      const { data, error: checkError } = await supabase
-        .from('blog_posts')
-        .select('id, slug, title, created_date, external_id')
-        .eq('slug', postSlug)
-        .maybeSingle()
-
-      if (checkError) {
-        console.error('[BLOG API] Error checking for existing post:', checkError)
-      }
       
-      if (data) {
-        existingPost = data
-        matchedBy = 'slug'
-        console.log(`[BLOG API] ✅ FOUND existing post by slug: ${data.id}`)
+      try {
+        const { data, error: checkError } = await supabase
+          .from('blog_posts')
+          .select('id, slug, title, created_date')
+          .eq('slug', postSlug)
+          .maybeSingle()
+
+        if (checkError) {
+          console.error('[BLOG API] Error checking for existing post:', checkError)
+        }
+        
+        if (data) {
+          existingPost = data
+          matchedBy = 'slug'
+          console.log(`[BLOG API] ✅ FOUND existing post by slug: ${data.id}`)
+        }
+      } catch (err) {
+        console.error('[BLOG API] Exception checking slug:', err)
       }
     }
 
