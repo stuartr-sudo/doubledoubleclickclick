@@ -25,6 +25,12 @@ export async function POST(request: Request) {
 async function processBlogPost(supabase: any, body: any, requestId: string) {
 
     const { 
+      // External identifier (from Base44 or other CMS)
+      postId,           // Base44's article UUID (camelCase)
+      post_id,          // Alternative snake_case
+      external_id,      // Generic external ID
+      base44_id,        // Base44 specific
+      article_id,       // Alternative name
       // Core content
       title, 
       content, 
@@ -43,17 +49,32 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
       generated_llm_schema,
       export_seo_as_tags,
       // User association
-      user_name
+      user_name,
+      // Base44 specific fields
+      provider,
+      credentialId,
+      html,
+      text,
+      page_builder,
+      content_html
     } = body
+    
+    // Normalize external ID (accept any of these field names)
+    // Priority: postId (Base44's field) > others
+    const externalId = postId || post_id || external_id || base44_id || article_id
+    
+    // Use html/content_html if content is not provided (Base44 compatibility)
+    const finalContent = content || html || content_html
     
     console.log(`[BLOG API] Request ID: ${requestId}`)
     console.log(`[BLOG API] Processing request for slug: ${slug || 'auto-generated'}`)
 
     // STRICT validation - reject incomplete requests
-    if (!title || !content) {
+    if (!title || !finalContent) {
       console.error('[BLOG API] ❌ REJECTED: Missing required fields')
       console.error('[BLOG API] Has title?', !!title)
-      console.error('[BLOG API] Has content?', !!content)
+      console.error('[BLOG API] Has content?', !!finalContent)
+      console.error('[BLOG API] Base44 fields - html:', !!html, 'content_html:', !!content_html, 'content:', !!content)
       return NextResponse.json(
         { success: false, error: 'Title and content are required' },
         { status: 400 }
@@ -61,9 +82,9 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     }
 
     // Validate content is not empty
-    if (content.trim().length < 50) {
+    if (finalContent.trim().length < 50) {
       console.error('[BLOG API] ❌ REJECTED: Content too short (must be at least 50 chars)')
-      console.error('[BLOG API] Content length:', content.trim().length)
+      console.error('[BLOG API] Content length:', finalContent.trim().length)
       return NextResponse.json(
         { success: false, error: 'Content must be at least 50 characters' },
         { status: 400 }
@@ -73,17 +94,22 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     // Log EVERYTHING Base44 is sending
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('[BLOG API] INCOMING FROM BASE44:')
+    console.log('  🔑 postId (Base44):', postId || '(not provided)')
+    console.log('  🆔 external_id (normalized):', externalId || '(none - will use slug)')
+    console.log('  🌐 provider:', provider || '(not provided)')
     console.log('  title:', title)
     console.log('  title length:', title?.length || 0)
     console.log('  meta_title:', meta_title)
     console.log('  slug:', slug)
-    console.log('  content length:', content?.length || 0)
+    console.log('  content length:', finalContent?.length || 0)
+    console.log('  content source:', content ? 'content' : html ? 'html' : content_html ? 'content_html' : 'NONE')
     console.log('  status:', status)
     console.log('  category:', category)
     console.log('  tags:', tags)
     console.log('  featured_image:', featured_image ? 'YES' : 'NO')
     console.log('  author:', author)
     console.log('  excerpt length:', excerpt?.length || 0)
+    console.log('  page_builder:', page_builder || '(not provided)')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
     // Generate slug if not provided - ALWAYS use a consistent method
@@ -128,12 +154,23 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     // Build data object with all fields - USE title AS TITLE, NEVER meta_title
     const postData: any = {
       title: finalTitle,  // ALWAYS use title field for title column
-      content,
+      content: finalContent,  // Use normalized content (content, html, or content_html)
       slug: postSlug,
       status,
       published_date: status === 'published' ? new Date().toISOString() : null,
       updated_date: new Date().toISOString(),
       user_name: user_name || 'api'
+    }
+    
+    // Store external ID if provided (PRIMARY identifier from Base44)
+    if (externalId) {
+      postData.external_id = externalId
+      console.log('[BLOG API] 🔑 Base44 postId detected:', externalId)
+      console.log('[BLOG API] 🔑 This will be used as PRIMARY identifier for updates')
+      console.log('[BLOG API] 🔑 Even if slug/title changes, we will UPDATE this article')
+    } else {
+      console.warn('[BLOG API] ⚠️  No postId provided - falling back to slug matching')
+      console.warn('[BLOG API] ⚠️  Base44 should send "postId" field to prevent duplicates')
     }
     
     console.log('[BLOG API] FINAL DATA TO STORE:')
@@ -153,15 +190,51 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     if (generated_llm_schema) postData.generated_llm_schema = generated_llm_schema
     if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
 
-    // CRITICAL: Check if post with this slug OR similar title already exists
-    const { data: existingPost, error: checkError } = await supabase
-      .from('blog_posts')
-      .select('id, slug, title, created_date')
-      .eq('slug', postSlug)
-      .maybeSingle()
+    // CRITICAL: Check if post exists by EXTERNAL ID FIRST (if provided)
+    // This is the PRIMARY check - if Base44 sends an article ID, use it!
+    let existingPost = null
+    let matchedBy = null
+    
+    if (externalId) {
+      console.log(`[BLOG API] 🔍 Checking for existing post by external_id: ${externalId}`)
+      const { data, error: extCheckError } = await supabase
+        .from('blog_posts')
+        .select('id, slug, title, created_date, external_id')
+        .eq('external_id', externalId)
+        .maybeSingle()
+      
+      if (extCheckError) {
+        console.error('[BLOG API] Error checking by external_id:', extCheckError)
+      }
+      
+      if (data) {
+        existingPost = data
+        matchedBy = 'external_id'
+        console.log(`[BLOG API] ✅ FOUND existing post by external_id: ${data.id}`)
+        console.log(`[BLOG API] ✅ This is the SAME article, will UPDATE`)
+      } else {
+        console.log(`[BLOG API] ❌ No post found with external_id: ${externalId}`)
+      }
+    }
+    
+    // SECONDARY: Check by slug if no external ID match
+    if (!existingPost) {
+      console.log(`[BLOG API] 🔍 Checking for existing post by slug: ${postSlug}`)
+      const { data, error: checkError } = await supabase
+        .from('blog_posts')
+        .select('id, slug, title, created_date, external_id')
+        .eq('slug', postSlug)
+        .maybeSingle()
 
-    if (checkError) {
-      console.error('[BLOG API] Error checking for existing post:', checkError)
+      if (checkError) {
+        console.error('[BLOG API] Error checking for existing post:', checkError)
+      }
+      
+      if (data) {
+        existingPost = data
+        matchedBy = 'slug'
+        console.log(`[BLOG API] ✅ FOUND existing post by slug: ${data.id}`)
+      }
     }
 
     // ADDITIONAL CHECK: Look for posts with very similar titles (prevent duplicates with different slugs)
