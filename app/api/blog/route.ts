@@ -135,7 +135,7 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     
     // ANTI-DUPLICATE PROTECTION: Use PostgreSQL advisory lock
     // This prevents race conditions across multiple serverless instances
-    const slugHash = postSlug.split('').reduce((acc, char) => {
+    const slugHash = postSlug.split('').reduce((acc: number, char: string) => {
       return ((acc << 5) - acc) + char.charCodeAt(0) | 0
     }, 0)
     const lockId = Math.abs(slugHash) % 2147483647 // Postgres bigint max
