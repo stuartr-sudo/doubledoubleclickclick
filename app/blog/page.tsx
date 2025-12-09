@@ -32,7 +32,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
   try {
     const supabase = await createClient()
     
-    // Fetch all published blog posts
+    // Fetch ALL published blog posts (no limit - shows all posts)
     const { data } = await supabase
       .from('blog_posts')
       .select('id, title, slug, meta_description, featured_image, created_date, tags, category')
