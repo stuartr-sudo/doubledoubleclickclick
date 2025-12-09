@@ -77,6 +77,14 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       <section className="blog-page-header">
         <div className="container">
           <h1>Answers to Your Questions</h1>
+          <div className="quiz-step">
+            See What Questions Your Prospects Are Asking
+            <br />
+            Enter a keyword and discover the top questions people are asking. 
+            Answer them before your competitors do.
+            <br />
+            <a href="/find-questions" className="quiz-step-link">Continue</a>
+          </div>
         </div>
       </section>
 
