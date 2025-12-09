@@ -11190,6 +11190,46 @@ img {
   max-width: 900px;
   margin: 0 auto;
   min-height: auto;
+  padding: 0 var(--spacing-md);
+}
+
+@media (max-width: 768px) {
+  .quiz-inline-container {
+    padding: 0 var(--spacing-sm);
+  }
+  
+  .quiz-title {
+    font-size: 1.5rem !important;
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  
+  .quiz-description {
+    font-size: 1rem !important;
+    text-align: center;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .quiz-step {
+    padding: var(--spacing-md) !important;
+  }
+  
+  .quiz-cta-button {
+    width: 100% !important;
+    padding: 1rem !important;
+    font-size: 1rem !important;
+    justify-content: center;
+  }
+  
+  .form-control {
+    font-size: 1rem !important;
+    padding: 0.875rem !important;
+  }
+  
+  .email-pulse-input {
+    font-size: 1rem !important;
+    padding: 1rem !important;
+  }
 }
 
 /* Elegant Blog Card Redesign - Divi Style */
@@ -11375,6 +11415,8 @@ img {
   
   .blog-page-header h1 {
     padding: 0 var(--spacing-md);
+    text-align: center !important;
+    font-size: 2rem;
   }
 }
 
