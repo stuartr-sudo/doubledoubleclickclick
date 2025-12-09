@@ -11352,7 +11352,7 @@ img {
 
 /* Blog Page Header Styling */
 .blog-page-header {
-  padding: var(--spacing-2xl) 0 var(--spacing-xl) 0;
+  padding: var(--spacing-2xl) 0 var(--spacing-md) 0;
   text-align: center;
   background: var(--color-bg);
 }
@@ -11361,55 +11361,20 @@ img {
   font-size: clamp(2.5rem, 5vw, 3.5rem);
   font-weight: 800;
   color: var(--color-primary);
-  margin: 0 auto var(--spacing-xl) auto;
+  margin: 0 auto;
   line-height: 1.1;
   max-width: 900px;
   letter-spacing: -0.02em;
   text-align: center;
 }
 
-.blog-page-header .quiz-step {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: var(--spacing-lg);
-  background: var(--color-bg-light);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  font-size: var(--font-size-lg);
-  color: var(--color-text);
-  line-height: 1.6;
-}
-
-.blog-page-header .quiz-step-link {
-  display: inline-block;
-  margin-top: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background: var(--color-primary);
-  color: var(--color-secondary);
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.blog-page-header .quiz-step-link:hover {
-  background: var(--color-text);
-  transform: translateY(-2px);
-}
-
 @media (max-width: 768px) {
   .blog-page-header {
-    padding: var(--spacing-xl) 0 var(--spacing-lg) 0;
+    padding: var(--spacing-xl) 0 var(--spacing-md) 0;
   }
   
   .blog-page-header h1 {
-    margin-bottom: var(--spacing-lg);
     padding: 0 var(--spacing-md);
-  }
-  
-  .blog-page-header .quiz-step {
-    font-size: var(--font-size-base);
-    padding: var(--spacing-md);
   }
 }
 
