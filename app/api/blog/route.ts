@@ -35,7 +35,7 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
       title, 
       content, 
       slug, 
-      status = 'draft', 
+      status = 'published',  // Default to published (was 'draft') 
       category, 
       tags, 
       featured_image,
