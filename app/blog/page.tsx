@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import BlogCarousel from '@/components/BlogCarousel'
 import QuestionsDiscovery from '@/components/QuestionsDiscovery'
-import Script from 'next/script'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 
@@ -26,6 +25,7 @@ export const revalidate = 0
 
 export default async function BlogPage({ searchParams }: { searchParams?: { category?: string } }) {
   let posts = null
+  let homepageContent = null
   
   try {
     const supabase = await createClient()
@@ -38,8 +38,12 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       .order('created_date', { ascending: false })
     posts = data
 
-    // No need to fetch homepage content anymore since we removed quiz CTAs
-    // homepageContent = null
+    // Fetch homepage content for Questions Discovery styling
+    const { data: hpContent } = await supabase
+      .from('homepage_content')
+      .select('hero_cta_bg_color, hero_cta_text_color')
+      .single()
+    homepageContent = hpContent
   } catch (error) {
     console.error('Error fetching blog posts:', error)
   }
@@ -77,14 +81,19 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       <section className="blog-page-header">
         <div className="container">
           <h1>Answers to Your Questions</h1>
-          <div className="quiz-step">
-            See What Questions Your Prospects Are Asking
-            <br />
-            Enter a keyword and discover the top questions people are asking. 
-            Answer them before your competitors do.
-            <br />
-            <a href="/find-questions" className="quiz-step-link">Continue</a>
-          </div>
+        </div>
+      </section>
+
+      {/* Questions Discovery Tool */}
+      <section style={{ padding: 'var(--spacing-lg) 0' }}>
+        <div className="container" style={{ maxWidth: '800px' }}>
+          <QuestionsDiscovery
+            title="See What Questions Your Prospects Are Asking"
+            description="Enter a keyword and discover the top questions people are asking. Answer them before your competitors do."
+            ctaText="Book a Discovery Call"
+            buttonBgColor={homepageContent?.hero_cta_bg_color || '#000000'}
+            buttonTextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
+          />
         </div>
       </section>
 
