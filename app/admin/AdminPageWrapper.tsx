@@ -31,7 +31,8 @@ export default function AdminPageWrapper() {
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch('/api/blog')
+      // Fetch ALL posts (published + draft) with high limit
+      const res = await fetch('/api/blog?status=all&limit=1000')
       const result = await res.json()
       setPosts(result.data || [])
     } catch (error) {
