@@ -24,6 +24,8 @@ export default function AdminPageWrapper() {
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchPosts()
@@ -52,6 +54,11 @@ export default function AdminPageWrapper() {
       })
       if (res.ok) {
         setPosts(posts.filter(p => p.id !== id))
+        setSelectedPosts(prev => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
         alert('Post deleted successfully')
       } else {
         alert('Failed to delete post')
@@ -60,6 +67,64 @@ export default function AdminPageWrapper() {
       console.error('Error deleting post:', error)
       alert('Error deleting post')
     }
+  }
+
+  const toggleSelectPost = (id: string) => {
+    setSelectedPosts(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedPosts.size === filteredPosts.length) {
+      setSelectedPosts(new Set())
+    } else {
+      setSelectedPosts(new Set(filteredPosts.map(p => p.id)))
+    }
+  }
+
+  const bulkDelete = async () => {
+    if (selectedPosts.size === 0) {
+      alert('Please select posts to delete')
+      return
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedPosts.size} post(s)? This cannot be undone.`)) {
+      return
+    }
+
+    setIsDeleting(true)
+    let successCount = 0
+    let failCount = 0
+
+    for (const id of Array.from(selectedPosts)) {
+      try {
+        const res = await fetch(`/api/blog/${id}`, {
+          method: 'DELETE',
+        })
+        if (res.ok) {
+          successCount++
+        } else {
+          failCount++
+        }
+      } catch (error) {
+        console.error(`Error deleting post ${id}:`, error)
+        failCount++
+      }
+    }
+
+    // Refresh posts list
+    await fetchPosts()
+    setSelectedPosts(new Set())
+    setIsDeleting(false)
+    
+    alert(`Deleted ${successCount} post(s).${failCount > 0 ? ` Failed to delete ${failCount} post(s).` : ''}`)
   }
 
   const handleLogout = async () => {
@@ -138,6 +203,32 @@ export default function AdminPageWrapper() {
           </button>
         </div>
 
+        {filteredPosts.length > 0 && (
+          <div className="bulk-actions">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={selectedPosts.size === filteredPosts.length && filteredPosts.length > 0}
+                onChange={toggleSelectAll}
+              />
+              <span>Select All ({filteredPosts.length})</span>
+            </label>
+            {selectedPosts.size > 0 && (
+              <>
+                <span className="selected-count">{selectedPosts.size} selected</span>
+                <button
+                  onClick={bulkDelete}
+                  disabled={isDeleting}
+                  className="btn btn-danger"
+                  style={{ marginLeft: '1rem' }}
+                >
+                  {isDeleting ? 'Deleting...' : `Delete Selected (${selectedPosts.size})`}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="admin-posts-list">
         {filteredPosts.length === 0 ? (
           <div className="empty-state">
@@ -150,6 +241,14 @@ export default function AdminPageWrapper() {
           <div className="posts-grid">
             {filteredPosts.map((post) => (
               <div key={post.id} className="post-card">
+                <div className="post-card-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={selectedPosts.has(post.id)}
+                    onChange={() => toggleSelectPost(post.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
                 {post.featured_image && (
                   <div className="post-card-image">
                     <img src={post.featured_image} alt={post.title} />
