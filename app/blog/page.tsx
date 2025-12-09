@@ -73,6 +73,13 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         </div>
       </header>
 
+      {/* Page Title */}
+      <section className="blog-page-header">
+        <div className="container">
+          <h1>Answers to Your Questions</h1>
+        </div>
+      </section>
+
       {/* Blog Posts */}
       <section className="blog-posts">
         <div className="container">
