@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import BlogCarousel from '@/components/BlogCarousel'
-import BlogQuizCTA from '@/components/BlogQuizCTA'
 import QuestionsDiscovery from '@/components/QuestionsDiscovery'
 import Script from 'next/script'
 import { createClient } from '@/lib/supabase/server'
@@ -27,7 +26,6 @@ export const revalidate = 0
 
 export default async function BlogPage({ searchParams }: { searchParams?: { category?: string } }) {
   let posts = null
-  let homepageContent = null
   
   try {
     const supabase = await createClient()
@@ -40,12 +38,8 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       .order('created_date', { ascending: false })
     posts = data
 
-    // Fetch homepage content for quiz styling
-    const { data: contentData } = await supabase
-      .from('homepage_content')
-      .select('quiz_cta_bg_color, quiz_description, quiz_cta_text, hero_cta_bg_color, hero_cta_text_color, quiz_cta_border_color')
-      .single()
-    homepageContent = contentData
+    // No need to fetch homepage content anymore since we removed quiz CTAs
+    // homepageContent = null
   } catch (error) {
     console.error('Error fetching blog posts:', error)
   }
@@ -78,16 +72,6 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
           </nav>
         </div>
       </header>
-
-      {/* Quiz CTA Section - Top */}
-      <BlogQuizCTA
-        quizCtaBgColor={homepageContent?.quiz_cta_bg_color || '#f8f9fa'}
-        quizDescription={homepageContent?.quiz_description || 'Discover how visible your brand is to AI assistants like ChatGPT, Claude, and Gemini in just 3 minutes.'}
-        quizCTAText={homepageContent?.quiz_cta_text || 'Start Quiz →'}
-        heroCTABgColor={homepageContent?.hero_cta_bg_color || '#000000'}
-        heroCTATextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
-        quizCTABorderColor={homepageContent?.quiz_cta_border_color || '#000000'}
-      />
 
       {/* Blog Posts */}
       <section className="blog-posts">
@@ -140,18 +124,6 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
                         </article>
                       ))}
                     </div>
-                    
-                    {/* Quiz CTA after first 3 posts */}
-                    {chunkIndex === 0 && filteredPosts.length > 3 && (
-                      <BlogQuizCTA
-                        quizCtaBgColor={homepageContent?.quiz_cta_bg_color || '#f8f9fa'}
-                        quizDescription={homepageContent?.quiz_description || 'Discover how visible your brand is to AI assistants like ChatGPT, Claude, and Gemini in just 3 minutes.'}
-                        quizCTAText={homepageContent?.quiz_cta_text || 'Start Quiz →'}
-                        heroCTABgColor={homepageContent?.hero_cta_bg_color || '#000000'}
-                        heroCTATextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
-                        quizCTABorderColor={homepageContent?.quiz_cta_border_color || '#000000'}
-                      />
-                    )}
                   </div>
                 )
               })}
