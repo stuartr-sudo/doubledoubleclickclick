@@ -11395,6 +11395,9 @@ img {
   padding: var(--spacing-2xl) 0 var(--spacing-md) 0;
   text-align: center;
   background: var(--color-bg);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 10;
 }
 
 .blog-page-header h1 {
