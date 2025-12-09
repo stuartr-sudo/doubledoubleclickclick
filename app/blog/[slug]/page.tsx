@@ -6,6 +6,7 @@ import Script from 'next/script'
 import BlogCarousel from '@/components/BlogCarousel'
 import BlogTracker from '@/components/BlogTracker'
 import BlogQuizCTA from '@/components/BlogQuizCTA'
+import ContactForm from '@/components/ContactForm'
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   let post = null
@@ -296,6 +297,9 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
       {/* Blog Carousel */}
       <BlogCarousel />
+
+      {/* Contact Form */}
+      <ContactForm />
 
       {/* Footer */}
       <footer className="footer">

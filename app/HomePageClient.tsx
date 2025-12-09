@@ -14,6 +14,7 @@ const SubscribeHero = dynamic(() => import('@/components/SubscribeHero'), { ssr:
 const HowItWorks = dynamic(() => import('@/components/HowItWorks'), { ssr: true })
 const QuestionsDiscovery = dynamic(() => import('@/components/QuestionsDiscovery'), { ssr: false })
 const ParticleAnimation = dynamic(() => import('@/components/ParticleAnimation'), { ssr: false })
+const ContactForm = dynamic(() => import('@/components/ContactForm'), { ssr: false })
 
 interface Service {
   id: string
@@ -1143,6 +1144,11 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       {/* Get Questions Section - Bottom */}
       <Suspense fallback={<div style={{ padding: '4rem 0', textAlign: 'center' }}>Loading...</div>}>
         <QuestionsDiscovery />
+      </Suspense>
+
+      {/* Contact Form */}
+      <Suspense fallback={<div style={{ padding: '4rem 0', textAlign: 'center' }}>Loading...</div>}>
+        <ContactForm />
       </Suspense>
 
       {/* Footer */}

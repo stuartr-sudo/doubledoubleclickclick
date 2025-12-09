@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import BlogCarousel from '@/components/BlogCarousel'
 import QuestionsDiscovery from '@/components/QuestionsDiscovery'
+import ContactForm from '@/components/ContactForm'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 
@@ -165,6 +166,9 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
 
       {/* Get Questions Section */}
       <QuestionsDiscovery />
+
+      {/* Contact Form */}
+      <ContactForm />
 
       {/* Footer */}
       <footer className="footer">
