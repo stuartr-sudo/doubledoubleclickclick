@@ -11189,7 +11189,7 @@ img {
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
-  min-height: 600px;
+  min-height: auto;
 }
 
 /* Elegant Blog Card Redesign - Divi Style */

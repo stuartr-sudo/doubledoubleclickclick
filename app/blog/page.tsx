@@ -85,7 +85,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       </section>
 
       {/* Questions Discovery Tool */}
-      <section style={{ padding: 'var(--spacing-lg) 0 0 0' }}>
+      <section style={{ padding: 'var(--spacing-lg) 0 var(--spacing-md) 0' }}>
         <div className="container" style={{ maxWidth: '800px' }}>
           <QuestionsDiscovery
             title="See What Questions Your Prospects Are Asking"
@@ -98,7 +98,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       </section>
 
       {/* Blog Posts */}
-      <section className="blog-posts" style={{ paddingTop: 'var(--spacing-lg)' }}>
+      <section className="blog-posts" style={{ paddingTop: '0' }}>
         <div className="container">
           {filteredPosts && filteredPosts.length > 0 ? (
             <>
