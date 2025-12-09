@@ -68,7 +68,7 @@ export default function ContactForm() {
           <div className="contact-form-left">
             <h2>Have a Question?</h2>
             <p className="contact-intro">
-              We're here to help! Fill out the form and we'll get back to you as soon as possible.
+              We&apos;re here to help! Fill out the form and we&apos;ll get back to you as soon as possible.
             </p>
             
             <div className="contact-info">
@@ -169,7 +169,7 @@ export default function ContactForm() {
 
               {submitStatus === 'success' && (
                 <div className="form-message form-success">
-                  ✓ Thank you! We'll get back to you soon.
+                  ✓ Thank you! We&apos;ll get back to you soon.
                 </div>
               )}
 
