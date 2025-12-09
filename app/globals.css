@@ -311,6 +311,7 @@ img {
   line-height: 1.2;
   letter-spacing: -0.02em;
   margin: 0 0 1.5rem 0;
+  text-align: center;
 }
 
 .quiz-description {
@@ -319,6 +320,7 @@ img {
   color: var(--color-text);
   margin: 0;
   opacity: 0.8;
+  text-align: center;
 }
 
 .quiz-cta-button {
@@ -11190,7 +11192,10 @@ img {
   max-width: 900px;
   margin: 0 auto;
   min-height: auto;
-  padding: 0 var(--spacing-md);
+  padding: var(--spacing-xl) var(--spacing-md);
+  background: #f8fafb;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 @media (max-width: 768px) {
