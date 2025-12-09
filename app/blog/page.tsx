@@ -86,7 +86,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
 
       {/* Questions Discovery Tool */}
       <section style={{ padding: 'var(--spacing-lg) 0 var(--spacing-md) 0' }}>
-        <div className="container" style={{ maxWidth: '800px' }}>
+        <div className="container" style={{ maxWidth: '800px', padding: '0 1rem' }}>
           <QuestionsDiscovery
             title="See What Questions Your Prospects Are Asking"
             description="Enter a keyword and discover the top questions people are asking. Answer them before your competitors do."
