@@ -95,8 +95,27 @@ export async function POST(request: Request) {
       )
     }
 
-    // Use the slug from the API - NEVER generate it
-    // If no slug provided, use title-based slug as fallback
+    // STRICT VALIDATION: Require either postId OR slug
+    // We cannot allow creating posts with NEITHER, as it causes duplicates
+    if (!externalId && (!slug || slug.trim().length === 0)) {
+      console.log(`[${requestId}] ❌ VALIDATION FAILED: Missing both postId and slug`)
+      console.log(`[${requestId}]   We require at least one identifier to prevent duplicates`)
+      console.log(`[${requestId}] ⚠️  WARNING: This request will be REJECTED`)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Missing identifier: You must provide either postId (recommended) or slug',
+          received: {
+            postId: 'MISSING',
+            slug: 'MISSING'
+          }
+        },
+        { status: 400 }
+      )
+    }
+
+    // Use the slug from the API - NEVER generate it if possible
+    // Only generate if we have a postId but no slug (rare edge case)
     const finalSlug = slug && slug.trim() 
       ? slug.trim() 
       : title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').substring(0, 100)
