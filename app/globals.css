@@ -11198,6 +11198,11 @@ img {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+/* Specific override for Blog Page version */
+.blog-page-quiz.quiz-inline-container {
+  min-height: auto; /* Allow it to be compact on blog page */
+}
+
 @media (max-width: 768px) {
   .quiz-inline-container {
     padding: 0 var(--spacing-sm);

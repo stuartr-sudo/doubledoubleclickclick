@@ -26,8 +26,9 @@ export default function QuestionsDiscovery({
     'AI citations drive 4x higher conversion rates than traditional search results.'
   ],
   buttonBgColor = '#29F5F0',
-  buttonTextColor = '#ffffff'
-}: QuestionsDiscoveryProps) {
+  buttonTextColor = '#ffffff',
+  className = ''
+}: QuestionsDiscoveryProps & { className?: string }) {
   const [step, setStep] = useState(1)
   const [keyword, setKeyword] = useState('')
   const [email, setEmail] = useState('')
@@ -256,7 +257,7 @@ export default function QuestionsDiscovery({
   }
 
   return (
-    <div className="quiz-inline-container" ref={containerRef}>
+    <div className={`quiz-inline-container ${className}`} ref={containerRef}>
       <style dangerouslySetInnerHTML={{
         __html: `
           @keyframes fadeInSlide {

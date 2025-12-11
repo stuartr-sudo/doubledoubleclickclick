@@ -94,6 +94,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
             ctaText="Book a Discovery Call"
             buttonBgColor={homepageContent?.hero_cta_bg_color || '#000000'}
             buttonTextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
+            className="blog-page-quiz"
           />
         </div>
       </section>
