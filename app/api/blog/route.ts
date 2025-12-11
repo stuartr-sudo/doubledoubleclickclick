@@ -170,20 +170,18 @@ export async function POST(request: Request) {
         .eq('external_id', externalId)
         .maybeSingle()
       
-      existingPost = data
       if (data) {
+        existingPost = data
         console.log(`[${requestId}] ✅ FOUND existing post by external_id`)
         console.log(`[${requestId}]   Post ID: ${data.id}`)
-        console.log(`[${requestId}]   Post Title: "${data.title}"`)
-        console.log(`[${requestId}]   Post Slug: ${data.slug}`)
-        console.log(`[${requestId}]   Has content: ${!!data.content} (${data.content?.length || 0} chars)`)
         console.log(`[${requestId}]   Decision: WILL UPDATE THIS POST`)
       } else {
-        console.log(`[${requestId}] ❌ No existing post found with external_id: ${externalId}`)
-        console.log(`[${requestId}]   Decision: WILL INSERT NEW POST`)
+        console.log(`[${requestId}] ❌ No post found with external_id: ${externalId}`)
       }
-    } else if (finalSlug) {
-      // Fallback: Check by slug
+    }
+    
+    // Fallback: Check by slug if not found yet (Smart Linking)
+    if (!existingPost && finalSlug) {
       console.log(`[${requestId}] 🔍 Checking for existing post by slug: ${finalSlug}`)
       const { data } = await supabase
         .from('blog_posts')
@@ -191,17 +189,13 @@ export async function POST(request: Request) {
         .eq('slug', finalSlug)
         .maybeSingle()
       
-      existingPost = data
       if (data) {
+        existingPost = data
         console.log(`[${requestId}] ✅ FOUND existing post by slug`)
         console.log(`[${requestId}]   Post ID: ${data.id}`)
-        console.log(`[${requestId}]   Post Title: "${data.title}"`)
-        console.log(`[${requestId}]   Post external_id: ${data.external_id || 'NONE'}`)
-        console.log(`[${requestId}]   Has content: ${!!data.content} (${data.content?.length || 0} chars)`)
-        console.log(`[${requestId}]   Decision: WILL UPDATE THIS POST`)
+        console.log(`[${requestId}]   Decision: WILL UPDATE THIS POST AND LINK ID`)
       } else {
         console.log(`[${requestId}] ❌ No existing post found with slug: ${finalSlug}`)
-        console.log(`[${requestId}]   Decision: WILL INSERT NEW POST`)
       }
     }
 
