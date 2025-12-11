@@ -519,29 +519,11 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
       }
       
       console.log(`[BLOG API] Successfully INSERTED new post ${data.id}`)
-      return NextResponse.json({ 
-        success: true, 
-        data: {
-          id: data.id,
-            title: insertData.title,
-            meta_title: insertData.meta_title,
-            slug: insertData.slug,
-            status: insertData.status,
-            created_date: insertData.created_date,
-            user_name: insertData.user_name,
-            _debug: {
-              title_for_display: insertData.title,
-              meta_title_for_seo: insertData.meta_title || insertData.title,
-              method: 'insert_fallback'
-            }
-          }
-        }, { status: 201 })
-      }
-
-      console.log(`[BLOG API] Successfully UPSERTED post ${data.id}`)
       console.log('[BLOG API] STORED IN DATABASE:')
       console.log('  title:', data.title)
       console.log('  meta_title:', data.meta_title)
+      console.log('  slug:', data.slug)
+      console.log('  external_id:', data.external_id || '(none)')
       
       // Validation warning
       if (data.title === data.meta_title && data.meta_title) {
@@ -549,7 +531,7 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
         console.warn('[BLOG API] ⚠️  title should be clean, meta_title should be SEO-optimized')
       }
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
+      
       return NextResponse.json({ 
         success: true, 
         data: {
@@ -563,7 +545,7 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
           _debug: {
             title_for_display: data.title,
             meta_title_for_seo: data.meta_title || data.title,
-            method: 'upsert'
+            method: 'insert'
           }
         }
       }, { status: 201 })
