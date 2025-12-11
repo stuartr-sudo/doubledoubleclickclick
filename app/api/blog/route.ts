@@ -157,15 +157,22 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
       }
     }
 
-    // Generate slug if not provided - ALWAYS use a consistent method
-    // Use a normalized version of the title to prevent slight variations creating duplicates
-    const normalizedTitle = title.trim().toLowerCase()
-    const postSlug = slug || normalizedTitle
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
-      .substring(0, 100) // Limit slug length
-    
-    console.log('[BLOG API] Generated slug:', postSlug)
+    // Use the slug provided by API - DO NOT generate from title if slug is provided
+    // Only generate from title if slug is missing/null/empty
+    let postSlug: string
+    if (slug && slug.trim().length > 0) {
+      // Use the slug sent by the API
+      postSlug = slug.trim()
+      console.log('[BLOG API] Using slug from API:', postSlug)
+    } else {
+      // Generate slug from title only if slug is not provided
+      const normalizedTitle = title.trim().toLowerCase()
+      postSlug = normalizedTitle
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+        .substring(0, 100) // Limit slug length
+      console.log('[BLOG API] Generated slug from title:', postSlug)
+    }
 
     // CRITICAL: Ensure title and meta_title are NOT swapped
     const finalTitle = title.trim()
@@ -448,7 +455,8 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     // INSERT new post (only if final check confirms it doesn't exist)
     console.log(`[BLOG API] INSERTING new post with slug: ${postSlug}`)
     console.log(`[BLOG API] Final check confirmed: No existing post with this slug`)
-      
+    
+    try {
       // Use INSERT (NOT upsert) - we've already checked for duplicates above
       // Upsert can cause issues if slug is null or changes
       const { data, error } = await supabase
@@ -549,6 +557,12 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
           }
         }
       }, { status: 201 })
+    } catch (insertErr) {
+      console.error('[BLOG API] Fatal error during insert:', insertErr)
+      return NextResponse.json(
+        { success: false, error: 'Failed to create blog post', details: String(insertErr) },
+        { status: 500 }
+      )
     } finally {
       // Release the advisory lock
       try {
