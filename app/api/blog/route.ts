@@ -14,9 +14,17 @@ export const revalidate = 0
  * 5. One request = ONE database operation (update OR insert, never both)
  */
 export async function POST(request: Request) {
+  const requestTimestamp = new Date().toISOString()
+  const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`
+  
   try {
     const supabase = await createClient()
     const body = await request.json()
+    
+    console.log('═══════════════════════════════════════════════════════════')
+    console.log(`[${requestId}] NEW REQUEST at ${requestTimestamp}`)
+    console.log('FULL REQUEST BODY:', JSON.stringify(body, null, 2))
+    console.log('═══════════════════════════════════════════════════════════')
     
     // Extract fields
     const {
@@ -53,15 +61,36 @@ export async function POST(request: Request) {
     
     // Validate required fields
     if (!title || !finalContent) {
+      console.log(`[${requestId}] ❌ VALIDATION FAILED: Missing title or content`)
+      console.log(`[${requestId}]   Has title: ${!!title}`)
+      console.log(`[${requestId}]   Has content: ${!!finalContent}`)
+      console.log(`[${requestId}] ⚠️  WARNING: This request will be REJECTED`)
       return NextResponse.json(
-        { success: false, error: 'Title and content are required' },
+        { 
+          success: false, 
+          error: 'Title and content are required',
+          received: {
+            title: !!title,
+            content: !!finalContent,
+            postId: externalId || 'NONE'
+          }
+        },
         { status: 400 }
       )
     }
     
     if (finalContent.trim().length < 50) {
+      console.log(`[${requestId}] ❌ VALIDATION FAILED: Content too short (${finalContent.trim().length} chars)`)
+      console.log(`[${requestId}] ⚠️  WARNING: This request will be REJECTED`)
       return NextResponse.json(
-        { success: false, error: 'Content must be at least 50 characters' },
+        { 
+          success: false, 
+          error: 'Content must be at least 50 characters',
+          received: {
+            contentLength: finalContent.trim().length,
+            postId: externalId || 'NONE'
+          }
+        },
         { status: 400 }
       )
     }
@@ -72,15 +101,19 @@ export async function POST(request: Request) {
       ? slug.trim() 
       : title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').substring(0, 100)
     
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('[BLOG API] NEW REQUEST')
-    console.log('  external_id:', externalId || 'NONE')
-    console.log('  title:', title)
-    console.log('  slug (from API):', slug || 'not provided')
-    console.log('  slug (final):', finalSlug)
-    console.log('  content length:', finalContent.length)
-    console.log('  status:', status)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+    console.log(`[${requestId}] ✅ VALIDATION PASSED`)
+    console.log(`[${requestId}]   external_id: ${externalId || 'NONE'}`)
+    console.log(`[${requestId}]   title: "${title}"`)
+    console.log(`[${requestId}]   title length: ${title.length}`)
+    console.log(`[${requestId}]   slug (from API): ${slug || 'not provided'}`)
+    console.log(`[${requestId}]   slug (final): ${finalSlug}`)
+    console.log(`[${requestId}]   content length: ${finalContent.length}`)
+    console.log(`[${requestId}]   content preview: ${finalContent.substring(0, 100)}...`)
+    console.log(`[${requestId}]   status: ${status}`)
+    console.log(`[${requestId}]   category: ${category || 'none'}`)
+    console.log(`[${requestId}]   tags: ${tags ? JSON.stringify(tags) : 'none'}`)
+    console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
 
     // Build post data
     const postData: any = {
@@ -111,35 +144,59 @@ export async function POST(request: Request) {
     
     if (externalId) {
       // Check by external_id (PRIMARY identifier)
-      console.log('[BLOG API] Checking by external_id:', externalId)
+      console.log(`[${requestId}] 🔍 Checking for existing post by external_id: ${externalId}`)
       const { data } = await supabase
         .from('blog_posts')
-        .select('id, slug, title, external_id')
+        .select('id, slug, title, external_id, content')
         .eq('external_id', externalId)
         .maybeSingle()
       
       existingPost = data
       if (data) {
-        console.log('[BLOG API] ✅ Found existing post by external_id:', data.id)
+        console.log(`[${requestId}] ✅ FOUND existing post by external_id`)
+        console.log(`[${requestId}]   Post ID: ${data.id}`)
+        console.log(`[${requestId}]   Post Title: "${data.title}"`)
+        console.log(`[${requestId}]   Post Slug: ${data.slug}`)
+        console.log(`[${requestId}]   Has content: ${!!data.content} (${data.content?.length || 0} chars)`)
+        console.log(`[${requestId}]   Decision: WILL UPDATE THIS POST`)
+      } else {
+        console.log(`[${requestId}] ❌ No existing post found with external_id: ${externalId}`)
+        console.log(`[${requestId}]   Decision: WILL INSERT NEW POST`)
       }
     } else if (finalSlug) {
       // Fallback: Check by slug
-      console.log('[BLOG API] Checking by slug:', finalSlug)
+      console.log(`[${requestId}] 🔍 Checking for existing post by slug: ${finalSlug}`)
       const { data } = await supabase
         .from('blog_posts')
-        .select('id, slug, title, external_id')
+        .select('id, slug, title, external_id, content')
         .eq('slug', finalSlug)
         .maybeSingle()
       
       existingPost = data
       if (data) {
-        console.log('[BLOG API] ✅ Found existing post by slug:', data.id)
+        console.log(`[${requestId}] ✅ FOUND existing post by slug`)
+        console.log(`[${requestId}]   Post ID: ${data.id}`)
+        console.log(`[${requestId}]   Post Title: "${data.title}"`)
+        console.log(`[${requestId}]   Post external_id: ${data.external_id || 'NONE'}`)
+        console.log(`[${requestId}]   Has content: ${!!data.content} (${data.content?.length || 0} chars)`)
+        console.log(`[${requestId}]   Decision: WILL UPDATE THIS POST`)
+      } else {
+        console.log(`[${requestId}] ❌ No existing post found with slug: ${finalSlug}`)
+        console.log(`[${requestId}]   Decision: WILL INSERT NEW POST`)
       }
     }
 
     if (existingPost) {
       // UPDATE existing post
-      console.log('[BLOG API] UPDATING post:', existingPost.id)
+      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+      console.log(`[${requestId}] 🔄 UPDATING EXISTING POST`)
+      console.log(`[${requestId}]   Post ID: ${existingPost.id}`)
+      console.log(`[${requestId}]   Old Title: "${existingPost.title}"`)
+      console.log(`[${requestId}]   New Title: "${title}"`)
+      console.log(`[${requestId}]   Old Slug: ${existingPost.slug}`)
+      console.log(`[${requestId}]   New Slug: ${finalSlug}`)
+      console.log(`[${requestId}]   New Content Length: ${finalContent.length}`)
+      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       
       const { data, error } = await supabase
         .from('blog_posts')
@@ -156,8 +213,11 @@ export async function POST(request: Request) {
         )
       }
 
-      console.log('[BLOG API] ✅ Post updated successfully')
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      console.log(`[${requestId}] ✅ POST UPDATED SUCCESSFULLY`)
+      console.log(`[${requestId}]   Final Title: "${data.title}"`)
+      console.log(`[${requestId}]   Final Slug: ${data.slug}`)
+      console.log(`[${requestId}]   Final Content Length: ${data.content?.length || 0}`)
+      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       
       return NextResponse.json({
         success: true,
@@ -173,7 +233,13 @@ export async function POST(request: Request) {
       }, { status: 200 })
     } else {
       // INSERT new post
-      console.log('[BLOG API] INSERTING new post')
+      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+      console.log(`[${requestId}] ➕ INSERTING NEW POST`)
+      console.log(`[${requestId}]   Title: "${title}"`)
+      console.log(`[${requestId}]   Slug: ${finalSlug}`)
+      console.log(`[${requestId}]   External ID: ${externalId || 'NONE'}`)
+      console.log(`[${requestId}]   Content Length: ${finalContent.length}`)
+      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       
       const { data, error } = await supabase
         .from('blog_posts')
@@ -234,8 +300,12 @@ export async function POST(request: Request) {
         )
       }
 
-      console.log('[BLOG API] ✅ Post created successfully')
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      console.log(`[${requestId}] ✅ POST CREATED SUCCESSFULLY`)
+      console.log(`[${requestId}]   New Post ID: ${data.id}`)
+      console.log(`[${requestId}]   Final Title: "${data.title}"`)
+      console.log(`[${requestId}]   Final Slug: ${data.slug}`)
+      console.log(`[${requestId}]   Final Content Length: ${data.content?.length || 0}`)
+      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       
       return NextResponse.json({
         success: true,
