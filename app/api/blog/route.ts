@@ -91,6 +91,16 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
       )
     }
 
+    // CRITICAL: Reject requests without postId OR slug (prevents empty slug duplicates)
+    if (!externalId && !slug) {
+      console.error('[BLOG API] ❌ REJECTED: Missing both postId and slug')
+      console.error('[BLOG API] Cannot create post without identifier - will cause duplicates!')
+      return NextResponse.json(
+        { success: false, error: 'Either postId or slug is required to prevent duplicates' },
+        { status: 400 }
+      )
+    }
+
     // Log EVERYTHING Base44 is sending
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('[BLOG API] INCOMING FROM BASE44:')
@@ -111,6 +121,41 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     console.log('  excerpt length:', excerpt?.length || 0)
     console.log('  page_builder:', page_builder || '(not provided)')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+    // CRITICAL: Check for existing posts by title FIRST (before generating slug)
+    // This catches duplicates when Base44 sends requests without postId/slug
+    let existingPost = null
+    let matchedBy = null
+    
+    if (title) {
+      console.log(`[BLOG API] 🔍 EARLY CHECK: Looking for existing post by exact title`)
+      
+      try {
+        const { data: titleMatches } = await supabase
+          .from('blog_posts')
+          .select('id, slug, title, created_date, external_id')
+          .ilike('title', title.trim())
+          .limit(10)
+
+        if (titleMatches && titleMatches.length > 0) {
+          // Find exact match (case-insensitive, trimmed)
+          const exactMatch = titleMatches.find((p: any) => 
+            p.title.trim().toLowerCase() === title.trim().toLowerCase()
+          )
+          
+          if (exactMatch) {
+            existingPost = exactMatch
+            matchedBy = 'title_early'
+            console.log(`[BLOG API] ✅ FOUND existing post by exact title: ${exactMatch.id}`)
+            console.log(`[BLOG API] ✅ Existing slug: ${exactMatch.slug || '(none)'}`)
+            console.log(`[BLOG API] ✅ Existing external_id: ${exactMatch.external_id || '(none)'}`)
+            console.log(`[BLOG API] ✅ Will UPDATE instead of creating duplicate`)
+          }
+        }
+      } catch (err) {
+        console.error('[BLOG API] Exception in early title check:', err)
+      }
+    }
 
     // Generate slug if not provided - ALWAYS use a consistent method
     // Use a normalized version of the title to prevent slight variations creating duplicates
@@ -200,12 +245,9 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     if (generated_llm_schema) postData.generated_llm_schema = generated_llm_schema
     if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
 
-    // CRITICAL: Check if post exists by EXTERNAL ID FIRST (if provided)
+    // CRITICAL: Check if post exists by EXTERNAL ID (if provided and not already found)
     // This is the PRIMARY check - if Base44 sends an article ID, use it!
-    let existingPost = null
-    let matchedBy = null
-    
-    if (externalId) {
+    if (externalId && !existingPost) {
       console.log(`[BLOG API] 🔍 Checking for existing post by external_id: ${externalId}`)
       
       try {
@@ -235,7 +277,7 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     }
     
     // SECONDARY: Check by slug if no external ID match
-    if (!existingPost) {
+    if (!existingPost && postSlug) {
       console.log(`[BLOG API] 🔍 Checking for existing post by slug: ${postSlug}`)
       
       try {
@@ -256,6 +298,36 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
         }
       } catch (err) {
         console.error('[BLOG API] Exception checking slug:', err)
+      }
+    }
+
+    // TERTIARY: Check by exact title match (catches posts with no slug)
+    // NOTE: This is a fallback - we already checked by title earlier, but this catches edge cases
+    if (!existingPost && title) {
+      console.log(`[BLOG API] 🔍 FALLBACK: Checking for existing post by exact title match`)
+      
+      try {
+        const { data: titleMatch } = await supabase
+          .from('blog_posts')
+          .select('id, slug, title, created_date')
+          .ilike('title', title.trim())
+          .limit(5)
+
+        if (titleMatch && titleMatch.length > 0) {
+          // Find exact match (case-insensitive)
+          const exactMatch = titleMatch.find((p: any) => 
+            p.title.trim().toLowerCase() === title.trim().toLowerCase()
+          )
+          
+          if (exactMatch) {
+            existingPost = exactMatch
+            matchedBy = 'title_fallback'
+            console.log(`[BLOG API] ✅ FOUND existing post by exact title (fallback): ${exactMatch.id}`)
+            console.log(`[BLOG API] ✅ Will UPDATE instead of creating duplicate`)
+          }
+        }
+      } catch (err) {
+        console.error('[BLOG API] Exception checking title:', err)
       }
     }
 
@@ -322,7 +394,16 @@ async function processBlogPost(supabase: any, body: any, requestId: string) {
     }
 
     if (existingPost) {
-      console.log(`[BLOG API] UPDATING existing post: ${existingPost.id} (slug: ${postSlug})`)
+      console.log(`[BLOG API] UPDATING existing post: ${existingPost.id}`)
+      console.log(`[BLOG API] Matched by: ${matchedBy}`)
+      console.log(`[BLOG API] New slug: ${postSlug}`)
+      console.log(`[BLOG API] New external_id: ${externalId || '(none)'}`)
+      
+      // If we found by title but now have external_id, update it
+      if (externalId && !existingPost.external_id) {
+        console.log(`[BLOG API] 🔑 Adding external_id to existing post: ${externalId}`)
+        postData.external_id = externalId
+      }
       
       // UPDATE existing post
       const { data, error } = await supabase
