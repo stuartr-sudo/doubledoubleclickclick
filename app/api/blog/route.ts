@@ -206,7 +206,7 @@ export async function POST(request: Request) {
         .single()
 
       if (error) {
-        console.error('[BLOG API] Update error:', error)
+        console.error(`[${requestId}] ❌ Update error:`, error)
         return NextResponse.json(
           { success: false, error: 'Failed to update post', details: error.message },
           { status: 500 }
@@ -231,7 +231,32 @@ export async function POST(request: Request) {
           operation: 'update'
         }
       }, { status: 200 })
-    } else {
+    }
+    
+    // CRITICAL: If we have an external_id but no existing post found, this is an UPDATE request that failed
+    // DO NOT CREATE A NEW POST - return error instead
+    if (externalId) {
+      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+      console.log(`[${requestId}] ❌ UPDATE FAILED: Post not found`)
+      console.log(`[${requestId}]   Searched for external_id: ${externalId}`)
+      console.log(`[${requestId}]   This appears to be an UPDATE request, but post doesn't exist`)
+      console.log(`[${requestId}]   REFUSING to create new post - returning error instead`)
+      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+      
+      return NextResponse.json({
+        success: false,
+        error: 'Post not found for update',
+        details: `No post found with external_id: ${externalId}. Cannot update a post that doesn't exist. Create it first, then update.`,
+        received: {
+          external_id: externalId,
+          slug: finalSlug,
+          title: title
+        }
+      }, { status: 404 })
+    }
+    
+    // Only INSERT if NO external_id (meaning this is a CREATE request, not UPDATE)
+    else {
       // INSERT new post
       console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       console.log(`[${requestId}] ➕ INSERTING NEW POST`)
