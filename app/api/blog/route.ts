@@ -270,6 +270,42 @@ export async function POST(request: Request) {
     
     // Only INSERT if NO external_id (meaning this is a CREATE request, not UPDATE)
     else {
+      // ═══════════════════════════════════════════════════════════════════════
+      // EMERGENCY DEDUPLICATION: Check if same title was created in last 60 seconds
+      // This catches duplicate requests from App Builders that fire twice
+      // ═══════════════════════════════════════════════════════════════════════
+      console.log(`[${requestId}] 🔒 DEDUPLICATION CHECK: Looking for recent posts with same title...`)
+      
+      const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString()
+      const { data: recentDuplicate } = await supabase
+        .from('blog_posts')
+        .select('id, title, slug, created_date')
+        .ilike('title', title.trim())
+        .gte('created_date', sixtySecondsAgo)
+        .limit(1)
+        .maybeSingle()
+      
+      if (recentDuplicate) {
+        console.log(`[${requestId}] ⛔ DUPLICATE BLOCKED!`)
+        console.log(`[${requestId}]   Found existing post created ${recentDuplicate.created_date}`)
+        console.log(`[${requestId}]   Existing ID: ${recentDuplicate.id}`)
+        console.log(`[${requestId}]   Existing Title: "${recentDuplicate.title}"`)
+        console.log(`[${requestId}]   This request is a DUPLICATE - rejecting to prevent double posts`)
+        console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+        
+        return NextResponse.json({
+          success: false,
+          error: 'Duplicate request blocked',
+          details: `A post with this title was created ${Math.round((Date.now() - new Date(recentDuplicate.created_date).getTime()) / 1000)} seconds ago. This appears to be a duplicate request.`,
+          existing_post: {
+            id: recentDuplicate.id,
+            slug: recentDuplicate.slug
+          }
+        }, { status: 409 }) // 409 Conflict
+      }
+      
+      console.log(`[${requestId}] ✅ No recent duplicates found - proceeding with INSERT`)
+      
       // INSERT new post
       console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       console.log(`[${requestId}] ➕ INSERTING NEW POST`)
