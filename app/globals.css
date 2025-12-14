@@ -11100,6 +11100,19 @@ img {
   }
 }
 
+/* Large screen optimization (1200px - 1920px) - Increase quiz widget width */
+@media (min-width: 1200px) and (max-width: 1920px) {
+  .hero-quiz-cta {
+    max-width: 550px;
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1920px) {
+  .hero-quiz-cta {
+    max-width: 600px;
+  }
+}
+
 /* Ultra-wide screen optimization (>1920px) - Keep backgrounds full width, constrain content */
 @media (min-width: 1921px) {
   .hero-stripe-left {

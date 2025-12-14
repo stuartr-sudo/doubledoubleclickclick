@@ -110,9 +110,6 @@ export default function BlogCarousel() {
             </Link>
           ))}
         </div>
-        <div style={{ textAlign: 'center', marginTop: '1rem', color: '#666', fontSize: '0.875rem' }}>
-          Hover or touch to pause scrolling
-        </div>
       </div>
     </section>
   )
