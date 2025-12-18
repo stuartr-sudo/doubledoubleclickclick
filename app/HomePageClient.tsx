@@ -562,7 +562,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     }
   ]
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sewo.io'
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.sewo.io'
   
   // JSON-LD structured data for Organization
   const organizationJsonLd = {

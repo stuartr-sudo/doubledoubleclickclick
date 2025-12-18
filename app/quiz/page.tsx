@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = homepageContent?.quiz_landing_title || 'Discover Your AI Visibility Score | SEWO'
   const description = homepageContent?.quiz_landing_description || 'Take our 3-minute assessment to see how visible your brand is to AI assistants like ChatGPT, Claude, and Gemini.'
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
 
   return {
     title,
@@ -62,7 +62,7 @@ export default async function QuizLandingPage() {
   const title = homepageContent?.quiz_landing_title || 'Discover Your AI Visibility Score'
   const description = homepageContent?.quiz_landing_description || 'Take our 3-minute assessment to see how visible your brand is to AI assistants like ChatGPT, Claude, and Gemini.'
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
 
   // JSON-LD structured data
   const jsonLd = {

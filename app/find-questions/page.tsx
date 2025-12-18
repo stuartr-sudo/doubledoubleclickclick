@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = homepageContent?.find_questions_title || 'Discover What Questions Your Prospects Are Asking | SEWO'
   const description = homepageContent?.find_questions_description || 'Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.'
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
 
   return {
     title,
@@ -92,7 +92,7 @@ export default async function FindQuestionsLandingPage() {
     'AI citations drive 4x higher conversion rates than traditional search results.'
   ]
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
 
   // JSON-LD structured data
   const jsonLd = {

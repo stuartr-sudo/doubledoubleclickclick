@@ -61,7 +61,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   // SEO: Use meta_title for <title> tag if available, otherwise fallback to regular title
   const seoTitle = post.meta_title || post.title
   const description = post.meta_description || ''
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
 
   return {
     title: seoTitle,
@@ -160,7 +160,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
   
   // JSON-LD structured data for the article
   // Use generated_llm_schema if provided, otherwise create default schema

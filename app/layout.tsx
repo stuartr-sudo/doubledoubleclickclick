@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: '%s | SEWO',
   },
   description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'),
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io',
     siteName: 'SEWO',
     title: 'SEWO - Get Found Everywhere',
     description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
