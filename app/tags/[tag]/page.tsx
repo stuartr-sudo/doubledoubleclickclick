@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 
 export default async function TagPage({ params }: { params: { tag: string } }) {
   const supabase = await createClient()
@@ -11,6 +12,11 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
     .ilike('tags', `%${tag}%`)
     .eq('status', 'published')
     .order('created_date', { ascending: false })
+
+  // Avoid "soft 404" (a 200 page with no meaningful content) for non-existent tags.
+  if (!posts || posts.length === 0) {
+    notFound()
+  }
 
   return (
     <main>
@@ -24,7 +30,7 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
       <section className="blog-posts">
         <div className="container">
           <div className="blog-grid blog-grid-cards">
-            {(posts || []).map((post) => (
+            {posts.map((post) => (
               <article key={post.id} className="blog-card">
                 {post.featured_image && (
                   <div className="blog-card-image">

@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // Revalidate every hour
 
-export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sewo.io'
+export async function GET(request: Request) {
+  const baseUrl = new URL(request.url).origin
   const lastMod = new Date().toISOString()
 
   const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
