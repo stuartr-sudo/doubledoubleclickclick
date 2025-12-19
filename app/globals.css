@@ -4289,54 +4289,89 @@ img {
   text-align: center;
 }
 
+.reactions-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 2rem;
+}
+
 .reaction-container {
   display: flex;
   justify-content: center;
+  align-items: center;
+  min-height: 120px;
 }
 
-.like-btn {
+.feedback-buttons {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.reaction-btn {
   background: white;
   border: 2px solid #e2e8f0;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 0.75rem;
-  padding: 1.25rem 2.5rem;
-  border-radius: 16px;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
   transition: all 0.2s ease;
-  min-width: 120px;
-}
-
-.like-btn:hover:not(:disabled) {
-  border-color: #0066cc;
-  background: #f0f7ff;
-  transform: translateY(-2px);
-}
-
-.like-btn.liked {
-  border-color: #0066cc;
-  background: #f0f7ff;
-  cursor: default;
-}
-
-.like-btn svg {
-  width: 32px;
-  height: 32px;
-}
-
-.like-count {
-  font-size: 1.1rem;
-  font-weight: 700;
+  min-width: 100px;
+  font-weight: 600;
   color: #1e293b;
 }
 
-.thanks-text {
-  margin-top: 1rem;
-  color: #0066cc;
-  font-size: 1rem;
-  font-weight: 600;
+.reaction-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
+
+.yes-btn:hover {
+  border-color: #0066cc;
+  background: #f0f7ff;
+  color: #0066cc;
+}
+
+.no-btn:hover {
+  border-color: #dc3545;
+  background: #fff5f5;
+  color: #dc3545;
+}
+
+.reaction-btn .icon-wrapper svg {
+  width: 24px;
+  height: 24px;
+}
+
+.feedback-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  animation: fadeInScale 0.4s ease;
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.icon-wrapper.large svg {
+  width: 48px;
+  height: 48px;
+}
+
+.thanks-text {
+  color: #1e293b;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.feedback-result.yes .thanks-text { color: #0066cc; }
+.feedback-result.no .thanks-text { color: #dc3545; }
 
 /* Redesigned Comments */
 .comments-section {
