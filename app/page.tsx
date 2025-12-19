@@ -31,17 +31,25 @@ export default async function HomePage() {
     .single()
   
   // Fetch blog posts for homepage preview (limit to 6)
-  // We prioritize 'popular' posts if they are flagged, then fall back to latest
-  const { data: latestPosts } = await supabase
+  // We prioritize 'popular' posts if they are flagged, then fall back to latest by published date
+  const { data: allPosts } = await supabase
     .from('blog_posts')
     .select('id, title, slug, meta_description, featured_image, created_date, published_date, is_popular')
     .eq('status', 'published')
-    .order('is_popular', { ascending: false })
-    .order('created_date', { ascending: false })
-    .limit(6)
+    .limit(50) // Fetch enough to sort manually
 
-  // Only use real posts from database
-  const latest = latestPosts || []
+  const sortedPosts = (allPosts || []).sort((a, b) => {
+    // 1. Popular first
+    if (a.is_popular && !b.is_popular) return -1
+    if (!a.is_popular && b.is_popular) return 1
+    
+    // 2. Then by published_date (or created_date) newest first
+    const dateA = new Date(a.published_date || a.created_date).getTime()
+    const dateB = new Date(b.published_date || b.created_date).getTime()
+    return dateB - dateA
+  })
+
+  const latest = sortedPosts.slice(0, 6)
 
   return <HomePageClient latestPosts={latest} homepageContent={homepageContent} />
 }

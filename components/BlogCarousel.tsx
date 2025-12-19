@@ -24,11 +24,13 @@ export default function BlogCarousel() {
         const response = await fetch('/api/blog?status=published&limit=12')
         const data = await response.json()
         if (data.success && data.data) {
-          // Sort by popular first, then date
+          // Sort by popular first, then published_date (or created_date) newest first
           const sortedPosts = [...data.data].sort((a: any, b: any) => {
             if (a.is_popular && !b.is_popular) return -1
             if (!a.is_popular && b.is_popular) return 1
-            return new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+            const dateA = new Date(a.published_date || a.created_date).getTime()
+            const dateB = new Date(b.published_date || b.created_date).getTime()
+            return dateB - dateA
           })
           setPosts(sortedPosts)
         }
@@ -100,7 +102,7 @@ export default function BlogCarousel() {
               )}
               <div className="carousel-card-content">
                 <div className="carousel-card-date">
-                  {new Date(post.created_date).toLocaleDateString('en-US', {
+                  {new Date(post.published_date || post.created_date).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',

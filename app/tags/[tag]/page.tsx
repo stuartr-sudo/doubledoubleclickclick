@@ -6,12 +6,17 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
   const supabase = await createClient()
   const tag = decodeURIComponent(params.tag)
 
-  const { data: posts } = await supabase
+  const { data } = await supabase
     .from('blog_posts')
     .select('id, title, slug, meta_description, featured_image, created_date, published_date, tags, category')
     .ilike('tags', `%${tag}%`)
     .eq('status', 'published')
-    .order('created_date', { ascending: false })
+
+  const posts = (data || []).sort((a, b) => {
+    const dateA = new Date(a.published_date || a.created_date).getTime()
+    const dateB = new Date(b.published_date || b.created_date).getTime()
+    return dateB - dateA
+  })
 
   // Avoid "soft 404" (a 200 page with no meaningful content) for non-existent tags.
   if (!posts || posts.length === 0) {

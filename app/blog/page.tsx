@@ -36,8 +36,13 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       .from('blog_posts')
       .select('id, title, slug, meta_description, featured_image, created_date, published_date, tags, category')
       .eq('status', 'published')
-      .order('created_date', { ascending: false })
-    posts = data
+    
+    // Sort by published_date descending in JS to be safe
+    posts = (data || []).sort((a, b) => {
+      const dateA = new Date(a.published_date || a.created_date).getTime()
+      const dateB = new Date(b.published_date || b.created_date).getTime()
+      return dateB - dateA
+    })
 
     // Fetch homepage content for Questions Discovery styling
     const { data: hpContent } = await supabase
