@@ -19,11 +19,10 @@ export default function ArticleComments({ postSlug }: { postSlug: string }) {
 
     setStatus('pending');
     
-    // Simulate API call and link removal
-    const cleanComment = stripLinks(comment);
+    // Auto-remove links: detect URLs and replace with empty string or note
+    const cleanComment = comment.replace(/(https?:\/\/[^\s]+|www\.[^\s]+|[a-z0-9.-]+\.[a-z]{2,10}[^\s]*)/gi, '[link removed]');
     
-    // In a real app, you would POST to /api/comments
-    // For now, we simulate the 'pending approval' state
+    // Simulate API call
     setTimeout(() => {
       setStatus('success');
       setComment('');
@@ -32,59 +31,59 @@ export default function ArticleComments({ postSlug }: { postSlug: string }) {
 
   return (
     <section className="comments-section">
-      <h3>Community Discussion</h3>
-      
-      <div className="comment-form">
-        <form onSubmit={handleSubmit}>
-          <div className="comment-input-wrapper">
-            <label htmlFor="comment-text">Join the conversation</label>
-            <div className="comment-input-area">
+      <div className="comments-container">
+        <div className="comments-header">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <h3>Community Discussion</h3>
+        </div>
+        
+        <div className="comment-form-card">
+          <form onSubmit={handleSubmit}>
+            <div className="comment-input-group">
               <textarea 
                 id="comment-text"
-                placeholder="Share your thoughts... (links are not allowed and will be removed)"
+                placeholder="What are your thoughts? (Links will be removed automatically)"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 disabled={status === 'pending' || status === 'success'}
               ></textarea>
+              <div className="comment-footer">
+                <p className="comment-policy">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  Comments are moderated
+                </p>
+                <button 
+                  type="submit" 
+                  className="comment-post-btn"
+                  disabled={status === 'pending' || status === 'success' || !comment.trim()}
+                >
+                  {status === 'pending' ? 'Posting...' : 'Post Comment'}
+                </button>
+              </div>
             </div>
+
+            {status === 'success' && (
+              <div className="comment-status-message success">
+                <div className="status-icon">✓</div>
+                <div className="status-text">
+                  <strong>Success!</strong> Your comment is in the queue for moderator review.
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
+
+        <div className="comment-list-placeholder">
+          <div className="placeholder-content">
+            <p>Be the first to share your thoughts on this article.</p>
           </div>
-          
-          <button 
-            type="submit" 
-            className="comment-submit-btn"
-            disabled={status === 'pending' || status === 'success' || !comment.trim()}
-          >
-            {status === 'pending' ? 'Sending...' : 'Post Comment'}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-
-          {status === 'success' && (
-            <div className="comment-status-box pending">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              <span>Thank you! Your comment has been submitted and is <strong>awaiting moderator approval</strong>.</span>
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="comment-status-box error">
-              <span>{errorMessage || 'Something went wrong. Please try again.'}</span>
-            </div>
-          )}
-          
-          <p className="comment-note">
-            To maintain a high-quality discussion, all comments are reviewed by our team before appearing live. 
-            Links are automatically removed to prevent spam.
-          </p>
-        </form>
-      </div>
-
-      <div className="comment-placeholder">
-        <p>No comments yet. Be the first to share your thoughts!</p>
+        </div>
       </div>
     </section>
   );
