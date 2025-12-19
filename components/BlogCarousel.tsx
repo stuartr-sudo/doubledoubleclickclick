@@ -10,6 +10,8 @@ interface BlogPost {
   meta_description: string | null
   featured_image: string | null
   created_date: string
+  published_date?: string | null
+  is_popular?: boolean
 }
 
 export default function BlogCarousel() {
