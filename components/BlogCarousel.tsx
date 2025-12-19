@@ -24,7 +24,13 @@ export default function BlogCarousel() {
         const response = await fetch('/api/blog?status=published&limit=12')
         const data = await response.json()
         if (data.success && data.data) {
-          setPosts(data.data)
+          // Sort by popular first, then date
+          const sortedPosts = [...data.data].sort((a: any, b: any) => {
+            if (a.is_popular && !b.is_popular) return -1
+            if (!a.is_popular && b.is_popular) return 1
+            return new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+          })
+          setPosts(sortedPosts)
         }
       } catch (error) {
         console.error('Error fetching carousel posts:', error)
@@ -62,9 +68,9 @@ export default function BlogCarousel() {
     <section className="blog-carousel-section">
       <div className="container">
         <div className="blog-carousel-header">
-          <h2>Latest Blog Posts</h2>
+          <h2>Popular posts</h2>
           <p>
-            Discover our latest insights on LLM ranking, AI search optimization, and making your brand the answer AI suggests
+            Discover our most popular insights on LLM ranking, AI search optimization, and making your brand the answer AI suggests
           </p>
         </div>
         <div 
