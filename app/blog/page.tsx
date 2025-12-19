@@ -36,7 +36,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       .from('blog_posts')
       .select('id, title, slug, meta_description, featured_image, created_date, published_date, tags, category')
       .eq('status', 'published')
-      .order('published_date', { ascending: false })
+      .order('created_date', { ascending: false })
     posts = data
 
     // Fetch homepage content for Questions Discovery styling

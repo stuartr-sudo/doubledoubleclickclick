@@ -416,7 +416,7 @@ export async function GET(request: Request) {
     const query = supabase
       .from('blog_posts')
       .select('*')
-      .order('published_date', { ascending: false })
+      .order('created_date', { ascending: false })
       .limit(limit)
 
     if (status !== 'all') {

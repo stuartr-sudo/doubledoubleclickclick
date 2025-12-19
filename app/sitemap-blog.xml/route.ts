@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       .from('blog_posts')
       .select('slug, title, meta_description, updated_date, created_date, published_date, category')
       .eq('status', 'published')
-      .order('published_date', { ascending: false })
+      .order('created_date', { ascending: false })
 
     if (posts && posts.length > 0) {
       // Filter out posts with null slugs

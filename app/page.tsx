@@ -35,7 +35,7 @@ export default async function HomePage() {
     .from('blog_posts')
     .select('id, title, slug, meta_description, featured_image, created_date, published_date')
     .eq('status', 'published')
-    .order('published_date', { ascending: false })
+    .order('created_date', { ascending: false })
     .limit(6)
 
   // Only use real posts from database
