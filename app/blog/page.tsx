@@ -34,9 +34,9 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
     // Fetch ALL published blog posts (no limit - shows all posts)
     const { data } = await supabase
       .from('blog_posts')
-      .select('id, title, slug, meta_description, featured_image, created_date, tags, category')
+      .select('id, title, slug, meta_description, featured_image, created_date, published_date, tags, category')
       .eq('status', 'published')
-      .order('created_date', { ascending: false })
+      .order('published_date', { ascending: false })
     posts = data
 
     // Fetch homepage content for Questions Discovery styling
@@ -138,8 +138,8 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
                               <p className="blog-card-excerpt">{post.meta_description}</p>
                             )}
                             <div className="blog-card-meta">
-                              <time dateTime={post.created_date}>
-                                {new Date(post.created_date).toLocaleDateString('en-US', {
+                              <time dateTime={post.published_date || post.created_date}>
+                                {new Date(post.published_date || post.created_date).toLocaleDateString('en-US', {
                                   month: 'long',
                                   day: 'numeric',
                                   year: 'numeric'

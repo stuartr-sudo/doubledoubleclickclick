@@ -33,9 +33,9 @@ export default async function HomePage() {
   // Fetch latest blog posts for homepage preview (limit to 6 since we only show 6)
   const { data: latestPosts } = await supabase
     .from('blog_posts')
-    .select('id, title, slug, meta_description, featured_image, created_date')
+    .select('id, title, slug, meta_description, featured_image, created_date, published_date')
     .eq('status', 'published')
-    .order('created_date', { ascending: false })
+    .order('published_date', { ascending: false })
     .limit(6)
 
   // Only use real posts from database

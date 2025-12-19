@@ -8,10 +8,10 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
 
   const { data: posts } = await supabase
     .from('blog_posts')
-    .select('id, title, slug, meta_description, featured_image, created_date, tags, category')
+    .select('id, title, slug, meta_description, featured_image, created_date, published_date, tags, category')
     .ilike('tags', `%${tag}%`)
     .eq('status', 'published')
-    .order('created_date', { ascending: false })
+    .order('published_date', { ascending: false })
 
   // Avoid "soft 404" (a 200 page with no meaningful content) for non-existent tags.
   if (!posts || posts.length === 0) {

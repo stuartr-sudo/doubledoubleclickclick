@@ -13,16 +13,16 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { data: posts } = await supabase
       .from('blog_posts')
-      .select('slug, title, meta_description, updated_date, created_date, category')
+      .select('slug, title, meta_description, updated_date, created_date, published_date, category')
       .eq('status', 'published')
-      .order('created_date', { ascending: false })
+      .order('published_date', { ascending: false })
 
     if (posts && posts.length > 0) {
       // Filter out posts with null slugs
       const validPosts = posts.filter(post => post.slug && post.slug !== 'null')
       
       blogEntries = validPosts.map((post) => {
-        const lastmod = post.updated_date || post.created_date
+        const lastmod = post.updated_date || post.published_date || post.created_date
         const description = post.meta_description || post.title
         const category = post.category || 'General'
         

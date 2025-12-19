@@ -177,8 +177,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
         headline: post.title,
         description: post.meta_description || '',
         image: post.featured_image || '',
-        datePublished: post.created_date,
-        dateModified: post.updated_date || post.created_date,
+        datePublished: post.published_date || post.created_date,
+        dateModified: post.updated_date || post.published_date || post.created_date,
         author: {
           '@type': 'Organization',
           name: post.author || 'SEWO',
@@ -249,8 +249,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             {/* Main title - displays post.title (NOT meta_title) */}
             <h1 className="blog-post-title">{post.title}</h1>
             <div className="blog-post-meta">
-              <time dateTime={post.created_date}>
-                {new Date(post.created_date).toLocaleDateString('en-US', {
+              <time dateTime={post.published_date || post.created_date}>
+                {new Date(post.published_date || post.created_date).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
