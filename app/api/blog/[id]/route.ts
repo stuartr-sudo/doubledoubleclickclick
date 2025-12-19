@@ -62,7 +62,8 @@ export async function PUT(
       excerpt,
       generated_llm_schema,
       export_seo_as_tags,
-      user_name
+      user_name,
+      is_popular
     } = body
 
     // Build update data object
@@ -89,6 +90,7 @@ export async function PUT(
     if (generated_llm_schema !== undefined) updateData.generated_llm_schema = generated_llm_schema
     if (export_seo_as_tags !== undefined) updateData.export_seo_as_tags = export_seo_as_tags
     if (user_name !== undefined) updateData.user_name = user_name
+    if (is_popular !== undefined) updateData.is_popular = is_popular
 
     // Always update the updated_date
     updateData.updated_date = new Date().toISOString()

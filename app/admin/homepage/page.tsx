@@ -249,7 +249,7 @@ function HomepageEditorPageInner() {
       { id: '3', title: 'Seasonal planting', image: '', link_url: '#' }
     ],
     services_bg_color: '#ffffff',
-    blog_grid_title: 'Latest from the blog',
+    blog_grid_title: 'Popular posts',
     blog_grid_bg_color: '#ffffff',
     blog_section_visible: true,
     proof_results_title: 'Proof of Results',

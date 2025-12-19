@@ -17,6 +17,7 @@ interface BlogPost {
   author: string
   created_date: string
   updated_date: string
+  is_popular: boolean
 }
 
 export default function AdminPageWrapper() {
@@ -66,6 +67,26 @@ export default function AdminPageWrapper() {
     } catch (error) {
       console.error('Error deleting post:', error)
       alert('Error deleting post')
+    }
+  }
+
+  const togglePopular = async (id: string, currentStatus: boolean) => {
+    try {
+      const res = await fetch(`/api/blog/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_popular: !currentStatus }),
+      })
+      if (res.ok) {
+        setPosts(posts.map(p => p.id === id ? { ...p, is_popular: !currentStatus } : p))
+      } else {
+        alert('Failed to update popular status')
+      }
+    } catch (error) {
+      console.error('Error updating popular status:', error)
+      alert('Error updating popular status')
     }
   }
 
@@ -278,6 +299,12 @@ export default function AdminPageWrapper() {
                     >
                       Edit
                     </Link>
+                    <button
+                      onClick={() => togglePopular(post.id, post.is_popular)}
+                      className={`btn btn-sm ${post.is_popular ? 'btn-primary' : 'btn-secondary'}`}
+                    >
+                      {post.is_popular ? '★ Popular' : 'Make Popular'}
+                    </button>
                     <button
                       onClick={() => deletePost(post.id)}
                       className="btn btn-sm btn-danger"

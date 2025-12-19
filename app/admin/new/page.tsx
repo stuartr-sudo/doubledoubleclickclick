@@ -17,13 +17,16 @@ export default function NewPostPage() {
     category: '',
     tags: '',
     author: '',
+    is_popular: false,
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
+    const { name, value, type } = e.target
+    const checked = (e.target as HTMLInputElement).checked
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }))
 
     // Auto-generate slug from title
@@ -200,6 +203,19 @@ export default function NewPostPage() {
                   onChange={handleChange}
                   placeholder="Author name"
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    id="is_popular"
+                    name="is_popular"
+                    checked={formData.is_popular}
+                    onChange={handleChange}
+                  />
+                  <span>Mark as Popular Post</span>
+                </label>
               </div>
 
               <button

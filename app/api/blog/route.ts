@@ -50,7 +50,8 @@ export async function POST(request: Request) {
       excerpt,
       generated_llm_schema,
       export_seo_as_tags,
-      user_name
+      user_name,
+      is_popular
     } = body
 
     // Normalize external ID
@@ -157,6 +158,7 @@ export async function POST(request: Request) {
     if (excerpt) postData.excerpt = excerpt
     if (generated_llm_schema) postData.generated_llm_schema = generated_llm_schema
     if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
+    if (typeof is_popular === 'boolean') postData.is_popular = is_popular
 
     // STRATEGY: If external_id provided, use it. Otherwise use slug.
     let existingPost = null
