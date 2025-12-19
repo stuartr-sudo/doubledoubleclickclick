@@ -11,46 +11,86 @@ import ArticleReactions from '@/components/ArticleReactions'
 import ArticleComments from '@/components/ArticleComments'
 import RelatedPosts from '@/components/RelatedPosts'
 
+const demoPosts = [
+  {
+    slug: 'how-to-build-a-startup-from-scratch',
+    title: 'How to build a startup from scratch',
+    meta_title: 'How to build a startup from scratch',
+    meta_description: 'A practical walkthrough on validating ideas, building the first version, and reaching product‑market fit.',
+    featured_image: null,
+    published_date: null,
+    created_date: '2025-01-01',
+    updated_date: '2025-01-01',
+    author: 'SEWO',
+    tags: [],
+    content: '<p>Demo content for startup growth.</p>',
+    category: 'Business',
+    generated_llm_schema: null,
+  },
+  {
+    slug: 'mastering-the-art-of-pitching-your-business-idea',
+    title: 'Mastering the art of pitching your business idea',
+    meta_title: 'Mastering the art of pitching your business idea',
+    meta_description: 'Structure, narrative, and visuals that make investors and customers say yes.',
+    featured_image: null,
+    published_date: null,
+    created_date: '2025-01-01',
+    updated_date: '2025-01-01',
+    author: 'SEWO',
+    tags: [],
+    content: '<p>Demo content for pitching.</p>',
+    category: 'Business',
+    generated_llm_schema: null,
+  },
+  {
+    slug: 'turning-your-passion-into-a-full-time-career',
+    title: 'Turning your passion into a full‑time career',
+    meta_title: 'Turning your passion into a full‑time career',
+    meta_description: 'Playbooks for creators to monetize, build audience, and scale sustainably.',
+    featured_image: null,
+    published_date: null,
+    created_date: '2025-01-01',
+    updated_date: '2025-01-01',
+    author: 'SEWO',
+    tags: [],
+    content: '<p>Demo content for careers.</p>',
+    category: 'Lifestyle',
+    generated_llm_schema: null,
+  },
+  {
+    slug: 'the-latest-tech-trends-every-creator-should-know',
+    title: 'The latest tech trends every creator should know',
+    meta_title: 'The latest tech trends every creator should know',
+    meta_description: 'From AI tools to new platforms—what matters this year and how to adapt fast.',
+    featured_image: null,
+    published_date: null,
+    created_date: '2025-01-01',
+    updated_date: '2025-01-01',
+    author: 'SEWO',
+    tags: [],
+    content: '<p>Demo content for tech trends.</p>',
+    category: 'Tech',
+    generated_llm_schema: null,
+  },
+]
+
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  let post = null
+  let post: any = null
 
   try {
     const supabase = await createClient()
     const { data } = await supabase
       .from('blog_posts')
-      .select('title, meta_title, meta_description')
+      .select('title, meta_title, meta_description, featured_image, published_date, created_date, author, tags')
       .eq('slug', params.slug)
       .eq('status', 'published')
       .single()
     post = data
   } catch (error) {
-    // Fallback to demo posts
-    const demoPosts = [
-      {
-        slug: 'how-to-build-a-startup-from-scratch',
-        title: 'How to build a startup from scratch',
-        meta_title: 'How to build a startup from scratch',
-        meta_description: 'A practical walkthrough on validating ideas, building the first version, and reaching product‑market fit.',
-      },
-      {
-        slug: 'mastering-the-art-of-pitching-your-business-idea',
-        title: 'Mastering the art of pitching your business idea',
-        meta_title: 'Mastering the art of pitching your business idea',
-        meta_description: 'Structure, narrative, and visuals that make investors and customers say yes.',
-      },
-      {
-        slug: 'turning-your-passion-into-a-full-time-career',
-        title: 'Turning your passion into a full‑time career',
-        meta_title: 'Turning your passion into a full‑time career',
-        meta_description: 'Playbooks for creators to monetize, build audience, and scale sustainably.',
-      },
-      {
-        slug: 'the-latest-tech-trends-every-creator-should-know',
-        title: 'The latest tech trends every creator should know',
-        meta_title: 'The latest tech trends every creator should know',
-        meta_description: 'From AI tools to new platforms—what matters this year and how to adapt fast.',
-      },
-    ]
+    post = demoPosts.find(p => p.slug === params.slug)
+  }
+
+  if (!post) {
     post = demoPosts.find(p => p.slug === params.slug)
   }
 
@@ -62,8 +102,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 
   // SEO: Use meta_title for <title> tag if available, otherwise fallback to regular title
-  const seoTitle = post.meta_title || post.title
-  const description = post.meta_description || ''
+  const seoTitle = (post as any).meta_title || (post as any).title
+  const description = (post as any).meta_description || ''
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
   const url = `${baseUrl}/blog/${params.slug}`
 
@@ -78,30 +118,30 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       description,
       type: 'article',
       url: url,
-      images: post.featured_image ? [
+      images: (post as any).featured_image ? [
         {
-          url: post.featured_image,
+          url: (post as any).featured_image,
           width: 1200,
           height: 630,
           alt: seoTitle,
         }
       ] : [],
-      publishedTime: post.published_date || post.created_date,
-      authors: [post.author || 'SEWO'],
-      tags: post.tags || [],
+      publishedTime: (post as any).published_date || (post as any).created_date,
+      authors: [(post as any).author || 'SEWO'],
+      tags: (post as any).tags || [],
     },
     twitter: {
       card: 'summary_large_image',
       title: seoTitle,
       description,
-      images: post.featured_image ? [post.featured_image] : [],
+      images: (post as any).featured_image ? [(post as any).featured_image] : [],
     },
   }
 }
 
 export default async function BlogPostPage({ params }: { params: { slug: string } }) {
-  let post = null
-  let homepageContent = null
+  let post: any = null
+  let homepageContent: any = null
 
   try {
     const supabase = await createClient()
@@ -125,8 +165,6 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
   // Fallback to demo posts if database is empty
   if (!post) {
-    // ... demo posts ...
-    // ...
     post = demoPosts.find(p => p.slug === params.slug)
     
     if (!post) {
