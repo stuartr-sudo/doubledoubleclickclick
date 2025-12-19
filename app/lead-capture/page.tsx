@@ -1,5 +1,3 @@
-'use client'
-
 import { Suspense } from 'react'
 import LeadCaptureContent from './LeadCaptureContent'
 import type { Metadata } from 'next'
