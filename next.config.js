@@ -39,6 +39,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.framerusercontent.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'v3b.fal.media',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.fal.media',
+      },
     ],
   },
   

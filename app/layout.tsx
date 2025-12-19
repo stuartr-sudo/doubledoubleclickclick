@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import Analytics from '@/components/Analytics'
 import CookieConsent from '@/components/CookieConsent'
+import StructuredData from '@/components/StructuredData'
 import Script from 'next/script'
 
 const inter = Inter({ 
@@ -18,6 +19,9 @@ export const metadata: Metadata = {
   },
   description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'),
+  alternates: {
+    canonical: '/',
+  },
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -81,6 +85,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         
         <Analytics />
         <CookieConsent />
+        <StructuredData />
         {children}
       </body>
     </html>

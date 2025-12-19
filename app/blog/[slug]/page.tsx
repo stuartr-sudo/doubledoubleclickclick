@@ -7,6 +7,9 @@ import BlogCarousel from '@/components/BlogCarousel'
 import BlogTracker from '@/components/BlogTracker'
 import BlogQuizCTA from '@/components/BlogQuizCTA'
 import ContactForm from '@/components/ContactForm'
+import ArticleReactions from '@/components/ArticleReactions'
+import ArticleComments from '@/components/ArticleComments'
+import RelatedPosts from '@/components/RelatedPosts'
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   let post = null
@@ -62,20 +65,36 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const seoTitle = post.meta_title || post.title
   const description = post.meta_description || ''
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
+  const url = `${baseUrl}/blog/${params.slug}`
 
   return {
     title: seoTitle,
     description,
+    alternates: {
+      canonical: url,
+    },
     openGraph: {
       title: seoTitle,
       description,
       type: 'article',
-      url: `${baseUrl}/blog/${params.slug}`,
+      url: url,
+      images: post.featured_image ? [
+        {
+          url: post.featured_image,
+          width: 1200,
+          height: 630,
+          alt: seoTitle,
+        }
+      ] : [],
+      publishedTime: post.published_date || post.created_date,
+      authors: [post.author || 'SEWO'],
+      tags: post.tags || [],
     },
     twitter: {
       card: 'summary_large_image',
       title: seoTitle,
       description,
+      images: post.featured_image ? [post.featured_image] : [],
     },
   }
 }
@@ -106,53 +125,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
   // Fallback to demo posts if database is empty
   if (!post) {
-    const demoPosts = [
-      {
-        id: 'demo-1',
-        title: 'How to build a startup from scratch',
-        slug: 'how-to-build-a-startup-from-scratch',
-        content: '<h2>Building Your Startup</h2><p>A practical walkthrough on validating ideas, building the first version, and reaching product‑market fit. This guide will help you navigate the challenging early stages of startup development.</p><h3>Key Steps</h3><ul><li>Validate your idea with real customers</li><li>Build an MVP quickly</li><li>Iterate based on feedback</li><li>Focus on product-market fit</li></ul>',
-        meta_description: 'A practical walkthrough on validating ideas, building the first version, and reaching product‑market fit.',
-        featured_image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1600&auto=format&fit=crop',
-        created_date: new Date().toISOString(),
-        category: 'Tech',
-        tags: ['startup', 'entrepreneurship', 'mvp'],
-      },
-      {
-        id: 'demo-2',
-        title: 'Mastering the art of pitching your business idea',
-        slug: 'mastering-the-art-of-pitching-your-business-idea',
-        content: '<h2>The Perfect Pitch</h2><p>Structure, narrative, and visuals that make investors and customers say yes. Learn how to craft a compelling story that resonates with your audience.</p><h3>Pitch Essentials</h3><ul><li>Start with a hook</li><li>Define the problem clearly</li><li>Present your solution</li><li>Show traction and metrics</li><li>End with a clear ask</li></ul>',
-        meta_description: 'Structure, narrative, and visuals that make investors and customers say yes.',
-        featured_image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1600&auto=format&fit=crop',
-        created_date: new Date(Date.now() - 86400000 * 3).toISOString(),
-        category: 'Entrepreneurship',
-        tags: ['pitching', 'investors', 'fundraising'],
-      },
-      {
-        id: 'demo-3',
-        title: 'Turning your passion into a full‑time career',
-        slug: 'turning-your-passion-into-a-full-time-career',
-        content: '<h2>From Passion to Profession</h2><p>Playbooks for creators to monetize, build audience, and scale sustainably. This comprehensive guide will show you how to turn what you love into a thriving business.</p><h3>The Creator Journey</h3><ul><li>Find your niche</li><li>Build an engaged audience</li><li>Diversify income streams</li><li>Scale your content</li><li>Maintain work-life balance</li></ul><h3>Monetization Strategies</h3><p>Multiple revenue streams are key to sustainable creator businesses. Consider courses, consulting, sponsorships, and digital products.</p>',
-        meta_description: 'Playbooks for creators to monetize, build audience, and scale sustainably.',
-        featured_image: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1600&auto=format&fit=crop',
-        created_date: new Date(Date.now() - 86400000 * 7).toISOString(),
-        category: 'Creator',
-        tags: ['creator-economy', 'monetization', 'passion'],
-      },
-      {
-        id: 'demo-4',
-        title: 'The latest tech trends every creator should know',
-        slug: 'the-latest-tech-trends-every-creator-should-know',
-        content: '<h2>Tech Trends for Creators</h2><p>From AI tools to new platforms—what matters this year and how to adapt fast.</p><h3>Top Trends</h3><ul><li>AI-powered content creation</li><li>Web3 and NFTs</li><li>Live streaming platforms</li><li>Creator DAOs</li></ul>',
-        meta_description: 'From AI tools to new platforms—what matters this year and how to adapt fast.',
-        featured_image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1600&auto=format&fit=crop',
-        created_date: new Date(Date.now() - 86400000 * 10).toISOString(),
-        category: 'Tech',
-        tags: ['technology', 'trends', 'ai'],
-      },
-    ]
-
+    // ... demo posts ...
+    // ...
     post = demoPosts.find(p => p.slug === params.slug)
     
     if (!post) {
@@ -164,53 +138,68 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   
   // JSON-LD structured data for the article
   // Use generated_llm_schema if provided, otherwise create default schema
-  let jsonLd
+  let articleJsonLd
   if (post.generated_llm_schema) {
     try {
-      jsonLd = JSON.parse(post.generated_llm_schema)
+      articleJsonLd = JSON.parse(post.generated_llm_schema)
     } catch (e) {
       console.error('Error parsing generated_llm_schema:', e)
-      // Fallback to default schema
-      jsonLd = {
-        '@context': 'https://schema.org',
-        '@type': 'Article',
-        headline: post.title,
-        description: post.meta_description || '',
-        image: post.featured_image || '',
-        datePublished: post.published_date || post.created_date,
-        dateModified: post.updated_date || post.published_date || post.created_date,
-        author: {
-          '@type': 'Organization',
-          name: post.author || 'SEWO',
-          url: baseUrl,
-        },
-        publisher: {
-          '@type': 'Organization',
-          name: 'SEWO',
-          url: baseUrl,
-        },
-      }
     }
-  } else {
-    jsonLd = {
+  }
+
+  if (!articleJsonLd) {
+    articleJsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Article',
       headline: post.title,
       description: post.meta_description || '',
       image: post.featured_image || '',
-      datePublished: post.created_date,
-      dateModified: post.updated_date || post.created_date,
+      datePublished: post.published_date || post.created_date,
+      dateModified: post.updated_date || post.published_date || post.created_date,
       author: {
-        '@type': 'Organization',
-        name: post.author || 'SEWO',
+        '@type': 'Person',
+        name: post.author || 'SEWO Editorial Team',
         url: baseUrl,
       },
       publisher: {
         '@type': 'Organization',
         name: 'SEWO',
-        url: baseUrl,
+        logo: {
+          '@type': 'ImageObject',
+          url: `${baseUrl}/favicon.svg`,
+        },
+      },
+      mainEntityOfPage: {
+        '@type': 'WebPage',
+        '@id': `${baseUrl}/blog/${post.slug}`,
       },
     }
+  }
+
+  // Breadcrumb Schema
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: baseUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Blog',
+        item: `${baseUrl}/blog`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: post.title,
+        item: `${baseUrl}/blog/${post.slug}`,
+      },
+    ],
   }
 
   return (
@@ -221,7 +210,11 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       {/* JSON-LD for SEO */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       
       {/* Header */}
@@ -282,8 +275,17 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             className="blog-post-content"
             dangerouslySetInnerHTML={{ __html: post.content || '' }}
           />
+
+          {/* Article Reactions */}
+          <ArticleReactions />
+
+          {/* Comments Section */}
+          <ArticleComments postSlug={post.slug} />
         </div>
       </article>
+
+      {/* Related Posts Section */}
+      <RelatedPosts currentPostId={post.id} category={post.category || 'General'} />
 
       {/* Quiz CTA Section */}
       <BlogQuizCTA

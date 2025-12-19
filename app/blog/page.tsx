@@ -8,10 +8,14 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Blog | SEWO - Get Found Everywhere',
   description: 'Expert insights on LLM ranking, AI search optimization, and making your brand the answer AI suggests.',
+  alternates: {
+    canonical: 'https://www.sewo.io/blog',
+  },
   openGraph: {
     title: 'Blog | SEWO',
     description: 'Expert insights on LLM ranking, AI search optimization, and making your brand the answer AI suggests.',
     type: 'website',
+    url: 'https://www.sewo.io/blog',
   },
   twitter: {
     card: 'summary_large_image',

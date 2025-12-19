@@ -9,10 +9,14 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: 'SEWO - Get Found Everywhere | LLM Ranking & AI Search Optimization',
   description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search results. Get discovered by ChatGPT, Claude, Gemini & more.',
+  alternates: {
+    canonical: 'https://www.sewo.io',
+  },
   openGraph: {
     title: 'SEWO - Get Found Everywhere',
     description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
     type: 'website',
+    url: 'https://www.sewo.io',
   },
   twitter: {
     card: 'summary_large_image',

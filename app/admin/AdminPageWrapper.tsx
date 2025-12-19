@@ -27,10 +27,48 @@ export default function AdminPageWrapper() {
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
+  const [categories, setCategories] = useState<string[]>([])
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
 
   useEffect(() => {
     fetchPosts()
+    fetchCategories()
   }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/blog/categories')
+      const result = await res.json()
+      if (result.success) {
+        setCategories(result.data)
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
+
+  const createCategory = async () => {
+    if (!newCategoryName.trim()) return
+    try {
+      const res = await fetch('/api/blog/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryName.trim() })
+      })
+      const result = await res.json()
+      if (result.success) {
+        setNewCategoryName('')
+        fetchCategories()
+        alert('Category created successfully')
+      } else {
+        alert(result.error || 'Failed to create category')
+      }
+    } catch (error) {
+      console.error('Error creating category:', error)
+      alert('Error creating category')
+    }
+  }
 
   const fetchPosts = async () => {
     try {
@@ -188,6 +226,9 @@ export default function AdminPageWrapper() {
               <Link href="/admin/leads" className="btn btn-secondary">
                 Leads
               </Link>
+              <button onClick={() => setShowCategoryModal(!showCategoryModal)} className="btn btn-secondary">
+                Categories
+              </button>
               <Link href="/admin/new" className="btn btn-primary">
                 New Post
               </Link>
@@ -203,6 +244,34 @@ export default function AdminPageWrapper() {
       </div>
 
       <div className="admin-container">
+        {showCategoryModal && (
+          <div className="admin-section" style={{ marginBottom: '2rem', padding: '1.5rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Manage Categories</h2>
+              <button onClick={() => setShowCategoryModal(false)} className="btn btn-sm btn-secondary">Close</button>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+              <input 
+                type="text" 
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="New category name..."
+                style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+              />
+              <button onClick={createCategory} className="btn btn-primary">Create</button>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {categories.map(cat => (
+                <span key={cat} style={{ background: '#e2e8f0', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.85rem', color: '#475569' }}>
+                  {cat}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="admin-filters">
           <button
             className={`filter-btn ${filter === 'all' ? 'active' : ''}`}

@@ -409,6 +409,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'published'
     const limit = parseInt(searchParams.get('limit') || '10')
+    const category = searchParams.get('category')
 
     const query = supabase
       .from('blog_posts')
@@ -418,6 +419,10 @@ export async function GET(request: Request) {
 
     if (status !== 'all') {
       query.eq('status', status)
+    }
+
+    if (category) {
+      query.eq('category', category)
     }
 
     const { data, error } = await query

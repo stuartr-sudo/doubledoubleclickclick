@@ -7,6 +7,8 @@ import Link from 'next/link'
 export default function NewPostPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [viewMode, setViewMode] = useState<'write' | 'preview'>('write')
+  const [categories, setCategories] = useState<string[]>([])
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -18,7 +20,24 @@ export default function NewPostPage() {
     tags: '',
     author: '',
     is_popular: false,
+    meta_title: '',
   })
+
+  useEffect(() => {
+    fetchCategories()
+  }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/blog/categories')
+      const result = await res.json()
+      if (result.success) {
+        setCategories(result.data)
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -97,6 +116,19 @@ export default function NewPostPage() {
               </div>
 
               <div className="form-group">
+                <label htmlFor="meta_title">Meta Title (SEO)</label>
+                <input
+                  type="text"
+                  id="meta_title"
+                  name="meta_title"
+                  value={formData.meta_title}
+                  onChange={handleChange}
+                  placeholder="SEO title (defaults to post title)"
+                />
+                <small>Overrides the browser tab title</small>
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="slug">Slug *</label>
                 <input
                   type="text"
@@ -110,16 +142,55 @@ export default function NewPostPage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="content">Content *</label>
-                <textarea
-                  id="content"
-                  name="content"
-                  value={formData.content}
-                  onChange={handleChange}
-                  required
-                  rows={20}
-                  placeholder="Write your post content here (supports Markdown)"
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label htmlFor="content" style={{ marginBottom: 0 }}>Content *</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${viewMode === 'write' ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                      onClick={() => setViewMode('write')}
+                    >
+                      Write
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${viewMode === 'preview' ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                      onClick={() => setViewMode('preview')}
+                    >
+                      Preview
+                    </button>
+                  </div>
+                </div>
+
+                {viewMode === 'write' ? (
+                  <textarea
+                    id="content"
+                    name="content"
+                    value={formData.content}
+                    onChange={handleChange}
+                    required
+                    rows={20}
+                    placeholder="Write your post content here (supports Markdown)"
+                  />
+                ) : (
+                  <div className="blog-post">
+                    <div 
+                      className="blog-post-content"
+                      style={{
+                        border: '1px solid #ddd',
+                        padding: '30px',
+                        borderRadius: '8px',
+                        backgroundColor: '#fff',
+                        minHeight: '400px',
+                        maxHeight: '600px',
+                        overflowY: 'auto'
+                      }}
+                      dangerouslySetInnerHTML={{ __html: formData.content }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -177,7 +248,14 @@ export default function NewPostPage() {
                   value={formData.category}
                   onChange={handleChange}
                   placeholder="e.g., Tech, Business, Lifestyle"
+                  list="category-list"
                 />
+                <datalist id="category-list">
+                  {categories.map(cat => (
+                    <option key={cat} value={cat} />
+                  ))}
+                </datalist>
+                <small>Select an existing category or type a new one to create it.</small>
               </div>
 
               <div className="form-group">

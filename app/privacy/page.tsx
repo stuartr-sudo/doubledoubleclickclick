@@ -5,6 +5,9 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'Privacy policy for SEWO - Learn how we handle your data.',
+  alternates: {
+    canonical: 'https://www.sewo.io/privacy',
+  },
 }
 
 export default function PrivacyPage() {

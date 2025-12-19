@@ -1,5 +1,10 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: '404 - Page Not Found',
+  description: 'Sorry, the page you are looking for does not exist.',
+}
 
 export default function NotFound() {
   return (
