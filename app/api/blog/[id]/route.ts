@@ -74,9 +74,17 @@ export async function PUT(
     if (slug !== undefined) updateData.slug = slug
     if (status !== undefined) {
       updateData.status = status
-      // Update published_date if changing to published
+      // Only set published_date if it's changing to published and doesn't have one
       if (status === 'published') {
-        updateData.published_date = new Date().toISOString()
+        const { data: currentPost } = await supabase
+          .from('blog_posts')
+          .select('published_date')
+          .eq('id', id)
+          .single()
+        
+        if (!currentPost?.published_date) {
+          updateData.published_date = new Date().toISOString()
+        }
       }
     }
     if (category !== undefined) updateData.category = category

@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       html,
       content_html,
       slug,
-      status = 'published',
+      status, // Removed default 'published'
       // Optional fields
       category,
       tags,
@@ -135,83 +135,78 @@ export async function POST(request: Request) {
     console.log(`[${requestId}]   tags: ${tags ? JSON.stringify(tags) : 'none'}`)
     console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
 
-    // Build post data
-    const postData: any = {
-      title: title.trim(),
-      content: finalContent,
-      slug: finalSlug,
-      status,
-      published_date: status === 'published' ? new Date().toISOString() : null,
-      updated_date: new Date().toISOString(),
-      user_name: user_name || 'api'
-    }
-    
-    // Add optional fields
-    if (externalId) postData.external_id = externalId
-    if (category) postData.category = category
-    if (tags) postData.tags = tags
-    if (featured_image) postData.featured_image = featured_image
-    if (author) postData.author = author
-    if (meta_title) postData.meta_title = meta_title
-    if (meta_description) postData.meta_description = meta_description
-    if (focus_keyword) postData.focus_keyword = focus_keyword
-    if (excerpt) postData.excerpt = excerpt
-    if (generated_llm_schema) postData.generated_llm_schema = generated_llm_schema
-    if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
-    if (typeof is_popular === 'boolean') postData.is_popular = is_popular
-
-    // STRATEGY: If external_id provided, use it. Otherwise use slug.
+    // 1. Identify existing post first
     let existingPost = null
     
     if (externalId) {
       // Check by external_id (PRIMARY identifier)
-      console.log(`[${requestId}] 🔍 Checking for existing post by external_id: ${externalId}`)
       const { data } = await supabase
         .from('blog_posts')
-        .select('id, slug, title, external_id, content')
+        .select('id, slug, title, external_id, status, published_date')
         .eq('external_id', externalId)
         .maybeSingle()
-      
-      if (data) {
-        existingPost = data
-        console.log(`[${requestId}] ✅ FOUND existing post by external_id`)
-        console.log(`[${requestId}]   Post ID: ${data.id}`)
-        console.log(`[${requestId}]   Decision: WILL UPDATE THIS POST`)
-      } else {
-        console.log(`[${requestId}] ❌ No post found with external_id: ${externalId}`)
+      existingPost = data
+    }
+    
+    if (!existingPost && finalSlug) {
+      // Fallback: Check by slug
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('id, slug, title, external_id, status, published_date')
+        .eq('slug', finalSlug)
+        .maybeSingle()
+      existingPost = data
+    }
+
+    // 2. Build update/insert data
+    const postData: any = {
+      title: title.trim(),
+      content: finalContent,
+      slug: finalSlug,
+      updated_date: new Date().toISOString(),
+      user_name: user_name || 'api'
+    }
+
+    // Status & Published Date logic:
+    if (status && (status === 'published' || status === 'draft')) {
+      postData.status = status
+      if (status === 'published') {
+        // Only set published_date if it's currently missing
+        if (!existingPost || !existingPost.published_date) {
+          postData.published_date = new Date().toISOString()
+        }
+      }
+    } else if (!existingPost) {
+      // For NEW posts, default to published if no valid status provided
+      postData.status = 'published'
+      postData.published_date = new Date().toISOString()
+    }
+    // CRITICAL: If post already exists and NO status was provided in this request,
+    // we explicitly preserve the existing status to prevent unpublishing.
+    else if (existingPost && existingPost.status) {
+      postData.status = existingPost.status
+      if (existingPost.published_date) {
+        postData.published_date = existingPost.published_date
       }
     }
     
-    // Fallback: Check by slug if not found yet (Smart Linking)
-    if (!existingPost && finalSlug) {
-      console.log(`[${requestId}] 🔍 Checking for existing post by slug: ${finalSlug}`)
-      const { data } = await supabase
-        .from('blog_posts')
-        .select('id, slug, title, external_id, content')
-        .eq('slug', finalSlug)
-        .maybeSingle()
-      
-      if (data) {
-        existingPost = data
-        console.log(`[${requestId}] ✅ FOUND existing post by slug`)
-        console.log(`[${requestId}]   Post ID: ${data.id}`)
-        console.log(`[${requestId}]   Decision: WILL UPDATE THIS POST AND LINK ID`)
-      } else {
-        console.log(`[${requestId}] ❌ No existing post found with slug: ${finalSlug}`)
-      }
-    }
+    // Add optional fields
+    if (externalId) postData.external_id = externalId
+    if (category !== undefined) postData.category = category
+    if (tags !== undefined) postData.tags = tags
+    if (featured_image !== undefined) postData.featured_image = featured_image
+    if (author !== undefined) postData.author = author
+    if (meta_title !== undefined) postData.meta_title = meta_title
+    if (meta_description !== undefined) postData.meta_description = meta_description
+    if (focus_keyword !== undefined) postData.focus_keyword = focus_keyword
+    if (excerpt !== undefined) postData.excerpt = excerpt
+    if (generated_llm_schema !== undefined) postData.generated_llm_schema = generated_llm_schema
+    if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
+    if (typeof is_popular === 'boolean') postData.is_popular = is_popular
 
     if (existingPost) {
       // UPDATE existing post
-      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      console.log(`[${requestId}] 🔄 UPDATING EXISTING POST`)
-      console.log(`[${requestId}]   Post ID: ${existingPost.id}`)
-      console.log(`[${requestId}]   Old Title: "${existingPost.title}"`)
-      console.log(`[${requestId}]   New Title: "${title}"`)
-      console.log(`[${requestId}]   Old Slug: ${existingPost.slug}`)
-      console.log(`[${requestId}]   New Slug: ${finalSlug}`)
-      console.log(`[${requestId}]   New Content Length: ${finalContent.length}`)
-      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+      console.log(`[${requestId}] 🔄 UPDATING EXISTING POST: ${existingPost.id}`)
       
       const { data, error } = await supabase
         .from('blog_posts')
