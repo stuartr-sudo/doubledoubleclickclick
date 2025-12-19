@@ -87,24 +87,29 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         </div>
       </header>
 
-      {/* Page Title */}
-      <section className="blog-page-header">
+      {/* Page Title & Questions Discovery Tool */}
+      <section className="blog-page-header" style={{ padding: 'var(--spacing-md) 0 var(--spacing-xl) 0', marginBottom: '0', background: 'var(--color-bg)' }}>
         <div className="container">
-          <h1>Answers to Your Questions</h1>
-        </div>
-      </section>
-
-      {/* Questions Discovery Tool */}
-      <section style={{ padding: 'var(--spacing-lg) 0 var(--spacing-md) 0' }}>
-        <div className="container" style={{ maxWidth: '800px', padding: '0 1rem' }}>
-          <QuestionsDiscovery
-            title="See What Questions Your Prospects Are Asking"
-            description="Enter a keyword and discover the top questions people are asking. Answer them before your competitors do."
-            ctaText="Book a Discovery Call"
-            buttonBgColor={homepageContent?.hero_cta_bg_color || '#000000'}
-            buttonTextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
-            className="blog-page-quiz"
-          />
+          <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-lg)' }}>Answers to Your Questions</h1>
+          
+          <div style={{ 
+            maxWidth: '850px', 
+            margin: '0 auto', 
+            padding: 'var(--spacing-xl) var(--spacing-md)',
+            backgroundColor: '#f8fafc',
+            borderRadius: '24px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)'
+          }}>
+            <QuestionsDiscovery
+              title="See What Questions Your Prospects Are Asking"
+              description="Enter a keyword and discover the top questions people are asking. Answer them before your competitors do."
+              ctaText="Book a Discovery Call"
+              buttonBgColor={homepageContent?.hero_cta_bg_color || '#000000'}
+              buttonTextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
+              className="blog-page-quiz"
+            />
+          </div>
         </div>
       </section>
 
@@ -173,9 +178,6 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
 
       {/* Blog Carousel */}
       <BlogCarousel />
-
-      {/* Get Questions Section */}
-      <QuestionsDiscovery />
 
       {/* Contact Form */}
       <ContactForm />

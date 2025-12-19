@@ -278,8 +278,24 @@ export default function QuestionsDiscovery({
               transform: rotate(360deg);
             }
           }
+          .quiz-inline-container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0;
+            padding-top: 0 !important;
+          }
+          .quiz-inline-wrapper {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            padding-top: 0;
+          }
           .quiz-step {
             animation: fadeInSlide 0.4s ease-out;
+            max-width: 100%;
+            padding-top: 0;
+            margin-top: 0;
           }
           .loading-spinner {
             animation: spin 1s linear infinite;
@@ -290,10 +306,10 @@ export default function QuestionsDiscovery({
         {/* Step 1: Keyword Input */}
         {step === 1 && (
           <div className="quiz-step">
-            <h3 className="quiz-title">
+            <h2 className="quiz-title" style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', marginTop: '0', marginBottom: '1rem' }}>
               {title}
-            </h3>
-            <p className="quiz-description" style={{ marginBottom: '2rem' }}>
+            </h2>
+            <p className="quiz-description" style={{ marginBottom: '1.25rem' }}>
               {description}
             </p>
             <form onSubmit={handleKeywordSubmit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

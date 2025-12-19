@@ -43,11 +43,6 @@ export default function FindQuestionsClient({
 
   return (
     <div className="landing-page-wrapper">
-      <div className="landing-page-hero">
-        <h1 className="landing-page-title">{title}</h1>
-        <p className="landing-page-description">{description}</p>
-      </div>
-      
       <div className="landing-page-content" ref={containerRef}>
         <QuestionsDiscovery
           title={title}

@@ -590,9 +590,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         {/* Hamburger Menu - Inside Hero Container */}
         <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
-            <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-            <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+            <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
 
@@ -910,7 +908,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                     width={450}
                     height={450}
                     loading="lazy"
-                    style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                   />
                 ) : (
                   <div className="why-work-with-us-image-placeholder">
@@ -1118,21 +1116,23 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                     </div>
                   )}
                   <div className="blog-card-content">
-                    <h3>
+                    <h3 className="blog-card-title">
                       <Link href={`/blog/${post.slug || post.id}`}>
                         {post.title}
                       </Link>
                     </h3>
                     {post.meta_description && (
-                      <p>{post.meta_description}</p>
+                      <p className="blog-card-excerpt">{post.meta_description}</p>
                     )}
-                    <time dateTime={post.created_date}>
-                      {new Date(post.created_date).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'numeric',
-                        day: 'numeric'
-                      })}
-                    </time>
+                    <div className="blog-card-meta">
+                      <time dateTime={post.created_date}>
+                        {new Date(post.created_date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'numeric',
+                          day: 'numeric'
+                        })}
+                      </time>
+                    </div>
                   </div>
                 </article>
               ))}
