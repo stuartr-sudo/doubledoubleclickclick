@@ -3959,32 +3959,35 @@ img {
 
 /* Expert Thoughts & TLDR Styling */
 .expert-thoughts, .post-tldr, .tldr-section {
-  margin: 2.5rem 0;
+  margin: 3rem 0;
   padding: 2rem;
-  border-radius: 12px;
+  border-radius: 16px;
   position: relative;
-  border-left: 4px solid #0066cc;
-  background: rgba(0, 102, 204, 0.05);
+  border: 1px solid #e2e8f0; /* Light full border */
+  border-left: 5px solid #0066cc; /* Bold accent border */
+  background-color: #f8fafc; /* Subtle grey-blue shading */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* Soft shadow to lift it */
 }
 
 .expert-thoughts::before, .post-tldr::before, .tldr-section::before {
   content: 'EXPERT INSIGHT';
   position: absolute;
-  top: -12px;
+  top: -14px;
   left: 20px;
   background: #0066cc;
   color: white;
-  padding: 2px 12px;
+  padding: 4px 14px;
   border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 800;
   letter-spacing: 0.05em;
   z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 102, 204, 0.2);
 }
 
 .post-tldr::before, .tldr-section::before {
   content: 'TL;DR';
-  background: #333;
+  background: #1e293b;
 }
 
 /* Hide the pseudo-element label if a custom title div is used inside */
@@ -3995,18 +3998,24 @@ img {
 
 .tldr-title {
   font-weight: 800;
-  font-size: 1.1rem;
-  color: #333;
-  margin-bottom: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 1.25rem;
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tldr-title::before {
+  content: '📝';
+  font-size: 1.2rem;
 }
 
 .expert-thoughts p, .post-tldr p, .tldr-section p {
   margin: 0 0 1rem 0 !important;
-  font-style: italic;
-  color: #333;
-  line-height: 1.6;
+  font-style: normal; /* Changed from italic for better readability in box */
+  color: #334155;
+  line-height: 1.7;
 }
 
 .expert-thoughts p:last-child, .post-tldr p:last-child, .tldr-section p:last-child {
@@ -7323,32 +7332,35 @@ img {
 
 /* Expert Thoughts & TLDR Styling */
 .expert-thoughts, .post-tldr, .tldr-section {
-  margin: 2.5rem 0;
+  margin: 3rem 0;
   padding: 2rem;
-  border-radius: 12px;
+  border-radius: 16px;
   position: relative;
-  border-left: 4px solid #0066cc;
-  background: rgba(0, 102, 204, 0.05);
+  border: 1px solid #e2e8f0; /* Light full border */
+  border-left: 5px solid #0066cc; /* Bold accent border */
+  background-color: #f8fafc; /* Subtle grey-blue shading */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* Soft shadow to lift it */
 }
 
 .expert-thoughts::before, .post-tldr::before, .tldr-section::before {
   content: 'EXPERT INSIGHT';
   position: absolute;
-  top: -12px;
+  top: -14px;
   left: 20px;
   background: #0066cc;
   color: white;
-  padding: 2px 12px;
+  padding: 4px 14px;
   border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 800;
   letter-spacing: 0.05em;
   z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 102, 204, 0.2);
 }
 
 .post-tldr::before, .tldr-section::before {
   content: 'TL;DR';
-  background: #333;
+  background: #1e293b;
 }
 
 /* Hide the pseudo-element label if a custom title div is used inside */
@@ -7359,18 +7371,24 @@ img {
 
 .tldr-title {
   font-weight: 800;
-  font-size: 1.1rem;
-  color: #333;
-  margin-bottom: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 1.25rem;
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tldr-title::before {
+  content: '📝';
+  font-size: 1.2rem;
 }
 
 .expert-thoughts p, .post-tldr p, .tldr-section p {
   margin: 0 0 1rem 0 !important;
-  font-style: italic;
-  color: #333;
-  line-height: 1.6;
+  font-style: normal; /* Changed from italic for better readability in box */
+  color: #334155;
+  line-height: 1.7;
 }
 
 .expert-thoughts p:last-child, .post-tldr p:last-child, .tldr-section p:last-child {
@@ -10670,32 +10688,35 @@ img {
 
 /* Expert Thoughts & TLDR Styling */
 .expert-thoughts, .post-tldr, .tldr-section {
-  margin: 2.5rem 0;
+  margin: 3rem 0;
   padding: 2rem;
-  border-radius: 12px;
+  border-radius: 16px;
   position: relative;
-  border-left: 4px solid #0066cc;
-  background: rgba(0, 102, 204, 0.05);
+  border: 1px solid #e2e8f0; /* Light full border */
+  border-left: 5px solid #0066cc; /* Bold accent border */
+  background-color: #f8fafc; /* Subtle grey-blue shading */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* Soft shadow to lift it */
 }
 
 .expert-thoughts::before, .post-tldr::before, .tldr-section::before {
   content: 'EXPERT INSIGHT';
   position: absolute;
-  top: -12px;
+  top: -14px;
   left: 20px;
   background: #0066cc;
   color: white;
-  padding: 2px 12px;
+  padding: 4px 14px;
   border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 800;
   letter-spacing: 0.05em;
   z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 102, 204, 0.2);
 }
 
 .post-tldr::before, .tldr-section::before {
   content: 'TL;DR';
-  background: #333;
+  background: #1e293b;
 }
 
 /* Hide the pseudo-element label if a custom title div is used inside */
@@ -10706,18 +10727,24 @@ img {
 
 .tldr-title {
   font-weight: 800;
-  font-size: 1.1rem;
-  color: #333;
-  margin-bottom: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 1.25rem;
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tldr-title::before {
+  content: '📝';
+  font-size: 1.2rem;
 }
 
 .expert-thoughts p, .post-tldr p, .tldr-section p {
   margin: 0 0 1rem 0 !important;
-  font-style: italic;
-  color: #333;
-  line-height: 1.6;
+  font-style: normal; /* Changed from italic for better readability in box */
+  color: #334155;
+  line-height: 1.7;
 }
 
 .expert-thoughts p:last-child, .post-tldr p:last-child, .tldr-section p:last-child {
