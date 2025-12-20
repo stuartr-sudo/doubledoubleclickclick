@@ -77,6 +77,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'assets.streamlinehq.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.worldvectorlogo.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+      },
     ],
   },
   
