@@ -214,6 +214,26 @@ img {
   min-height: 100%;
 }
 
+/* Responsive: stack hero columns on smaller screens so right-column text doesn't get squeezed */
+@media (max-width: 900px) {
+  .hero-stripe {
+    min-height: auto;
+  }
+
+  .hero-stripe-content {
+    min-height: auto;
+  }
+
+  .hero-stripe-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-stripe-left,
+  .hero-stripe-right {
+    padding: clamp(1.25rem, 4vw, 2rem);
+  }
+}
+
 /* Left Column - Gradient Background with Content */
 .hero-stripe-left {
   display: flex;
@@ -343,6 +363,10 @@ img {
   margin: 0 0 0.75rem 0;
   padding: 0;
   text-align: center;
+  max-width: 22ch;
+  margin-left: auto;
+  margin-right: auto;
+  text-wrap: balance;
 }
 
 .quiz-description {
@@ -352,6 +376,10 @@ img {
   margin: 0;
   opacity: 0.8;
   text-align: center;
+  max-width: 58ch;
+  margin-left: auto;
+  margin-right: auto;
+  text-wrap: balance;
 }
 
 .quiz-cta-button {
