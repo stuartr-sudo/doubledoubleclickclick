@@ -36,7 +36,7 @@ export const trackQuizView = (location: 'hero' | 'mid' | 'bottom') => {
 
 // Form submissions
 export const trackFormSubmission = (
-  formType: 'contact' | 'agencies' | 'enterprise' | 'beta' | 'subscribe' | 'questions_discovery',
+  formType: 'contact' | 'agencies' | 'enterprise' | 'beta' | 'subscribe' | 'questions_discovery' | 'consulting',
   success: boolean | string,
   metadata?: Record<string, any>
 ) => {
@@ -49,7 +49,7 @@ export const trackFormSubmission = (
 }
 
 export const trackFormStart = (
-  formType: 'contact' | 'agencies' | 'enterprise' | 'beta' | 'subscribe' | 'questions_discovery'
+  formType: 'contact' | 'agencies' | 'enterprise' | 'beta' | 'subscribe' | 'questions_discovery' | 'consulting'
 ) => {
   trackEvent('form_start', {
     form_type: formType,
@@ -58,7 +58,7 @@ export const trackFormStart = (
 
 // Page views with context
 export const trackServicePageView = (
-  service: 'agencies' | 'enterprise' | 'beta' | 'course' | 'guide'
+  service: 'agencies' | 'enterprise' | 'beta' | 'course' | 'guide' | 'consulting'
 ) => {
   trackEvent('service_page_view', {
     service_type: service,
