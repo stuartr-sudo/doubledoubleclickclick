@@ -3954,7 +3954,7 @@ img {
 }
 
 .blog-post-header {
-  margin-bottom: 0;
+  margin-bottom: 10px !important;
 }
 
 .blog-post-title {
@@ -3989,7 +3989,7 @@ img {
 }
 
 .blog-post-image {
-  margin: 10px 0;
+  margin: 10px 0 !important;
   border-radius: 12px;
   overflow: hidden;
 }
@@ -4004,7 +4004,7 @@ img {
   font-size: var(--font-size-lg);
   line-height: 1.8;
   color: var(--color-text);
-  margin-top: 10px;
+  margin-top: 10px !important;
 }
 
 .blog-post-content h2 {
