@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import Script from 'next/script'
+import SiteHeader from '@/components/SiteHeader'
 
 export default function BookCallPage() {
   useEffect(() => {
@@ -22,10 +23,11 @@ export default function BookCallPage() {
         strategy="afterInteractive"
       />
 
+      <SiteHeader />
+
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: '#f8fafc',
-        paddingTop: '2rem',
         paddingBottom: '2rem',
       }}>
         <div style={{ 
@@ -33,56 +35,11 @@ export default function BookCallPage() {
           margin: '0 auto', 
           padding: '0 1rem',
         }}>
-          {/* Home Button */}
-          <div style={{ marginBottom: '1rem' }}>
-            <a 
-              href="/"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 1rem',
-                backgroundColor: '#ffffff',
-                color: '#64748b',
-                textDecoration: 'none',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = '#f8fafc'
-                e.currentTarget.style.borderColor = '#cbd5e1'
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = '#ffffff'
-                e.currentTarget.style.borderColor = '#e2e8f0'
-              }}
-            >
-              <svg 
-                width="16" 
-                height="16" 
-                viewBox="0 0 16 16" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path 
-                  d="M6.5 12.5L2 8L6.5 3.5M2.5 8H14" 
-                  stroke="currentColor" 
-                  strokeWidth="1.5" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Back to Home
-            </a>
-          </div>
-
           {/* Header */}
           <div style={{ 
             textAlign: 'center', 
             marginBottom: '2rem',
+            marginTop: '2rem',
           }}>
             <h1 style={{ 
               fontSize: '2.5rem', 

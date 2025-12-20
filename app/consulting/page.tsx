@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { trackServicePageView } from '@/lib/analytics'
 import { useEffect } from 'react'
+import SiteHeader from '@/components/SiteHeader'
 
 export default function ConsultingPage() {
   useEffect(() => {
@@ -11,9 +12,9 @@ export default function ConsultingPage() {
 
   return (
     <main>
+      <SiteHeader />
       <section className="tier-page-hero">
         <div className="tier-page-container">
-          <Link href="/" className="back-link">← Back to Home</Link>
           <h1 className="tier-page-title">Fractional AI Growth Lead</h1>
           <p className="tier-page-subtitle">
             Strategic AI optimization for brands that want to lead their category in AI-powered search. I work with select organizations as a fractional lead to build systems that capture AI referral traffic at scale.

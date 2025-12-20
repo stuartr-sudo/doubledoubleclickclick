@@ -1,0 +1,59 @@
+'use client'
+
+import Link from 'next/link'
+import { useCallback, useState } from 'react'
+import MobileMenu from '@/components/MobileMenu'
+
+type SiteHeaderProps = {
+  blogVisible?: boolean
+}
+
+export default function SiteHeader({ blogVisible = true }: SiteHeaderProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  const handleMenuToggle = useCallback(() => {
+    setIsMenuOpen(prev => !prev)
+  }, [])
+
+  const handleMenuClose = useCallback(() => {
+    setIsMenuOpen(false)
+  }, [])
+
+  return (
+    <header className="header site-header">
+      <div className="container">
+        <nav className="nav">
+          <Link href="/" className="logo" aria-label="SEWO Home">
+            SEWO
+          </Link>
+
+          <div className="nav-links">
+            <Link href="/guide">The Playbook</Link>
+            <Link href="/course">The Accelerator</Link>
+            <Link href="/book-call">Strategy Audit</Link>
+            <Link href="/consulting">Consulting</Link>
+            {blogVisible && <Link href="/blog">Blog</Link>}
+          </div>
+
+          <button
+            type="button"
+            className="site-header-menu-btn"
+            onClick={handleMenuToggle}
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMenuOpen}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 6H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M4 12H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M4 18H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </nav>
+      </div>
+
+      <MobileMenu isOpen={isMenuOpen} onClose={handleMenuClose} blogVisible={blogVisible} />
+    </header>
+  )
+}
+
+

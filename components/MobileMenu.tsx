@@ -12,15 +12,15 @@ interface MobileMenuProps {
 
 export default function MobileMenu({ isOpen, onClose, blogVisible = true }: MobileMenuProps) {
   const pathname = usePathname()
-  const initialPathname = useRef(pathname)
+  const prevPathnameRef = useRef(pathname)
 
   // Close menu when pathname changes (meaning we've navigated to a new page)
   useEffect(() => {
-    if (pathname !== initialPathname.current) {
+    if (isOpen && pathname !== prevPathnameRef.current) {
       onClose()
-      initialPathname.current = pathname
     }
-  }, [pathname, onClose])
+    prevPathnameRef.current = pathname
+  }, [pathname, onClose, isOpen])
 
   useEffect(() => {
     if (isOpen) {

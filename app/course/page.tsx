@@ -1,8 +1,10 @@
 import Link from 'next/link'
+import SiteHeader from '@/components/SiteHeader'
 
 export default function CoursePage() {
   return (
     <main>
+      <SiteHeader />
       <section className="hero">
         <div className="container">
           <h1 className="page-title">LLM Content Accelerator</h1>

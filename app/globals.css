@@ -135,6 +135,35 @@ img {
   color: var(--color-accent);
 }
 
+/* Site Header: mobile hamburger */
+.site-header-menu-btn {
+  display: none;
+  border: 1px solid var(--color-border);
+  background: white;
+  border-radius: 10px;
+  padding: 8px;
+  color: var(--color-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.site-header-menu-btn:hover {
+  background: var(--color-bg-light);
+  transform: scale(1.03);
+}
+
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+  }
+  .site-header-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* Hero Section - Stripe-style Design */
 .hero-stripe {
   min-height: 100vh;
