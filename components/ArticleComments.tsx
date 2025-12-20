@@ -1,11 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function ArticleComments({ postSlug }: { postSlug: string }) {
   const [comment, setComment] = useState('');
   const [status, setStatus] = useState<'idle' | 'pending' | 'error' | 'success'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea as user types
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [comment]);
 
   const stripLinks = (text: string) => {
     // Regex to find URLs
@@ -43,12 +53,14 @@ export default function ArticleComments({ postSlug }: { postSlug: string }) {
           <form onSubmit={handleSubmit}>
             <div className="comment-input-group">
               <textarea 
+                ref={textareaRef}
                 id="comment-text"
                 className="force-dark-text"
                 placeholder="What are your thoughts? (Links will be removed automatically)"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 disabled={status === 'pending' || status === 'success'}
+                rows={1}
               ></textarea>
               <div className="comment-footer">
                 <p className="comment-policy">

@@ -4912,6 +4912,16 @@ textarea#comment-text,
   opacity: 1 !important;
   visibility: visible !important;
   color-scheme: light !important;
+  resize: none !important;
+  min-height: 60px;
+  max-height: 400px;
+  overflow-y: auto !important;
+  padding: 1.5rem !important;
+  border: none !important;
+  width: 100% !important;
+  font-family: inherit;
+  font-size: 1.125rem;
+  line-height: 1.6;
 }
 
 textarea::placeholder,
