@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -12,10 +12,14 @@ interface MobileMenuProps {
 
 export default function MobileMenu({ isOpen, onClose, blogVisible = true }: MobileMenuProps) {
   const pathname = usePathname()
+  const initialPathname = useRef(pathname)
 
-  // Close menu when pathname changes
+  // Close menu when pathname changes (meaning we've navigated to a new page)
   useEffect(() => {
-    onClose()
+    if (pathname !== initialPathname.current) {
+      onClose()
+      initialPathname.current = pathname
+    }
   }, [pathname, onClose])
 
   useEffect(() => {
