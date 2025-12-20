@@ -47,6 +47,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.fal.media',
       },
+      {
+        protocol: 'https',
+        hostname: '**.icons8.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'registry.npmmirror.com',
+      },
     ],
   },
   
