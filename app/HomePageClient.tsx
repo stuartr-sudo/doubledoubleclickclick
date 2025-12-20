@@ -276,7 +276,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
 
   // Product & Consulting Offerings
-  const pricingTitle = homepageContent?.pricing_title || 'Product Offerings'
+  const pricingTitle = homepageContent?.pricing_title || 'AI Strategies'
   const pricingTiers = (homepageContent?.pricing && homepageContent.pricing.length > 0) ? homepageContent.pricing : [
     {
       id: 'guide',
@@ -324,6 +324,24 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       ],
       cta_text: 'Book Session',
       cta_link: '/book-call',
+      featured: false
+    },
+    {
+      id: 'fractional',
+      name: 'Fractional AI Growth Lead',
+      price: 'Custom',
+      period: 'monthly',
+      description: 'A dedicated partner to own and scale your AI-powered search visibility program. Limited to 3 clients.',
+      features: [
+        'Custom Strategy & Roadmap',
+        'Content Architecture Audit',
+        'Team Training & Systems',
+        'Ongoing Optimization',
+        'Performance Monitoring',
+        'Unlimited Async Support'
+      ],
+      cta_text: 'Learn More',
+      cta_link: '/consulting',
       featured: false
     }
   ]
@@ -1109,7 +1127,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* Pricing Section - Product Offerings */}
+      {/* AI Strategies Section */}
       <section id="pricing" className="pricing-section">
         <div className="container">
           <div className="pricing-header">
@@ -1129,25 +1147,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 <Link href={tier.cta_link} className="btn-pricing">
                   {tier.cta_text}
                 </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Work With Me Section */}
-      <section id="consulting" className="outcomes-section" style={{ background: '#f8fafc' }}>
-        <div className="container">
-          <div className="outcomes-header" style={{ textAlign: 'center', marginBottom: '4rem' }}>
-            <h2 className="outcomes-title" style={{ fontSize: '2.5rem', fontWeight: 800 }}>{outcomesTitle}</h2>
-            <p className="outcomes-subtitle" style={{ color: '#64748b', fontSize: '1.25rem' }}>{outcomesSubtitle}</p>
-          </div>
-          <div className="outcomes-grid">
-            {outcomesList.map((outcome) => (
-              <div key={outcome.id} className="outcome-card" style={{ background: 'white', padding: '3rem', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-                <h3 className="outcome-card-title" style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '1.5rem' }}>{outcome.title}</h3>
-                <p className="outcome-description" style={{ color: '#475569', lineHeight: 1.7, fontSize: '1.1rem', marginBottom: '2rem' }}>{outcome.description}</p>
-                <Link href="/consulting" className="btn btn-secondary">Learn More →</Link>
               </div>
             ))}
           </div>
