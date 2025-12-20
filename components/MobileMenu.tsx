@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 interface MobileMenuProps {
   isOpen: boolean
@@ -10,6 +11,13 @@ interface MobileMenuProps {
 }
 
 export default function MobileMenu({ isOpen, onClose, blogVisible = true }: MobileMenuProps) {
+  const pathname = usePathname()
+
+  // Close menu when pathname changes
+  useEffect(() => {
+    onClose()
+  }, [pathname, onClose])
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -26,6 +34,12 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const href = e.currentTarget.getAttribute('href')
+    
+    // If clicking a link to the current page, close the menu manually
+    if (href === pathname || href === '/') {
+      onClose()
+    }
+    
     if (href?.startsWith('#')) {
       // Smooth scroll to anchor
       e.preventDefault()
@@ -34,8 +48,8 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' })
       }
+      onClose()
     }
-    onClose()
   }
 
   return (
@@ -52,23 +66,23 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
       </button>
 
       <nav className="mobile-menu-nav">
-        <Link href="/" className="mobile-menu-link" onClick={onClose}>
+        <Link href="/" className="mobile-menu-link" onClick={handleLinkClick}>
           Home
         </Link>
-        <Link href="/guide" className="mobile-menu-link" onClick={onClose}>
+        <Link href="/guide" className="mobile-menu-link" onClick={handleLinkClick}>
           The Playbook
         </Link>
-        <Link href="/course" className="mobile-menu-link" onClick={onClose}>
+        <Link href="/course" className="mobile-menu-link" onClick={handleLinkClick}>
           The Accelerator
         </Link>
-        <Link href="/book-call" className="mobile-menu-link" onClick={onClose}>
+        <Link href="/book-call" className="mobile-menu-link" onClick={handleLinkClick}>
           Strategy Audit
         </Link>
-        <Link href="/consulting" className="mobile-menu-link" onClick={onClose}>
+        <Link href="/consulting" className="mobile-menu-link" onClick={handleLinkClick}>
           Consulting
         </Link>
         {blogVisible && (
-          <Link href="/blog" className="mobile-menu-link" onClick={onClose}>
+          <Link href="/blog" className="mobile-menu-link" onClick={handleLinkClick}>
             Blog
           </Link>
         )}
