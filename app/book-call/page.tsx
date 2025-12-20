@@ -98,7 +98,7 @@ export default function BookCallPage() {
               maxWidth: '600px',
               margin: '0 auto',
             }}>
-              A focused 60-minute deep dive into your brand's AI visibility. We'll identify gaps, find your highest-value AI questions, and build your ranking roadmap.
+              A focused 60-minute deep dive into your brand&apos;s AI visibility. We&apos;ll identify gaps, find your highest-value AI questions, and build your ranking roadmap.
             </p>
           </div>
 
