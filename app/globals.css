@@ -325,7 +325,7 @@ img {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
-  align-items: center;
+  align-items: flex-start;
 }
 
 .quiz-badge {
@@ -362,10 +362,10 @@ img {
   letter-spacing: -0.02em;
   margin: 0 0 0.75rem 0;
   padding: 0;
-  text-align: center;
+  text-align: left;
   max-width: 22ch;
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 0;
+  margin-right: 0;
   text-wrap: balance;
 }
 
@@ -375,10 +375,10 @@ img {
   color: var(--color-text);
   margin: 0;
   opacity: 0.8;
-  text-align: center;
+  text-align: left;
   max-width: 58ch;
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 0;
+  margin-right: 0;
   text-wrap: balance;
 }
 
