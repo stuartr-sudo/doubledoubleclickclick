@@ -264,6 +264,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             </Link>
             <div className="nav-links">
               <Link href="/">Home</Link>
+              <Link href="/about">About</Link>
               <Link href="/blog">Blog</Link>
             </div>
           </nav>
@@ -340,13 +341,6 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
       {/* Contact Form */}
       <ContactForm />
-
-      {/* Footer */}
-      <footer className="footer">
-        <div className="container">
-          <p>&copy; {new Date().getFullYear()} SEWO. All rights reserved.</p>
-        </div>
-      </footer>
     </main>
   )
 }

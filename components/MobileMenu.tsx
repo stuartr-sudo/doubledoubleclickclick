@@ -57,6 +57,9 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
             Blog
           </Link>
         )}
+        <Link href="/about" className="mobile-menu-link" onClick={onClose}>
+          About
+        </Link>
         <Link href="/contact" className="mobile-menu-link" onClick={onClose}>
           Contact
         </Link>

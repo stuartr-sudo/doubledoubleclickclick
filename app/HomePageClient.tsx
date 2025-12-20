@@ -1151,13 +1151,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         <ContactForm />
       </Suspense>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="container">
-          <p>&copy; {new Date().getFullYear()} SEWO - Get Found Everywhere. All rights reserved.</p>
-        </div>
-      </footer>
-
       {/* Mobile Menu Component */}
       <Suspense fallback={null}>
         <MobileMenu 

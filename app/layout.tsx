@@ -4,6 +4,7 @@ import './globals.css'
 import Analytics from '@/components/Analytics'
 import CookieConsent from '@/components/CookieConsent'
 import StructuredData from '@/components/StructuredData'
+import Footer from '@/components/Footer'
 import Script from 'next/script'
 
 const inter = Inter({ 
@@ -87,6 +88,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <CookieConsent />
         <StructuredData />
         {children}
+        <Footer />
       </body>
     </html>
   )
