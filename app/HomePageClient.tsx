@@ -1102,39 +1102,39 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             </div>
             <div className="blog-grid-3x2">
               {latestPosts.slice(0, 6).map((post) => (
-                <article key={post.id} className="blog-card">
-                  {post.featured_image && (
-                    <div className="blog-card-image">
-                      <Image 
-                        src={post.featured_image} 
-                        alt={post.title}
-                        loading="lazy"
-                        width={400}
-                        height={250}
-                        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                      />
-                    </div>
-                  )}
-                  <div className="blog-card-content">
-                    <h3 className="blog-card-title">
-                      <Link href={`/blog/${post.slug || post.id}`}>
-                        {post.title}
-                      </Link>
-                    </h3>
-                    {post.meta_description && (
-                      <p className="blog-card-excerpt">{post.meta_description}</p>
+                <Link key={post.id} href={`/blog/${post.slug || post.id}`} className="blog-card">
+                  <article>
+                    {post.featured_image && (
+                      <div className="blog-card-image">
+                        <Image 
+                          src={post.featured_image} 
+                          alt={post.title}
+                          loading="lazy"
+                          width={400}
+                          height={250}
+                          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                        />
+                      </div>
                     )}
-                    <div className="blog-card-meta">
-                      <time dateTime={post.created_date}>
-                        {new Date(post.created_date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'numeric',
-                          day: 'numeric'
-                        })}
-                      </time>
+                    <div className="blog-card-content">
+                      <h3 className="blog-card-title">
+                        {post.title}
+                      </h3>
+                      {post.meta_description && (
+                        <p className="blog-card-excerpt">{post.meta_description}</p>
+                      )}
+                      <div className="blog-card-meta">
+                        <time dateTime={post.created_date}>
+                          {new Date(post.created_date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'numeric',
+                            day: 'numeric'
+                          })}
+                        </time>
+                      </div>
                     </div>
-                  </div>
-                </article>
+                  </article>
+                </Link>
               ))}
             </div>
           </div>

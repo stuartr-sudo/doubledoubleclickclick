@@ -130,39 +130,39 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
                     {/* 3-column grid */}
                     <div className="blog-grid blog-grid-cards">
                       {chunk.map((post) => (
-                        <article key={post.id} className="blog-card">
-                          <div className="blog-card-image">
-                            <img 
-                              src={post.featured_image || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1600&auto=format&fit=crop'} 
-                              alt={post.title}
-                              loading="lazy"
-                              width={400}
-                              height={350}
-                            />
-                          </div>
-                          <div className="blog-card-content">
-                            <div className="blog-card-top">
-                              {post.category && <span className="tag-pill">{post.category}</span>}
+                        <Link key={post.id} href={`/blog/${post.slug || post.id}`} className="blog-card">
+                          <article>
+                            <div className="blog-card-image">
+                              <img 
+                                src={post.featured_image || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1600&auto=format&fit=crop'} 
+                                alt={post.title}
+                                loading="lazy"
+                                width={400}
+                                height={350}
+                              />
                             </div>
-                            <h2 className="blog-card-title">
-                              <Link href={`/blog/${post.slug || post.id}`}>
+                            <div className="blog-card-content">
+                              <div className="blog-card-top">
+                                {post.category && <span className="tag-pill">{post.category}</span>}
+                              </div>
+                              <h2 className="blog-card-title">
                                 {post.title}
-                              </Link>
-                            </h2>
-                            {post.meta_description && (
-                              <p className="blog-card-excerpt">{post.meta_description}</p>
-                            )}
-                            <div className="blog-card-meta">
-                              <time dateTime={post.published_date || post.created_date}>
-                                {new Date(post.published_date || post.created_date).toLocaleDateString('en-US', {
-                                  month: 'long',
-                                  day: 'numeric',
-                                  year: 'numeric'
-                                })}
-                              </time>
+                              </h2>
+                              {post.meta_description && (
+                                <p className="blog-card-excerpt">{post.meta_description}</p>
+                              )}
+                              <div className="blog-card-meta">
+                                <time dateTime={post.published_date || post.created_date}>
+                                  {new Date(post.published_date || post.created_date).toLocaleDateString('en-US', {
+                                    month: 'long',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                </time>
+                              </div>
                             </div>
-                          </div>
-                        </article>
+                          </article>
+                        </Link>
                       ))}
                     </div>
                   </div>
