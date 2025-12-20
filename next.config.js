@@ -47,44 +47,6 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.fal.media',
       },
-      {
-        protocol: 'https',
-        hostname: '**.icons8.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.npmmirror.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'registry.npmmirror.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'encrypted-tbn0.gstatic.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.gstatic.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.googleusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'assets.streamlinehq.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdn.worldvectorlogo.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'upload.wikimedia.org',
-      },
     ],
   },
   

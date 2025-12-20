@@ -5,22 +5,25 @@ export default function CoursePage() {
     <main>
       <section className="hero">
         <div className="container">
-          <h1 className="page-title">The AI Content Accelerator</h1>
+          <h1 className="page-title">LLM Content Accelerator</h1>
           <p className="page-description">
-            A comprehensive mini-course to build your AI content system and ship your first ranking sprint.
+            A mini-course for teams who want to build an internal system for AI-powered search visibility. Learn how to transform your content into an AI-recommendation engine.
           </p>
-          <Link href="/lead-capture?type=course" className="btn btn-secondary">Get Instant Access</Link>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
+            <Link href="https://buy.stripe.com/test_course" className="btn btn-primary">Enroll Now — $249</Link>
+            <Link href="/book-call" className="btn btn-secondary">Bulk Team Access</Link>
+          </div>
         </div>
       </section>
 
       <section className="how-it-works-section">
         <div className="how-it-works-header">
-          <h2 className="section-label">curriculum.</h2>
+          <h2 className="section-label">the curriculum.</h2>
         </div>
         <div className="how-it-works-steps">
-          <div className="step-card"><div className="step-number">01</div><h3 className="step-title">LLM Research</h3><p className="step-description">Find and prioritize AI questions for your category.</p></div>
-          <div className="step-card"><div className="step-number">02</div><h3 className="step-title">Content System</h3><p className="step-description">Structure content for AI understanding and recommendation.</p></div>
-          <div className="step-card"><div className="step-number">03</div><h3 className="step-title">Evaluation</h3><p className="step-description">Measure visibility and iterate for wins.</p></div>
+          <div className="step-card"><div className="step-number">01</div><h3 className="step-title">LLM Research</h3><p className="step-description">Find and prioritize the exact questions AI models are asking about your category.</p></div>
+          <div className="step-card"><div className="step-number">02</div><h3 className="step-title">Content System</h3><p className="step-description">Build a high-scale system for structuring content for AI recommendation.</p></div>
+          <div className="step-card"><div className="step-number">03</div><h3 className="step-title">The Evaluation</h3><p className="step-description">Measure your visibility scores and iterate until you own the top recommendations.</p></div>
         </div>
       </section>
     </main>

@@ -64,7 +64,7 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
         <Link href="/book-call" className="mobile-menu-link" onClick={onClose}>
           Strategy Audit
         </Link>
-        <Link href="/enterprise" className="mobile-menu-link" onClick={onClose}>
+        <Link href="/consulting" className="mobile-menu-link" onClick={onClose}>
           Consulting
         </Link>
         {blogVisible && (
@@ -72,9 +72,6 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
             Blog
           </Link>
         )}
-        <Link href="/about" className="mobile-menu-link" onClick={onClose}>
-          About
-        </Link>
       </nav>
     </div>
   )

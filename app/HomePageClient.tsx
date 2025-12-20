@@ -254,13 +254,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     { id: '3', quote: 'The team at Consulting exceeded our expectations in every way. We are grateful for their partnership and the positive impact they\'ve had on our business.', rating: 5, author_name: 'John Smith', author_title: 'Founder', author_company: 'JS Solutions', author_image: '' }
   ]
   const testimonialsBgColor = homepageContent?.testimonials_bg_color || '#f5f5f5'
-  const servicesSectionTitle = homepageContent?.services_section_title || 'How we work with you'
-  const servicesSectionDescription = homepageContent?.services_section_description || 'From self-serve tools to deep-dive consulting, we have a path to get your brand discovered by AI.'
+  const servicesSectionTitle = homepageContent?.services_section_title || 'Our services'
+  const servicesSectionDescription = homepageContent?.services_section_description || 'Our team combines expertise with creativity to transform outdoor spaces into breathtaking landscapes that enhance the beauty of any property.'
   const servicesItems = homepageContent?.services_items || [
-    { id: '1', title: 'The LLM Ranking Playbook', image: '', link_url: '/guide' },
-    { id: '2', title: 'The AI Content Accelerator', image: '', link_url: '/course' },
-    { id: '3', title: 'Strategy Audit (Paid)', image: '', link_url: '/book-call' },
-    { id: '4', title: 'Fractional AI Growth Partner', image: '', link_url: '/enterprise' }
+    { id: '1', title: 'Landscaping works', image: '', link_url: '#' },
+    { id: '2', title: 'Garden design', image: '', link_url: '#' },
+    { id: '3', title: 'Seasonal planting', image: '', link_url: '#' }
   ]
   const servicesBgColor = homepageContent?.services_bg_color || '#ffffff'
   const blogGridBgColor = homepageContent?.blog_grid_bg_color || '#ffffff'
@@ -275,6 +274,70 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   ]
   const proofResultsBgColor = homepageContent?.proof_results_bg_color || '#ffffff'
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
+
+  // Product & Consulting Offerings
+  const pricingTitle = homepageContent?.pricing_title || 'Product Offerings'
+  const pricingTiers = (homepageContent?.pricing && homepageContent.pricing.length > 0) ? homepageContent.pricing : [
+    {
+      id: 'guide',
+      name: 'The Playbook',
+      price: '$97',
+      period: 'once',
+      description: 'The complete blueprint for LLM ranking. Everything you need to self-implement.',
+      features: [
+        'AI Visibility Roadmap',
+        'Custom Prompt Library',
+        '30-Day Implementation Plan',
+        'Lifetime Updates'
+      ],
+      cta_text: 'Buy Playbook',
+      cta_link: '/guide',
+      featured: false
+    },
+    {
+      id: 'course',
+      name: 'Content Accelerator',
+      price: '$249',
+      period: 'once',
+      description: 'A deep-dive mini-course for teams building high-scale AI content systems.',
+      features: [
+        'Advanced System Architecture',
+        'High-Scale Workflows',
+        'Evaluation Frameworks',
+        'Team Training Templates'
+      ],
+      cta_text: 'Enroll Now',
+      cta_link: '/course',
+      featured: true
+    },
+    {
+      id: 'strategy',
+      name: 'Strategy Session',
+      price: '$450',
+      period: 'once',
+      description: 'A focused, 1-on-1 session to build your category-specific ranking roadmap.',
+      features: [
+        'Personalized Audit',
+        'Question Discovery',
+        '60-Minute Deep Dive',
+        'Custom Ranking Plan'
+      ],
+      cta_text: 'Book Session',
+      cta_link: '/book-call',
+      featured: false
+    }
+  ]
+
+  const outcomesTitle = homepageContent?.outcomes_title || 'Work With Me'
+  const outcomesSubtitle = homepageContent?.outcomes_subtitle || 'Fractional AI Growth Lead'
+  const outcomesList = (homepageContent?.outcomes && homepageContent.outcomes.length > 0) ? homepageContent.outcomes : [
+    {
+      id: 'fractional',
+      title: 'Fractional AI Growth Lead',
+      description: 'I work with select brands as a dedicated partner to own and scale their AI-powered search visibility program. Limited to 3 clients.'
+    }
+  ]
+
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
   const [showQuiz, setShowQuiz] = useState(false)
@@ -1046,49 +1109,46 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* Services Section */}
-      <section id="services" className="services-showcase-section" style={{ background: servicesBgColor }}>
-        <div className="services-showcase-container">
-          <div className="services-showcase-header">
-            <h2 className="services-showcase-title">{servicesSectionTitle}</h2>
-            <p className="services-showcase-description">{servicesSectionDescription}</p>
+      {/* Pricing Section - Product Offerings */}
+      <section id="pricing" className="pricing-section">
+        <div className="container">
+          <div className="pricing-header">
+            <h2 className="pricing-title">{pricingTitle}</h2>
           </div>
-          <div className="services-showcase-grid">
-            {servicesItems.map((service) => (
-              <Link
-                key={service.id}
-                href={service.link_url || '#'}
-                className="service-showcase-card"
-              >
-                <div className="service-showcase-image">
-                  {service.image ? (
-                    <Image
-                      src={service.image}
-                      alt={service.title}
-                      width={440}
-                      height={480}
-                      loading="lazy"
-                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                    />
-                  ) : (
-                    <div className="service-showcase-placeholder">
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                      </svg>
-                    </div>
-                  )}
-                  <div className="service-showcase-overlay"></div>
-                </div>
-                <div className="service-showcase-content">
-                  <h3 className="service-showcase-card-title">{service.title}</h3>
-                  <svg className="service-showcase-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              </Link>
+          <div className="pricing-grid">
+            {pricingTiers.map((tier) => (
+              <div key={tier.id} className={`pricing-card ${tier.featured ? 'pricing-card-featured' : ''}`}>
+                <div className="pricing-tier">{tier.name}</div>
+                <div className="pricing-price">{tier.price}<span className="pricing-period">/{tier.period}</span></div>
+                <p className="pricing-description">{tier.description}</p>
+                <ul className="pricing-features">
+                  {tier.features.map((feature, idx) => (
+                    <li key={idx}>{feature}</li>
+                  ))}
+                </ul>
+                <Link href={tier.cta_link} className="btn-pricing">
+                  {tier.cta_text}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Work With Me Section */}
+      <section id="consulting" className="outcomes-section" style={{ background: '#f8fafc' }}>
+        <div className="container">
+          <div className="outcomes-header" style={{ textAlign: 'center', marginBottom: '4rem' }}>
+            <h2 className="outcomes-title" style={{ fontSize: '2.5rem', fontWeight: 800 }}>{outcomesTitle}</h2>
+            <p className="outcomes-subtitle" style={{ color: '#64748b', fontSize: '1.25rem' }}>{outcomesSubtitle}</p>
+          </div>
+          <div className="outcomes-grid">
+            {outcomesList.map((outcome) => (
+              <div key={outcome.id} className="outcome-card" style={{ background: 'white', padding: '3rem', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+                <h3 className="outcome-card-title" style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '1.5rem' }}>{outcome.title}</h3>
+                <p className="outcome-description" style={{ color: '#475569', lineHeight: 1.7, fontSize: '1.1rem', marginBottom: '2rem' }}>{outcome.description}</p>
+                <Link href="/consulting" className="btn btn-secondary">Learn More →</Link>
+              </div>
             ))}
           </div>
         </div>

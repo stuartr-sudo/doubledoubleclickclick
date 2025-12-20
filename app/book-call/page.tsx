@@ -90,7 +90,7 @@ export default function BookCallPage() {
               marginBottom: '1rem',
               color: '#1e293b',
             }}>
-              Paid AI Visibility Strategy Audit
+              Paid Ai Strategy & Audit Session
             </h1>
             <p style={{ 
               fontSize: '1.125rem', 
@@ -98,14 +98,27 @@ export default function BookCallPage() {
               maxWidth: '600px',
               margin: '0 auto',
             }}>
-              Nothing is free. This is a high-impact, 60-minute session for serious brands ready to dominate AI-powered search.
+              A focused 60-minute deep dive into your brand's AI visibility. We'll identify gaps, find your highest-value AI questions, and build your ranking roadmap.
+            </p>
+          </div>
+
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '2rem',
+            padding: '1.5rem',
+            backgroundColor: '#eff6ff',
+            borderRadius: '12px',
+            border: '1px solid #bfdbfe',
+          }}>
+            <p style={{ margin: 0, fontWeight: 600, color: '#1e40af' }}>
+              Investment: $450 (Credentialed clients only. No time-wasters.)
             </p>
           </div>
 
           {/* Calendly Embed */}
           <div 
             className="calendly-inline-widget" 
-            data-url="https://calendly.com/stuartr-sewo/llm-optimization"
+            data-url="https://calendly.com/stuartr-sewo/llm-optimization-paid"
             style={{ 
               minWidth: '320px', 
               height: '700px',
@@ -119,7 +132,7 @@ export default function BookCallPage() {
             color: '#64748b',
           }}>
             <p style={{ marginBottom: '0.5rem' }}>
-              <strong>What is included in this audit:</strong>
+              <strong>What you get:</strong>
             </p>
             <ul style={{ 
               listStyle: 'none', 
@@ -130,19 +143,19 @@ export default function BookCallPage() {
             }}>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                60-minute deep-dive strategy session
+                60-minute high-level strategy intensive
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                Comprehensive review of your brand&apos;s current AI visibility
+                Full audit of your current LLM/AI visibility
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                Identification of high-value AI referral traffic opportunities
+                Keyword & Question discovery for your category
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                A custom AI Growth Roadmap delivered within 24 hours
+                Actionable 30-day ranking implementation plan
               </li>
             </ul>
           </div>

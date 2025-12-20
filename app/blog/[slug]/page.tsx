@@ -265,10 +265,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             </Link>
             <div className="nav-links">
               <Link href="/">Home</Link>
-              <Link href="/guide">Playbook</Link>
-              <Link href="/course">Accelerator</Link>
-              <Link href="/book-call">Audit</Link>
-              <Link href="/enterprise">Consulting</Link>
+              <Link href="/about">About</Link>
               <Link href="/blog">Blog</Link>
             </div>
           </nav>

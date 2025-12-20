@@ -7,20 +7,23 @@ export default function GuidePage() {
         <div className="container">
           <h1 className="page-title">The LLM Ranking Playbook</h1>
           <p className="page-description">
-            A practical, step-by-step system to make your brand the answer AI suggests. PDF + Notion templates + Prompt library.
+            A practical, step‑by‑step system to make your brand the answer AI suggests. This is the exact blueprint I use for my high-ticket consulting clients.
           </p>
-          <Link href="/lead-capture?type=ebook" className="btn btn-secondary">Get the Playbook Now</Link>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
+            <Link href="https://buy.stripe.com/test_guide" className="btn btn-primary">Buy Playbook — $97</Link>
+            <Link href="#what-you-get" className="btn btn-secondary">Learn More</Link>
+          </div>
         </div>
       </section>
 
-      <section className="how-it-works-section">
+      <section id="what-you-get" className="how-it-works-section">
         <div className="how-it-works-header">
-          <h2 className="section-label">what you get.</h2>
+          <h2 className="section-label">inside the playbook.</h2>
         </div>
         <div className="how-it-works-steps">
-          <div className="step-card"><h3 className="step-title">Architecture</h3><p className="step-description">Build an LLM‑first content architecture mapped to the questions that matter.</p></div>
-          <div className="step-card"><h3 className="step-title">Prompts</h3><p className="step-description">Reusable prompting patterns for research, drafting, reviewing, and evaluation.</p></div>
-          <div className="step-card"><h3 className="step-title">Implementation</h3><p className="step-description">Checklists and templates to ship your first ranking sprint.</p></div>
+          <div className="step-card"><h3 className="step-title">The Architecture</h3><p className="step-description">Build an LLM‑first content architecture mapped to the questions that matter most in your industry.</p></div>
+          <div className="step-card"><h3 className="step-title">The Prompt Library</h3><p className="step-description">Tested prompting patterns for automated research, content drafting, and AI-readiness evaluation.</p></div>
+          <div className="step-card"><h3 className="step-title">The Checklist</h3><p className="step-description">A 30-day implementation plan with templates to ship your first ranking sprint and see immediate results.</p></div>
         </div>
       </section>
 

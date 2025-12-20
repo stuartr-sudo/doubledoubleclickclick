@@ -41,6 +41,13 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url, 301)
   }
 
+  // Refactor: Redirect old service pages to new Consulting page
+  if (lowerPath === '/agencies' || lowerPath === '/enterprise') {
+    url.pathname = '/consulting'
+    url.search = ''
+    return NextResponse.redirect(url, 301)
+  }
+
   // Legacy endpoints that should be treated as gone (helps Google drop them faster).
   const gonePaths = new Set<string>([
     '/dashboard',

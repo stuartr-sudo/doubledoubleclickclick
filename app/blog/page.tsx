@@ -82,10 +82,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
             </Link>
             <div className="nav-links">
               <Link href="/">Home</Link>
-              <Link href="/guide">Playbook</Link>
-              <Link href="/course">Accelerator</Link>
-              <Link href="/book-call">Audit</Link>
-              <Link href="/enterprise">Consulting</Link>
+              <Link href="/about">About</Link>
               <Link href="/blog">Blog</Link>
             </div>
           </nav>
@@ -109,7 +106,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
             <QuestionsDiscovery
               title="See What Questions Your Prospects Are Asking"
               description="Enter a keyword and discover the top questions people are asking. Answer them before your competitors do."
-              ctaText="Book a Strategy Audit"
+              ctaText="Book a Discovery Call"
               buttonBgColor={homepageContent?.hero_cta_bg_color || '#000000'}
               buttonTextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
               className="blog-page-quiz"
