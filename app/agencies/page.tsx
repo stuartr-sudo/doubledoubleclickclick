@@ -87,7 +87,7 @@ export default function AgenciesPage() {
             <Link href="/" className="back-link">← Back to Home</Link>
             <h1 className="tier-page-title">Agency Partnerships</h1>
             <p className="tier-page-subtitle">
-              Scale your agency's AI optimization services. We provide the playbook, the tools, and the high-level consulting you need to deliver results for your clients.
+              Scale your agency&apos;s AI optimization services. We provide the playbook, the tools, and the high-level consulting you need to deliver results for your clients.
             </p>
           </div>
 

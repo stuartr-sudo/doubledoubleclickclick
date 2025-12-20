@@ -134,7 +134,7 @@ export default function BookCallPage() {
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                Comprehensive review of your brand's current AI visibility
+                Comprehensive review of your brand&apos;s current AI visibility
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
