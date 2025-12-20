@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ImageUpload from '@/components/ImageUpload'
@@ -283,11 +283,7 @@ function HomepageEditorPageInner() {
     }
   }
 
-  useEffect(() => {
-    fetchHomepageContent()
-  }, [])
-
-  const fetchHomepageContent = async () => {
+  const fetchHomepageContent = useCallback(async () => {
     try {
       const res = await fetch('/api/homepage')
       if (res.ok) {
@@ -317,7 +313,11 @@ function HomepageEditorPageInner() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchHomepageContent()
+  }, [fetchHomepageContent])
 
   // Handle gradient color changes
   const handleGradientColorChange = (type: 'start' | 'end', color: string) => {

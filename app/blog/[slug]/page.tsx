@@ -300,12 +300,13 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
           {post.featured_image && (
             <div className="blog-post-image">
-              <img 
+              <Image 
                 src={post.featured_image} 
                 alt={post.title}
                 loading="eager"
                 width={1200}
                 height={600}
+                style={{ objectFit: 'cover', width: '100%', height: 'auto' }}
               />
             </div>
           )}

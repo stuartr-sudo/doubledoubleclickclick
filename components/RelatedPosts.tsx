@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface BlogPost {
   id: string;
@@ -67,12 +68,13 @@ export default function RelatedPosts({ currentPostId, category }: RelatedPostsPr
             <Link key={post.id} href={`/blog/${post.slug || post.id}`} className="blog-card">
               <article>
                 <div className="blog-card-image">
-                  <img 
+                  <Image 
                     src={post.featured_image || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1600&auto=format&fit=crop'} 
                     alt={post.title}
                     loading="lazy"
                     width={400}
                     height={250}
+                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                   />
                 </div>
                 <div className="blog-card-content">

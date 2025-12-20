@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function NewPostPage() {
   const router = useRouter()
@@ -234,7 +235,13 @@ export default function NewPostPage() {
                 />
                 {formData.featured_image && (
                   <div className="image-preview">
-                    <img src={formData.featured_image} alt="Preview" />
+                    <Image 
+                      src={formData.featured_image} 
+                      alt="Preview" 
+                      width={400} 
+                      height={250} 
+                      style={{ objectFit: 'cover', width: '100%', height: 'auto' }}
+                    />
                   </div>
                 )}
               </div>

@@ -2,6 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion, useAnimation, Variants } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 
@@ -98,7 +99,14 @@ const Step = ({ step, index, isReversed }: StepProps) => {
 
       <div className="hiw-step-image">
         {step.image ? (
-          <img src={step.image} alt={step.title} loading="lazy" />
+          <Image 
+            src={step.image} 
+            alt={step.title} 
+            width={500} 
+            height={350} 
+            style={{ objectFit: 'cover', width: '100%', height: 'auto' }}
+            loading="lazy" 
+          />
         ) : (
           <div className="hiw-step-image-placeholder">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

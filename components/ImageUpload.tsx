@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 
 interface ImageUploadProps {
   value: string
@@ -366,7 +367,13 @@ export default function ImageUpload({ value, onChange, label = 'Image', folder =
 
       {value && (
         <div className="image-upload-preview">
-          <img src={value} alt="Preview" />
+          <Image 
+            src={value} 
+            alt="Preview" 
+            width={400} 
+            height={250} 
+            style={{ objectFit: 'cover', width: '100%', height: 'auto', borderRadius: '8px' }}
+          />
           <button
             type="button"
             onClick={() => {

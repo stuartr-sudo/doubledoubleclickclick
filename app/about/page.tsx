@@ -58,7 +58,7 @@ export default function AboutPage() {
             <div className="about-text-main">
               <h2>Our Mission</h2>
               <p>
-                In a world where consumers increasingly turn to AI assistants like ChatGPT, Claude, and Gemini for answers, being "found" has a new meaning. Traditional SEO is no longer enough.
+                In a world where consumers increasingly turn to AI assistants like ChatGPT, Claude, and Gemini for answers, being &quot;found&quot; has a new meaning. Traditional SEO is no longer enough.
               </p>
               <p>
                 At SEWO, our mission is to ensure your brand is the answer AI suggests. We leverage deep research into LLM behavior and semantic search to optimize your visibility where it matters most.
@@ -89,7 +89,13 @@ export default function AboutPage() {
             {authors.map((author, index) => (
               <div key={index} className="author-card">
                 <div className="author-image">
-                  <img src={author.image} alt={author.name} />
+                  <Image 
+                    src={author.image} 
+                    alt={author.name} 
+                    width={400} 
+                    height={250} 
+                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                  />
                 </div>
                 <div className="author-info">
                   <h3 className="author-name">{author.name}</h3>

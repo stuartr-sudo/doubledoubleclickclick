@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 
@@ -36,22 +37,31 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
         <div className="container">
           <div className="blog-grid blog-grid-cards">
             {posts.map((post) => (
-              <article key={post.id} className="blog-card">
-                {post.featured_image && (
-                  <div className="blog-card-image">
-                    <img src={post.featured_image} alt={post.title} loading="lazy" />
+              <Link key={post.id} href={`/blog/${post.slug || post.id}`} className="blog-card">
+                <article>
+                  {post.featured_image && (
+                    <div className="blog-card-image">
+                      <Image 
+                        src={post.featured_image} 
+                        alt={post.title} 
+                        width={400} 
+                        height={250} 
+                        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                        loading="lazy" 
+                      />
+                    </div>
+                  )}
+                  <div className="blog-card-content">
+                    <div className="blog-card-top">
+                      {post.category && <span className="tag-pill">{post.category}</span>}
+                    </div>
+                    <h2 className="blog-card-title">
+                      {post.title}
+                    </h2>
+                    {post.meta_description && <p className="blog-card-excerpt">{post.meta_description}</p>}
                   </div>
-                )}
-                <div className="blog-card-content">
-                  <div className="blog-card-top">
-                    {post.category && <span className="tag-pill">{post.category}</span>}
-                  </div>
-                  <h2 className="blog-card-title">
-                    <Link href={`/blog/${post.slug || post.id}`}>{post.title}</Link>
-                  </h2>
-                  {post.meta_description && <p className="blog-card-excerpt">{post.meta_description}</p>}
-                </div>
-              </article>
+                </article>
+              </Link>
             ))}
           </div>
         </div>

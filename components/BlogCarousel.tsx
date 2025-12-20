@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 
 interface BlogPost {
@@ -93,12 +94,13 @@ export default function BlogCarousel() {
             >
               {post.featured_image && (
                 <div className="carousel-card-image">
-                  <img
+                  <Image
                     src={post.featured_image}
                     alt={post.title}
                     loading="lazy"
                     width={400}
                     height={300}
+                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                   />
                 </div>
               )}

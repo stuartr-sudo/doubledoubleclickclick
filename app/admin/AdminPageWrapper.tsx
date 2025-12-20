@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 interface BlogPost {
   id: string
@@ -341,7 +342,13 @@ export default function AdminPageWrapper() {
                 </div>
                 {post.featured_image && (
                   <div className="post-card-image">
-                    <img src={post.featured_image} alt={post.title} />
+                    <Image 
+                      src={post.featured_image} 
+                      alt={post.title} 
+                      width={400} 
+                      height={250} 
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                    />
                   </div>
                 )}
                 <div className="post-card-content">

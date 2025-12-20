@@ -771,7 +771,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               <div key={item.id} className="tech-carousel-item">
                 <div className="tech-icon-wrapper">
                   {item.icon ? (
-                    <img src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
+                    <Image src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
                   ) : (
                     <div className="tech-icon-placeholder">
                       <span className="tech-icon-text">{item.name}</span>
@@ -786,7 +786,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               <div key={`${item.id}-duplicate`} className="tech-carousel-item">
                 <div className="tech-icon-wrapper">
                   {item.icon ? (
-                    <img src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
+                    <Image src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
                   ) : (
                     <div className="tech-icon-placeholder">
                       <span className="tech-icon-text">{item.name}</span>
@@ -1010,7 +1010,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <div className="testimonial-author">
                     <div className="testimonial-author-image">
                       {testimonial.author_image && testimonial.author_image.trim() ? (
-                        <img
+                        <Image
                           src={testimonial.author_image}
                           alt={testimonial.author_name}
                           width={56}

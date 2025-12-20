@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import BlogCarousel from '@/components/BlogCarousel'
 import QuestionsDiscovery from '@/components/QuestionsDiscovery'
 import ContactForm from '@/components/ContactForm'
@@ -133,12 +134,13 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
                         <Link key={post.id} href={`/blog/${post.slug || post.id}`} className="blog-card">
                           <article>
                             <div className="blog-card-image">
-                              <img 
+                              <Image 
                                 src={post.featured_image || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1600&auto=format&fit=crop'} 
                                 alt={post.title}
                                 loading="lazy"
                                 width={400}
                                 height={350}
+                                style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                               />
                             </div>
                             <div className="blog-card-content">

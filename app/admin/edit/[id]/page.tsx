@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function EditPostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -24,12 +25,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
     meta_title: '',
   })
 
-  useEffect(() => {
-    fetchPost()
-    fetchCategories()
-  }, [])
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const res = await fetch('/api/blog/categories')
       const result = await res.json()
@@ -39,9 +35,9 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
     } catch (error) {
       console.error('Error fetching categories:', error)
     }
-  }
+  }, [])
 
-  const fetchPost = async () => {
+  const fetchPost = useCallback(async () => {
     try {
       const res = await fetch(`/api/blog/${params.id}`)
       const result = await res.json()
@@ -65,7 +61,12 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id])
+
+  useEffect(() => {
+    fetchPost()
+    fetchCategories()
+  }, [fetchPost, fetchCategories])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -260,7 +261,13 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
                 />
                 {formData.featured_image && (
                   <div className="image-preview">
-                    <img src={formData.featured_image} alt="Preview" />
+                    <Image 
+                      src={formData.featured_image} 
+                      alt="Preview" 
+                      width={400} 
+                      height={250} 
+                      style={{ objectFit: 'cover', width: '100%', height: 'auto' }}
+                    />
                   </div>
                 )}
               </div>
