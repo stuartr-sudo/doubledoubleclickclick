@@ -3961,7 +3961,7 @@ img {
   font-size: var(--font-size-4xl);
   font-weight: 700;
   line-height: 1.2;
-  margin: var(--spacing-lg) 0;
+  margin: var(--spacing-lg) 0 0.5rem 0;
   color: var(--color-primary);
 }
 
@@ -3971,7 +3971,7 @@ img {
   align-items: center;
   color: var(--color-text-light);
   font-size: var(--font-size-sm);
-  margin-top: var(--spacing-md);
+  margin: 0.5rem 0;
 }
 
 .blog-post-tags {
@@ -4004,6 +4004,7 @@ img {
   font-size: var(--font-size-lg);
   line-height: 1.8;
   color: var(--color-text);
+  margin-top: 10px;
 }
 
 .blog-post-content h2 {
