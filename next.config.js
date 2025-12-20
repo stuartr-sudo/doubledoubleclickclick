@@ -53,7 +53,13 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '**.npmmirror.com',
+      },
+      {
+        protocol: 'https',
         hostname: 'registry.npmmirror.com',
+        port: '',
+        pathname: '/**',
       },
     ],
   },
