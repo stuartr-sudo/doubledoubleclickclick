@@ -47,6 +47,22 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.fal.media',
       },
+      {
+        protocol: 'https',
+        hostname: 'registry.npmmirror.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.seeklogo.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.svgrepo.com',
+      },
     ],
   },
   
