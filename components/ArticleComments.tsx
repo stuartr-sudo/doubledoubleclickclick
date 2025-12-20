@@ -44,6 +44,7 @@ export default function ArticleComments({ postSlug }: { postSlug: string }) {
             <div className="comment-input-group">
               <textarea 
                 id="comment-text"
+                className="force-dark-text"
                 placeholder="What are your thoughts? (Links will be removed automatically)"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}

@@ -254,12 +254,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     { id: '3', quote: 'The team at Consulting exceeded our expectations in every way. We are grateful for their partnership and the positive impact they\'ve had on our business.', rating: 5, author_name: 'John Smith', author_title: 'Founder', author_company: 'JS Solutions', author_image: '' }
   ]
   const testimonialsBgColor = homepageContent?.testimonials_bg_color || '#f5f5f5'
-  const servicesSectionTitle = homepageContent?.services_section_title || 'Our services'
-  const servicesSectionDescription = homepageContent?.services_section_description || 'Our team combines expertise with creativity to transform outdoor spaces into breathtaking landscapes that enhance the beauty of any property.'
+  const servicesSectionTitle = homepageContent?.services_section_title || 'How we work with you'
+  const servicesSectionDescription = homepageContent?.services_section_description || 'From self-serve tools to deep-dive consulting, we have a path to get your brand discovered by AI.'
   const servicesItems = homepageContent?.services_items || [
-    { id: '1', title: 'Landscaping works', image: '', link_url: '#' },
-    { id: '2', title: 'Garden design', image: '', link_url: '#' },
-    { id: '3', title: 'Seasonal planting', image: '', link_url: '#' }
+    { id: '1', title: 'The LLM Ranking Playbook', image: '', link_url: '/guide' },
+    { id: '2', title: 'The AI Content Accelerator', image: '', link_url: '/course' },
+    { id: '3', title: 'Strategy Audit (Paid)', image: '', link_url: '/book-call' },
+    { id: '4', title: 'Fractional AI Growth Partner', image: '', link_url: '/enterprise' }
   ]
   const servicesBgColor = homepageContent?.services_bg_color || '#ffffff'
   const blogGridBgColor = homepageContent?.blog_grid_bg_color || '#ffffff'

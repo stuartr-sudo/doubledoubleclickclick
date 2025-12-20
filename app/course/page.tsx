@@ -5,11 +5,11 @@ export default function CoursePage() {
     <main>
       <section className="hero">
         <div className="container">
-          <h1 className="page-title">Rank in LLMs — Team Course</h1>
+          <h1 className="page-title">The AI Content Accelerator</h1>
           <p className="page-description">
-            A live, cohort‑based program to build your LLM content system and ship a first ranking sprint.
+            A comprehensive mini-course to build your AI content system and ship your first ranking sprint.
           </p>
-          <Link href="/lead-capture?type=course" className="btn btn-secondary">Join the Waitlist</Link>
+          <Link href="/lead-capture?type=course" className="btn btn-secondary">Get Instant Access</Link>
         </div>
       </section>
 

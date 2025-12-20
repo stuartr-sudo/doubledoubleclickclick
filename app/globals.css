@@ -4392,6 +4392,13 @@ img {
   margin-bottom: 2rem;
 }
 
+.comments-header h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
 .comment-form-card {
   background: white;
   border: 1px solid #e2e8f0;
@@ -4399,15 +4406,6 @@ img {
   overflow: hidden;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
   margin-bottom: 3rem;
-}
-
-.comment-input-group textarea {
-  width: 100%;
-  min-height: 150px;
-  padding: 1.5rem;
-  border: none;
-  font-size: 1.05rem;
-  background: #fcfcfd;
 }
 
 .comment-footer {
@@ -4419,6 +4417,18 @@ img {
   border-top: 1px solid #f1f5f9;
 }
 
+.comment-policy {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.comment-policy svg {
+  color: #94a3b8;
+}
+
 .comment-post-btn {
   background: #0066cc;
   color: white;
@@ -4427,6 +4437,54 @@ img {
   font-weight: 700;
   border: none;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.comment-post-btn:hover:not(:disabled) {
+  background: #0052a3;
+}
+
+.comment-post-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.comment-list-placeholder {
+  padding: 3rem 1rem;
+  text-align: center;
+  border: 2px dashed #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.placeholder-content p {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.comment-status-message {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.comment-status-message.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.status-icon {
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+.status-text strong {
+  display: block;
 }
 
 /* Related Posts */
@@ -4813,4 +4871,24 @@ img {
   .about-stats {
     flex-direction: column;
   }
+}
+
+/* URGENT FIX: Force dark text in all textareas */
+textarea, 
+textarea#comment-text, 
+.comment-input-group textarea, 
+.force-dark-text {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  color-scheme: light !important;
+}
+
+textarea::placeholder,
+#comment-text::placeholder,
+.force-dark-text::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
 }

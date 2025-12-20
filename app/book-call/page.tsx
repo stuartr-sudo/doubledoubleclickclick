@@ -90,7 +90,7 @@ export default function BookCallPage() {
               marginBottom: '1rem',
               color: '#1e293b',
             }}>
-              Book Your Ai Optimization Discovery Call
+              Paid AI Visibility Strategy Audit
             </h1>
             <p style={{ 
               fontSize: '1.125rem', 
@@ -98,7 +98,7 @@ export default function BookCallPage() {
               maxWidth: '600px',
               margin: '0 auto',
             }}>
-              Let&apos;s discuss how to get your brand discovered by Ai and increase your referral traffic.
+              Nothing is free. This is a high-impact, 60-minute session for serious brands ready to dominate AI-powered search.
             </p>
           </div>
 
@@ -119,7 +119,7 @@ export default function BookCallPage() {
             color: '#64748b',
           }}>
             <p style={{ marginBottom: '0.5rem' }}>
-              <strong>What to expect:</strong>
+              <strong>What is included in this audit:</strong>
             </p>
             <ul style={{ 
               listStyle: 'none', 
@@ -130,19 +130,19 @@ export default function BookCallPage() {
             }}>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                15-minute discovery call
+                60-minute deep-dive strategy session
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                Review your current Ai visibility
+                Comprehensive review of your brand's current AI visibility
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                Discuss opportunities to increase referral traffic
+                Identification of high-value AI referral traffic opportunities
               </li>
               <li style={{ marginBottom: '0.5rem', paddingLeft: '1.5rem', position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 0 }}>✓</span>
-                Get a custom action plan
+                A custom AI Growth Roadmap delivered within 24 hours
               </li>
             </ul>
           </div>

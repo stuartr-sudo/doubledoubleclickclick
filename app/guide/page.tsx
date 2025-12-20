@@ -7,9 +7,9 @@ export default function GuidePage() {
         <div className="container">
           <h1 className="page-title">The LLM Ranking Playbook</h1>
           <p className="page-description">
-            A practical, step‑by‑step system to make your brand the answer AI suggests.
+            A practical, step-by-step system to make your brand the answer AI suggests. PDF + Notion templates + Prompt library.
           </p>
-          <Link href="/lead-capture?type=ebook" className="btn btn-secondary">Get Early Access</Link>
+          <Link href="/lead-capture?type=ebook" className="btn btn-secondary">Get the Playbook Now</Link>
         </div>
       </section>
 

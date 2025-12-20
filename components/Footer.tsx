@@ -13,12 +13,12 @@ export default function Footer() {
           </div>
           
           <div className="footer-links">
-            <h4 className="footer-heading">Company</h4>
+            <h4 className="footer-heading">Products</h4>
             <ul className="footer-list">
-              <li><Link href="/">Home</Link></li>
-              <li><Link href="/about">About Us</Link></li>
-              <li><Link href="/blog">Blog</Link></li>
-              <li><Link href="/contact">Contact</Link></li>
+              <li><Link href="/guide">The Playbook</Link></li>
+              <li><Link href="/course">The Accelerator</Link></li>
+              <li><Link href="/book-call">Strategy Audit</Link></li>
+              <li><Link href="/enterprise">Consulting</Link></li>
             </ul>
           </div>
           

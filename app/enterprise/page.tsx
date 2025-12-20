@@ -85,9 +85,9 @@ export default function EnterprisePage() {
         <div className="tier-page-container tier-page-hero-grid">
           <div className="tier-page-hero-copy">
             <Link href="/" className="back-link">← Back to Home</Link>
-            <h1 className="tier-page-title">Enterprise</h1>
+            <h1 className="tier-page-title">Fractional AI Growth Partner</h1>
             <p className="tier-page-subtitle">
-              Enterprise-grade solutions for large organizations. Custom implementations designed to meet your unique requirements and scale.
+              High-level consulting for organizations that need a dedicated expert to own their AI visibility strategy, implementation, and growth.
             </p>
           </div>
 

@@ -52,6 +52,21 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
       </button>
 
       <nav className="mobile-menu-nav">
+        <Link href="/" className="mobile-menu-link" onClick={onClose}>
+          Home
+        </Link>
+        <Link href="/guide" className="mobile-menu-link" onClick={onClose}>
+          The Playbook
+        </Link>
+        <Link href="/course" className="mobile-menu-link" onClick={onClose}>
+          The Accelerator
+        </Link>
+        <Link href="/book-call" className="mobile-menu-link" onClick={onClose}>
+          Strategy Audit
+        </Link>
+        <Link href="/enterprise" className="mobile-menu-link" onClick={onClose}>
+          Consulting
+        </Link>
         {blogVisible && (
           <Link href="/blog" className="mobile-menu-link" onClick={onClose}>
             Blog
@@ -59,15 +74,6 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
         )}
         <Link href="/about" className="mobile-menu-link" onClick={onClose}>
           About
-        </Link>
-        <Link href="/contact" className="mobile-menu-link" onClick={onClose}>
-          Contact
-        </Link>
-        <a href="#services" className="mobile-menu-link" onClick={handleLinkClick}>
-          Services
-        </a>
-        <Link href="/privacy" className="mobile-menu-link" onClick={onClose}>
-          Privacy
         </Link>
       </nav>
     </div>

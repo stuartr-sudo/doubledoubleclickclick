@@ -17,7 +17,7 @@ export default function QuestionsDiscovery({
   onClose,
   title = 'See What Questions Your Prospects Are Asking',
   description = 'Enter a keyword and discover the top questions people are asking. Answer them before your competitors do.',
-  ctaText = 'Book a Discovery Call',
+  ctaText = 'Book a Strategy Audit',
   aiFacts = [
     'Did you know? Over 85% of consumers use AI-powered search before making purchase decisions.',
     'ChatGPT reaches 100 million users in just 2 months - the fastest growing app in history.',
@@ -697,7 +697,7 @@ export default function QuestionsDiscovery({
                 </div>
                 <div style={{ textAlign: 'center', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
                   <p style={{ marginBottom: '1rem', color: '#64748b' }}>
-                    Book a Discovery call and we&apos;ll show you exactly how to answer these questions to boost your Ai visibility.
+                    Book a Strategy Audit and we&apos;ll show you exactly how to answer these questions to boost your AI visibility.
                   </p>
                   <a 
                     href="/book-call" 

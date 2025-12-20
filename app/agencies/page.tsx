@@ -85,9 +85,9 @@ export default function AgenciesPage() {
         <div className="tier-page-container tier-page-hero-grid">
           <div className="tier-page-hero-copy">
             <Link href="/" className="back-link">← Back to Home</Link>
-            <h1 className="tier-page-title">Agencies</h1>
+            <h1 className="tier-page-title">Agency Partnerships</h1>
             <p className="tier-page-subtitle">
-              Tailored solutions for agencies managing multiple client websites. Scale your Ai optimization services with our comprehensive platform.
+              Scale your agency's AI optimization services. We provide the playbook, the tools, and the high-level consulting you need to deliver results for your clients.
             </p>
           </div>
 
