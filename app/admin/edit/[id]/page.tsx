@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 
 export default function EditPostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'write' | 'preview'>('write')
   const [categories, setCategories] = useState<string[]>([])
+  const initialStatusRef = useRef<'draft' | 'published' | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -41,14 +42,19 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
     try {
       const res = await fetch(`/api/blog/${params.id}`)
       const result = await res.json()
+      if (!res.ok || result?.success === false) {
+        throw new Error(result?.error || 'Failed to load post')
+      }
       const post = result.data || result // Handle both wrapped and unwrapped responses
+      const normalizedStatus: 'draft' | 'published' = post.status === 'published' ? 'published' : 'draft'
+      initialStatusRef.current = normalizedStatus
       setFormData({
         title: post.title || '',
         slug: post.slug || '',
         content: post.content || '',
         meta_description: post.meta_description || '',
         featured_image: post.featured_image || '',
-        status: post.status || 'draft',
+        status: normalizedStatus,
         category: post.category || '',
         tags: Array.isArray(post.tags) ? post.tags.join(', ') : '',
         author: post.author || '',
@@ -57,7 +63,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
       })
     } catch (error) {
       console.error('Error fetching post:', error)
-      alert('Error loading post')
+      setLoadError(error instanceof Error ? error.message : 'Error loading post')
     } finally {
       setLoading(false)
     }
@@ -79,6 +85,14 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loadError) return
+
+    // Safety: confirm before unpublishing a previously published post
+    if (initialStatusRef.current === 'published' && formData.status === 'draft') {
+      const ok = confirm('This will unpublish this article (move it back to Draft). Continue?')
+      if (!ok) return
+    }
+
     setSaving(true)
 
     try {
@@ -126,6 +140,24 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
       </header>
 
       <div className="admin-container">
+        {loadError && (
+          <div
+            className="admin-section"
+            style={{
+              marginBottom: '1.5rem',
+              padding: '1rem',
+              background: '#fff7ed',
+              border: '1px solid #fed7aa',
+              borderRadius: '12px',
+              color: '#9a3412',
+            }}
+          >
+            <strong>Couldn&apos;t load this post.</strong> {loadError}
+            <div style={{ marginTop: '0.5rem' }}>
+              Please refresh. If this keeps happening, the API is failing—don&apos;t save this form.
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="post-form">
           <div className="form-grid">
             <div className="form-main">
@@ -261,12 +293,11 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
                 />
                 {formData.featured_image && (
                   <div className="image-preview">
-                    <Image 
-                      src={formData.featured_image} 
-                      alt="Preview" 
-                      width={400} 
-                      height={250} 
-                      style={{ objectFit: 'cover', width: '100%', height: 'auto' }}
+                    <img
+                      src={formData.featured_image}
+                      alt="Preview"
+                      loading="lazy"
+                      style={{ objectFit: 'cover', width: '100%', height: 'auto', display: 'block' }}
                     />
                   </div>
                 )}
@@ -332,7 +363,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
               <button
                 type="submit"
                 className="btn btn-primary btn-block"
-                disabled={saving}
+                disabled={saving || !!loadError}
               >
                 {saving ? 'Saving...' : 'Update Post'}
               </button>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
+// NOTE: Do not use next/image in the admin UI. A single external hostname can crash the whole admin page.
 
 export default function NewPostPage() {
   const router = useRouter()
@@ -235,12 +235,11 @@ export default function NewPostPage() {
                 />
                 {formData.featured_image && (
                   <div className="image-preview">
-                    <Image 
-                      src={formData.featured_image} 
-                      alt="Preview" 
-                      width={400} 
-                      height={250} 
-                      style={{ objectFit: 'cover', width: '100%', height: 'auto' }}
+                    <img
+                      src={formData.featured_image}
+                      alt="Preview"
+                      loading="lazy"
+                      style={{ objectFit: 'cover', width: '100%', height: 'auto', display: 'block' }}
                     />
                   </div>
                 )}

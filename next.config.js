@@ -63,6 +63,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'www.svgrepo.com',
       },
+      {
+        protocol: 'https',
+        hostname: '**.cloudfront.net',
+      },
     ],
   },
   
