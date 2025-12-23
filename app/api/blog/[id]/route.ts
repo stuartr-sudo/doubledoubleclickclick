@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { verifySession } from '@/lib/auth'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // Force dynamic rendering and disable caching
 export const dynamic = 'force-dynamic'
@@ -44,7 +45,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const { id } = params
     const body = await request.json()
 
@@ -164,7 +165,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const { id } = params
 
     const { error } = await supabase

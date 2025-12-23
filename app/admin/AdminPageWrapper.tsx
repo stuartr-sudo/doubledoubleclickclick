@@ -18,6 +18,7 @@ interface BlogPost {
   author: string
   created_date: string
   updated_date: string
+  user_name?: string
   is_popular: boolean
 }
 
@@ -299,6 +300,9 @@ export default function AdminPageWrapper() {
               <Link href="/admin/leads" className="btn btn-secondary">
                 Leads
               </Link>
+              <Link href="/admin/authors" className="btn btn-secondary">
+                Authors
+              </Link>
               <button onClick={() => setShowCategoryModal(!showCategoryModal)} className="btn btn-secondary">
                 Categories
               </button>
@@ -453,6 +457,9 @@ export default function AdminPageWrapper() {
                       month: 'numeric',
                       day: 'numeric'
                     })}
+                  </p>
+                  <p className="post-meta" style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: '#64748b' }}>
+                    Updated: {new Date(post.updated_date || post.created_date).toLocaleString('en-US')} • {post.user_name || 'unknown'}
                   </p>
                   {post.meta_description && (
                     <p className="post-excerpt">{post.meta_description}</p>

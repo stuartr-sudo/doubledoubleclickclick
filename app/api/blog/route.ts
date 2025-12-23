@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { verifySession } from '@/lib/auth'
+import { createServiceClient } from '@/lib/supabase/service'
 
 export const revalidate = 0
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`
   
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const body = await request.json()
     
     console.log('═══════════════════════════════════════════════════════════')

@@ -585,9 +585,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const handleMenuToggle = () => {
-    setIsMenuOpen(!isMenuOpen)
-  }
+  const handleMenuToggle = useCallback(() => {
+    setIsMenuOpen(prev => !prev)
+  }, [])
+
+  const handleMenuClose = useCallback(() => {
+    setIsMenuOpen(false)
+  }, [])
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index)
@@ -1215,7 +1219,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       <Suspense fallback={null}>
         <MobileMenu 
           isOpen={isMenuOpen} 
-          onClose={handleMenuToggle} 
+          onClose={handleMenuClose} 
           blogVisible={blogSectionVisible}
         />
       </Suspense>
