@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { verifySession } from '@/lib/auth'
 
 // Force dynamic rendering and disable caching
 export const dynamic = 'force-dynamic'
@@ -73,6 +74,25 @@ export async function PUT(
     if (content !== undefined) updateData.content = content
     if (slug !== undefined) updateData.slug = slug
     if (status !== undefined) {
+      // Hard safety: Prevent Published -> Draft unless authenticated admin session.
+      if (status === 'draft') {
+        const { data: currentPost, error: currentPostError } = await supabase
+          .from('blog_posts')
+          .select('status, published_date')
+          .eq('id', id)
+          .single()
+
+        if (!currentPostError && currentPost?.status === 'published') {
+          const { authenticated } = await verifySession()
+          if (!authenticated) {
+            return NextResponse.json(
+              { success: false, error: 'Forbidden: unpublishing requires admin authentication' },
+              { status: 403 }
+            )
+          }
+        }
+      }
+
       updateData.status = status
       // Only set published_date if it's changing to published and doesn't have one
       if (status === 'published') {

@@ -28,6 +28,7 @@ export default function AdminPageWrapper() {
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -187,6 +188,77 @@ export default function AdminPageWrapper() {
     alert(`Deleted ${successCount} post(s).${failCount > 0 ? ` Failed to delete ${failCount} post(s).` : ''}`)
   }
 
+  const bulkPublishSelected = async () => {
+    if (selectedPosts.size === 0) {
+      alert('Please select posts to publish')
+      return
+    }
+    if (!confirm(`Publish ${selectedPosts.size} selected post(s)?`)) return
+
+    setIsPublishing(true)
+    let successCount = 0
+    let failCount = 0
+
+    for (const id of Array.from(selectedPosts)) {
+      try {
+        const res = await fetch(`/api/blog/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'published' }),
+        })
+        if (res.ok) {
+          successCount++
+        } else {
+          failCount++
+        }
+      } catch (error) {
+        console.error(`Error publishing post ${id}:`, error)
+        failCount++
+      }
+    }
+
+    await fetchPosts()
+    setSelectedPosts(new Set())
+    setIsPublishing(false)
+    alert(`Published ${successCount} post(s).${failCount > 0 ? ` Failed to publish ${failCount} post(s).` : ''}`)
+  }
+
+  const publishAllCompleteDrafts = async () => {
+    const completeDrafts = posts.filter(p => p.status === 'draft' && !!p.slug)
+    if (completeDrafts.length === 0) {
+      alert('No complete draft posts found to publish.')
+      return
+    }
+    if (!confirm(`Publish ALL complete drafts (${completeDrafts.length})?`)) return
+
+    setIsPublishing(true)
+    let successCount = 0
+    let failCount = 0
+
+    for (const post of completeDrafts) {
+      try {
+        const res = await fetch(`/api/blog/${post.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'published' }),
+        })
+        if (res.ok) {
+          successCount++
+        } else {
+          failCount++
+        }
+      } catch (error) {
+        console.error(`Error publishing post ${post.id}:`, error)
+        failCount++
+      }
+    }
+
+    await fetchPosts()
+    setSelectedPosts(new Set())
+    setIsPublishing(false)
+    alert(`Published ${successCount} post(s).${failCount > 0 ? ` Failed to publish ${failCount} post(s).` : ''}`)
+  }
+
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/admin/logout', {
@@ -308,6 +380,14 @@ export default function AdminPageWrapper() {
               <>
                 <span className="selected-count">{selectedPosts.size} selected</span>
                 <button
+                  onClick={bulkPublishSelected}
+                  disabled={isPublishing}
+                  className="btn btn-primary"
+                  style={{ marginLeft: '1rem' }}
+                >
+                  {isPublishing ? 'Publishing...' : `Publish Selected (${selectedPosts.size})`}
+                </button>
+                <button
                   onClick={bulkDelete}
                   disabled={isDeleting}
                   className="btn btn-danger"
@@ -316,6 +396,16 @@ export default function AdminPageWrapper() {
                   {isDeleting ? 'Deleting...' : `Delete Selected (${selectedPosts.size})`}
                 </button>
               </>
+            )}
+            {filter === 'draft' && (
+              <button
+                onClick={publishAllCompleteDrafts}
+                disabled={isPublishing}
+                className="btn btn-secondary"
+                style={{ marginLeft: '1rem' }}
+              >
+                {isPublishing ? 'Publishing...' : 'Publish All Complete Drafts'}
+              </button>
             )}
           </div>
         )}

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { verifySession } from '@/lib/auth'
 
 export const revalidate = 0
 
@@ -169,7 +170,21 @@ export async function POST(request: Request) {
 
     // Status & Published Date logic:
     if (status && (status === 'published' || status === 'draft')) {
-      postData.status = status
+      // Hard safety: Prevent Published -> Draft unless this request is from an authenticated admin session.
+      if (existingPost?.status === 'published' && status === 'draft') {
+        const { authenticated } = await verifySession()
+        if (!authenticated) {
+          console.warn(`[${requestId}] 🚫 BLOCKED: Attempt to unpublish without admin session. Preserving published status.`)
+          postData.status = 'published'
+          if (existingPost.published_date) {
+            postData.published_date = existingPost.published_date
+          }
+        } else {
+          postData.status = status
+        }
+      } else {
+        postData.status = status
+      }
       if (status === 'published') {
         // Only set published_date if it's currently missing
         if (!existingPost || !existingPost.published_date) {
