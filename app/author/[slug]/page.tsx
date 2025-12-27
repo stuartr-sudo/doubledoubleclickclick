@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import SiteHeader from '@/components/SiteHeader'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -18,7 +19,7 @@ export default async function AuthorPage({ params }: { params: { slug: string } 
   if (!author) notFound()
 
   const { data: posts } = await supabase
-    .from('blog_posts')
+    .from('site_posts')
     .select('id, slug, title, meta_description, featured_image, published_date, created_date, tags')
     .eq('status', 'published')
     .eq('author', author.name)
@@ -26,23 +27,10 @@ export default async function AuthorPage({ params }: { params: { slug: string } 
     .limit(50)
 
   return (
-    <main>
-      <header className="header">
-        <div className="container">
-          <nav className="nav">
-            <Link href="/" className="logo">SEWO</Link>
-            <div className="nav-links">
-              <Link href="/guide">The Playbook</Link>
-              <Link href="/course">The Accelerator</Link>
-              <Link href="/book-call">Strategy Audit</Link>
-              <Link href="/consulting">Consulting</Link>
-              <Link href="/blog">Blog</Link>
-            </div>
-          </nav>
-        </div>
-      </header>
-
-      <section className="author-hero">
+    <>
+      <SiteHeader />
+      <main>
+        <section className="author-hero">
         <div className="container author-hero-inner">
           <div className="author-avatar">
             {author.avatar_url ? (
@@ -108,7 +96,7 @@ export default async function AuthorPage({ params }: { params: { slug: string } 
         </div>
       </section>
     </main>
+    </>
   )
 }
-
 

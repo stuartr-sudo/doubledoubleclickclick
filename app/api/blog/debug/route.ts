@@ -12,12 +12,12 @@ export async function GET() {
     
     // Get total count
     const { count: totalCount } = await supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('*', { count: 'exact', head: true })
     
     // Get ghost posts (no content or short content)
     const { data: ghostPosts } = await supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('id, title, slug, created_date, status')
       .or('content.is.null,slug.is.null')
       .order('created_date', { ascending: false })
@@ -25,7 +25,7 @@ export async function GET() {
     
     // Get posts with short content (less than 50 chars)
     const { data: shortContentPosts } = await supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('id, title, slug, content, created_date')
       .order('created_date', { ascending: false })
       .limit(50)
@@ -37,14 +37,14 @@ export async function GET() {
     
     // Get recent posts (last 10)
     const { data: recentPosts } = await supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('id, title, slug, created_date, status')
       .order('created_date', { ascending: false })
       .limit(10)
     
     // Get duplicate titles
     const { data: allPosts } = await supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('id, title, slug, created_date')
       .order('created_date', { ascending: false })
     

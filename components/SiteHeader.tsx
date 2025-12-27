@@ -32,6 +32,9 @@ export default function SiteHeader({ blogVisible = true }: SiteHeaderProps) {
             <Link href="/course">The Accelerator</Link>
             <Link href="/book-call">Strategy Audit</Link>
             <Link href="/consulting">Consulting</Link>
+            <Link href="/author/stuart-asta">Author</Link>
+            <Link href="/about">About</Link>
+            <Link href="/contact">Contact</Link>
             {blogVisible && <Link href="/blog">Blog</Link>}
           </div>
 

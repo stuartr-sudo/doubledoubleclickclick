@@ -11,6 +11,7 @@ import ContactForm from '@/components/ContactForm'
 import ArticleReactions from '@/components/ArticleReactions'
 import ArticleComments from '@/components/ArticleComments'
 import RelatedPosts from '@/components/RelatedPosts'
+import SiteHeader from '@/components/SiteHeader'
 
 const demoPosts = [
   {
@@ -81,7 +82,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   try {
     const supabase = await createClient()
     const { data } = await supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('title, meta_title, meta_description, featured_image, published_date, created_date, author, tags')
       .eq('slug', params.slug)
       .eq('status', 'published')
@@ -147,7 +148,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   try {
     const supabase = await createClient()
     const { data } = await supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('*')
       .eq('slug', params.slug)
       .eq('status', 'published')
@@ -242,8 +243,10 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   }
 
   return (
-    <main>
-      {/* Analytics Tracking */}
+    <>
+      <SiteHeader />
+      <main>
+        {/* Analytics Tracking */}
       <BlogTracker slug={post.slug} title={post.title} category={post.category} />
       
       {/* JSON-LD for SEO */}
@@ -256,22 +259,6 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       
-      {/* Header */}
-      <header className="header">
-        <div className="container">
-          <nav className="nav">
-            <Link href="/" className="logo">
-              SEWO
-            </Link>
-            <div className="nav-links">
-              <Link href="/">Home</Link>
-              <Link href="/about">About</Link>
-              <Link href="/blog">Blog</Link>
-            </div>
-          </nav>
-        </div>
-      </header>
-
       {/* Blog Post */}
       <article className="blog-post">
         <div className="container">

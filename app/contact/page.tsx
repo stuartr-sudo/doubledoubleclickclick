@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { trackFormSubmission, trackFormStart } from '@/lib/analytics'
+import SiteHeader from '@/components/SiteHeader'
 
 export default function ContactPage() {
   const [name, setName] = useState('')
@@ -62,167 +63,96 @@ export default function ContactPage() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 24px',
-        backgroundColor: '#050816',
-        color: '#ffffff',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '640px',
-          borderRadius: '24px',
-          padding: '32px 24px',
-          background:
-            'radial-gradient(circle at top, rgba(129, 140, 248, 0.12), transparent 60%), #020617',
-          boxShadow: '0 24px 80px rgba(15, 23, 42, 0.8)',
-        }}
-      >
-        <h1
-          style={{
-            fontSize: 'clamp(2rem, 4vw, 2.75rem)',
-            margin: '0 0 8px',
-            fontWeight: 700,
-          }}
-        >
-          Contact SEWO
-        </h1>
-        <p
-          style={{
-            margin: '0 0 24px',
-            fontSize: '0.98rem',
-            lineHeight: 1.6,
-            color: 'rgba(226, 232, 240, 0.85)',
-          }}
-        >
-          Share a bit about your brand and what you&apos;re trying to solve. We&apos;ll reply within 1–2
-          business days.
-        </p>
+    <>
+      <SiteHeader />
+      <main className="contact-form-section">
+        <div className="container">
+          <div className="contact-form-wrapper">
+            <div className="contact-form-left">
+              <h2>Contact SEWO</h2>
+              <p className="contact-intro">
+                Share a bit about your brand and what you&apos;re trying to solve. We&apos;ll reply within 1–2 business days.
+              </p>
+              
+              <div className="contact-info">
+                <div className="contact-info-item">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                  <a href="mailto:contact@sewo.io">contact@sewo.io</a>
+                </div>
+                <div className="contact-info-item">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                  <span>+1 342223434</span>
+                </div>
+              </div>
+            </div>
 
-        {submitted && (
-          <div
-            style={{
-              marginBottom: '16px',
-              padding: '10px 12px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(22, 163, 74, 0.15)',
-              color: '#bbf7d0',
-              fontSize: '0.9rem',
-            }}
-          >
-            Thanks for reaching out. Your message has been received.
+            <div className="contact-form-right">
+              {submitted ? (
+                <div className="form-message form-success">
+                  <h3>Message Received!</h3>
+                  <p>Thanks for reaching out. We&apos;ll get back to you shortly.</p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit}>
+                  {error && <div className="form-message form-error">{error}</div>}
+                  
+                  <div className="form-group">
+                    <label htmlFor="name">Name</label>
+                    <input
+                      id="name"
+                      type="text"
+                      className="form-input"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your Name"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="email">Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      className="form-input"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="message">How can we help?</label>
+                    <textarea
+                      id="message"
+                      className="form-input form-textarea"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Tell us about your project..."
+                      rows={5}
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="form-submit-btn"
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Sending...' : 'Send Message'}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
-        )}
-
-        {error && (
-          <div
-            style={{
-              marginBottom: '16px',
-              padding: '10px 12px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(248, 113, 113, 0.15)',
-              color: '#fecaca',
-              fontSize: '0.9rem',
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label htmlFor="name" style={{ fontSize: '0.9rem', fontWeight: 500 }}>
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={{
-                padding: '10px 12px',
-                borderRadius: '10px',
-                border: '1px solid rgba(148, 163, 184, 0.4)',
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                color: '#e5e7eb',
-                fontSize: '0.95rem',
-              }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label htmlFor="email" style={{ fontSize: '0.9rem', fontWeight: 500 }}>
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{
-                padding: '10px 12px',
-                borderRadius: '10px',
-                border: '1px solid rgba(148, 163, 184, 0.4)',
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                color: '#e5e7eb',
-                fontSize: '0.95rem',
-              }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label htmlFor="message" style={{ fontSize: '0.9rem', fontWeight: 500 }}>
-              How can we help?
-            </label>
-            <textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={5}
-              required
-              style={{
-                padding: '10px 12px',
-                borderRadius: '10px',
-                border: '1px solid rgba(148, 163, 184, 0.4)',
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                color: '#e5e7eb',
-                fontSize: '0.95rem',
-                resize: 'vertical',
-              }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            style={{
-              marginTop: '8px',
-              padding: '10px 20px',
-              borderRadius: '999px',
-              border: 'none',
-              background:
-                'linear-gradient(135deg, rgba(56, 189, 248, 1), rgba(129, 140, 248, 1))',
-              color: '#0f172a',
-              fontWeight: 600,
-              fontSize: '0.95rem',
-              cursor: submitting ? 'default' : 'pointer',
-              opacity: submitting ? 0.7 : 1,
-            }}
-          >
-            {submitting ? 'Sending…' : 'Submit'}
-          </button>
-        </form>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   )
 }
-
-

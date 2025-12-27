@@ -1,215 +1,97 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { verifySession } from '@/lib/auth'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const revalidate = 0
 
 /**
- * POST /api/blog - Create or update a blog post
+ * POST /api/blog - Create, Update, or Unpublish a blog post
  * 
- * RULES:
- * 1. If postId is provided, use it as the ONLY identifier (ignore slug/title)
- * 2. If postId exists in DB, UPDATE that post
- * 3. If postId doesn't exist, INSERT new post
- * 4. Use the slug sent by the API - NEVER generate it
- * 5. One request = ONE database operation (update OR insert, never both)
+ * THE RULES (FOR SEWO ONLY):
+ * 1. ONLY use 'site_posts' table. Never touch 'blog_posts'.
+ * 2. If status is 'published':
+ *    - Check if postId (external_id) exists.
+ *    - If exists: UPDATE the record.
+ *    - If not: INSERT new record.
+ * 3. If status is 'draft':
+ *    - Check if postId (external_id) exists.
+ *    - If exists: DELETE the record (this is "unpublishing").
+ *    - If not: Do nothing (ignore it, we don't store drafts).
  */
 export async function POST(request: Request) {
-  const requestTimestamp = new Date().toISOString()
   const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`
   
   try {
     const supabase = createServiceClient()
     const body = await request.json()
     
-    console.log('═══════════════════════════════════════════════════════════')
-    console.log(`[${requestId}] NEW REQUEST at ${requestTimestamp}`)
-    console.log('FULL REQUEST BODY:', JSON.stringify(body, null, 2))
-    console.log('═══════════════════════════════════════════════════════════')
+    console.log(`[${requestId}] 📥 SEWO API REQUEST RECEIVED`)
     
-    // Extract fields
+    // 1. Extract and Normalize Fields
     const {
-      // External ID (PRIMARY identifier from Base44)
-      postId,
-      post_id,
-      external_id,
-      // Content fields
-      title,
-      content,
-      html,
-      content_html,
-      slug,
-      status, // Removed default 'published'
-      // Optional fields
-      category,
-      tags,
-      featured_image,
-      author,
-      meta_title,
-      meta_description,
-      focus_keyword,
-      excerpt,
-      generated_llm_schema,
-      export_seo_as_tags,
-      user_name,
-      is_popular
+      postId, title, slug, content, status,
+      meta_title, meta_description, focus_keyword, excerpt,
+      category, tags, author, featured_image,
+      generated_llm_schema, export_seo_as_tags, user_name, is_popular
     } = body
 
-    // Normalize external ID
-    const externalId = postId || post_id || external_id
-    
-    // Normalize content
-    const finalContent = content || html || content_html
-    
-    // Validate required fields
-    if (!title || !finalContent) {
-      console.log(`[${requestId}] ❌ VALIDATION FAILED: Missing title or content`)
-      console.log(`[${requestId}]   Has title: ${!!title}`)
-      console.log(`[${requestId}]   Has content: ${!!finalContent}`)
-      console.log(`[${requestId}] ⚠️  WARNING: This request will be REJECTED`)
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Title and content are required',
-          received: {
-            title: !!title,
-            content: !!finalContent,
-            postId: externalId || 'NONE'
-          }
-        },
-        { status: 400 }
-      )
-    }
-    
-    if (finalContent.trim().length < 50) {
-      console.log(`[${requestId}] ❌ VALIDATION FAILED: Content too short (${finalContent.trim().length} chars)`)
-      console.log(`[${requestId}] ⚠️  WARNING: This request will be REJECTED`)
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Content must be at least 50 characters',
-          received: {
-            contentLength: finalContent.trim().length,
-            postId: externalId || 'NONE'
-          }
-        },
-        { status: 400 }
-      )
+    // We MUST have an identifier to know which post to update/unpublish
+    if (!postId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Missing required field: "postId". This is our unique identifier for updates and unpublishing.' 
+      }, { status: 400 })
     }
 
-    // STRICT VALIDATION: Require either postId OR slug
-    // We cannot allow creating posts with NEITHER, as it causes duplicates
-    if (!externalId && (!slug || slug.trim().length === 0)) {
-      console.log(`[${requestId}] ❌ VALIDATION FAILED: Missing both postId and slug`)
-      console.log(`[${requestId}]   We require at least one identifier to prevent duplicates`)
-      console.log(`[${requestId}] ⚠️  WARNING: This request will be REJECTED`)
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Missing identifier: You must provide either postId (recommended) or slug',
-          received: {
-            postId: 'MISSING',
-            slug: 'MISSING'
-          }
-        },
-        { status: 400 }
-      )
+    // 2. Normalize Status
+    const normalizedStatus = String(status || 'published').toLowerCase().trim()
+    const isPublished = ['published', 'publish', 'active', 'live', 'true', '1'].includes(normalizedStatus)
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CASE A: UNPUBLISHING (Status is DRAFT)
+    // ═══════════════════════════════════════════════════════════════════════
+    if (!isPublished) {
+      console.log(`[${requestId}] 🗑️ UNPUBLISH REQUEST: Deleting post with external_id: ${postId}`)
+      const { error: deleteError } = await supabase
+        .from('site_posts')
+        .delete()
+        .eq('external_id', postId)
+      
+      if (deleteError) {
+        console.error(`[${requestId}] ❌ Delete error:`, deleteError)
+        return NextResponse.json({ success: false, error: 'Failed to unpublish post' }, { status: 500 })
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Post successfully unpublished (removed from database)',
+        operation: 'delete'
+      }, { status: 200 })
     }
 
-    // Use the slug from the API - NEVER generate it if possible
-    // Only generate if we have a postId but no slug (rare edge case)
-    const finalSlug = slug && slug.trim() 
-      ? slug.trim() 
-      : title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').substring(0, 100)
+    // ═══════════════════════════════════════════════════════════════════════
+    // CASE B: PUBLISHING (Status is PUBLISHED)
+    // ═══════════════════════════════════════════════════════════════════════
     
-    console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-    console.log(`[${requestId}] ✅ VALIDATION PASSED`)
-    console.log(`[${requestId}]   external_id: ${externalId || 'NONE'}`)
-    console.log(`[${requestId}]   title: "${title}"`)
-    console.log(`[${requestId}]   title length: ${title.length}`)
-    console.log(`[${requestId}]   slug (from API): ${slug || 'not provided'}`)
-    console.log(`[${requestId}]   slug (final): ${finalSlug}`)
-    console.log(`[${requestId}]   content length: ${finalContent.length}`)
-    console.log(`[${requestId}]   content preview: ${finalContent.substring(0, 100)}...`)
-    console.log(`[${requestId}]   status: ${status}`)
-    console.log(`[${requestId}]   category: ${category || 'none'}`)
-    console.log(`[${requestId}]   tags: ${tags ? JSON.stringify(tags) : 'none'}`)
-    console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-
-    // 1. Identify existing post first
-    let existingPost = null
-    
-    if (externalId) {
-      // Check by external_id (PRIMARY identifier)
-      const { data } = await supabase
-        .from('blog_posts')
-        .select('id, slug, title, external_id, status, published_date')
-        .eq('external_id', externalId)
-        .maybeSingle()
-      existingPost = data
-    }
-    
-    if (!existingPost && finalSlug) {
-      // Fallback: Check by slug
-      const { data } = await supabase
-        .from('blog_posts')
-        .select('id, slug, title, external_id, status, published_date')
-        .eq('slug', finalSlug)
-        .maybeSingle()
-      existingPost = data
+    // Validate required content for publishing
+    if (!title || !content) {
+      return NextResponse.json({ success: false, error: 'Title and content are required for publishing.' }, { status: 400 })
     }
 
-    // 2. Build update/insert data
+    // Prepare data for site_posts
     const postData: any = {
+      external_id: postId,
       title: title.trim(),
-      content: finalContent,
-      slug: finalSlug,
+      content: content,
+      slug: slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      status: 'published',
       updated_date: new Date().toISOString(),
-      user_name: user_name || 'api'
+      user_name: user_name || 'SEWO'
     }
 
-    // Status & Published Date logic:
-    if (status && (status === 'published' || status === 'draft')) {
-      // Hard safety: Prevent Published -> Draft unless this request is from an authenticated admin session.
-      if (existingPost?.status === 'published' && status === 'draft') {
-        const { authenticated } = await verifySession()
-        if (!authenticated) {
-          console.warn(`[${requestId}] 🚫 BLOCKED: Attempt to unpublish without admin session. Preserving published status.`)
-          postData.status = 'published'
-          if (existingPost.published_date) {
-            postData.published_date = existingPost.published_date
-          }
-        } else {
-          postData.status = status
-        }
-      } else {
-        postData.status = status
-      }
-      if (status === 'published') {
-        // Only set published_date if it's currently missing
-        if (!existingPost || !existingPost.published_date) {
-          postData.published_date = new Date().toISOString()
-        }
-      }
-    } else if (!existingPost) {
-      // For NEW posts, default to published if no valid status provided
-      postData.status = 'published'
-      postData.published_date = new Date().toISOString()
-    }
-    // CRITICAL: If post already exists and NO status was provided in this request,
-    // we explicitly preserve the existing status to prevent unpublishing.
-    else if (existingPost && existingPost.status) {
-      postData.status = existingPost.status
-      if (existingPost.published_date) {
-        postData.published_date = existingPost.published_date
-      }
-    }
-    
-    // Add optional fields
-    if (externalId) postData.external_id = externalId
+    // Add optional fields if provided
     if (category !== undefined) postData.category = category
-    if (tags !== undefined) postData.tags = tags
+    if (tags !== undefined) postData.tags = Array.isArray(tags) ? tags : []
     if (featured_image !== undefined) postData.featured_image = featured_image
     if (author !== undefined) postData.author = author
     if (meta_title !== undefined) postData.meta_title = meta_title
@@ -220,222 +102,56 @@ export async function POST(request: Request) {
     if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
     if (typeof is_popular === 'boolean') postData.is_popular = is_popular
 
-    if (existingPost) {
-      // UPDATE existing post
-      console.log(`[${requestId}] 🔄 UPDATING EXISTING POST: ${existingPost.id}`)
-      
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .update(postData)
-        .eq('id', existingPost.id)
-        .select()
-        .single()
+    // Set published_date if not already set (upsert handles this carefully)
+    postData.published_date = new Date().toISOString()
 
-      if (error) {
-        console.error(`[${requestId}] ❌ Update error:`, error)
-        return NextResponse.json(
-          { success: false, error: 'Failed to update post', details: error.message },
-          { status: 500 }
-        )
-      }
+    console.log(`[${requestId}] 🚀 UPSERTING POST: ${postId} (${postData.title})`)
 
-      console.log(`[${requestId}] ✅ POST UPDATED SUCCESSFULLY`)
-      console.log(`[${requestId}]   Final Title: "${data.title}"`)
-      console.log(`[${requestId}]   Final Slug: ${data.slug}`)
-      console.log(`[${requestId}]   Final Content Length: ${data.content?.length || 0}`)
-      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      
-      return NextResponse.json({
-        success: true,
-        data: {
-          id: data.id,
-          title: data.title,
-          slug: data.slug,
-          status: data.status,
-          external_id: data.external_id,
-          created_date: data.created_date,
-          operation: 'update'
-        }
-      }, { status: 200 })
+    const { data, error } = await supabase
+      .from('site_posts')
+      .upsert(postData, { onConflict: 'external_id' })
+      .select()
+      .single()
+
+    if (error) {
+      console.error(`[${requestId}] ❌ Upsert error:`, error)
+      return NextResponse.json({ success: false, error: 'Failed to publish post', details: error.message }, { status: 500 })
     }
-    
-    // CRITICAL: If we have an external_id but no existing post found, this is an UPDATE request that failed
-    // DO NOT CREATE A NEW POST - return error instead
-    if (externalId) {
-      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      console.log(`[${requestId}] ❌ UPDATE FAILED: Post not found`)
-      console.log(`[${requestId}]   Searched for external_id: ${externalId}`)
-      console.log(`[${requestId}]   This appears to be an UPDATE request, but post doesn't exist`)
-      console.log(`[${requestId}]   REFUSING to create new post - returning error instead`)
-      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      
-      return NextResponse.json({
-        success: false,
-        error: 'Post not found for update',
-        details: `No post found with external_id: ${externalId}. Cannot update a post that doesn't exist. Create it first, then update.`,
-        received: {
-          external_id: externalId,
-          slug: finalSlug,
-          title: title
-        }
-      }, { status: 404 })
-    }
-    
-    // Only INSERT if NO external_id (meaning this is a CREATE request, not UPDATE)
-    else {
-      // ═══════════════════════════════════════════════════════════════════════
-      // EMERGENCY DEDUPLICATION: Check if same title was created in last 60 seconds
-      // This catches duplicate requests from App Builders that fire twice
-      // ═══════════════════════════════════════════════════════════════════════
-      console.log(`[${requestId}] 🔒 DEDUPLICATION CHECK: Looking for recent posts with same title...`)
-      
-      const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString()
-      const { data: recentDuplicate } = await supabase
-        .from('blog_posts')
-        .select('id, title, slug, created_date')
-        .ilike('title', title.trim())
-        .gte('created_date', sixtySecondsAgo)
-        .limit(1)
-        .maybeSingle()
-      
-      if (recentDuplicate) {
-        console.log(`[${requestId}] ⛔ DUPLICATE BLOCKED!`)
-        console.log(`[${requestId}]   Found existing post created ${recentDuplicate.created_date}`)
-        console.log(`[${requestId}]   Existing ID: ${recentDuplicate.id}`)
-        console.log(`[${requestId}]   Existing Title: "${recentDuplicate.title}"`)
-        console.log(`[${requestId}]   This request is a DUPLICATE - rejecting to prevent double posts`)
-        console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-        
-        return NextResponse.json({
-          success: false,
-          error: 'Duplicate request blocked',
-          details: `A post with this title was created ${Math.round((Date.now() - new Date(recentDuplicate.created_date).getTime()) / 1000)} seconds ago. This appears to be a duplicate request.`,
-          existing_post: {
-            id: recentDuplicate.id,
-            slug: recentDuplicate.slug
-          }
-        }, { status: 409 }) // 409 Conflict
-      }
-      
-      console.log(`[${requestId}] ✅ No recent duplicates found - proceeding with INSERT`)
-      
-      // INSERT new post
-      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      console.log(`[${requestId}] ➕ INSERTING NEW POST`)
-      console.log(`[${requestId}]   Title: "${title}"`)
-      console.log(`[${requestId}]   Slug: ${finalSlug}`)
-      console.log(`[${requestId}]   External ID: ${externalId || 'NONE'}`)
-      console.log(`[${requestId}]   Content Length: ${finalContent.length}`)
-      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .insert(postData)
-        .select()
-        .single()
 
-      if (error) {
-        console.error('[BLOG API] Insert error:', error)
-        
-        // If duplicate, try to update instead
-        if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
-          console.log('[BLOG API] Duplicate detected, attempting update...')
-          
-          // Try to find by slug
-          const { data: existing } = await supabase
-            .from('blog_posts')
-            .select('id')
-            .eq('slug', finalSlug)
-            .maybeSingle()
-          
-          if (existing) {
-            const { data: updated, error: updateError } = await supabase
-              .from('blog_posts')
-              .update(postData)
-              .eq('id', existing.id)
-              .select()
-              .single()
-            
-            if (updateError) {
-              return NextResponse.json(
-                { success: false, error: 'Failed to update duplicate post', details: updateError.message },
-                { status: 500 }
-              )
-            }
-            
-            console.log('[BLOG API] ✅ Updated existing post (duplicate prevention)')
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-            
-            return NextResponse.json({
-              success: true,
-              data: {
-                id: updated.id,
-                title: updated.title,
-                slug: updated.slug,
-                status: updated.status,
-                external_id: updated.external_id,
-                created_date: updated.created_date,
-                operation: 'update'
-              }
-            }, { status: 200 })
-          }
-        }
-        
-        return NextResponse.json(
-          { success: false, error: 'Failed to create post', details: error.message },
-          { status: 500 }
-        )
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: data.id,
+        title: data.title,
+        slug: data.slug,
+        status: data.status,
+        operation: 'upsert'
       }
+    }, { status: 200 })
 
-      console.log(`[${requestId}] ✅ POST CREATED SUCCESSFULLY`)
-      console.log(`[${requestId}]   New Post ID: ${data.id}`)
-      console.log(`[${requestId}]   Final Title: "${data.title}"`)
-      console.log(`[${requestId}]   Final Slug: ${data.slug}`)
-      console.log(`[${requestId}]   Final Content Length: ${data.content?.length || 0}`)
-      console.log(`[${requestId}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      
-      return NextResponse.json({
-        success: true,
-        data: {
-          id: data.id,
-          title: data.title,
-          slug: data.slug,
-          status: data.status,
-          external_id: data.external_id,
-          created_date: data.created_date,
-          operation: 'insert'
-        }
-      }, { status: 201 })
-    }
   } catch (error) {
-    console.error('[BLOG API] Fatal error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error', details: String(error) },
-      { status: 500 }
-    )
+    console.error(`[${requestId}] ❌ FATAL ERROR:`, error)
+    return NextResponse.json({ success: false, error: 'Internal server error', details: String(error) }, { status: 500 })
   }
 }
 
 /**
- * GET /api/blog - Fetch blog posts
+ * GET /api/blog - Fetch blog posts (SEWO ONLY)
  */
 export async function GET(request: Request) {
   try {
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status') || 'published'
-    const limit = parseInt(searchParams.get('limit') || '10')
+    const limit = parseInt(searchParams.get('limit') || '100')
     const category = searchParams.get('category')
 
+    // Always only read from site_posts
     const query = supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('*')
+      .order('published_date', { ascending: false, nullsFirst: false })
       .order('created_date', { ascending: false })
       .limit(limit)
-
-    if (status !== 'all') {
-      query.eq('status', status)
-    }
 
     if (category) {
       query.eq('category', category)
@@ -443,31 +159,11 @@ export async function GET(request: Request) {
 
     const { data, error } = await query
 
-    if (error) {
-      return NextResponse.json(
-        { error: 'Failed to fetch posts', details: error.message },
-        { status: 500 }
-      )
-    }
+    if (error) throw error
 
-    // Deduplicate by slug (keep newest)
-    const uniquePosts = new Map<string, any>()
-    for (const post of data || []) {
-      const key = post.slug || post.id
-      if (!uniquePosts.has(key)) {
-        uniquePosts.set(key, post)
-      }
-    }
-
-    return NextResponse.json(
-      { success: true, data: Array.from(uniquePosts.values()) },
-      { status: 200 }
-    )
+    return NextResponse.json({ success: true, data: data || [] }, { status: 200 })
   } catch (error) {
     console.error('[BLOG API] GET error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
 }

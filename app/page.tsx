@@ -37,7 +37,7 @@ export default async function HomePage() {
   // Fetch blog posts for homepage preview (limit to 6)
   // We prioritize 'popular' posts if they are flagged, then fall back to latest by published date
   const { data: allPosts } = await supabase
-    .from('blog_posts')
+    .from('site_posts')
     .select('id, title, slug, meta_description, featured_image, created_date, published_date, is_popular')
     .eq('status', 'published')
     .limit(50) // Fetch enough to sort manually

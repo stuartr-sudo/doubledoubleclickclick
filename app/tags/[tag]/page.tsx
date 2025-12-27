@@ -8,7 +8,7 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
   const tag = decodeURIComponent(params.tag)
 
   const { data } = await supabase
-    .from('blog_posts')
+    .from('site_posts')
     .select('id, title, slug, meta_description, featured_image, created_date, published_date, tags, category')
     .ilike('tags', `%${tag}%`)
     .eq('status', 'published')

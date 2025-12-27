@@ -87,9 +87,9 @@ export default function EditPostClient({ id }: { id: string }) {
     e.preventDefault()
     if (loadError) return
 
-    // Safety: confirm before unpublishing a previously published post
-    if (initialStatusRef.current === 'published' && formData.status === 'draft') {
-      const ok = confirm('This will unpublish this article (move it back to Draft). Continue?')
+    // Safety: confirm before unpublishing
+    if (formData.status === 'draft') {
+      const ok = confirm('Setting status to "Draft" will REMOVE this article from the live site. Continue?')
       if (!ok) return
     }
 

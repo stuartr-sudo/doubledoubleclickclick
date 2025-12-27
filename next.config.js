@@ -71,7 +71,34 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'media.licdn.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'img.icons8.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'encrypted-tbn0.gstatic.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'assets.streamlinehq.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'uxwing.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'custom.typingmind.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'raw.githubusercontent.com',
+      },
     ],
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   
   // Experimental features for better performance

@@ -5,6 +5,7 @@ import QuestionsDiscovery from '@/components/QuestionsDiscovery'
 import ContactForm from '@/components/ContactForm'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
+import SiteHeader from '@/components/SiteHeader'
 
 export const metadata: Metadata = {
   title: 'Blog | SEWO - Get Found Everywhere',
@@ -38,7 +39,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
     
     // Fetch ALL published blog posts (no limit - shows all posts)
     const { data } = await supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('id, title, slug, meta_description, featured_image, created_date, published_date, tags, category')
       .eq('status', 'published')
     
@@ -72,24 +73,10 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
   const uniqueCategories = Array.from(new Set(postsData.map((p) => p.category))).filter(Boolean)
 
   return (
-    <main>
-      {/* Header */}
-      <header className="header">
-        <div className="container">
-          <nav className="nav">
-            <Link href="/" className="logo">
-              SEWO
-            </Link>
-            <div className="nav-links">
-              <Link href="/">Home</Link>
-              <Link href="/about">About</Link>
-              <Link href="/blog">Blog</Link>
-            </div>
-          </nav>
-        </div>
-      </header>
-
-      {/* Page Title & Questions Discovery Tool */}
+    <>
+      <SiteHeader />
+      <main>
+        {/* Page Title & Questions Discovery Tool */}
       <section className="blog-page-header" style={{ padding: 'var(--spacing-md) 0 var(--spacing-xl) 0', marginBottom: '0', background: 'var(--color-bg)' }}>
         <div className="container">
           <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-lg)' }}>Answers to Your Questions</h1>

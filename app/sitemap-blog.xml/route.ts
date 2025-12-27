@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   try {
     const supabase = await createClient()
     const { data: posts } = await supabase
-      .from('blog_posts')
+      .from('site_posts')
       .select('slug, title, meta_description, updated_date, created_date, published_date, category')
       .eq('status', 'published')
       .order('created_date', { ascending: false })

@@ -26,7 +26,6 @@ export default function AdminPageWrapper() {
   const router = useRouter()
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -75,8 +74,8 @@ export default function AdminPageWrapper() {
 
   const fetchPosts = async () => {
     try {
-      // Fetch ALL posts (published + draft) with high limit
-      const res = await fetch('/api/blog?status=all&limit=1000')
+      // Fetch ONLY published posts for the website view
+      const res = await fetch('/api/blog?status=published&limit=1000')
       const result = await res.json()
       setPosts(result.data || [])
     } catch (error) {
@@ -274,10 +273,7 @@ export default function AdminPageWrapper() {
     }
   }
 
-  const filteredPosts = posts.filter(post => {
-    if (filter === 'all') return true
-    return post.status === filter
-  })
+  const filteredPosts = posts // No more status filters needed, all posts in site_posts are published
 
   if (loading) {
     return (
@@ -350,24 +346,9 @@ export default function AdminPageWrapper() {
         )}
 
         <div className="admin-filters">
-          <button
-            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => setFilter('all')}
-          >
-            All Posts ({posts.length})
-          </button>
-          <button
-            className={`filter-btn ${filter === 'published' ? 'active' : ''}`}
-            onClick={() => setFilter('published')}
-          >
-            Published ({posts.filter(p => p.status === 'published').length})
-          </button>
-          <button
-            className={`filter-btn ${filter === 'draft' ? 'active' : ''}`}
-            onClick={() => setFilter('draft')}
-          >
-            Drafts ({posts.filter(p => p.status === 'draft').length})
-          </button>
+          <h2 style={{ fontSize: '1.25rem', color: '#1e293b' }}>
+            Live Articles ({posts.length})
+          </h2>
         </div>
 
         {filteredPosts.length > 0 && (
@@ -380,37 +361,19 @@ export default function AdminPageWrapper() {
               />
               <span>Select All ({filteredPosts.length})</span>
             </label>
-            {selectedPosts.size > 0 && (
-              <>
-                <span className="selected-count">{selectedPosts.size} selected</span>
-                <button
-                  onClick={bulkPublishSelected}
-                  disabled={isPublishing}
-                  className="btn btn-primary"
-                  style={{ marginLeft: '1rem' }}
-                >
-                  {isPublishing ? 'Publishing...' : `Publish Selected (${selectedPosts.size})`}
-                </button>
-                <button
-                  onClick={bulkDelete}
-                  disabled={isDeleting}
-                  className="btn btn-danger"
-                  style={{ marginLeft: '1rem' }}
-                >
-                  {isDeleting ? 'Deleting...' : `Delete Selected (${selectedPosts.size})`}
-                </button>
-              </>
-            )}
-            {filter === 'draft' && (
-              <button
-                onClick={publishAllCompleteDrafts}
-                disabled={isPublishing}
-                className="btn btn-secondary"
-                style={{ marginLeft: '1rem' }}
-              >
-                {isPublishing ? 'Publishing...' : 'Publish All Complete Drafts'}
-              </button>
-            )}
+    if (selectedPosts.size > 0 && (
+      <>
+        <span className="selected-count">{selectedPosts.size} selected</span>
+        <button
+          onClick={bulkDelete}
+          disabled={isDeleting}
+          className="btn btn-danger"
+          style={{ marginLeft: '1rem' }}
+        >
+          {isDeleting ? 'Deleting...' : `Delete Selected (${selectedPosts.size})`}
+        </button>
+      </>
+    ))
           </div>
         )}
 
