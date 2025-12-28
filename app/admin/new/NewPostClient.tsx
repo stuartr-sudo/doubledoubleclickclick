@@ -15,7 +15,7 @@ export default function NewPostClient() {
     content: '',
     meta_description: '',
     featured_image: '',
-    status: 'draft',
+    status: 'published',
     category: '',
     tags: '',
     author: '',

@@ -11,14 +11,13 @@ export default function EditPostClient({ id }: { id: string }) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'write' | 'preview'>('write')
   const [categories, setCategories] = useState<string[]>([])
-  const initialStatusRef = useRef<'draft' | 'published' | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
     content: '',
     meta_description: '',
     featured_image: '',
-    status: 'draft',
+    status: 'published',
     category: '',
     tags: '',
     author: '',
@@ -46,15 +45,13 @@ export default function EditPostClient({ id }: { id: string }) {
         throw new Error(result?.error || 'Failed to load post')
       }
       const post = result.data || result // Handle both wrapped and unwrapped responses
-      const normalizedStatus: 'draft' | 'published' = post.status === 'published' ? 'published' : 'draft'
-      initialStatusRef.current = normalizedStatus
       setFormData({
         title: post.title || '',
         slug: post.slug || '',
         content: post.content || '',
         meta_description: post.meta_description || '',
         featured_image: post.featured_image || '',
-        status: normalizedStatus,
+        status: 'published',
         category: post.category || '',
         tags: Array.isArray(post.tags) ? post.tags.join(', ') : '',
         author: post.author || '',
@@ -86,12 +83,6 @@ export default function EditPostClient({ id }: { id: string }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (loadError) return
-
-    // Safety: confirm before unpublishing
-    if (formData.status === 'draft') {
-      const ok = confirm('Setting status to "Draft" will REMOVE this article from the live site. Continue?')
-      if (!ok) return
-    }
 
     setSaving(true)
 

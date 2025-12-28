@@ -361,19 +361,19 @@ export default function AdminPageWrapper() {
               />
               <span>Select All ({filteredPosts.length})</span>
             </label>
-    if (selectedPosts.size > 0 && (
-      <>
-        <span className="selected-count">{selectedPosts.size} selected</span>
-        <button
-          onClick={bulkDelete}
-          disabled={isDeleting}
-          className="btn btn-danger"
-          style={{ marginLeft: '1rem' }}
-        >
-          {isDeleting ? 'Deleting...' : `Delete Selected (${selectedPosts.size})`}
-        </button>
-      </>
-    ))
+            {selectedPosts.size > 0 && (
+              <>
+                <span className="selected-count">{selectedPosts.size} selected</span>
+                <button
+                  onClick={bulkDelete}
+                  disabled={isDeleting}
+                  className="btn btn-danger"
+                  style={{ marginLeft: '1rem' }}
+                >
+                  {isDeleting ? 'Deleting...' : `Delete Selected (${selectedPosts.size})`}
+                </button>
+              </>
+            )}
           </div>
         )}
 

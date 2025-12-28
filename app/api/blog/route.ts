@@ -29,33 +29,39 @@ export async function POST(request: Request) {
     
     // 1. Extract and Normalize Fields
     const {
-      postId, title, slug, content, status,
+      postId, post_id, external_id,
+      title, slug, content, html, content_html, status,
       meta_title, meta_description, focus_keyword, excerpt,
       category, tags, author, featured_image,
-      generated_llm_schema, export_seo_as_tags, user_name, is_popular
+      generated_llm_schema, export_seo_as_tags, user_name
     } = body
 
-    // We MUST have an identifier to know which post to update/unpublish
-    if (!postId) {
+    // Normalize identifier - MUST have one
+    const finalExternalId = postId || post_id || external_id
+    if (!finalExternalId) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Missing required field: "postId". This is our unique identifier for updates and unpublishing.' 
+        error: 'Missing required field: "postId".' 
       }, { status: 400 })
     }
 
-    // 2. Normalize Status
-    const normalizedStatus = String(status || 'published').toLowerCase().trim()
-    const isPublished = ['published', 'publish', 'active', 'live', 'true', '1'].includes(normalizedStatus)
+    // Normalize content
+    const finalContent = content || html || content_html
+
+    // 2. Normalize Status (BE FUCKING CLEAR: Anything not explicitly 'draft' is 'published')
+    const incomingStatus = String(status || '').toLowerCase().trim()
+    const isExplicitDraft = ['draft', 'unpublish', 'false', '0'].includes(incomingStatus)
+    const isPublished = !isExplicitDraft
 
     // ═══════════════════════════════════════════════════════════════════════
-    // CASE A: UNPUBLISHING (Status is DRAFT)
+    // CASE A: UNPUBLISHING (Status is explicitly DRAFT)
     // ═══════════════════════════════════════════════════════════════════════
     if (!isPublished) {
-      console.log(`[${requestId}] 🗑️ UNPUBLISH REQUEST: Deleting post with external_id: ${postId}`)
+      console.log(`[${requestId}] 🗑️ UNPUBLISH REQUEST: Deleting post with external_id: ${finalExternalId}`)
       const { error: deleteError } = await supabase
         .from('site_posts')
         .delete()
-        .eq('external_id', postId)
+        .eq('external_id', finalExternalId)
       
       if (deleteError) {
         console.error(`[${requestId}] ❌ Delete error:`, deleteError)
@@ -64,48 +70,52 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ 
         success: true, 
-        message: 'Post successfully unpublished (removed from database)',
-        operation: 'delete'
+        message: 'Post successfully unpublished (removed from live site)',
+        operation: 'delete',
+        api_version: 'SEWO-v3-FIXED'
       }, { status: 200 })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // CASE B: PUBLISHING (Status is PUBLISHED)
+    // CASE B: PUBLISHING (Status is PUBLISHED or not provided)
     // ═══════════════════════════════════════════════════════════════════════
     
     // Validate required content for publishing
-    if (!title || !content) {
+    if (!title || !finalContent) {
       return NextResponse.json({ success: false, error: 'Title and content are required for publishing.' }, { status: 400 })
     }
 
     // Prepare data for site_posts
     const postData: any = {
-      external_id: postId,
+      external_id: finalExternalId,
       title: title.trim(),
-      content: content,
+      content: finalContent,
       slug: slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-      status: 'published',
+      status: 'published', // FORCE published status in DB
       updated_date: new Date().toISOString(),
       user_name: user_name || 'SEWO'
     }
 
-    // Add optional fields if provided
-    if (category !== undefined) postData.category = category
+    // Add optional fields ONLY if provided in payload (don't overwrite with null/empty)
     if (tags !== undefined) postData.tags = Array.isArray(tags) ? tags : []
-    if (featured_image !== undefined) postData.featured_image = featured_image
-    if (author !== undefined) postData.author = author
-    if (meta_title !== undefined) postData.meta_title = meta_title
-    if (meta_description !== undefined) postData.meta_description = meta_description
-    if (focus_keyword !== undefined) postData.focus_keyword = focus_keyword
-    if (excerpt !== undefined) postData.excerpt = excerpt
-    if (generated_llm_schema !== undefined) postData.generated_llm_schema = generated_llm_schema
+    if (featured_image) postData.featured_image = featured_image
+    if (author) postData.author = author
+    if (meta_title) postData.meta_title = meta_title
+    if (meta_description) postData.meta_description = meta_description
+    if (focus_keyword) postData.focus_keyword = focus_keyword
+    if (excerpt) postData.excerpt = excerpt
+    if (generated_llm_schema) postData.generated_llm_schema = generated_llm_schema
     if (typeof export_seo_as_tags === 'boolean') postData.export_seo_as_tags = export_seo_as_tags
-    if (typeof is_popular === 'boolean') postData.is_popular = is_popular
+    
+    // Category is optional - only include if provided
+    if (category) {
+      postData.category = category
+    }
 
-    // Set published_date if not already set (upsert handles this carefully)
+    // Set published_date
     postData.published_date = new Date().toISOString()
 
-    console.log(`[${requestId}] 🚀 UPSERTING POST: ${postId} (${postData.title})`)
+    console.log(`[${requestId}] 🚀 UPSERTING POST: ${finalExternalId} (${postData.title})`)
 
     const { data, error } = await supabase
       .from('site_posts')
@@ -126,7 +136,8 @@ export async function POST(request: Request) {
         slug: data.slug,
         status: data.status,
         operation: 'upsert'
-      }
+      },
+      api_version: 'SEWO-v3-FIXED'
     }, { status: 200 })
 
   } catch (error) {
