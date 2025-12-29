@@ -7,9 +7,9 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
 import { trackQuizStart, trackScrollDepth, trackCTAClick } from '@/lib/analytics'
+import SiteHeader from '@/components/SiteHeader'
 
 // Dynamic imports for code splitting - load below-the-fold components lazily
-const MobileMenu = dynamic(() => import('@/components/MobileMenu'), { ssr: false })
 const SubscribeHero = dynamic(() => import('@/components/SubscribeHero'), { ssr: false })
 const HowItWorks = dynamic(() => import('@/components/HowItWorks'), { ssr: true })
 const QuestionsDiscovery = dynamic(() => import('@/components/QuestionsDiscovery'), { ssr: false })
@@ -356,7 +356,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     }
   ]
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
   const [showQuiz, setShowQuiz] = useState(false)
   const [showMidQuiz, setShowMidQuiz] = useState(false)
@@ -585,14 +584,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const handleMenuToggle = useCallback(() => {
-    setIsMenuOpen(prev => !prev)
-  }, [])
-
-  const handleMenuClose = useCallback(() => {
-    setIsMenuOpen(false)
-  }, [])
-
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index)
   }
@@ -664,45 +655,21 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   }
 
   return (
-    <main>
-      {/* JSON-LD for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-      />
+    <>
+      {/* Site Header with shadow */}
+      <SiteHeader blogVisible={blogSectionVisible} />
       
-      {/* Hero Section - Stripe-style Design */}
-      <section className="hero-stripe">
-        {/* Navigation - Consistent with SiteHeader but styled for Hero */}
-        <nav className="hero-nav">
-          <div className="container">
-            <div className="hero-nav-inner">
-              <Link href="/" className="logo" style={{ color: '#000000' }}>
-                SEWO
-              </Link>
-              
-              <div className="hero-desktop-links" style={{ color: '#000000' }}>
-                <Link href="/guide">The Playbook</Link>
-                <Link href="/course">The Accelerator</Link>
-                <Link href="/book-call">Strategy Audit</Link>
-                <Link href="/consulting">Consulting</Link>
-                <Link href="/author/stuart-asta">Author</Link>
-                <Link href="/about">About</Link>
-                <Link href="/contact">Contact</Link>
-                {blogSectionVisible && <Link href="/blog">Blog</Link>}
-              </div>
-
-              <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu" style={{ color: '#000000' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </nav>
-
-        {/* Main Content */}
-        <div className="hero-stripe-content">
+      <main>
+        {/* JSON-LD for SEO */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        
+        {/* Hero Section - Stripe-style Design */}
+        <section className="hero-stripe">
+          {/* Main Content */}
+          <div className="hero-stripe-content">
           <div className="hero-stripe-grid">
             {/* Left Column - Content with Gradient Background */}
             <div 
@@ -1236,21 +1203,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         <ContactForm />
       </Suspense>
 
-      {/* Mobile Menu Component */}
-      <Suspense fallback={null}>
-        <MobileMenu 
-          isOpen={isMenuOpen} 
-          onClose={handleMenuClose} 
-          blogVisible={blogSectionVisible}
+        {/* Particle Animation */}
+        <ParticleAnimation 
+          isActive={showParticles} 
+          onComplete={() => setShowParticles(false)} 
         />
-      </Suspense>
-
-      {/* Particle Animation */}
-      <ParticleAnimation 
-        isActive={showParticles} 
-        onComplete={() => setShowParticles(false)} 
-      />
-    </main>
+      </main>
+    </>
   )
 }
 

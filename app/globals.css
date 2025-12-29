@@ -202,6 +202,7 @@ img {
   overflow: hidden;
   padding: 0;
   margin: 0;
+  padding-top: 80px; /* Account for fixed header */
 }
 
 /* Hero Navigation - Desktop */
