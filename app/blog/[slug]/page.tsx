@@ -331,6 +331,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       {/* Contact Form */}
       <ContactForm />
     </main>
+    </>
   )
 }
 

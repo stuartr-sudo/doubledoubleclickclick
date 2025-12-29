@@ -172,6 +172,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       {/* Contact Form */}
       <ContactForm />
     </main>
+    </>
   )
 }
 
