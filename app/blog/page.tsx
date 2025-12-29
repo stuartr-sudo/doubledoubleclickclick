@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import BlogCarousel from '@/components/BlogCarousel'
-import QuestionsDiscovery from '@/components/QuestionsDiscovery'
 import ContactForm from '@/components/ContactForm'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
@@ -32,7 +31,6 @@ export const revalidate = 0
 
 export default async function BlogPage({ searchParams }: { searchParams?: { category?: string } }) {
   let posts = null
-  let homepageContent = null
   
   try {
     const supabase = await createClient()
@@ -49,13 +47,6 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       const dateB = new Date(b.published_date || b.created_date).getTime()
       return dateB - dateA
     })
-
-    // Fetch homepage content for Questions Discovery styling
-    const { data: hpContent } = await supabase
-      .from('homepage_content')
-      .select('hero_cta_bg_color, hero_cta_text_color')
-      .single()
-    homepageContent = hpContent
   } catch (error) {
     console.error('Error fetching blog posts:', error)
   }
@@ -76,29 +67,10 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
     <>
       <SiteHeader />
       <main>
-        {/* Page Title & Questions Discovery Tool */}
+        {/* Page Title */}
       <section className="blog-page-header" style={{ padding: 'var(--spacing-md) 0 var(--spacing-xl) 0', marginBottom: '0', background: 'var(--color-bg)' }}>
         <div className="container">
           <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-lg)' }}>Answers to Your Questions</h1>
-          
-          <div style={{ 
-            maxWidth: '850px', 
-            margin: '0 auto', 
-            padding: 'var(--spacing-xl) var(--spacing-md)',
-            backgroundColor: '#f8fafc',
-            borderRadius: '24px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)'
-          }}>
-            <QuestionsDiscovery
-              title="See What Questions Your Prospects Are Asking"
-              description="Enter a keyword and discover the top questions people are asking. Answer them before your competitors do."
-              ctaText="Book a Discovery Call"
-              buttonBgColor={homepageContent?.hero_cta_bg_color || '#000000'}
-              buttonTextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
-              className="blog-page-quiz"
-            />
-          </div>
         </div>
       </section>
 
