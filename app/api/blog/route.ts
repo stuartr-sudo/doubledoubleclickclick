@@ -150,11 +150,14 @@ export async function POST(request: Request) {
  * GET /api/blog - Fetch blog posts (SEWO ONLY)
  */
 export async function GET(request: Request) {
+  const requestId = `GET-${Date.now()}`
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '100')
     const category = searchParams.get('category')
+
+    console.log(`[${requestId}] 🔍 FETCHING POSTS FROM site_posts (limit: ${limit})`)
 
     // Always only read from site_posts
     const query = supabase

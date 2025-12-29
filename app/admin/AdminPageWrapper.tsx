@@ -74,8 +74,8 @@ export default function AdminPageWrapper() {
 
   const fetchPosts = async () => {
     try {
-      // Fetch ONLY published posts for the website view
-      const res = await fetch('/api/blog?status=published&limit=1000')
+      // Fetch ONLY published posts from site_posts
+      const res = await fetch('/api/blog?limit=1000', { cache: 'no-store' })
       const result = await res.json()
       setPosts(result.data || [])
     } catch (error) {
@@ -188,77 +188,6 @@ export default function AdminPageWrapper() {
     alert(`Deleted ${successCount} post(s).${failCount > 0 ? ` Failed to delete ${failCount} post(s).` : ''}`)
   }
 
-  const bulkPublishSelected = async () => {
-    if (selectedPosts.size === 0) {
-      alert('Please select posts to publish')
-      return
-    }
-    if (!confirm(`Publish ${selectedPosts.size} selected post(s)?`)) return
-
-    setIsPublishing(true)
-    let successCount = 0
-    let failCount = 0
-
-    for (const id of Array.from(selectedPosts)) {
-      try {
-        const res = await fetch(`/api/blog/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'published' }),
-        })
-        if (res.ok) {
-          successCount++
-        } else {
-          failCount++
-        }
-      } catch (error) {
-        console.error(`Error publishing post ${id}:`, error)
-        failCount++
-      }
-    }
-
-    await fetchPosts()
-    setSelectedPosts(new Set())
-    setIsPublishing(false)
-    alert(`Published ${successCount} post(s).${failCount > 0 ? ` Failed to publish ${failCount} post(s).` : ''}`)
-  }
-
-  const publishAllCompleteDrafts = async () => {
-    const completeDrafts = posts.filter(p => p.status === 'draft' && !!p.slug)
-    if (completeDrafts.length === 0) {
-      alert('No complete draft posts found to publish.')
-      return
-    }
-    if (!confirm(`Publish ALL complete drafts (${completeDrafts.length})?`)) return
-
-    setIsPublishing(true)
-    let successCount = 0
-    let failCount = 0
-
-    for (const post of completeDrafts) {
-      try {
-        const res = await fetch(`/api/blog/${post.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'published' }),
-        })
-        if (res.ok) {
-          successCount++
-        } else {
-          failCount++
-        }
-      } catch (error) {
-        console.error(`Error publishing post ${post.id}:`, error)
-        failCount++
-      }
-    }
-
-    await fetchPosts()
-    setSelectedPosts(new Set())
-    setIsPublishing(false)
-    alert(`Published ${successCount} post(s).${failCount > 0 ? ` Failed to publish ${failCount} post(s).` : ''}`)
-  }
-
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/admin/logout', {
@@ -346,9 +275,11 @@ export default function AdminPageWrapper() {
         )}
 
         <div className="admin-filters">
-          <h2 style={{ fontSize: '1.25rem', color: '#1e293b' }}>
-            Live Articles ({posts.length})
-          </h2>
+          <div className="filter-tabs">
+            <button className="active">
+              EXISTING SITE CONTENT ({posts.length})
+            </button>
+          </div>
         </div>
 
         {filteredPosts.length > 0 && (
@@ -410,8 +341,8 @@ export default function AdminPageWrapper() {
                 <div className="post-card-content">
                   <div className="post-card-header">
                     <h3>{post.title}</h3>
-                    <span className={`post-status ${post.status}`}>
-                      {post.status}
+                    <span className="post-status published">
+                      Live
                     </span>
                   </div>
                   <p className="post-meta">
