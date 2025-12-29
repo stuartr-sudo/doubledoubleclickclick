@@ -68,14 +68,14 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
       <SiteHeader />
       <main style={{ paddingTop: '100px' }}>
         {/* Page Title */}
-      <section className="blog-page-header" style={{ padding: 'var(--spacing-md) 0 var(--spacing-xl) 0', marginBottom: '0', background: 'var(--color-bg)' }}>
+      <section className="blog-page-header" style={{ padding: 'var(--spacing-sm) 0', marginBottom: '0', background: 'var(--color-bg)' }}>
         <div className="container">
-          <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-lg)', textAlign: 'center' }}>The AI Field Guide</h1>
+          <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-sm)', textAlign: 'center' }}>The AI Field Guide</h1>
         </div>
       </section>
 
       {/* Blog Posts */}
-      <section className="blog-posts" style={{ paddingTop: '0' }}>
+      <section className="blog-posts" style={{ paddingTop: 'var(--spacing-md)' }}>
         <div className="container">
           {filteredPosts && filteredPosts.length > 0 ? (
             <>
