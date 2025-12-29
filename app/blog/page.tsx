@@ -70,7 +70,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         {/* Page Title */}
       <section className="blog-page-header" style={{ padding: 'var(--spacing-md) 0 var(--spacing-xl) 0', marginBottom: '0', background: 'var(--color-bg)' }}>
         <div className="container">
-          <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-lg)' }}>Answers to Your Questions</h1>
+          <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-lg)', textAlign: 'center' }}>The AI Field Guide</h1>
         </div>
       </section>
 
