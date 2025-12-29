@@ -66,7 +66,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
   return (
     <>
       <SiteHeader />
-      <main>
+      <main style={{ paddingTop: '100px' }}>
         {/* Page Title */}
       <section className="blog-page-header" style={{ padding: 'var(--spacing-md) 0 var(--spacing-xl) 0', marginBottom: '0', background: 'var(--color-bg)' }}>
         <div className="container">
