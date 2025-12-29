@@ -677,11 +677,11 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         <nav className="hero-nav">
           <div className="container">
             <div className="hero-nav-inner">
-              <Link href="/" className="logo" style={{ color: heroTextColor }}>
+              <Link href="/" className="logo" style={{ color: '#000000' }}>
                 SEWO
               </Link>
               
-              <div className="hero-desktop-links" style={{ color: heroTextColor }}>
+              <div className="hero-desktop-links" style={{ color: '#000000' }}>
                 <Link href="/guide">The Playbook</Link>
                 <Link href="/course">The Accelerator</Link>
                 <Link href="/book-call">Strategy Audit</Link>
@@ -692,7 +692,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 {blogSectionVisible && <Link href="/blog">Blog</Link>}
               </div>
 
-              <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu" style={{ color: heroTextColor }}>
+              <button className="hero-menu-icon" onClick={handleMenuToggle} aria-label="Menu" style={{ color: '#000000' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
