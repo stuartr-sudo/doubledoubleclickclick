@@ -4,7 +4,7 @@ import './homepage-new.css'
 
 export const metadata: Metadata = {
   title: 'AI Visibility Diagnostic | Make Your Brand the Answer AI Suggests',
-  description: 'AI is rewriting how customers discover brands. Get a clarity-first diagnostic to understand why AI systems aren't surfacing you — and a clear plan to fix it.',
+  description: 'AI is rewriting how customers discover brands. Get a clarity-first diagnostic to understand why AI systems are not surfacing you - and a clear plan to fix it.',
   alternates: {
     canonical: 'https://www.sewo.io',
   },
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'AI Visibility Diagnostic | SEWO',
-    description: 'Make your brand the answer AI suggests. Get clarity on why AI isn't recommending you.',
+    description: 'Make your brand the answer AI suggests. Get clarity on why AI is not recommending you.',
   },
 }
 
