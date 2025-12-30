@@ -666,172 +666,33 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
         
-        {/* Hero Section - Stripe-style Design */}
+        {/* Hero Section - Full Width */}
         <section className="hero-stripe">
           {/* Main Content */}
           <div className="hero-stripe-content">
-          <div className="hero-stripe-grid">
-            {/* Left Column - Content with Gradient Background */}
+            {/* Full Width Hero Content with Gradient Background */}
             <div 
-              className="hero-stripe-left"
+              className="hero-stripe-full"
               style={{
                 background: heroBgGradient,
                 color: heroTextColor
               }}
             >
-              <div className="hero-stripe-left-inner">
-                <h1 className="hero-stripe-title">
-                  {heroTitle.split('\n').map((line, i) => (
-                    <span key={i} className="title-line">{line}</span>
-                  ))}
-                </h1>
-                <p className="hero-stripe-description">
-                  {heroDescription}
-                </p>
-              </div>
-            </div>
-
-            {/* Right Column - A/B Test: Quiz vs Questions Discovery */}
-            <div
-              ref={heroQuizRef}
-              className={`hero-stripe-right ${(showQuiz || showQuestionsDiscovery) ? 'quiz-open' : ''} ${heroVariant === 'questions' && !showQuiz && !showQuestionsDiscovery ? 'questions-variant' : ''}`}
-            >
-              <div className="hero-quiz-cta">
-                {/* Variant A: Quiz CTA (50%) */}
-                {heroVariant === 'quiz' && (
-                  <>
-                <div style={{ display: showQuiz ? 'none' : 'block' }}>
-                  <div className="quiz-badge">
-                    <span className="quiz-steps">{quizSteps}</span>
-                    <span className="quiz-badge-text">{quizBadgeText}</span>
-                  </div>
-                  <h2 className="quiz-title">{quizTitle}</h2>
-                  <p className="quiz-description">{quizDescription}</p>
-                  <button 
-                        onClick={openHeroQuiz}
-                    className="quiz-cta-button"
-                    style={{
-                      backgroundColor: heroCTABgColor,
-                      color: heroCTATextColor,
-                      borderColor: quizCTABorderColor,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {quizCTAText}
-                    <svg className="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                </div>
-                  </>
-                )}
-
-                {/* Variant B: Questions Discovery - Always Show Form (50%) */}
-                {heroVariant === 'questions' && !showQuestionsDiscovery && (
-                  <>
-                    <div className="quiz-badge">
-                      <span className="quiz-steps">⚡ 2 Minute</span>
-                      <span className="quiz-badge-text">Question Discovery</span>
-                    </div>
-                    <QuestionsDiscovery 
-                      onClose={() => setShowQuestionsDiscovery(false)}
-                      title={homepageContent?.questions_discovery_title}
-                      description={homepageContent?.questions_discovery_description}
-                      ctaText={homepageContent?.questions_discovery_cta_text}
-                      aiFacts={[
-                        homepageContent?.ai_fact_1,
-                        homepageContent?.ai_fact_2,
-                        homepageContent?.ai_fact_3,
-                        homepageContent?.ai_fact_4,
-                        homepageContent?.ai_fact_5,
-                      ].filter(Boolean) as string[]}
-                      buttonBgColor={heroCTABgColor}
-                      buttonTextColor={heroCTATextColor}
-                    />
-                  </>
-                )}
-                
-                <div 
-                  className="w-full relative h-full" 
-                  style={{ 
-                    display: showQuiz ? 'block' : 'none',
-                    height: '100%',
-                    overflowY: 'auto',
-                    scrollbarWidth: 'none', /* Firefox */
-                    msOverflowStyle: 'none',  /* IE and Edge */
-                  }}
-                >
-                  {/* Loading State */}
-                  {!isQuizLoaded && (
-                    <div 
-                      className="absolute inset-0 flex items-center justify-center bg-white z-20"
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 20,
-                        backgroundColor: '#ffffff'
-                      }}
-                    >
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" style={{
-                        width: '48px',
-                        height: '48px',
-                        border: '3px solid rgba(0,0,0,0.1)',
-                        borderTopColor: heroCTABgColor,
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }}></div>
-                      <style dangerouslySetInnerHTML={{
-                        __html: `
-                          @keyframes spin {
-                            to { transform: rotate(360deg); }
-                          }
-                        `
-                      }} />
-                    </div>
-                  )}
-
-                  <style dangerouslySetInnerHTML={{
-                    __html: `
-                      .scrollbar-hide::-webkit-scrollbar {
-                        display: none;
-                      }
-                      .scrollbar-hide {
-                        -ms-overflow-style: none;
-                        scrollbar-width: none;
-                      }
-                      .quiz-content-wrapper {
-                        height: 100%;
-                        padding-top: 100px;
-                      }
-                      @media (max-width: 1024px) {
-                        .quiz-content-wrapper {
-                          padding-top: 0 !important;
-                        }
-                      }
-                    `
-                  }} />
-                  <div ref={quizContainerRef} className="quiz-content-wrapper">
-                    {heroVariant === 'quiz' && (
-                      <iframe
-                        src="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
-                        style={{ width: '100%', border: '0', minHeight: '900px', background: 'transparent' }}
-                        loading="lazy"
-                        onLoad={() => setIsQuizLoaded(true)}
-                      />
-                    )}
-                  </div>
+              <div className="container">
+                <div className="hero-stripe-inner">
+                  <h1 className="hero-stripe-title">
+                    {heroTitle.split('\n').map((line, i) => (
+                      <span key={i} className="title-line">{line}</span>
+                    ))}
+                  </h1>
+                  <p className="hero-stripe-description">
+                    {heroDescription}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       {/* Technology Carousel Section */}
       <section className="tech-carousel-section" style={{ background: techCarouselBgColor }}>

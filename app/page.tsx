@@ -1,32 +1,38 @@
-import HomePageNew from './HomePageNew'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import HomePageClient from './HomePageClient'
 import type { Metadata } from 'next'
-import './homepage-new.css'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'AI Visibility Diagnostic | Make Your Brand the Answer AI Suggests',
-  description: 'AI is rewriting how customers discover brands. Get a clarity-first diagnostic to understand why AI systems are not surfacing you - and a clear plan to fix it.',
+  title: 'SEWO - Get Found Everywhere | LLM Ranking & AI Search Optimization',
+  description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search results. Get discovered by ChatGPT, Claude, Gemini & more.',
   alternates: {
     canonical: 'https://www.sewo.io',
   },
   openGraph: {
-    title: 'AI Visibility Diagnostic | SEWO',
-    description: 'Make your brand the answer AI suggests. Get clarity, prioritisation, and a 90-day roadmap.',
+    title: 'SEWO - Get Found Everywhere',
+    description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
     type: 'website',
     url: 'https://www.sewo.io',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AI Visibility Diagnostic | SEWO',
-    description: 'Make your brand the answer AI suggests. Get clarity on why AI is not recommending you.',
+    title: 'SEWO - Get Found Everywhere',
+    description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization.',
   },
 }
 
 export default async function HomePage() {
   const supabase = await createClient()
+  
+  // Fetch homepage content
+  const { data: homepageContent } = await supabase
+    .from('homepage_content')
+    .select('*')
+    .single()
   
   // Fetch blog posts for homepage preview (limit to 6)
   // We prioritize 'popular' posts if they are flagged, then fall back to latest by published date
@@ -47,7 +53,7 @@ export default async function HomePage() {
     return dateB - dateA
   })
 
-  const latestPosts = sortedPosts.slice(0, 6)
+  const latest = sortedPosts.slice(0, 6)
 
-  return <HomePageNew latestPosts={latestPosts} />
+  return <HomePageClient latestPosts={latest} homepageContent={homepageContent} />
 }
