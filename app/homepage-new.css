@@ -1,0 +1,627 @@
+/* ============================================
+   NEW HOMEPAGE STYLES
+   Single-page, conversion-focused layout
+   ============================================ */
+
+/* Global Constraints */
+.homepage-new {
+  --max-width: 1200px;
+  --section-spacing: 6rem;
+  --color-primary: #000000;
+  --color-text: #1a1a1a;
+  --color-text-light: #666666;
+  --color-border: #e5e5e5;
+  --color-bg-light: #f9fafb;
+}
+
+/* ============================================
+   MINIMAL HEADER
+   ============================================ */
+.minimal-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.minimal-header-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.minimal-logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.minimal-header-cta {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.minimal-header-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================
+   SECTION 1 — HERO
+   ============================================ */
+.hero-new {
+  padding: 10rem 2rem 6rem;
+  background: var(--color-bg-light);
+}
+
+.hero-new-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.hero-new-grid {
+  display: grid;
+  grid-template-columns: 60fr 40fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.hero-new-h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  color: var(--color-primary);
+}
+
+.hero-new-subheading {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  margin-bottom: 1.5rem;
+}
+
+.hero-new-body {
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: var(--color-text-light);
+  margin-bottom: 2.5rem;
+}
+
+.hero-new-cta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.primary-cta-button {
+  display: inline-block;
+  padding: 1.25rem 2.5rem;
+  background: var(--color-primary);
+  color: white;
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1.125rem;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  max-width: fit-content;
+}
+
+.primary-cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.cta-subtext {
+  font-size: 0.875rem;
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+.trust-list {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  list-style: none;
+}
+
+.trust-list li {
+  font-size: 1.125rem;
+  line-height: 2;
+  color: var(--color-text);
+}
+
+/* ============================================
+   SECTION 2 — CONTEXT SHIFT
+   ============================================ */
+.context-shift {
+  padding: var(--section-spacing) 2rem;
+  background: white;
+  text-align: center;
+}
+
+.context-shift-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.context-shift-h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: var(--color-primary);
+}
+
+.context-shift-p {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  color: var(--color-text);
+}
+
+/* ============================================
+   SECTION 3 — THE PROBLEM
+   ============================================ */
+.the-problem {
+  padding: var(--section-spacing) 2rem;
+  background: var(--color-bg-light);
+}
+
+.the-problem-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.the-problem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+}
+
+.the-problem h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--color-primary);
+}
+
+.the-problem ul {
+  list-style: none;
+  padding: 0;
+}
+
+.the-problem ul li {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--color-text);
+  padding-left: 1.5rem;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.the-problem ul li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.problem-right p {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--color-text);
+}
+
+/* ============================================
+   SECTION 4 — CONTRAST (IS / ISN'T)
+   ============================================ */
+.contrast-section {
+  padding: var(--section-spacing) 2rem;
+  background: white;
+}
+
+.contrast-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.contrast-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+}
+
+.contrast-card {
+  padding: 3rem;
+  border-radius: 16px;
+  border: 2px solid var(--color-border);
+}
+
+.contrast-is {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.contrast-not {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.contrast-card h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--color-primary);
+}
+
+.contrast-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.contrast-card ul li {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--color-text);
+  padding-left: 1.5rem;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.contrast-card ul li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+
+/* ============================================
+   SECTION 5 — THE OFFER
+   ============================================ */
+.the-offer {
+  padding: var(--section-spacing) 2rem;
+  background: var(--color-bg-light);
+}
+
+.the-offer-container {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.the-offer h2 {
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--color-primary);
+}
+
+.offer-subheading {
+  font-size: 1.5rem;
+  color: var(--color-text-light);
+  margin-bottom: 2rem;
+}
+
+.offer-intro {
+  font-size: 1.125rem;
+  color: var(--color-text);
+  margin-bottom: 1.5rem;
+}
+
+.offer-quote {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--color-primary);
+  border-left: 4px solid var(--color-primary);
+  padding-left: 2rem;
+  margin: 2.5rem 0 3rem;
+  text-align: left;
+}
+
+.deliverables {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.deliverable-item {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  text-align: left;
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+}
+
+.deliverable-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  min-width: 60px;
+}
+
+.deliverable-content h4 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--color-primary);
+}
+
+.deliverable-content ul {
+  list-style: none;
+  padding: 0;
+}
+
+.deliverable-content ul li {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--color-text);
+  padding-left: 1.5rem;
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.deliverable-content ul li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+}
+
+/* ============================================
+   SECTION 6 — AUDIENCE FIT
+   ============================================ */
+.audience-fit {
+  padding: var(--section-spacing) 2rem;
+  background: white;
+}
+
+.audience-fit-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.audience-fit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+}
+
+.fit-card {
+  padding: 3rem;
+  border-radius: 16px;
+  border: 2px solid var(--color-border);
+}
+
+.good-fit {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.not-fit {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.fit-card h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--color-primary);
+}
+
+.fit-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.fit-card ul li {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--color-text);
+  padding-left: 1.5rem;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.fit-card ul li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+
+/* ============================================
+   SECTION 7 — WHY NOW
+   ============================================ */
+.why-now {
+  padding: var(--section-spacing) 2rem;
+  background: var(--color-bg-light);
+  text-align: center;
+}
+
+.why-now-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.why-now h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: var(--color-primary);
+}
+
+.why-now p {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  color: var(--color-text);
+}
+
+/* ============================================
+   SECTION 8 — PRICING
+   ============================================ */
+.pricing-simple {
+  padding: var(--section-spacing) 2rem;
+  background: white;
+}
+
+.pricing-simple-container {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.pricing-card-simple {
+  background: var(--color-bg-light);
+  padding: 3rem;
+  border-radius: 16px;
+  border: 2px solid var(--color-border);
+}
+
+.price-amount {
+  font-size: 4rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 1rem;
+}
+
+.price-details p {
+  font-size: 1rem;
+  color: var(--color-text-light);
+  margin-bottom: 1.5rem;
+}
+
+.price-value {
+  font-size: 1.125rem;
+  color: var(--color-text);
+  font-style: italic;
+}
+
+/* ============================================
+   SECTION 9 — FINAL CTA
+   ============================================ */
+.final-cta {
+  padding: var(--section-spacing) 2rem;
+  background: var(--color-primary);
+  text-align: center;
+}
+
+.final-cta-container {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.final-cta .primary-cta-button {
+  background: white;
+  color: var(--color-primary);
+  margin-bottom: 1.5rem;
+}
+
+.final-cta .primary-cta-button:hover {
+  background: #f9fafb;
+}
+
+.final-cta-reassurance {
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-style: italic;
+}
+
+/* ============================================
+   SECTION 10 — MINIMAL FOOTER
+   ============================================ */
+.minimal-footer {
+  padding: 3rem 2rem;
+  background: var(--color-bg-light);
+  text-align: center;
+}
+
+.minimal-footer-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.minimal-footer p {
+  font-size: 1rem;
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+/* ============================================
+   RESPONSIVE (MOBILE)
+   ============================================ */
+@media (max-width: 768px) {
+  .hero-new {
+    padding: 8rem 1.5rem 4rem;
+  }
+
+  .hero-new-grid {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .hero-new-h1 {
+    font-size: 2rem;
+  }
+
+  .hero-new-subheading {
+    font-size: 1.125rem;
+  }
+
+  .hero-new-body {
+    font-size: 1rem;
+  }
+
+  .the-problem-grid,
+  .contrast-grid,
+  .audience-fit-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .context-shift-h2,
+  .why-now h2 {
+    font-size: 1.75rem;
+  }
+
+  .the-offer h2 {
+    font-size: 2rem;
+  }
+
+  .deliverable-item {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .price-amount {
+    font-size: 3rem;
+  }
+
+  .minimal-header-cta {
+    font-size: 0.875rem;
+    padding: 0.625rem 1.25rem;
+  }
+}
