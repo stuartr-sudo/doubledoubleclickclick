@@ -521,6 +521,90 @@
 }
 
 /* ============================================
+   BLOG SECTION — Latest from the blog
+   ============================================ */
+.blog-grid-section {
+  padding: var(--section-spacing) 2rem;
+  background: white;
+}
+
+.blog-grid-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.blog-grid-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.blog-grid-title {
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.blog-grid-3x2 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.blog-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  transition: transform 0.3s, box-shadow 0.3s;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.blog-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.blog-card-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: var(--color-bg-light);
+}
+
+.blog-card-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.blog-card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--color-primary);
+  line-height: 1.4;
+}
+
+.blog-card-excerpt {
+  font-size: 0.95rem;
+  color: var(--color-text-light);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  flex: 1;
+}
+
+.blog-card-meta {
+  font-size: 0.875rem;
+  color: var(--color-text-light);
+  margin-top: auto;
+}
+
+/* ============================================
    SECTION 9 — FINAL CTA
    ============================================ */
 .final-cta {
@@ -568,6 +652,15 @@
   font-size: 1rem;
   color: var(--color-text-light);
   margin: 0;
+}
+
+/* ============================================
+   RESPONSIVE (TABLET)
+   ============================================ */
+@media (max-width: 1024px) {
+  .blog-grid-3x2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ============================================
@@ -623,5 +716,10 @@
   .minimal-header-cta {
     font-size: 0.875rem;
     padding: 0.625rem 1.25rem;
+  }
+
+  .blog-grid-3x2 {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 }

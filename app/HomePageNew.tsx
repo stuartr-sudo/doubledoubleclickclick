@@ -1,9 +1,25 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState } from 'react'
 
-export default function HomePageNew() {
+interface Post {
+  id: string
+  title: string
+  slug: string | null
+  meta_description: string | null
+  featured_image: string | null
+  created_date: string
+  published_date?: string
+  is_popular?: boolean
+}
+
+interface HomePageNewProps {
+  latestPosts: Post[]
+}
+
+export default function HomePageNew({ latestPosts }: HomePageNewProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
@@ -251,6 +267,54 @@ export default function HomePageNew() {
             </div>
           </div>
         </section>
+
+        {/* BLOG SECTION — Latest from the blog */}
+        {latestPosts && latestPosts.length > 0 && (
+          <section className="blog-grid-section">
+            <div className="blog-grid-container">
+              <div className="blog-grid-header">
+                <h2 className="blog-grid-title">Latest from the blog</h2>
+              </div>
+              <div className="blog-grid-3x2">
+                {latestPosts.slice(0, 6).map((post) => (
+                  <Link key={post.id} href={`/blog/${post.slug || post.id}`} className="blog-card">
+                    <article>
+                      {post.featured_image && (
+                        <div className="blog-card-image">
+                          <Image 
+                            src={post.featured_image} 
+                            alt={post.title}
+                            loading="lazy"
+                            width={400}
+                            height={250}
+                            style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                          />
+                        </div>
+                      )}
+                      <div className="blog-card-content">
+                        <h3 className="blog-card-title">
+                          {post.title}
+                        </h3>
+                        {post.meta_description && (
+                          <p className="blog-card-excerpt">{post.meta_description}</p>
+                        )}
+                        <div className="blog-card-meta">
+                          <time dateTime={post.created_date}>
+                            {new Date(post.created_date).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'numeric',
+                              day: 'numeric'
+                            })}
+                          </time>
+                        </div>
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* SECTION 9 — FINAL CTA */}
         <section className="final-cta">
