@@ -48,11 +48,10 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
                 </h1>
                 <p className="hero-new-subheading">
                   AI is rewriting how customers discover brands.<br />
-                  If it doesn't recommend you, you're losing ground every day.
+                  If it does not recommend you, you are losing ground every day.
                 </p>
                 <p className="hero-new-body">
-                  We help brand owners understand why AI systems aren't surfacing them —
-                  and give them a clear plan to fix it.
+                  We help brand owners understand why AI systems are not surfacing them and give them a clear plan to fix it.
                 </p>
                 <div className="hero-new-cta-block">
                   <Link href="#diagnostic" className="primary-cta-button">
@@ -65,10 +64,10 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
               {/* Right Column (Context / Trust) */}
               <div className="hero-new-right">
                 <ul className="trust-list">
-                  <li>✔ Search + AI clarity (not "AI SEO")</li>
+                  <li>✔ Search + AI clarity (not AI SEO)</li>
                   <li>✔ Plain-English explanation</li>
                   <li>✔ Written report + 90-day roadmap</li>
-                  <li>✔ For ecommerce, SaaS & established coaches</li>
+                  <li>✔ For ecommerce, SaaS &amp; established coaches</li>
                 </ul>
               </div>
             </div>
@@ -81,9 +80,9 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
             <h2 className="context-shift-h2">Search has changed. Discovery has changed.</h2>
             <p className="context-shift-p">
               Customers are no longer just Googling.<br />
-              They're asking AI tools like ChatGPT what to buy, who to trust, and which brands to choose.<br />
+              They are asking AI tools like ChatGPT what to buy, who to trust, and which brands to choose.<br />
               <br />
-              AI doesn't rank pages — it recommends answers.
+              AI does not rank pages — it recommends answers.
             </p>
           </div>
         </section>
@@ -98,8 +97,8 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
                 <ul>
                   <li>Publishing content, but results feel random</li>
                   <li>SEO advice feels generic or outdated</li>
-                  <li>"AI SEO" sounds important, but unclear</li>
-                  <li>Hearing about ChatGPT leads — with no idea how</li>
+                  <li>AI SEO sounds important, but unclear</li>
+                  <li>Hearing about ChatGPT leads with no idea how</li>
                 </ul>
               </div>
 
@@ -109,7 +108,7 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
                 <p>
                   AI systems surface brands that are easy to understand, clearly relevant, and consistently trusted.
                   <br /><br />
-                  Most websites don't signal that — even if their SEO "looks fine".
+                  Most websites do not signal that — even if their SEO looks fine.
                 </p>
               </div>
             </div>
@@ -154,7 +153,7 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
               A one-time engagement designed to answer one question:
             </p>
             <blockquote className="offer-quote">
-              "Why isn't our business being surfaced or recommended by AI — and what should we do next?"
+              Why is not our business being surfaced or recommended by AI — and what should we do next?
             </blockquote>
 
             {/* Deliverables */}
@@ -177,7 +176,7 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
                   <h4>60-minute private Zoom</h4>
                   <ul>
                     <li>Plain-English explanation</li>
-                    <li>What AI "sees" vs expectations</li>
+                    <li>What AI sees vs expectations</li>
                     <li>Why competitors get mentioned</li>
                     <li>Live prioritisation</li>
                   </ul>
@@ -235,7 +234,7 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
                   <li>Want guarantees</li>
                   <li>Want implementation</li>
                   <li>Want shortcuts</li>
-                  <li>Aren't ready to act</li>
+                  <li>Are not ready to act</li>
                 </ul>
               </div>
             </div>
@@ -248,7 +247,7 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
             <h2>AI is already shaping buying decisions</h2>
             <p>
               People ask AI what to buy and who to trust.<br />
-              If your brand isn't part of the answer, someone else is.
+              If your brand is not part of the answer, someone else is.
             </p>
           </div>
         </section>
@@ -262,7 +261,7 @@ export default function HomePageNew({ latestPosts }: HomePageNewProps) {
                 <p>One-time · No upsells · No obligation</p>
               </div>
               <p className="price-value">
-                You're paying for clarity, prioritisation, and a plan you can execute.
+                You are paying for clarity, prioritisation, and a plan you can execute.
               </p>
             </div>
           </div>
