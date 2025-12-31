@@ -637,30 +637,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       question: 'How do I get started?',
       answer: 'Getting started is simple. Take our 12-step quiz to see where you\'re missing out on LLM visibility, or reach out directly through our contact form. We\'ll schedule a consultation to discuss your goals and create a customized plan for your brand.'
     }
-  ]
-
-  const baseUrl = 'https://www.sewo.io';
-  
-  const organizationJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'SEWO',
-    url: baseUrl,
-    logo: logoImage || `${baseUrl}/logo.png`,
-    description: 'Expert LLM ranking optimization to boost your visibility in AI-powered search',
-    sameAs: []
-  };
+  ];
 
   return (
     <>
       <SiteHeader blogVisible={blogSectionVisible} />
       
       <main>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-        />
-        
         <section 
           className="hero-stripe"
           style={{
