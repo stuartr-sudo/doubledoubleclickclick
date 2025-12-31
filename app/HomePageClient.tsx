@@ -688,6 +688,21 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <p className="hero-stripe-description">
                     {heroDescription}
                   </p>
+                  <div className="hero-cta-wrapper">
+                    <Link 
+                      href="/guide" 
+                      className="hero-cta-button"
+                      style={{
+                        backgroundColor: heroCTABgColor,
+                        color: heroCTATextColor,
+                      }}
+                    >
+                      Download Our Free AI Visibility Assessment Checklist
+                    </Link>
+                    <p className="hero-cta-subtext">
+                      Get ahead of your competitors and understand exactly what you need to do to get recommended by Ai, before it&apos;s too late.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
