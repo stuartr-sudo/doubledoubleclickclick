@@ -978,6 +978,95 @@ img {
   color: var(--color-primary);
 }
 
+/* Problem Statement Section */
+.problem-statement-section {
+  padding: var(--spacing-4xl) var(--spacing-2xl);
+  background: #f8f9fa;
+}
+
+.problem-statement-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: var(--spacing-3xl);
+  text-align: center;
+  color: var(--color-text);
+}
+
+.problem-statement-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-3xl);
+  align-items: center;
+}
+
+.problem-statement-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.problem-statement-text p {
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.problem-statement-highlight {
+  font-size: 1.25rem !important;
+  font-weight: 600;
+  color: var(--color-text) !important;
+  margin-top: var(--spacing-sm) !important;
+  margin-bottom: var(--spacing-sm) !important;
+}
+
+.problem-statement-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.problem-statement-image-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, #e8e8e8 0%, #d4d4d4 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+}
+
+.problem-statement-image-placeholder svg {
+  width: 80px;
+  height: 80px;
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  .problem-statement-section {
+    padding: var(--spacing-2xl) var(--spacing-md);
+  }
+
+  .problem-statement-title {
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .problem-statement-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2xl);
+  }
+
+  .problem-statement-image {
+    order: -1;
+  }
+
+  .problem-statement-text p {
+    font-size: 1rem;
+  }
+}
+
 /* Proof of Results Section */
 .proof-results-section {
   padding: var(--spacing-3xl) var(--spacing-2xl);

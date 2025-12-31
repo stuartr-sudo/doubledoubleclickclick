@@ -709,6 +709,47 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
         </section>
 
+      {/* Problem Statement Section */}
+      <section className="problem-statement-section">
+        <div className="container">
+          <h1 className="problem-statement-title">
+            Publishing content isn&apos;t the problem.<br />
+            Being recognised by AI is.
+          </h1>
+          <div className="problem-statement-grid">
+            <div className="problem-statement-text">
+              <p>
+                Businesses are waking up to the fact that customers aren&apos;t just searching anymore — they&apos;re having conversations with AI.
+              </p>
+              <p>
+                The shift has happened faster than anyone expected, but the guidance hasn&apos;t caught up.
+              </p>
+              <p>
+                Brands are being told to chase prompts and publish more content, without understanding how AI systems actually decide who to recommend.
+              </p>
+              <p className="problem-statement-highlight">
+                We exist to solve this.
+              </p>
+              <p>
+                Because when customers ask AI for answers, your brand either shows up — or it doesn&apos;t.
+              </p>
+              <p>
+                And that visibility gap is the exact problem we&apos;re built to fix.
+              </p>
+            </div>
+            <div className="problem-statement-image">
+              <div className="problem-statement-image-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Proof of Results Section */}
       <section className="proof-results-section" style={{ background: proofResultsBgColor }}>
         <div className="proof-results-container">
