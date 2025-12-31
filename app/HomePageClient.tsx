@@ -639,9 +639,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     }
   ]
 
-  const baseUrl = 'https://www.sewo.io'
+  const baseUrl = 'https://www.sewo.io';
   
-  // JSON-LD structured data for Organization
   const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -649,8 +648,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     url: baseUrl,
     logo: logoImage || `${baseUrl}/logo.png`,
     description: 'Expert LLM ranking optimization to boost your visibility in AI-powered search',
-    sameAs: [],
-  }
+    sameAs: []
+  };
 
   return (
     <>
@@ -662,7 +661,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
         
-        {/* Hero Section - Full Width */}
         <section 
           className="hero-stripe"
           style={{
