@@ -191,7 +191,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   // Default content if not set in CMS
   const logoImage = homepageContent?.logo_image || ''
   const logoText = homepageContent?.logo_text || 'SEWO'
-  const heroTitle = homepageContent?.hero_title || 'Make Your Brand the Answer AI Suggests'
+  const heroTitle = homepageContent?.hero_title || 'Make Your Brand the Answer Ai Recommends'
   const heroDescription = homepageContent?.hero_description || 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!'
   const heroCTAText = homepageContent?.hero_cta_text || 'Get Started'
   const heroCTALink = homepageContent?.hero_cta_link || '#contact'

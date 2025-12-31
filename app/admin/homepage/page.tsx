@@ -167,7 +167,7 @@ function HomepageEditorPageInner() {
   const [formData, setFormData] = useState<HomepageContent>({
     logo_image: '',
     logo_text: 'SEWO',
-    hero_title: 'Make Your Brand the Answer AI Suggests',
+    hero_title: 'Make Your Brand the Answer Ai Recommends',
     hero_description: 'Hello, I\'m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let\'s create!',
     hero_image: '',
     hero_cta_text: 'Get Started',
