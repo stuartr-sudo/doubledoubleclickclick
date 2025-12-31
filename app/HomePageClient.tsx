@@ -700,7 +700,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       Download Our Free AI Visibility Assessment Checklist
                     </Link>
                     <p className="hero-cta-subtext">
-                      Get ahead of your competitors and understand exactly what you need to do to get recommended by Ai, before it&apos;s too late.
+                      Understand how AI systems decide which brands to recommend — and where your current content falls short.
                     </p>
                   </div>
                 </div>
