@@ -700,7 +700,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       Apply to Work With Us
                     </Link>
                     <p className="hero-cta-subtext">
-                      Understand how AI systems decide which brands to recommend — and where your current content falls short.
+                      For established brands serious about AI-driven discovery.
                     </p>
                   </div>
                 </div>
