@@ -156,6 +156,15 @@ interface HomepageContent {
   proof_results_items?: ProofResultItem[]
   proof_results_bg_color?: string
   quiz_cta_bg_color?: string
+  problem_statement_title?: string
+  problem_statement_para_1?: string
+  problem_statement_para_2?: string
+  problem_statement_para_3?: string
+  problem_statement_highlight?: string
+  problem_statement_para_4?: string
+  problem_statement_para_5?: string
+  problem_statement_image?: string
+  problem_statement_bg_color?: string
   about_title?: string
   about_description?: string
   services_title?: string
@@ -274,6 +283,17 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   ]
   const proofResultsBgColor = homepageContent?.proof_results_bg_color || '#ffffff'
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
+  
+  // Problem Statement Section
+  const problemStatementTitle = homepageContent?.problem_statement_title || 'Publishing content isn\'t the problem.\nBeing recognised by AI is.'
+  const problemStatementPara1 = homepageContent?.problem_statement_para_1 || 'Businesses are waking up to the fact that customers aren\'t just searching anymore — they\'re having conversations with AI.'
+  const problemStatementPara2 = homepageContent?.problem_statement_para_2 || 'The shift has happened faster than anyone expected, but the guidance hasn\'t caught up.'
+  const problemStatementPara3 = homepageContent?.problem_statement_para_3 || 'Brands are being told to chase prompts and publish more content, without understanding how AI systems actually decide who to recommend.'
+  const problemStatementHighlight = homepageContent?.problem_statement_highlight || 'We exist to solve this.'
+  const problemStatementPara4 = homepageContent?.problem_statement_para_4 || 'Because when customers ask AI for answers, your brand either shows up — or it doesn\'t.'
+  const problemStatementPara5 = homepageContent?.problem_statement_para_5 || 'And that visibility gap is the exact problem we\'re built to fix.'
+  const problemStatementImage = homepageContent?.problem_statement_image || ''
+  const problemStatementBgColor = homepageContent?.problem_statement_bg_color || '#f8f9fa'
 
   // Product & Consulting Offerings
   const pricingTitle = homepageContent?.pricing_title || 'AI Strategies'
@@ -710,41 +730,42 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </section>
 
       {/* Problem Statement Section */}
-      <section className="problem-statement-section">
+      <section className="problem-statement-section" style={{ background: problemStatementBgColor }}>
         <div className="container">
           <h1 className="problem-statement-title">
-            Publishing content isn&apos;t the problem.<br />
-            Being recognised by AI is.
+            {problemStatementTitle.split('\n').map((line, i) => (
+              <span key={i}>{line}{i < problemStatementTitle.split('\n').length - 1 && <br />}</span>
+            ))}
           </h1>
           <div className="problem-statement-grid">
             <div className="problem-statement-text">
-              <p>
-                Businesses are waking up to the fact that customers aren&apos;t just searching anymore — they&apos;re having conversations with AI.
-              </p>
-              <p>
-                The shift has happened faster than anyone expected, but the guidance hasn&apos;t caught up.
-              </p>
-              <p>
-                Brands are being told to chase prompts and publish more content, without understanding how AI systems actually decide who to recommend.
-              </p>
-              <p className="problem-statement-highlight">
-                We exist to solve this.
-              </p>
-              <p>
-                Because when customers ask AI for answers, your brand either shows up — or it doesn&apos;t.
-              </p>
-              <p>
-                And that visibility gap is the exact problem we&apos;re built to fix.
-              </p>
+              {problemStatementPara1 && <p>{problemStatementPara1}</p>}
+              {problemStatementPara2 && <p>{problemStatementPara2}</p>}
+              {problemStatementPara3 && <p>{problemStatementPara3}</p>}
+              {problemStatementHighlight && (
+                <p className="problem-statement-highlight">{problemStatementHighlight}</p>
+              )}
+              {problemStatementPara4 && <p>{problemStatementPara4}</p>}
+              {problemStatementPara5 && <p>{problemStatementPara5}</p>}
             </div>
             <div className="problem-statement-image">
-              <div className="problem-statement-image-placeholder">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                </svg>
-              </div>
+              {problemStatementImage ? (
+                <Image 
+                  src={problemStatementImage} 
+                  alt="Problem Statement" 
+                  width={600}
+                  height={450}
+                  style={{ objectFit: 'cover', width: '100%', height: 'auto', borderRadius: '12px' }}
+                />
+              ) : (
+                <div className="problem-statement-image-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                  </svg>
+                </div>
+              )}
             </div>
           </div>
         </div>

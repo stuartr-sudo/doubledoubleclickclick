@@ -109,6 +109,15 @@ interface HomepageContent {
   proof_results_subtitle?: string
   proof_results_items?: ProofResultItem[]
   proof_results_bg_color?: string
+  problem_statement_title?: string
+  problem_statement_para_1?: string
+  problem_statement_para_2?: string
+  problem_statement_para_3?: string
+  problem_statement_highlight?: string
+  problem_statement_para_4?: string
+  problem_statement_para_5?: string
+  problem_statement_image?: string
+  problem_statement_bg_color?: string
   quiz_cta_bg_color?: string
   quiz_landing_title?: string
   quiz_landing_description?: string
@@ -260,7 +269,16 @@ function HomepageEditorPageInner() {
       { id: '3', title: 'Case Study 3', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' }
     ],
     proof_results_bg_color: '#ffffff',
-    quiz_cta_bg_color: '#ffffff'
+    quiz_cta_bg_color: '#ffffff',
+    problem_statement_title: 'Publishing content isn\'t the problem.\nBeing recognised by AI is.',
+    problem_statement_para_1: 'Businesses are waking up to the fact that customers aren\'t just searching anymore — they\'re having conversations with AI.',
+    problem_statement_para_2: 'The shift has happened faster than anyone expected, but the guidance hasn\'t caught up.',
+    problem_statement_para_3: 'Brands are being told to chase prompts and publish more content, without understanding how AI systems actually decide who to recommend.',
+    problem_statement_highlight: 'We exist to solve this.',
+    problem_statement_para_4: 'Because when customers ask AI for answers, your brand either shows up — or it doesn\'t.',
+    problem_statement_para_5: 'And that visibility gap is the exact problem we\'re built to fix.',
+    problem_statement_image: '',
+    problem_statement_bg_color: '#f8f9fa'
   })
 
   // Generate gradient string from color picker values
@@ -1000,6 +1018,136 @@ function HomepageEditorPageInner() {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Problem Statement Section */}
+          <div className="form-section">
+            <h2 className="form-section-title">Problem Statement Section</h2>
+            <p style={{ color: '#666', marginBottom: '1rem' }}>
+              This section appears directly below the hero. Two columns: text on left, image on right.
+            </p>
+
+            <div className="form-row">
+              <div className="form-group" style={{ flex: 2 }}>
+                <TextEnhancer
+                  value={formData.problem_statement_title || ''}
+                  onChange={(value) => setFormData({...formData, problem_statement_title: value})}
+                  fieldType="problem_statement_title"
+                  label="Section Title (use line breaks for multiple lines)"
+                  multiline={true}
+                  rows={2}
+                  defaultProvider={aiProvider}
+                  defaultModel={aiModel}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="problem_statement_bg_color">Background Color</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    id="problem_statement_bg_color"
+                    value={formData.problem_statement_bg_color || '#f8f9fa'}
+                    onChange={(e) => setFormData({...formData, problem_statement_bg_color: e.target.value})}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                  />
+                  <input
+                    type="text"
+                    value={formData.problem_statement_bg_color || '#f8f9fa'}
+                    onChange={(e) => setFormData({...formData, problem_statement_bg_color: e.target.value})}
+                    placeholder="#f8f9fa"
+                    style={{ flex: 1, padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.problem_statement_para_1 || ''}
+                onChange={(value) => setFormData({...formData, problem_statement_para_1: value})}
+                fieldType="problem_statement_para"
+                label="Paragraph 1"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.problem_statement_para_2 || ''}
+                onChange={(value) => setFormData({...formData, problem_statement_para_2: value})}
+                fieldType="problem_statement_para"
+                label="Paragraph 2"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.problem_statement_para_3 || ''}
+                onChange={(value) => setFormData({...formData, problem_statement_para_3: value})}
+                fieldType="problem_statement_para"
+                label="Paragraph 3"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.problem_statement_highlight || ''}
+                onChange={(value) => setFormData({...formData, problem_statement_highlight: value})}
+                fieldType="problem_statement_highlight"
+                label="Highlight Text (displayed prominently)"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.problem_statement_para_4 || ''}
+                onChange={(value) => setFormData({...formData, problem_statement_para_4: value})}
+                fieldType="problem_statement_para"
+                label="Paragraph 4"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.problem_statement_para_5 || ''}
+                onChange={(value) => setFormData({...formData, problem_statement_para_5: value})}
+                fieldType="problem_statement_para"
+                label="Paragraph 5"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <ImageUpload
+                value={formData.problem_statement_image || ''}
+                onChange={(url) => setFormData({ ...formData, problem_statement_image: url })}
+                label="Section Image (Right Column)"
+                folder="problem-statement"
+                defaultPromptProvider={aiProvider}
+                defaultPromptModel={aiModel}
+              />
             </div>
           </div>
 
