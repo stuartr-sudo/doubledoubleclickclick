@@ -694,6 +694,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
         </section>
 
+      {/* How It Works Section */}
+      <HowItWorks
+        title={howItWorksTitle}
+        steps={howItWorksSteps}
+        bgColor={howItWorksBgColor}
+      />
+
       {/* Technology Carousel Section */}
       <section className="tech-carousel-section" style={{ background: techCarouselBgColor }}>
         <div className="tech-carousel-header">
@@ -734,13 +741,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
         </div>
       </section>
-
-      {/* How It Works Section */}
-      <HowItWorks
-        title={howItWorksTitle}
-        steps={howItWorksSteps}
-        bgColor={howItWorksBgColor}
-      />
 
       {/* Proof of Results Section */}
       <section className="proof-results-section" style={{ background: proofResultsBgColor }}>
