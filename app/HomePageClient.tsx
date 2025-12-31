@@ -637,13 +637,36 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       question: 'How do I get started?',
       answer: 'Getting started is simple. Take our 12-step quiz to see where you\'re missing out on LLM visibility, or reach out directly through our contact form. We\'ll schedule a consultation to discuss your goals and create a customized plan for your brand.'
     }
-  ];
+  ]
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.sewo.io'
+  
+  // JSON-LD structured data for Organization
+  const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'SEWO',
+    url: baseUrl,
+    logo: logoImage || `${baseUrl}/logo.png`,
+    description: 'Expert LLM ranking optimization to boost your visibility in AI-powered search',
+    sameAs: [
+      // Add social media URLs here if available
+    ],
+  }
 
   return (
     <>
+      {/* Site Header with shadow */}
       <SiteHeader blogVisible={blogSectionVisible} />
       
       <main>
+        {/* JSON-LD for SEO */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        
+        {/* Hero Section - Full Width */}
         <section 
           className="hero-stripe"
           style={{
@@ -761,8 +784,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             ))}
           </div>
         </div>
-      </section>
-
       </section>
 
       {/* Quiz CTA Section */}
