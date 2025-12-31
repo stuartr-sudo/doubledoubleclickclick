@@ -694,6 +694,50 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
         </section>
 
+      {/* Proof of Results Section */}
+      <section className="proof-results-section" style={{ background: proofResultsBgColor }}>
+        <div className="proof-results-container">
+          <div className="proof-results-header">
+            <h2 className="proof-results-title">{proofResultsTitle}</h2>
+            <p className="proof-results-subtitle">{proofResultsSubtitle}</p>
+          </div>
+          <div className="proof-results-grid">
+            {proofResultsItems.map((item) => (
+              <article key={item.id} className="proof-result-card">
+                <div className="proof-result-image">
+                  {item.image ? (
+                    <Image 
+                      src={item.image} 
+                      alt={item.title} 
+                      width={400}
+                      height={225}
+                      loading="lazy"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                    />
+                  ) : (
+                    <div className="proof-result-image-placeholder">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <div className="proof-result-content">
+                  <h3 className="proof-result-card-title">{item.title}</h3>
+                  <p className="proof-result-description">{item.description}</p>
+                  <Link href={item.cta_link} className="proof-result-cta">
+                    {item.cta_text}
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* How It Works Section */}
       <HowItWorks
         title={howItWorksTitle}
@@ -742,48 +786,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* Proof of Results Section */}
-      <section className="proof-results-section" style={{ background: proofResultsBgColor }}>
-        <div className="proof-results-container">
-          <div className="proof-results-header">
-            <h2 className="proof-results-title">{proofResultsTitle}</h2>
-            <p className="proof-results-subtitle">{proofResultsSubtitle}</p>
-          </div>
-          <div className="proof-results-grid">
-            {proofResultsItems.map((item) => (
-              <article key={item.id} className="proof-result-card">
-                <div className="proof-result-image">
-                  {item.image ? (
-                    <Image 
-                      src={item.image} 
-                      alt={item.title} 
-                      width={400}
-                      height={225}
-                      loading="lazy"
-                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                    />
-                  ) : (
-                    <div className="proof-result-image-placeholder">
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div className="proof-result-content">
-                  <h3 className="proof-result-card-title">{item.title}</h3>
-                  <p className="proof-result-description">{item.description}</p>
-                  <Link href={item.cta_link} className="proof-result-cta">
-                    {item.cta_text}
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* Quiz CTA Section */}
