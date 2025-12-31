@@ -639,7 +639,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     }
   ]
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.sewo.io'
+  const baseUrl = 'https://www.sewo.io'
   
   // JSON-LD structured data for Organization
   const organizationJsonLd = {
@@ -649,18 +649,14 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     url: baseUrl,
     logo: logoImage || `${baseUrl}/logo.png`,
     description: 'Expert LLM ranking optimization to boost your visibility in AI-powered search',
-    sameAs: [
-      // Add social media URLs here if available
-    ],
+    sameAs: [],
   }
 
   return (
     <>
-      {/* Site Header with shadow */}
       <SiteHeader blogVisible={blogSectionVisible} />
       
       <main>
-        {/* JSON-LD for SEO */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
