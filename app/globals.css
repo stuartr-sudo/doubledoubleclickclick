@@ -370,11 +370,11 @@ img {
 }
 
 .hero-cta-subtext {
-  font-size: 0.9rem;
-  opacity: 0.8;
-  max-width: 500px;
+  font-size: 1.125rem;
+  opacity: 0.9;
+  max-width: 600px;
   text-align: center;
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
 }
 
