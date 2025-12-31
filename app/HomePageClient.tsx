@@ -815,13 +815,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <HowItWorks
-        title={howItWorksTitle}
-        steps={howItWorksSteps}
-        bgColor={howItWorksBgColor}
-      />
-
       {/* AI Visibility System Section */}
       <section className="solution-section">
         <div className="solution-container">
@@ -926,6 +919,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
         </div>
       </section>
+
+      {/* How It Works Section */}
+      <HowItWorks
+        title={howItWorksTitle}
+        steps={howItWorksSteps}
+        bgColor={howItWorksBgColor}
+      />
 
       {/* Quiz CTA Section */}
       <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
