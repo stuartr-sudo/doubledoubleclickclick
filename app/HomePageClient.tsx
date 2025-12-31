@@ -697,7 +697,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                         color: heroCTATextColor,
                       }}
                     >
-                      Download Our Free AI Visibility Assessment Checklist
+                      Apply to Work With Us
                     </Link>
                     <p className="hero-cta-subtext">
                       Understand how AI systems decide which brands to recommend — and where your current content falls short.
