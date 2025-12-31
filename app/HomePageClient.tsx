@@ -667,17 +667,17 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         />
         
         {/* Hero Section - Full Width */}
-        <section className="hero-stripe">
+        <section 
+          className="hero-stripe"
+          style={{
+            background: heroBgGradient,
+            color: heroTextColor
+          }}
+        >
           {/* Main Content */}
           <div className="hero-stripe-content">
-            {/* Full Width Hero Content with Gradient Background */}
-            <div 
-              className="hero-stripe-full"
-              style={{
-                background: heroBgGradient,
-                color: heroTextColor
-              }}
-            >
+            {/* Full Width Hero Content */}
+            <div className="hero-stripe-full">
               <div className="container">
                 <div className="hero-stripe-inner">
                   <h1 className="hero-stripe-title">

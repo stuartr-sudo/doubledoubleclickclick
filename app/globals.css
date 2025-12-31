@@ -194,15 +194,14 @@ img {
 
 /* Hero Section - Stripe-style Design */
 .hero-stripe {
-  min-height: auto;
-  background: var(--color-bg);
+  min-height: 80vh;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
   padding: 0;
   margin: 0;
-  margin-top: 80px; /* Account for fixed header */
+  padding-top: 80px; /* Account for fixed header */
 }
 
 /* Hero Navigation - Desktop */
@@ -276,7 +275,7 @@ img {
   width: 100%;
   display: flex;
   align-items: center;
-  padding: var(--spacing-lg) 0;
+  padding: var(--spacing-4xl) 0;
   position: relative;
 }
 
@@ -286,17 +285,17 @@ img {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-xl);
   text-align: center;
 }
 
 @media (max-width: 768px) {
   .hero-stripe-full {
-    padding: var(--spacing-md) 0;
+    padding: var(--spacing-3xl) 0;
   }
   
   .hero-stripe-inner {
-    gap: var(--spacing-sm);
+    gap: var(--spacing-lg);
   }
 }
 
