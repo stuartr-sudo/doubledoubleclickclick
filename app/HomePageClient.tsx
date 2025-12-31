@@ -822,6 +822,111 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         bgColor={howItWorksBgColor}
       />
 
+      {/* AI Visibility System Section */}
+      <section className="solution-section">
+        <div className="solution-container">
+          <div className="solution-grid">
+            {/* Left Column - Narrative */}
+            <div className="solution-narrative">
+              <span className="solution-kicker">Introducing</span>
+              <h2 className="solution-headline">
+                AI Visibility System: our authority framework for AI search and summaries.
+              </h2>
+              <div className="solution-body">
+                <p>
+                  Most brands are guessing how to get recommended by AI. They&apos;re chasing prompts, publishing more content, and hoping something sticks.
+                </p>
+                <p>
+                  The market is full of noise—quick fixes, hacks, and tactics that don&apos;t translate into lasting visibility.
+                </p>
+                <p>
+                  We built the AI Visibility System to remove guesswork. It&apos;s a structured approach to how AI systems interpret, trust, and reuse your brand&apos;s information.
+                </p>
+                <p>
+                  This isn&apos;t a one-off optimisation. It&apos;s designed to compound—building durable authority that grows stronger over time.
+                </p>
+              </div>
+              <div className="solution-cta">
+                <Link href="/guide" className="solution-button">
+                  Apply to work with us
+                </Link>
+                <p className="solution-note">
+                  Limited capacity. We take on a small number of brands at a time.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Column - Pillars */}
+            <div className="solution-pillars">
+              <div className="solution-pillar">
+                <div className="pillar-icon">
+                  {/* Search/AI Icon */}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                    <path d="M11 8v6M8 11h6"/>
+                  </svg>
+                </div>
+                <div className="pillar-content">
+                  <h3 className="pillar-title">Built for AI discovery, not traditional SEO</h3>
+                  <p className="pillar-description">
+                    Traditional search optimisation doesn&apos;t translate to AI. We focus on how language models find, interpret, and recommend brands.
+                  </p>
+                </div>
+              </div>
+
+              <div className="solution-pillar">
+                <div className="pillar-icon">
+                  {/* Authority/Shield Icon */}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M9 12l2 2 4-4"/>
+                  </svg>
+                </div>
+                <div className="pillar-content">
+                  <h3 className="pillar-title">Authority over volume</h3>
+                  <p className="pillar-description">
+                    More content isn&apos;t the answer. We help you become the trusted source AI systems turn to—not just another voice in the noise.
+                  </p>
+                </div>
+              </div>
+
+              <div className="solution-pillar">
+                <div className="pillar-icon">
+                  {/* Growth/Compound Icon */}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                  </svg>
+                </div>
+                <div className="pillar-content">
+                  <h3 className="pillar-title">Designed to compound</h3>
+                  <p className="pillar-description">
+                    Each piece of work builds on the last. Authority grows. Visibility deepens. Results improve over time, not just once.
+                  </p>
+                </div>
+              </div>
+
+              <div className="solution-pillar">
+                <div className="pillar-icon">
+                  {/* Proven/Target Icon */}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="6"/>
+                    <circle cx="12" cy="12" r="2"/>
+                  </svg>
+                </div>
+                <div className="pillar-content">
+                  <h3 className="pillar-title">Proven approach, low guesswork</h3>
+                  <p className="pillar-description">
+                    We&apos;ve tested what works. Our process is refined, repeatable, and built on real outcomes—not theory.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Quiz CTA Section */}
       <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
         <div className="quiz-cta-container">
