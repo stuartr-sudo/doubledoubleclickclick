@@ -822,47 +822,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         bgColor={howItWorksBgColor}
       />
 
-      {/* Technology Carousel Section */}
-      <section className="tech-carousel-section" style={{ background: techCarouselBgColor }}>
-        <div className="tech-carousel-header">
-          <h2 className="section-label">{techCarouselTitle}</h2>
-        </div>
-        <div className="tech-carousel-wrapper">
-          <div className="tech-carousel-track">
-            {/* First set of items */}
-            {techCarouselItems.map((item) => (
-              <div key={item.id} className="tech-carousel-item">
-                <div className="tech-icon-wrapper">
-                  {item.icon ? (
-                    <Image src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
-                  ) : (
-                    <div className="tech-icon-placeholder">
-                      <span className="tech-icon-text">{item.name}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="tech-title">{item.name}</div>
-              </div>
-            ))}
-            {/* Duplicate set for seamless infinite scroll */}
-            {techCarouselItems.map((item) => (
-              <div key={`${item.id}-duplicate`} className="tech-carousel-item">
-                <div className="tech-icon-wrapper">
-                  {item.icon ? (
-                    <Image src={item.icon} alt={item.name} className="tech-icon" width={80} height={80} />
-                  ) : (
-                    <div className="tech-icon-placeholder">
-                      <span className="tech-icon-text">{item.name}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="tech-title">{item.name}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Quiz CTA Section */}
       <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
         <div className="quiz-cta-container">
