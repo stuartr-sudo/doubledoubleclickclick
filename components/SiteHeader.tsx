@@ -28,7 +28,6 @@ export default function SiteHeader({ blogVisible = true }: SiteHeaderProps) {
           </Link>
 
           <div className="nav-links">
-            <Link href="/author/stuart-asta">Author</Link>
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
             {blogVisible && <Link href="/blog">Blog</Link>}

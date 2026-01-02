@@ -1,33 +1,29 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import SiteHeader from '@/components/SiteHeader'
+import { createClient } from '@/lib/supabase/server'
 
-const authors = [
-  {
-    name: 'Stuart Asta',
-    role: 'Founder & CEO',
-    bio: 'Expert in LLM ranking optimization and AI search strategy. Passionate about helping brands get discovered by AI assistants.',
-    linkedin: 'https://www.linkedin.com/in/stuartasta/',
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=400&auto=format&fit=crop',
-    slug: 'stuart-asta'
-  },
-  {
-    name: 'Sarah Chen',
-    role: 'Head of AI Research',
-    bio: 'Specializing in prompt engineering and semantic search. Sarah leads our research into how different LLMs prioritize information.',
-    linkedin: 'https://www.linkedin.com/in/sarahchen/',
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400&auto=format&fit=crop'
-  },
-  {
-    name: 'Michael Ross',
-    role: 'Content Strategy Lead',
-    bio: 'Bridging the gap between traditional SEO and AI-native content optimization. Michael ensures our clients\' content is AI-ready.',
-    linkedin: 'https://www.linkedin.com/in/michaelross/',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=400&auto=format&fit=crop'
-  }
-]
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const supabase = await createClient()
+
+  // Fetch Stuart Asta's author data
+  const { data: author } = await supabase
+    .from('authors')
+    .select('slug, name, bio, linkedin_url, avatar_url')
+    .eq('slug', 'stuart-asta')
+    .single()
+
+  // Fetch posts by Stuart Asta
+  const { data: posts } = await supabase
+    .from('site_posts')
+    .select('id, slug, title, meta_description, featured_image, published_date, created_date')
+    .eq('status', 'published')
+    .eq('author', author?.name || 'Stuart Asta')
+    .order('published_date', { ascending: false })
+    .limit(6)
   return (
     <>
       <SiteHeader />
@@ -67,59 +63,79 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="authors-section">
-          <div className="container">
-            <h2 className="section-title">Meet Our Authors</h2>
-            <p className="section-description">
-              The experts behind our insights and strategies.
-            </p>
-            
-            <div className="authors-grid">
-              {authors.map((author, index) => (
-                <div key={index} className="author-card">
-                  <div className="author-image">
-                    <Image 
-                      src={author.image} 
-                      alt={author.name} 
-                      width={400} 
-                      height={250} 
-                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+        {/* Founder Section */}
+        {author && (
+          <section className="founder-section">
+            <div className="container">
+              <h2 className="section-title">Meet the Founder</h2>
+              
+              <div className="founder-hero">
+                <div className="founder-avatar">
+                  {author.avatar_url ? (
+                    <Image
+                      src={author.avatar_url}
+                      alt={author.name}
+                      width={150}
+                      height={150}
+                      style={{ objectFit: 'cover', borderRadius: '999px' }}
                     />
-                  </div>
-                  <div className="author-info">
-                    <h3 className="author-name">
-                      {author.slug ? (
-                        <Link href={`/author/${author.slug}`}>{author.name}</Link>
-                      ) : (
-                        author.name
-                      )}
-                    </h3>
-                    <p className="author-role">{author.role}</p>
-                    <p className="author-bio">{author.bio}</p>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                      <a 
-                        href={author.linkedin} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="linkedin-link"
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                        </svg>
+                  ) : (
+                    <div className="founder-avatar-fallback">{author.name?.slice(0, 1)?.toUpperCase()}</div>
+                  )}
+                </div>
+                <div className="founder-info">
+                  <h3 className="founder-name">{author.name}</h3>
+                  <p className="founder-role">Founder & CEO</p>
+                  {author.bio && <p className="founder-bio">{author.bio}</p>}
+                  <div className="founder-links">
+                    {author.linkedin_url && (
+                      <a className="btn btn-secondary" href={author.linkedin_url} target="_blank" rel="noreferrer">
                         LinkedIn
                       </a>
-                      {author.slug && (
-                        <Link href={`/author/${author.slug}`} className="linkedin-link" style={{ color: 'var(--color-primary)' }}>
-                          View Profile →
-                        </Link>
-                      )}
-                    </div>
+                    )}
+                    <Link className="btn btn-secondary" href="/blog">View all posts</Link>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {posts && posts.length > 0 && (
+                <div className="founder-posts">
+                  <h3 className="founder-posts-title">Recent Posts by {author.name}</h3>
+                  <div className="blog-grid">
+                    {posts.map((post: any) => (
+                      <Link key={post.id} href={`/blog/${post.slug || post.id}`} className="blog-card">
+                        {post.featured_image && (
+                          <div className="blog-card-image">
+                            <Image
+                              src={post.featured_image}
+                              alt={post.title}
+                              width={600}
+                              height={340}
+                              style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                            />
+                          </div>
+                        )}
+                        <div className="blog-card-content">
+                          <div className="blog-card-meta">
+                            <span className="blog-card-date">
+                              {new Date(post.published_date || post.created_date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })}
+                            </span>
+                          </div>
+                          <h4 className="blog-card-title">{post.title}</h4>
+                          {post.meta_description && <p className="blog-card-excerpt">{post.meta_description}</p>}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
     </>
   )

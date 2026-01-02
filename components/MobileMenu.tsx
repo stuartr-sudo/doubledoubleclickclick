@@ -73,9 +73,6 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
         <Link href="/" className="mobile-menu-link" onClick={handleLinkClick}>
           Home
         </Link>
-        <Link href="/author/stuart-asta" className="mobile-menu-link" onClick={handleLinkClick}>
-          Author
-        </Link>
         <Link href="/about" className="mobile-menu-link" onClick={handleLinkClick}>
           About
         </Link>
