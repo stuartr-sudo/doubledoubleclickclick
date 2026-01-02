@@ -1053,6 +1053,26 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             <h2 className="proof-results-title">{proofResultsTitle}</h2>
             <p className="proof-results-subtitle">{proofResultsSubtitle}</p>
           </div>
+
+          {/* Case Study Text Block */}
+          <div className="proof-results-case-study">
+            <h3 className="proof-results-case-study-title">Case study: AI visibility in a highly competitive market</h3>
+            <div className="proof-results-case-study-content">
+              <p>
+                In a highly competitive U.S. skincare market, we applied our AI Visibility System to restructure how content, site signals, and brand authority were presented to AI systems.
+              </p>
+              <p>
+                Rather than relying on shortcuts or volume, the work focused on clarity, trust signals, and consistency across content, structure, and supporting brand signals.
+              </p>
+              <p>
+                Within the first 30 days, the brand achieved top placement in AI-generated results, maintained that visibility, and saw a <strong>450% increase in organic traffic</strong> — driven by sustained inclusion in AI summaries and recommendations.
+              </p>
+              <p>
+                This outcome wasn&apos;t the result of a single tactic, but a connected system designed to compound over time.
+              </p>
+            </div>
+          </div>
+
           <div className="proof-results-grid">
             {proofResultsItems.map((item) => (
               <article key={item.id} className="proof-result-card">
@@ -1086,25 +1106,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 </div>
               </article>
             ))}
-          </div>
-
-          {/* Case Study Text Block */}
-          <div className="proof-results-case-study">
-            <h3 className="proof-results-case-study-title">Case study: AI visibility in a highly competitive market</h3>
-            <div className="proof-results-case-study-content">
-              <p>
-                In a highly competitive U.S. skincare market, we applied our AI Visibility System to restructure how content, site signals, and brand authority were presented to AI systems.
-              </p>
-              <p>
-                Rather than relying on shortcuts or volume, the work focused on clarity, trust signals, and consistency across content, structure, and supporting brand signals.
-              </p>
-              <p>
-                Within the first 30 days, the brand achieved top placement in AI-generated results, maintained that visibility, and saw a <strong>450% increase in organic traffic</strong> — driven by sustained inclusion in AI summaries and recommendations.
-              </p>
-              <p>
-                This outcome wasn&apos;t the result of a single tactic, but a connected system designed to compound over time.
-              </p>
-          </div>
           </div>
         </div>
       </section>
