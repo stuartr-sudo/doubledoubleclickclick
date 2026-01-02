@@ -1173,6 +1173,25 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </div>
       </section>
 
+      {/* Apply to Work With Us Form */}
+      <section id="apply-form" className="apply-form-section">
+        <div className="container">
+          <div className="apply-form-wrapper">
+            <div className="apply-form-header">
+              <h2>Apply to Work With Us</h2>
+              <p className="apply-form-intro">
+                Tell us about your brand and how we can help you get recommended by AI.
+              </p>
+            </div>
+
+            <ApplyForm 
+              buttonBgColor={heroCTABgColor}
+              buttonTextColor={heroCTATextColor}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Latest Blog Posts - 3x2 Grid */}
       {blogSectionVisible && latestPosts && latestPosts.length > 0 && (
         <section className="blog-grid-section" style={{ background: blogGridBgColor }}>
@@ -1220,25 +1239,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
         </section>
       )}
-
-      {/* Apply to Work With Us Form */}
-      <section id="apply-form" className="apply-form-section">
-        <div className="container">
-          <div className="apply-form-wrapper">
-            <div className="apply-form-header">
-              <h2>Apply to Work With Us</h2>
-              <p className="apply-form-intro">
-                Tell us about your brand and how we can help you get recommended by AI.
-              </p>
-            </div>
-
-            <ApplyForm 
-              buttonBgColor={heroCTABgColor}
-              buttonTextColor={heroCTATextColor}
-            />
-          </div>
-        </div>
-      </section>
 
       {/* Particle Animation */}
       <ParticleAnimation 
