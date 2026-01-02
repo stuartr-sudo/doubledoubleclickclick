@@ -13,7 +13,6 @@ import SiteHeader from '@/components/SiteHeader'
 const SubscribeHero = dynamic(() => import('@/components/SubscribeHero'), { ssr: false })
 const HowItWorks = dynamic(() => import('@/components/HowItWorks'), { ssr: true })
 const ParticleAnimation = dynamic(() => import('@/components/ParticleAnimation'), { ssr: false })
-const ContactForm = dynamic(() => import('@/components/ContactForm'), { ssr: false })
 
 interface Service {
   id: string
@@ -1188,11 +1187,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
         </section>
       )}
-
-      {/* Contact Form */}
-      <Suspense fallback={<div style={{ padding: '4rem 0', textAlign: 'center' }}>Loading...</div>}>
-        <ContactForm />
-      </Suspense>
 
         {/* Particle Animation */}
         <ParticleAnimation 
