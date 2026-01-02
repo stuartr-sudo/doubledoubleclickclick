@@ -6153,7 +6153,7 @@ textarea::placeholder,
 .apply-form-section {
   padding-top: calc(var(--spacing-4xl) * 0.5);
   padding-bottom: var(--spacing-4xl);
-  background: var(--color-bg);
+  background: #f8f9fa;
 }
 
 .apply-form-wrapper {
