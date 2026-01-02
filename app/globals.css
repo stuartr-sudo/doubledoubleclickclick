@@ -1046,7 +1046,46 @@ img {
   margin: 0;
 }
 
+/* Signals Conclusion Section */
+.signals-conclusion-section {
+  padding: var(--spacing-4xl) var(--spacing-2xl);
+  background: #ffffff;
+}
+
+.signals-conclusion-content {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.signals-conclusion-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-lg) 0;
+}
+
+.signals-conclusion-text {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
 @media (max-width: 768px) {
+  .signals-conclusion-section {
+    padding: var(--spacing-3xl) var(--spacing-md);
+  }
+
+  .signals-conclusion-title {
+    font-size: 1.75rem;
+  }
+
+  .signals-conclusion-text {
+    font-size: 1.125rem;
+  }
+
   .connected-signals-section {
     padding: var(--spacing-3xl) var(--spacing-md);
   }

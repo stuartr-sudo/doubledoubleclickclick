@@ -840,13 +840,18 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <li>visible activity across relevant social platforms</li>
                   <li>consistency between what you publish and how your brand shows up elsewhere</li>
                 </ul>
-
-                <div className="signals-conclusion">
-                  <p className="signals-emphasis">These signals don&apos;t operate independently.<br />They reinforce each other.</p>
-                  <p>This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
-                </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Signals Conclusion Section */}
+      <section className="signals-conclusion-section">
+        <div className="container">
+          <div className="signals-conclusion-content">
+            <h1 className="signals-conclusion-title">These signals don&apos;t operate independently.<br />They reinforce each other.</h1>
+            <p className="signals-conclusion-text">This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
           </div>
         </div>
       </section>
