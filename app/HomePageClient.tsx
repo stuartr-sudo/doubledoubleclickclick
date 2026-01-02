@@ -893,21 +893,24 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             {/* Left Column - Narrative */}
             <div className="solution-narrative">
               <span className="solution-kicker">Introducing</span>
-              <h2 className="solution-headline">
-                AI Visibility System: our authority framework for AI search and summaries.
-              </h2>
+              <h2 className="solution-headline">AI Visibility System</h2>
+              <p className="solution-subtitle">Our authority framework for AI search and summaries</p>
               <div className="solution-body">
                 <p>
-                  Most brands are guessing how to get recommended by AI. They&apos;re chasing prompts, publishing more content, and hoping something sticks.
+                  Most brands are guessing how to get recommended by AI.
                 </p>
                 <p>
-                  The market is full of noise—quick fixes, hacks, and tactics that don&apos;t translate into lasting visibility.
+                  They&apos;re chasing prompts, publishing more content, and hoping something sticks — while the market fills with quick fixes, hacks, and tactics that don&apos;t translate into lasting visibility.
+                </p>
+                <p className="solution-emphasis">
+                  We built the AI Visibility System to remove that guesswork.
                 </p>
                 <p>
-                  We built the AI Visibility System to remove guesswork. It&apos;s a structured approach to how AI systems interpret, trust, and reuse your brand&apos;s information.
+                  It&apos;s a structured approach to how AI systems interpret, trust, and reuse your brand&apos;s information — not just what you publish, but how your brand presents itself as a whole.
                 </p>
                 <p>
-                  This isn&apos;t a one-off optimisation. It&apos;s designed to compound—building durable authority that grows stronger over time.
+                  This isn&apos;t a one-off optimisation.<br />
+                  It&apos;s designed to compound — building durable authority that strengthens over time.
                 </p>
               </div>
               <div className="solution-cta">
@@ -922,6 +925,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
             {/* Right Column - Pillars */}
             <div className="solution-pillars">
+              <h3 className="pillars-heading">Why this works differently</h3>
+              
               <div className="solution-pillar">
                 <div className="pillar-icon">
                   {/* Search/AI Icon */}
@@ -932,9 +937,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   </svg>
                 </div>
                 <div className="pillar-content">
-                  <h3 className="pillar-title">Built for AI discovery, not traditional SEO</h3>
+                  <h4 className="pillar-title">Built for AI discovery, not traditional SEO</h4>
                   <p className="pillar-description">
-                    Traditional search optimisation doesn&apos;t translate to AI. We focus on how language models find, interpret, and recommend brands.
+                    Traditional search optimisation and paid media focus on direct inputs. AI recommendations don&apos;t.
+                  </p>
+                  <p className="pillar-description">
+                    We specialise specifically in AI summaries and AI recommendations — how language models decide which brands to surface, cite, and suggest when users ask questions.
                   </p>
                 </div>
               </div>
@@ -948,9 +956,15 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   </svg>
                 </div>
                 <div className="pillar-content">
-                  <h3 className="pillar-title">Authority over volume</h3>
+                  <h4 className="pillar-title">Authority over volume</h4>
                   <p className="pillar-description">
-                    More content isn&apos;t the answer. We help you become the trusted source AI systems turn to—not just another voice in the noise.
+                    More content isn&apos;t the answer.
+                  </p>
+                  <p className="pillar-description">
+                    AI systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints — not those publishing the most pages.
+                  </p>
+                  <p className="pillar-description">
+                    Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.
                   </p>
                 </div>
               </div>
@@ -963,9 +977,15 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   </svg>
                 </div>
                 <div className="pillar-content">
-                  <h3 className="pillar-title">Designed to compound</h3>
+                  <h4 className="pillar-title">Designed to compound</h4>
                   <p className="pillar-description">
-                    Each piece of work builds on the last. Authority grows. Visibility deepens. Results improve over time, not just once.
+                    AI visibility isn&apos;t something you switch on. It&apos;s something you build.
+                  </p>
+                  <p className="pillar-description">
+                    Each piece of work reinforces the next — content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time.
+                  </p>
+                  <p className="pillar-description">
+                    That&apos;s why results don&apos;t reset every few months. They accumulate.
                   </p>
                 </div>
               </div>
@@ -980,9 +1000,15 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   </svg>
                 </div>
                 <div className="pillar-content">
-                  <h3 className="pillar-title">Proven approach, low guesswork</h3>
+                  <h4 className="pillar-title">Proven approach, low guesswork</h4>
                   <p className="pillar-description">
-                    We&apos;ve tested what works. Our process is refined, repeatable, and built on real outcomes—not theory.
+                    This work isn&apos;t experimental.
+                  </p>
+                  <p className="pillar-description">
+                    Our process is refined, repeatable, and grounded in how AI systems actually behave — not theory, not trends, and not short-lived tactics.
+                  </p>
+                  <p className="pillar-description">
+                    We don&apos;t attempt to game the system. We focus on building the conditions AI relies on to recommend brands with confidence.
                   </p>
                 </div>
               </div>

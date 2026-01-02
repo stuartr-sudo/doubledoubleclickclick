@@ -1052,6 +1052,18 @@ img {
   margin: 0;
 }
 
+.solution-subtitle {
+  font-size: 1.125rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.solution-emphasis {
+  font-weight: 600;
+  color: var(--color-text) !important;
+}
+
 .solution-body {
   display: flex;
   flex-direction: column;
@@ -1102,6 +1114,15 @@ img {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+.pillars-heading {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-lg) 0;
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .solution-pillar {
