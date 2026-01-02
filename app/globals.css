@@ -1769,7 +1769,10 @@ img {
 
 /* Proof of Results Section */
 .proof-results-section {
-  padding: var(--spacing-3xl) var(--spacing-2xl);
+  padding-top: var(--spacing-3xl);
+  padding-bottom: calc(var(--spacing-3xl) * 0.5);
+  padding-left: var(--spacing-2xl);
+  padding-right: var(--spacing-2xl);
   background: var(--color-bg);
 }
 
@@ -1982,7 +1985,10 @@ img {
 /* Responsive - Mobile optimized */
 @media (max-width: 1024px) {
   .proof-results-section {
-    padding: var(--spacing-2xl) var(--spacing-lg);
+    padding-top: var(--spacing-2xl);
+    padding-bottom: calc(var(--spacing-2xl) * 0.5);
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
   }
 
   .proof-results-header {
@@ -2028,7 +2034,10 @@ img {
 
 @media (max-width: 640px) {
   .proof-results-section {
-    padding: var(--spacing-xl) var(--spacing-md);
+    padding-top: var(--spacing-xl);
+    padding-bottom: calc(var(--spacing-xl) * 0.5);
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
   }
 
   .proof-results-header {
