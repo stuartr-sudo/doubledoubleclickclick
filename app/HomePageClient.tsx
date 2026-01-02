@@ -1117,6 +1117,22 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         bgColor={howItWorksBgColor}
       />
 
+      {/* FAQ CTA - Above FAQ Section */}
+      <div className="faq-cta-wrapper">
+        <div className="faq-cta">
+          <Link 
+            href="#apply-form" 
+            className="faq-cta-button"
+            style={{
+              backgroundColor: heroCTABgColor,
+              color: heroCTATextColor,
+            }}
+          >
+            Apply to Work With Us
+          </Link>
+        </div>
+      </div>
+
       {/* FAQ Section */}
       <section className="faq-section" style={{ background: faqBgColor }}>
         <div className="faq-container">
@@ -1157,18 +1173,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 )}
               </div>
             ))}
-          </div>
-          <div className="faq-cta">
-            <Link 
-              href="#apply-form" 
-              className="faq-cta-button"
-              style={{
-                backgroundColor: heroCTABgColor,
-                color: heroCTATextColor,
-              }}
-            >
-              Apply to Work With Us
-                </Link>
           </div>
         </div>
       </section>
