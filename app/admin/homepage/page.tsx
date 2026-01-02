@@ -46,6 +46,12 @@ interface ProofResultItem {
   cta_link: string
 }
 
+interface SolutionPillarItem {
+  id: string
+  title: string
+  description: string
+}
+
 interface HomepageContent {
   logo_image: string
   logo_text: string
@@ -123,6 +129,24 @@ interface HomepageContent {
   quiz_landing_description?: string
   find_questions_title?: string
   find_questions_description?: string
+  solution_kicker?: string
+  solution_headline?: string
+  solution_subtitle?: string
+  solution_body_para_1?: string
+  solution_body_para_2?: string
+  solution_body_para_3?: string
+  solution_body_para_4?: string
+  solution_body_para_5?: string
+  solution_cta_text?: string
+  solution_cta_link?: string
+  solution_note?: string
+  solution_pillars_heading?: string
+  solution_pillars?: SolutionPillarItem[]
+  solution_testimonial_quote?: string
+  solution_testimonial_author_name?: string
+  solution_testimonial_author_company?: string
+  solution_testimonial_author_image?: string
+  solution_bg_color?: string
 }
 
 function HomepageEditorPageInner() {
@@ -278,7 +302,46 @@ function HomepageEditorPageInner() {
     problem_statement_para_4: 'Because when customers ask AI for answers, your brand either shows up — or it doesn\'t.',
     problem_statement_para_5: 'And that visibility gap is the exact problem we\'re built to fix.',
     problem_statement_image: '',
-    problem_statement_bg_color: '#f8f9fa'
+    problem_statement_bg_color: '#f8f9fa',
+    solution_kicker: 'Introducing',
+    solution_headline: 'AI Visibility System',
+    solution_subtitle: 'Our authority framework for AI search and summaries',
+    solution_body_para_1: 'Most brands are guessing how to get recommended by AI.',
+    solution_body_para_2: 'They\'re chasing prompts, publishing more content, and hoping something sticks — while the market fills with quick fixes, hacks, and tactics that don\'t translate into lasting visibility.',
+    solution_body_para_3: 'We built the AI Visibility System to remove that guesswork.',
+    solution_body_para_4: 'It\'s a structured approach to how AI systems interpret, trust, and reuse your brand\'s information — not just what you publish, but how your brand presents itself as a whole.',
+    solution_body_para_5: 'This isn\'t a one-off optimisation. It\'s designed to compound — building durable authority that strengthens over time.',
+    solution_cta_text: 'Apply to Work With Us',
+    solution_cta_link: '/guide',
+    solution_note: 'Limited capacity. We take on a small number of brands at a time.',
+    solution_pillars_heading: 'Why this works differently',
+    solution_pillars: [
+      {
+        id: '1',
+        title: 'Built for AI discovery, not traditional SEO',
+        description: 'Traditional search optimisation and paid media focus on direct inputs. AI recommendations don\'t. We specialise specifically in AI summaries and AI recommendations — how language models decide which brands to surface, cite, and suggest when users ask questions.'
+      },
+      {
+        id: '2',
+        title: 'Authority over volume',
+        description: 'More content isn\'t the answer. AI systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints — not those publishing the most pages. Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.'
+      },
+      {
+        id: '3',
+        title: 'Designed to compound',
+        description: 'AI visibility isn\'t something you switch on. It\'s something you build. Each piece of work reinforces the next — content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time. That\'s why results don\'t reset every few months. They accumulate.'
+      },
+      {
+        id: '4',
+        title: 'Proven approach, low guesswork',
+        description: 'This work isn\'t experimental. Our process is refined, repeatable, and grounded in how AI systems actually behave — not theory, not trends, and not short-lived tactics. We don\'t attempt to game the system. We focus on building the conditions AI relies on to recommend brands with confidence.'
+      }
+    ],
+    solution_testimonial_quote: 'I really think is the future if you\'re serious about ranking in Ai search.',
+    solution_testimonial_author_name: 'James Neilson-Watt',
+    solution_testimonial_author_company: 'learnspark.io',
+    solution_testimonial_author_image: 'https://framerusercontent.com/images/0WlUXwlUVlsMtOtPEH9RIoG0CFQ.jpeg?width=400&height=400',
+    solution_bg_color: '#fafafa'
   })
 
   // Generate gradient string from color picker values
@@ -318,7 +381,9 @@ function HomepageEditorPageInner() {
                 image: item.image || item.icon || ''
               }))
             : prev.why_work_with_us_items,
-          faq_items: Array.isArray(data.faq_items) ? data.faq_items : prev.faq_items
+          faq_items: Array.isArray(data.faq_items) ? data.faq_items : prev.faq_items,
+          proof_results_items: Array.isArray(data.proof_results_items) ? data.proof_results_items : prev.proof_results_items,
+          solution_pillars: Array.isArray(data.solution_pillars) ? data.solution_pillars : prev.solution_pillars
         }))
         
         // Parse gradient and set color picker states
@@ -514,6 +579,30 @@ function HomepageEditorPageInner() {
     setFormData(prev => ({
       ...prev,
       proof_results_items: (prev.proof_results_items || []).filter((_, i) => i !== index)
+    }))
+  }
+
+  // Solution Section handlers
+  const handleSolutionPillarChange = (index: number, field: 'title' | 'description', value: string) => {
+    const newItems = [...(formData.solution_pillars || [])]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setFormData(prev => ({ ...prev, solution_pillars: newItems }))
+  }
+
+  const addSolutionPillar = () => {
+    setFormData(prev => ({
+      ...prev,
+      solution_pillars: [
+        ...(prev.solution_pillars || []),
+        { id: String(Date.now()), title: '', description: '' }
+      ]
+    }))
+  }
+
+  const removeSolutionPillar = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      solution_pillars: (prev.solution_pillars || []).filter((_, i) => i !== index)
     }))
   }
 
@@ -1971,6 +2060,272 @@ function HomepageEditorPageInner() {
                       onChange={(value) => handleFAQChange(index, 'answer', value)}
                       fieldType="faq_answer"
                       label="Answer"
+                      multiline={true}
+                      rows={4}
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* AI Visibility System (Solution) Section */}
+          <div className="form-section">
+            <div className="form-section-header">
+              <h2 className="form-section-title">AI Visibility System Section</h2>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="solution_bg_color">Background Color</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="color"
+                  id="solution_bg_color"
+                  value={formData.solution_bg_color || '#fafafa'}
+                  onChange={(e) => setFormData({...formData, solution_bg_color: e.target.value})}
+                  style={{ width: '60px', height: '40px', cursor: 'pointer' }}
+                />
+                <input
+                  type="text"
+                  value={formData.solution_bg_color || '#fafafa'}
+                  onChange={(e) => setFormData({...formData, solution_bg_color: e.target.value})}
+                  placeholder="#fafafa"
+                  style={{ flex: 1, padding: '0.5rem' }}
+                />
+              </div>
+            </div>
+
+            <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Left Column - Narrative</h3>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_kicker || ''}
+                onChange={(value) => setFormData({...formData, solution_kicker: value})}
+                fieldType="solution_kicker"
+                label="Kicker Text"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_headline || ''}
+                onChange={(value) => setFormData({...formData, solution_headline: value})}
+                fieldType="solution_headline"
+                label="Headline"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_subtitle || ''}
+                onChange={(value) => setFormData({...formData, solution_subtitle: value})}
+                fieldType="solution_subtitle"
+                label="Subtitle"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_body_para_1 || ''}
+                onChange={(value) => setFormData({...formData, solution_body_para_1: value})}
+                fieldType="solution_body_para_1"
+                label="Body Paragraph 1"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_body_para_2 || ''}
+                onChange={(value) => setFormData({...formData, solution_body_para_2: value})}
+                fieldType="solution_body_para_2"
+                label="Body Paragraph 2"
+                multiline={true}
+                rows={3}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_body_para_3 || ''}
+                onChange={(value) => setFormData({...formData, solution_body_para_3: value})}
+                fieldType="solution_body_para_3"
+                label="Body Paragraph 3 (Emphasis)"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_body_para_4 || ''}
+                onChange={(value) => setFormData({...formData, solution_body_para_4: value})}
+                fieldType="solution_body_para_4"
+                label="Body Paragraph 4"
+                multiline={true}
+                rows={3}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_body_para_5 || ''}
+                onChange={(value) => setFormData({...formData, solution_body_para_5: value})}
+                fieldType="solution_body_para_5"
+                label="Body Paragraph 5"
+                multiline={true}
+                rows={3}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>CTA Button Text</label>
+                <input
+                  type="text"
+                  value={formData.solution_cta_text || ''}
+                  onChange={(e) => setFormData({...formData, solution_cta_text: e.target.value})}
+                  placeholder="Apply to Work With Us"
+                />
+              </div>
+              <div className="form-group">
+                <label>CTA Button Link</label>
+                <input
+                  type="text"
+                  value={formData.solution_cta_link || ''}
+                  onChange={(e) => setFormData({...formData, solution_cta_link: e.target.value})}
+                  placeholder="/guide"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_note || ''}
+                onChange={(value) => setFormData({...formData, solution_note: value})}
+                fieldType="solution_note"
+                label="Note Text (below CTA)"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Testimonial</h3>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_testimonial_quote || ''}
+                onChange={(value) => setFormData({...formData, solution_testimonial_quote: value})}
+                fieldType="solution_testimonial_quote"
+                label="Testimonial Quote"
+                multiline={true}
+                rows={2}
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Author Name</label>
+                <input
+                  type="text"
+                  value={formData.solution_testimonial_author_name || ''}
+                  onChange={(e) => setFormData({...formData, solution_testimonial_author_name: e.target.value})}
+                  placeholder="James Neilson-Watt"
+                />
+              </div>
+              <div className="form-group">
+                <label>Author Company</label>
+                <input
+                  type="text"
+                  value={formData.solution_testimonial_author_company || ''}
+                  onChange={(e) => setFormData({...formData, solution_testimonial_author_company: e.target.value})}
+                  placeholder="learnspark.io"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <ImageUpload
+                value={formData.solution_testimonial_author_image || ''}
+                onChange={(url) => setFormData({...formData, solution_testimonial_author_image: url})}
+                label="Author Image"
+                folder="testimonials"
+                defaultPromptProvider={aiProvider}
+                defaultPromptModel={aiModel}
+              />
+            </div>
+
+            <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Right Column - Pillars</h3>
+
+            <div className="form-group">
+              <TextEnhancer
+                value={formData.solution_pillars_heading || ''}
+                onChange={(value) => setFormData({...formData, solution_pillars_heading: value})}
+                fieldType="solution_pillars_heading"
+                label="Pillars Heading"
+                defaultProvider={aiProvider}
+                defaultModel={aiModel}
+              />
+            </div>
+
+            <div className="form-section-header" style={{ marginTop: '1rem' }}>
+              <button type="button" onClick={addSolutionPillar} className="btn btn-sm btn-primary">
+                + Add Pillar
+              </button>
+            </div>
+
+            <div className="services-list">
+              {(formData.solution_pillars || []).map((pillar, index) => (
+                <div key={pillar.id} className="service-item">
+                  <div className="service-item-header">
+                    <h4>Pillar {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeSolutionPillar(index)}
+                      className="btn-remove"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={pillar.title}
+                      onChange={(value) => handleSolutionPillarChange(index, 'title', value)}
+                      fieldType="solution_pillar_title"
+                      label="Pillar Title"
+                      defaultProvider={aiProvider}
+                      defaultModel={aiModel}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <TextEnhancer
+                      value={pillar.description}
+                      onChange={(value) => handleSolutionPillarChange(index, 'description', value)}
+                      fieldType="solution_pillar_description"
+                      label="Pillar Description"
                       multiline={true}
                       rows={4}
                       defaultProvider={aiProvider}

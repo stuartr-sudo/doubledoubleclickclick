@@ -180,6 +180,24 @@ interface HomepageContent {
   contact_linkedin_url?: string
   contact_twitter_url?: string
   contact_behance_url?: string
+  solution_kicker?: string
+  solution_headline?: string
+  solution_subtitle?: string
+  solution_body_para_1?: string
+  solution_body_para_2?: string
+  solution_body_para_3?: string
+  solution_body_para_4?: string
+  solution_body_para_5?: string
+  solution_cta_text?: string
+  solution_cta_link?: string
+  solution_note?: string
+  solution_pillars_heading?: string
+  solution_pillars?: Array<{ id: string; title: string; description: string }>
+  solution_testimonial_quote?: string
+  solution_testimonial_author_name?: string
+  solution_testimonial_author_company?: string
+  solution_testimonial_author_image?: string
+  solution_bg_color?: string
 }
 
 interface HomePageClientProps {
@@ -292,6 +310,47 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const problemStatementPara5 = homepageContent?.problem_statement_para_5 || 'And that visibility gap is the exact problem we\'re built to fix.'
   const problemStatementImage = homepageContent?.problem_statement_image || ''
   const problemStatementBgColor = homepageContent?.problem_statement_bg_color || '#f8f9fa'
+
+  // AI Visibility System (Solution) Section
+  const solutionKicker = homepageContent?.solution_kicker || 'Introducing'
+  const solutionHeadline = homepageContent?.solution_headline || 'AI Visibility System'
+  const solutionSubtitle = homepageContent?.solution_subtitle || 'Our authority framework for AI search and summaries'
+  const solutionBodyPara1 = homepageContent?.solution_body_para_1 || 'Most brands are guessing how to get recommended by AI.'
+  const solutionBodyPara2 = homepageContent?.solution_body_para_2 || 'They\'re chasing prompts, publishing more content, and hoping something sticks — while the market fills with quick fixes, hacks, and tactics that don\'t translate into lasting visibility.'
+  const solutionBodyPara3 = homepageContent?.solution_body_para_3 || 'We built the AI Visibility System to remove that guesswork.'
+  const solutionBodyPara4 = homepageContent?.solution_body_para_4 || 'It\'s a structured approach to how AI systems interpret, trust, and reuse your brand\'s information — not just what you publish, but how your brand presents itself as a whole.'
+  const solutionBodyPara5 = homepageContent?.solution_body_para_5 || 'This isn\'t a one-off optimisation. It\'s designed to compound — building durable authority that strengthens over time.'
+  const solutionCTAText = homepageContent?.solution_cta_text || 'Apply to Work With Us'
+  const solutionCTALink = homepageContent?.solution_cta_link || '/guide'
+  const solutionNote = homepageContent?.solution_note || 'Limited capacity. We take on a small number of brands at a time.'
+  const solutionPillarsHeading = homepageContent?.solution_pillars_heading || 'Why this works differently'
+  const solutionPillars = homepageContent?.solution_pillars || [
+    {
+      id: '1',
+      title: 'Built for AI discovery, not traditional SEO',
+      description: 'Traditional search optimisation and paid media focus on direct inputs. AI recommendations don\'t. We specialise specifically in AI summaries and AI recommendations — how language models decide which brands to surface, cite, and suggest when users ask questions.'
+    },
+    {
+      id: '2',
+      title: 'Authority over volume',
+      description: 'More content isn\'t the answer. AI systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints — not those publishing the most pages. Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.'
+    },
+    {
+      id: '3',
+      title: 'Designed to compound',
+      description: 'AI visibility isn\'t something you switch on. It\'s something you build. Each piece of work reinforces the next — content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time. That\'s why results don\'t reset every few months. They accumulate.'
+    },
+    {
+      id: '4',
+      title: 'Proven approach, low guesswork',
+      description: 'This work isn\'t experimental. Our process is refined, repeatable, and grounded in how AI systems actually behave — not theory, not trends, and not short-lived tactics. We don\'t attempt to game the system. We focus on building the conditions AI relies on to recommend brands with confidence.'
+    }
+  ]
+  const solutionTestimonialQuote = homepageContent?.solution_testimonial_quote || 'I really think is the future if you\'re serious about ranking in Ai search.'
+  const solutionTestimonialAuthorName = homepageContent?.solution_testimonial_author_name || 'James Neilson-Watt'
+  const solutionTestimonialAuthorCompany = homepageContent?.solution_testimonial_author_company || 'learnspark.io'
+  const solutionTestimonialAuthorImage = homepageContent?.solution_testimonial_author_image || 'https://framerusercontent.com/images/0WlUXwlUVlsMtOtPEH9RIoG0CFQ.jpeg?width=400&height=400'
+  const solutionBgColor = homepageContent?.solution_bg_color || '#fafafa'
 
   // Product & Consulting Offerings
   const pricingTitle = homepageContent?.pricing_title || 'AI Strategies'
@@ -878,163 +937,111 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       </section>
 
       {/* AI Visibility System Section */}
-      <section className="solution-section">
+      <section className="solution-section" style={{ background: solutionBgColor }}>
         <div className="solution-container">
           <div className="solution-grid">
             {/* Left Column - Narrative */}
             <div className="solution-narrative">
-              <span className="solution-kicker">Introducing</span>
-              <h2 className="solution-headline">AI Visibility System</h2>
-              <p className="solution-subtitle">Our authority framework for AI search and summaries</p>
+              <span className="solution-kicker">{solutionKicker}</span>
+              <h2 className="solution-headline">{solutionHeadline}</h2>
+              <p className="solution-subtitle">{solutionSubtitle}</p>
               <div className="solution-body">
-                <p>
-                  Most brands are guessing how to get recommended by AI.
-                </p>
-                <p>
-                  They&apos;re chasing prompts, publishing more content, and hoping something sticks — while the market fills with quick fixes, hacks, and tactics that don&apos;t translate into lasting visibility.
-                </p>
-                <p className="solution-emphasis">
-                  We built the AI Visibility System to remove that guesswork.
-                </p>
-                <p>
-                  It&apos;s a structured approach to how AI systems interpret, trust, and reuse your brand&apos;s information — not just what you publish, but how your brand presents itself as a whole.
-                </p>
-                <p>
-                  This isn&apos;t a one-off optimisation.<br />
-                  It&apos;s designed to compound — building durable authority that strengthens over time.
-                </p>
+                {solutionBodyPara1 && <p>{solutionBodyPara1}</p>}
+                {solutionBodyPara2 && <p>{solutionBodyPara2}</p>}
+                {solutionBodyPara3 && <p className="solution-emphasis">{solutionBodyPara3}</p>}
+                {solutionBodyPara4 && <p>{solutionBodyPara4}</p>}
+                {solutionBodyPara5 && <p>{solutionBodyPara5.split('\n').map((line, i) => (
+                  <span key={i}>{line}{i < solutionBodyPara5.split('\n').length - 1 && <br />}</span>
+                ))}</p>}
               </div>
               <div className="solution-cta">
                 <Link 
-                  href="/guide" 
+                  href={solutionCTALink} 
                   className="solution-button"
                       style={{
                     backgroundColor: heroCTABgColor,
                     color: heroCTATextColor,
                   }}
                 >
-                  Apply to Work With Us
+                  {solutionCTAText}
                 </Link>
-                <p className="solution-note">
-                  Limited capacity. We take on a small number of brands at a time.
-                </p>
+                {solutionNote && <p className="solution-note">{solutionNote}</p>}
                     </div>
               
-              <div className="solution-testimonial">
-                <div className="solution-testimonial-content">
-                  <p className="solution-testimonial-quote">
-                    &quot;I really think is the future if you&apos;re serious about ranking in Ai search.&quot;
-                  </p>
-                  <div className="solution-testimonial-author">
-                    <div className="solution-testimonial-image">
-                      <Image
-                        src="https://framerusercontent.com/images/0WlUXwlUVlsMtOtPEH9RIoG0CFQ.jpeg?width=400&height=400"
-                        alt="James Neilson-Watt"
-                        width={56}
-                        height={56}
+              {solutionTestimonialQuote && (
+                <div className="solution-testimonial">
+                  <div className="solution-testimonial-content">
+                    <p className="solution-testimonial-quote">
+                      &quot;{solutionTestimonialQuote}&quot;
+                    </p>
+                    <div className="solution-testimonial-author">
+                      {solutionTestimonialAuthorImage && (
+                        <div className="solution-testimonial-image">
+                          <Image
+                            src={solutionTestimonialAuthorImage}
+                            alt={solutionTestimonialAuthorName}
+                            width={56}
+                            height={56}
                         loading="lazy"
-                        style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
+                            style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
                       />
+                        </div>
+                    )}
+                      <div className="solution-testimonial-author-info">
+                        <p className="solution-testimonial-author-name">{solutionTestimonialAuthorName}</p>
+                        <p className="solution-testimonial-author-company">{solutionTestimonialAuthorCompany}</p>
                   </div>
-                    <div className="solution-testimonial-author-info">
-                      <p className="solution-testimonial-author-name">James Neilson-Watt</p>
-                      <p className="solution-testimonial-author-company">learnspark.io</p>
                 </div>
               </div>
             </div>
+              )}
           </div>
-        </div>
 
             {/* Right Column - Pillars */}
             <div className="solution-pillars">
-              <h3 className="pillars-heading">Why this works differently</h3>
+              {solutionPillarsHeading && <h3 className="pillars-heading">{solutionPillarsHeading}</h3>}
               
-              <div className="solution-pillar">
-                <div className="pillar-icon">
-                  {/* Search/AI Icon */}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              {solutionPillars.map((pillar, index) => {
+                // Icon mapping based on index
+                const icons = [
+                  // Icon 1: Search/AI
+                  <svg key="icon1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8"/>
                     <path d="M21 21l-4.35-4.35"/>
                     <path d="M11 8v6M8 11h6"/>
-                  </svg>
-        </div>
-                <div className="pillar-content">
-                  <h4 className="pillar-title">Built for AI discovery, not traditional SEO</h4>
-                  <p className="pillar-description">
-                    Traditional search optimisation and paid media focus on direct inputs. AI recommendations don&apos;t.
-                  </p>
-                  <p className="pillar-description">
-                    We specialise specifically in AI summaries and AI recommendations — how language models decide which brands to surface, cite, and suggest when users ask questions.
-                  </p>
-                    </div>
-                </div>
-
-              <div className="solution-pillar">
-                <div className="pillar-icon">
-                  {/* Authority/Shield Icon */}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  </svg>,
+                  // Icon 2: Authority/Shield
+                  <svg key="icon2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                     <path d="M9 12l2 2 4-4"/>
-                  </svg>
-              </div>
-                <div className="pillar-content">
-                  <h4 className="pillar-title">Authority over volume</h4>
-                  <p className="pillar-description">
-                    More content isn&apos;t the answer.
-                  </p>
-                  <p className="pillar-description">
-                    AI systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints — not those publishing the most pages.
-                  </p>
-                  <p className="pillar-description">
-                    Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.
-                  </p>
-                    </div>
-                </div>
-
-              <div className="solution-pillar">
-                <div className="pillar-icon">
-                  {/* Growth/Compound Icon */}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  </svg>,
+                  // Icon 3: Growth/Compound
+                  <svg key="icon3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                  </svg>
-              </div>
-                <div className="pillar-content">
-                  <h4 className="pillar-title">Designed to compound</h4>
-                  <p className="pillar-description">
-                    AI visibility isn&apos;t something you switch on. It&apos;s something you build.
-                  </p>
-                  <p className="pillar-description">
-                    Each piece of work reinforces the next — content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time.
-                  </p>
-                  <p className="pillar-description">
-                    That&apos;s why results don&apos;t reset every few months. They accumulate.
-                  </p>
-                </div>
-              </div>
-
-              <div className="solution-pillar">
-                <div className="pillar-icon">
-                  {/* Proven/Target Icon */}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  </svg>,
+                  // Icon 4: Proven/Target
+                  <svg key="icon4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/>
                     <circle cx="12" cy="12" r="6"/>
                     <circle cx="12" cy="12" r="2"/>
                   </svg>
+                ]
+                
+                return (
+                  <div key={pillar.id} className="solution-pillar">
+                    <div className="pillar-icon">
+                      {icons[index % icons.length]}
+        </div>
+                    <div className="pillar-content">
+                      <h4 className="pillar-title">{pillar.title}</h4>
+                      {pillar.description.split('\n').map((para, i) => (
+                        <p key={i} className="pillar-description">{para}</p>
+                      ))}
+                    </div>
                 </div>
-                <div className="pillar-content">
-                  <h4 className="pillar-title">Proven approach, low guesswork</h4>
-                  <p className="pillar-description">
-                    This work isn&apos;t experimental.
-                  </p>
-                  <p className="pillar-description">
-                    Our process is refined, repeatable, and grounded in how AI systems actually behave — not theory, not trends, and not short-lived tactics.
-                  </p>
-                  <p className="pillar-description">
-                    We don&apos;t attempt to game the system. We focus on building the conditions AI relies on to recommend brands with confidence.
-                  </p>
-                </div>
+                )
+              })}
               </div>
-            </div>
           </div>
         </div>
       </section>
