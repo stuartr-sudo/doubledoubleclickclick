@@ -766,7 +766,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 </p>
                   <div className="hero-cta-wrapper">
                     <Link 
-                      href="/guide" 
+                      href="#apply-form" 
                       className="hero-cta-button"
                     style={{
                       backgroundColor: heroCTABgColor,
@@ -922,7 +922,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             <p className="signals-conclusion-text">This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
             <div className="signals-conclusion-cta">
               <Link 
-                href="/guide" 
+                href="#apply-form" 
                 className="signals-conclusion-button"
                   style={{ 
                   backgroundColor: heroCTABgColor,
@@ -956,7 +956,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               </div>
               <div className="solution-cta">
                 <Link 
-                  href={solutionCTALink} 
+                  href="#apply-form" 
                   className="solution-button"
                       style={{
                     backgroundColor: heroCTABgColor,
@@ -1140,7 +1140,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
           <div className="faq-cta">
             <Link 
-              href="/guide" 
+              href="#apply-form" 
               className="faq-cta-button"
               style={{
                 backgroundColor: heroCTABgColor,
@@ -1201,6 +1201,25 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </section>
       )}
 
+      {/* Apply to Work With Us Form */}
+      <section id="apply-form" className="apply-form-section">
+        <div className="container">
+          <div className="apply-form-wrapper">
+            <div className="apply-form-header">
+              <h2>Apply to Work With Us</h2>
+              <p className="apply-form-intro">
+                Tell us about your brand and how we can help you get recommended by AI.
+              </p>
+            </div>
+
+            <ApplyForm 
+              buttonBgColor={heroCTABgColor}
+              buttonTextColor={heroCTATextColor}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Particle Animation */}
       <ParticleAnimation 
         isActive={showParticles} 
@@ -1208,6 +1227,209 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       />
     </main>
     </>
+  )
+}
+
+// Apply Form Component - Optimized for AI bots
+interface ApplyFormProps {
+  buttonBgColor: string
+  buttonTextColor: string
+}
+
+function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
+  const [formData, setFormData] = useState({
+    company_name: '',
+    contact_name: '',
+    email_address: '',
+    website_url: '',
+    company_description: '',
+    current_challenges: '',
+    goals: ''
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setSubmitStatus(null)
+
+    try {
+      const response = await fetch('/api/lead-capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.contact_name,
+          email: formData.email_address,
+          phone: '',
+          source: 'apply_to_work_with_us',
+          website: formData.website_url,
+          company_name: formData.company_name,
+          message: `Company: ${formData.company_name}\nWebsite: ${formData.website_url}\n\nCompany Description:\n${formData.company_description}\n\nCurrent Challenges:\n${formData.current_challenges}\n\nGoals:\n${formData.goals}`
+        })
+      })
+
+      if (response.ok) {
+        setSubmitStatus('success')
+        setFormData({
+          company_name: '',
+          contact_name: '',
+          email_address: '',
+          website_url: '',
+          company_description: '',
+          current_challenges: '',
+          goals: ''
+        })
+        // Scroll to top of form to show success message
+        document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else {
+        setSubmitStatus('error')
+      }
+    } catch (error) {
+      console.error('Form submission error:', error)
+      setSubmitStatus('error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }))
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="apply-form" aria-label="Apply to Work With Us Form">
+      {submitStatus === 'success' && (
+        <div className="form-message form-message-success" role="alert">
+          <p>Thank you! We&apos;ve received your application and will be in touch soon.</p>
+        </div>
+      )}
+
+      {submitStatus === 'error' && (
+        <div className="form-message form-message-error" role="alert">
+          <p>There was an error submitting your application. Please try again or contact us directly.</p>
+        </div>
+      )}
+
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor="company_name">Company Name</label>
+          <input
+            type="text"
+            id="company_name"
+            name="company_name"
+            value={formData.company_name}
+            onChange={handleChange}
+            required
+            placeholder="Enter your company name"
+            aria-required="true"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="contact_name">Your Name</label>
+          <input
+            type="text"
+            id="contact_name"
+            name="contact_name"
+            value={formData.contact_name}
+            onChange={handleChange}
+            required
+            placeholder="Enter your full name"
+            aria-required="true"
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor="email_address">Email Address</label>
+          <input
+            type="email"
+            id="email_address"
+            name="email_address"
+            value={formData.email_address}
+            onChange={handleChange}
+            required
+            placeholder="your.email@company.com"
+            aria-required="true"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="website_url">Website URL</label>
+          <input
+            type="url"
+            id="website_url"
+            name="website_url"
+            value={formData.website_url}
+            onChange={handleChange}
+            required
+            placeholder="https://www.yourcompany.com"
+            aria-required="true"
+          />
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="company_description">Tell us about your company</label>
+        <textarea
+          id="company_description"
+          name="company_description"
+          value={formData.company_description}
+          onChange={handleChange}
+          required
+          rows={4}
+          placeholder="Describe what your company does, your industry, and your target audience."
+          aria-required="true"
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="current_challenges">What challenges are you facing with AI visibility?</label>
+        <textarea
+          id="current_challenges"
+          name="current_challenges"
+          value={formData.current_challenges}
+          onChange={handleChange}
+          required
+          rows={4}
+          placeholder="Describe your current challenges with AI search, recommendations, or visibility."
+          aria-required="true"
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="goals">What are your goals?</label>
+        <textarea
+          id="goals"
+          name="goals"
+          value={formData.goals}
+          onChange={handleChange}
+          required
+          rows={4}
+          placeholder="What do you hope to achieve by working with us?"
+          aria-required="true"
+        />
+      </div>
+
+      <div className="form-submit">
+        <button
+          type="submit"
+          className="apply-form-submit-button"
+          disabled={isSubmitting}
+          style={{
+            backgroundColor: buttonBgColor,
+            color: buttonTextColor,
+          }}
+        >
+          {isSubmitting ? 'Submitting...' : 'Submit Application'}
+        </button>
+      </div>
+    </form>
   )
 }
 

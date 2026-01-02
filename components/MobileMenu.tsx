@@ -84,7 +84,7 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
             Blog
           </Link>
         )}
-        <Link href="/guide" className="mobile-menu-cta" onClick={handleLinkClick}>
+        <Link href="/#apply-form" className="mobile-menu-cta" onClick={handleLinkClick}>
           Apply to Work With Us
         </Link>
       </nav>
