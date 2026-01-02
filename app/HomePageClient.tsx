@@ -804,35 +804,47 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       {/* Connected Signals Section */}
       <section className="connected-signals-section">
         <div className="container">
-          <div className="connected-signals-content">
-            <h2 className="connected-signals-title">AI recommendations are shaped by connected signals</h2>
-            
-            <p className="connected-signals-intro">
-              Content is the foundation — but it&apos;s not the whole system.
-            </p>
-
-            <div className="connected-signals-body">
-              <p>AI systems look for consistency across:</p>
+          <div className="connected-signals-grid">
+            <div className="connected-signals-text">
+              <h2 className="connected-signals-title">AI recommendations are shaped by connected signals</h2>
               
-              <ul className="signals-list signals-list-primary">
-                <li>how your site is structured and understood</li>
-                <li>whether your expertise is supported by evidence</li>
-                <li>whether your brand appears active and credible beyond your website</li>
-                <li>whether claims are reinforced by real-world validation</li>
-              </ul>
+              <p className="connected-signals-intro">
+                Content is the foundation — but it&apos;s not the whole system.
+              </p>
 
-              <p>That includes elements like:</p>
+              <div className="connected-signals-body">
+                <p>AI systems look for consistency across:</p>
+                
+                <ul className="signals-list signals-list-primary">
+                  <li>how your site is structured and understood</li>
+                  <li>whether your expertise is supported by evidence</li>
+                  <li>whether your brand appears active and credible beyond your website</li>
+                  <li>whether claims are reinforced by real-world validation</li>
+                </ul>
 
-              <ul className="signals-list signals-list-secondary">
-                <li>site architecture and technical clarity</li>
-                <li>case studies and testimonials</li>
-                <li>visible activity across relevant social platforms</li>
-                <li>consistency between what you publish and how your brand shows up elsewhere</li>
-              </ul>
+                <p>That includes elements like:</p>
 
-              <div className="signals-conclusion">
-                <p className="signals-emphasis">These signals don&apos;t operate independently.<br />They reinforce each other.</p>
-                <p>This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
+                <ul className="signals-list signals-list-secondary">
+                  <li>site architecture and technical clarity</li>
+                  <li>case studies and testimonials</li>
+                  <li>visible activity across relevant social platforms</li>
+                  <li>consistency between what you publish and how your brand shows up elsewhere</li>
+                </ul>
+
+                <div className="signals-conclusion">
+                  <p className="signals-emphasis">These signals don&apos;t operate independently.<br />They reinforce each other.</p>
+                  <p>This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
+                </div>
+              </div>
+            </div>
+            <div className="connected-signals-image">
+              <div className="connected-signals-image-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                </svg>
               </div>
             </div>
           </div>
