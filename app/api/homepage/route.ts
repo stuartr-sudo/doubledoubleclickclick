@@ -58,6 +58,22 @@ export async function POST(request: Request) {
       if (error) {
         console.error('Update error:', error)
         console.error('Update data:', JSON.stringify(updateData, null, 2))
+        
+        // Check if error is about missing column
+        if (error.message && error.message.includes('column') && error.message.includes('schema cache')) {
+          const columnMatch = error.message.match(/column ['"]([^'"]+)['"]/i)
+          const columnName = columnMatch ? columnMatch[1] : 'unknown'
+          return NextResponse.json(
+            { 
+              error: 'Database schema mismatch', 
+              details: `The column '${columnName}' does not exist in the database. Please run the migration: supabase/migrations/20250120_add_problem_statement_section.sql`,
+              migration_required: true,
+              missing_column: columnName
+            },
+            { status: 500 }
+          )
+        }
+        
         return NextResponse.json(
           { error: 'Failed to update homepage content', details: error.message },
           { status: 500 }
