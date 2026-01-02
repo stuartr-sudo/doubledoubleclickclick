@@ -206,7 +206,7 @@ function HomepageEditorPageInner() {
     hero_cta_text: 'Get Started',
     hero_cta_link: '#contact',
     hero_footer_cta_text: 'Get Started',
-    hero_footer_cta_link: 'mailto:hello@sewo.io',
+    hero_footer_cta_link: 'mailto:stuartr@sewo.io',
     hero_bg_gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     hero_text_color: '#ffffff',
     hero_cta_bg_color: '#000000',
@@ -705,16 +705,25 @@ function HomepageEditorPageInner() {
 
       const responseData = await res.json()
 
-      if (res.ok) {
+      if (res.ok && responseData) {
+        console.log('Save successful, response:', responseData)
+        // Show success message
+        alert('Homepage content saved successfully!')
         // Refresh the data to show updated values
-        fetchHomepageContent()
+        await fetchHomepageContent()
+        // Scroll to top to show the success
+        window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
         console.error('API Error:', responseData)
-        alert(`Failed to update homepage content: ${responseData.error || 'Unknown error'}${responseData.details ? `\n\nDetails: ${responseData.details}` : ''}`)
+        const errorMsg = responseData.error || 'Unknown error'
+        const details = responseData.details || ''
+        const fullError = `Failed to update homepage content: ${errorMsg}${details ? `\n\nDetails: ${details}` : ''}${responseData.migration_required ? '\n\nPlease run the required migration in Supabase.' : ''}`
+        alert(fullError)
       }
     } catch (error) {
       console.error('Error updating homepage:', error)
-      alert(`Error updating homepage: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Error updating homepage: ${errorMessage}\n\nPlease check the browser console for more details.`)
     } finally {
       setSaving(false)
     }
