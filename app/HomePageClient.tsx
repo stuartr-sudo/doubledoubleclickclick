@@ -729,6 +729,39 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
         </section>
 
+      {/* Not Traditional SEO Section */}
+      <section className="not-seo-section">
+        <div className="container">
+          <div className="not-seo-grid">
+            <div className="not-seo-image">
+              <div className="not-seo-image-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                </svg>
+              </div>
+            </div>
+            <div className="not-seo-content">
+              <h1 className="not-seo-title">This is not traditional SEO or paid media</h1>
+              <div className="not-seo-body">
+                <p>Most marketing services are built around direct inputs.</p>
+                <p className="not-seo-list">
+                  Paid ads buy attention.<br />
+                  Traditional SEO optimises pages for rankings.<br />
+                  Both can work — but neither explains why AI recommends one brand and ignores another.
+                </p>
+                <p className="not-seo-emphasis">AI systems don&apos;t respond to single tactics in isolation.</p>
+                <p>They evaluate patterns of trust across content, structure, brand presence, and evidence.</p>
+                <p>That&apos;s why this work sits in a different category.</p>
+                <p>We specialise specifically in AI summaries and AI recommendations — how AI systems decide which brands to surface, cite, and suggest when users ask questions.</p>
+                <p>And that decision is influenced by far more than content alone.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Problem Statement Section */}
       <section className="problem-statement-section" style={{ background: problemStatementBgColor }}>
         <div className="container">
