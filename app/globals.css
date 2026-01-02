@@ -5857,7 +5857,8 @@ img {
 
 /* About Page Styles */
 .about-hero {
-  padding: 6rem 0;
+  padding-top: calc(6rem * 1.35);
+  padding-bottom: 6rem;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   text-align: center;
 }
