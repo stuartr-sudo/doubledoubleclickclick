@@ -805,6 +805,16 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       <section className="connected-signals-section">
         <div className="container">
           <div className="connected-signals-grid">
+            <div className="connected-signals-image">
+              <div className="connected-signals-image-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                </svg>
+              </div>
+            </div>
             <div className="connected-signals-text">
               <h2 className="connected-signals-title">AI recommendations are shaped by connected signals</h2>
               
@@ -835,16 +845,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <p className="signals-emphasis">These signals don&apos;t operate independently.<br />They reinforce each other.</p>
                   <p>This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
                 </div>
-              </div>
-            </div>
-            <div className="connected-signals-image">
-              <div className="connected-signals-image-placeholder">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                </svg>
               </div>
             </div>
           </div>
