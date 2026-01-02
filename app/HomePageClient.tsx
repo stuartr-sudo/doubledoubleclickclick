@@ -217,7 +217,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const logoImage = homepageContent?.logo_image || ''
   const logoText = homepageContent?.logo_text || 'SEWO'
   const heroTitle = homepageContent?.hero_title || 'Make Your Brand the Answer Ai Recommends'
-  const heroDescription = homepageContent?.hero_description || 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let&apos;s create!'
+  const heroDescription = homepageContent?.hero_description || 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise - based in Tokyo, working remote. Let&apos;s create!'
   const heroCTAText = homepageContent?.hero_cta_text || 'Get Started'
   const heroCTALink = homepageContent?.hero_cta_link || '#contact'
   const heroFooterCTAText = homepageContent?.hero_footer_cta_text || 'Get Started'
@@ -248,7 +248,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' }
   ]
   const aboutTitle = homepageContent?.about_title || 'about.'
-  const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search—it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
+  const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search - it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
   const aboutImage = homepageContent?.about_image || ''
   const contactCTAText = homepageContent?.contact_cta_text || 'Get Started'
   const contactCTALink = homepageContent?.contact_cta_link || 'mailto:hello@sewo.io'
@@ -302,11 +302,11 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   
   // Problem Statement Section
   const problemStatementTitle = homepageContent?.problem_statement_title || 'Publishing Content Isn\'t The Problem.\nBeing Recognised By AI Is.'
-  const problemStatementPara1 = homepageContent?.problem_statement_para_1 || 'Businesses are waking up to the fact that customers aren\'t just searching anymore — they\'re having conversations with AI.'
+  const problemStatementPara1 = homepageContent?.problem_statement_para_1 || 'Businesses are waking up to the fact that customers aren\'t just searching anymore - they\'re having conversations with AI.'
   const problemStatementPara2 = homepageContent?.problem_statement_para_2 || 'The shift has happened faster than anyone expected, but the guidance hasn\'t caught up.'
   const problemStatementPara3 = homepageContent?.problem_statement_para_3 || 'Brands are being told to chase prompts and publish more content, without understanding how AI systems actually decide who to recommend.'
   const problemStatementHighlight = homepageContent?.problem_statement_highlight || 'We exist to solve this.'
-  const problemStatementPara4 = homepageContent?.problem_statement_para_4 || 'Because when customers ask AI for answers, your brand either shows up — or it doesn\'t.'
+  const problemStatementPara4 = homepageContent?.problem_statement_para_4 || 'Because when customers ask AI for answers, your brand either shows up - or it doesn\'t.'
   const problemStatementPara5 = homepageContent?.problem_statement_para_5 || 'And that visibility gap is the exact problem we\'re built to fix.'
   const problemStatementImage = homepageContent?.problem_statement_image || ''
   const problemStatementBgColor = homepageContent?.problem_statement_bg_color || '#f8f9fa'
@@ -316,10 +316,10 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const solutionHeadline = homepageContent?.solution_headline || 'AI Visibility System'
   const solutionSubtitle = homepageContent?.solution_subtitle || 'Our authority framework for AI search and summaries'
   const solutionBodyPara1 = homepageContent?.solution_body_para_1 || 'Most brands are guessing how to get recommended by AI.'
-  const solutionBodyPara2 = homepageContent?.solution_body_para_2 || 'They\'re chasing prompts, publishing more content, and hoping something sticks — while the market fills with quick fixes, hacks, and tactics that don\'t translate into lasting visibility.'
+  const solutionBodyPara2 = homepageContent?.solution_body_para_2 || 'They\'re chasing prompts, publishing more content, and hoping something sticks - while the market fills with quick fixes, hacks, and tactics that don\'t translate into lasting visibility.'
   const solutionBodyPara3 = homepageContent?.solution_body_para_3 || 'We built the AI Visibility System to remove that guesswork.'
-  const solutionBodyPara4 = homepageContent?.solution_body_para_4 || 'It\'s a structured approach to how AI systems interpret, trust, and reuse your brand\'s information — not just what you publish, but how your brand presents itself as a whole.'
-  const solutionBodyPara5 = homepageContent?.solution_body_para_5 || 'This isn\'t a one-off optimisation. It\'s designed to compound — building durable authority that strengthens over time.'
+  const solutionBodyPara4 = homepageContent?.solution_body_para_4 || 'It\'s a structured approach to how AI systems interpret, trust, and reuse your brand\'s information - not just what you publish, but how your brand presents itself as a whole.'
+  const solutionBodyPara5 = homepageContent?.solution_body_para_5 || 'This isn\'t a one-off optimisation. It\'s designed to compound - building durable authority that strengthens over time.'
   const solutionCTAText = homepageContent?.solution_cta_text || 'Apply to Work With Us'
   const solutionCTALink = homepageContent?.solution_cta_link || '/guide'
   const solutionNote = homepageContent?.solution_note || 'Limited capacity. We take on a small number of brands at a time.'
@@ -328,22 +328,22 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     {
       id: '1',
       title: 'Built for AI discovery, not traditional SEO',
-      description: 'Traditional search optimisation and paid media focus on direct inputs. AI recommendations don\'t. We specialise specifically in AI summaries and AI recommendations — how language models decide which brands to surface, cite, and suggest when users ask questions.'
+      description: 'Traditional search optimisation and paid media focus on direct inputs. AI recommendations don\'t. We specialise specifically in AI summaries and AI recommendations - how language models decide which brands to surface, cite, and suggest when users ask questions.'
     },
     {
       id: '2',
       title: 'Authority over volume',
-      description: 'More content isn\'t the answer. AI systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints — not those publishing the most pages. Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.'
+      description: 'More content isn\'t the answer. AI systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints - not those publishing the most pages. Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.'
     },
     {
       id: '3',
       title: 'Designed to compound',
-      description: 'AI visibility isn\'t something you switch on. It\'s something you build. Each piece of work reinforces the next — content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time. That\'s why results don\'t reset every few months. They accumulate.'
+      description: 'AI visibility isn\'t something you switch on. It\'s something you build. Each piece of work reinforces the next - content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time. That\'s why results don\'t reset every few months. They accumulate.'
     },
     {
       id: '4',
       title: 'Proven approach, low guesswork',
-      description: 'This work isn\'t experimental. Our process is refined, repeatable, and grounded in how AI systems actually behave — not theory, not trends, and not short-lived tactics. We don\'t attempt to game the system. We focus on building the conditions AI relies on to recommend brands with confidence.'
+      description: 'This work isn\'t experimental. Our process is refined, repeatable, and grounded in how AI systems actually behave - not theory, not trends, and not short-lived tactics. We don\'t attempt to game the system. We focus on building the conditions AI relies on to recommend brands with confidence.'
     }
   ]
   const solutionTestimonialQuote = homepageContent?.solution_testimonial_quote || 'I really think is the future if you\'re serious about ranking in Ai search.'
@@ -805,12 +805,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 <p className="not-seo-list">
                   Paid ads buy attention.<br />
                   Traditional SEO optimises pages for rankings.<br />
-                  Both can work — but neither explains why AI recommends one brand and ignores another.
+                  Both can work - but neither explains why AI recommends one brand and ignores another.
                 </p>
                 <p className="not-seo-emphasis">AI systems don&apos;t respond to single tactics in isolation.</p>
                 <p>They evaluate patterns of trust across content, structure, brand presence, and evidence.</p>
                 <p>That&apos;s why this work sits in a different category.</p>
-                <p>We specialise specifically in AI summaries and AI recommendations — how AI systems decide which brands to surface, cite, and suggest when users ask questions.</p>
+                <p>We specialise specifically in AI summaries and AI recommendations - how AI systems decide which brands to surface, cite, and suggest when users ask questions.</p>
                 <p>And that decision is influenced by far more than content alone.</p>
               </div>
             </div>
@@ -873,7 +873,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               <h2 className="connected-signals-title">AI Recommendations Are Shaped By Connected Signals</h2>
               
               <p className="connected-signals-intro">
-                Content is the foundation — but it&apos;s not the whole system.
+                Content is the foundation - but it&apos;s not the whole system.
               </p>
 
               <div className="connected-signals-body">
@@ -1065,7 +1065,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 Rather than relying on shortcuts or volume, the work focused on clarity, trust signals, and consistency across content, structure, and supporting brand signals.
               </p>
               <p>
-                Within the first 30 days, the brand achieved top placement in AI-generated results, maintained that visibility, and saw a <strong>450% increase in organic traffic</strong> — driven by sustained inclusion in AI summaries and recommendations.
+                Within the first 30 days, the brand achieved top placement in AI-generated results, maintained that visibility, and saw a <strong>450% increase in organic traffic</strong> - driven by sustained inclusion in AI summaries and recommendations.
               </p>
               <p>
                 This outcome wasn&apos;t the result of a single tactic, but a connected system designed to compound over time.
