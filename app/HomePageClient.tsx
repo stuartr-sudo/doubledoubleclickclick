@@ -217,7 +217,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const logoImage = homepageContent?.logo_image || ''
   const logoText = homepageContent?.logo_text || 'SEWO'
   const heroTitle = homepageContent?.hero_title || 'Make Your Brand the Answer Ai Recommends'
-  const heroDescription = homepageContent?.hero_description || 'Hello, I&apos;m a freelancer specializing in minimal design with 10 years of expertise - based in Tokyo, working remote. Let&apos;s create!'
+  const heroDescription = homepageContent?.hero_description || 'AI search now shapes how customers discover and choose brands.\nWe specialise exclusively in positioning businesses so AI systems recognise and recommend them'
   const heroCTAText = homepageContent?.hero_cta_text || 'Get Started'
   const heroCTALink = homepageContent?.hero_cta_link || '#contact'
   const heroFooterCTAText = homepageContent?.hero_footer_cta_text || 'Get Started'
@@ -762,7 +762,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   ))}
                 </h1>
                 <p className="hero-stripe-description">
-                  {heroDescription}
+                  {heroDescription.split('\n').map((line, i, arr) => (
+                    <span key={i}>
+                      {line}
+                      {i < arr.length - 1 && <br />}
+                    </span>
+                  ))}
                 </p>
                   <div className="hero-cta-wrapper">
                     <Link 
