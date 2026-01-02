@@ -772,11 +772,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               {problemStatementPara1 && <p>{problemStatementPara1}</p>}
               {problemStatementPara2 && <p>{problemStatementPara2}</p>}
               {problemStatementPara3 && <p>{problemStatementPara3}</p>}
-              {problemStatementHighlight && (
-                <p className="problem-statement-highlight">{problemStatementHighlight}</p>
-              )}
-              {problemStatementPara4 && <p>{problemStatementPara4}</p>}
-              {problemStatementPara5 && <p>{problemStatementPara5}</p>}
             </div>
             <div className="problem-statement-image">
               {problemStatementImage ? (
@@ -821,6 +816,14 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               <p className="connected-signals-intro">
                 Content is the foundation — but it&apos;s not the whole system.
               </p>
+
+              <div className="connected-signals-body">
+                {problemStatementHighlight && (
+                  <p className="connected-signals-highlight">{problemStatementHighlight}</p>
+                )}
+                {problemStatementPara4 && <p>{problemStatementPara4}</p>}
+                {problemStatementPara5 && <p>{problemStatementPara5}</p>}
+              </div>
             </div>
           </div>
         </div>

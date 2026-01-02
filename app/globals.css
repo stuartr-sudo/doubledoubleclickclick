@@ -979,6 +979,7 @@ img {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
 }
 
 .connected-signals-body > p {
@@ -987,6 +988,20 @@ img {
   color: var(--color-text);
   margin: 0;
   font-weight: 500;
+}
+
+.connected-signals-highlight {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.connected-signals-highlight {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-md) 0;
 }
 
 .signals-list {
