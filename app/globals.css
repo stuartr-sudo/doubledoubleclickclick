@@ -692,7 +692,8 @@ img {
 
 /* How It Works (HIW) Styles */
 .hiw-section {
-  padding: var(--spacing-4xl) 0;
+  padding-top: calc(var(--spacing-4xl) * 0.35);
+  padding-bottom: var(--spacing-4xl);
   background: var(--color-bg);
   position: relative;
   overflow: hidden;
