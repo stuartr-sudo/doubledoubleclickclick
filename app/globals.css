@@ -3553,7 +3553,8 @@ img {
 
 /* Contact Form Section */
 .contact-form-section {
-  padding: var(--spacing-3xl) 0;
+  padding-top: calc(var(--spacing-3xl) * 1.25);
+  padding-bottom: var(--spacing-3xl);
   background: var(--color-bg);
   overflow: hidden;
 }
@@ -3724,7 +3725,8 @@ img {
 
 @media (max-width: 640px) {
   .contact-form-section {
-    padding: var(--spacing-2xl) 0;
+    padding-top: calc(var(--spacing-2xl) * 1.25);
+    padding-bottom: var(--spacing-2xl);
   }
 
   .contact-form-right {
