@@ -821,26 +821,32 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               <p className="connected-signals-intro">
                 Content is the foundation — but it&apos;s not the whole system.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-              <div className="connected-signals-body">
-                <p><strong>AI systems look for consistency across:</strong></p>
-                
-                <ul className="signals-list signals-list-primary">
-                  <li>how your site is structured and understood</li>
-                  <li>whether your expertise is supported by evidence</li>
-                  <li>whether your brand appears active and credible beyond your website</li>
-                  <li>whether claims are reinforced by real-world validation</li>
-                </ul>
-
-                <p><strong>That includes elements like:</strong></p>
-
-                <ul className="signals-list signals-list-secondary">
-                  <li>site architecture and technical clarity</li>
-                  <li>case studies and testimonials</li>
-                  <li>visible activity across relevant social platforms</li>
-                  <li>consistency between what you publish and how your brand shows up elsewhere</li>
-                </ul>
-              </div>
+      {/* AI Consistency Signals Section */}
+      <section className="ai-consistency-signals-section">
+        <div className="container">
+          <div className="ai-consistency-signals-grid">
+            <div className="ai-consistency-signals-column">
+              <p className="ai-consistency-signals-heading"><strong>AI systems look for consistency across:</strong></p>
+              <ul className="ai-consistency-signals-list">
+                <li>how your site is structured and understood</li>
+                <li>whether your expertise is supported by evidence</li>
+                <li>whether your brand appears active and credible beyond your website</li>
+                <li>whether claims are reinforced by real-world validation</li>
+              </ul>
+            </div>
+            <div className="ai-consistency-signals-column">
+              <p className="ai-consistency-signals-heading"><strong>That includes elements like:</strong></p>
+              <ul className="ai-consistency-signals-list">
+                <li>site architecture and technical clarity</li>
+                <li>case studies and testimonials</li>
+                <li>visible activity across relevant social platforms</li>
+                <li>consistency between what you publish and how your brand shows up elsewhere</li>
+              </ul>
             </div>
           </div>
         </div>

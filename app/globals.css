@@ -1046,6 +1046,72 @@ img {
   margin: 0;
 }
 
+/* AI Consistency Signals Section */
+.ai-consistency-signals-section {
+  padding: var(--spacing-4xl) var(--spacing-2xl);
+  background: #f8f9fa;
+}
+
+.ai-consistency-signals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4xl);
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.ai-consistency-signals-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-consistency-signals-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-lg) 0;
+  line-height: 1.5;
+}
+
+.ai-consistency-signals-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.ai-consistency-signals-list li {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  padding-left: var(--spacing-lg);
+  position: relative;
+}
+
+.ai-consistency-signals-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+@media (max-width: 768px) {
+  .ai-consistency-signals-section {
+    padding: var(--spacing-3xl) var(--spacing-md);
+  }
+
+  .ai-consistency-signals-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2xl);
+  }
+}
+
 /* Signals Conclusion Section */
 .signals-conclusion-section {
   padding: var(--spacing-4xl) var(--spacing-2xl);
