@@ -1131,6 +1131,18 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               </div>
             ))}
           </div>
+          <div className="faq-cta">
+            <Link 
+              href="/guide" 
+              className="faq-cta-button"
+              style={{
+                backgroundColor: heroCTABgColor,
+                color: heroCTATextColor,
+              }}
+            >
+              Apply to Work With Us
+            </Link>
+          </div>
         </div>
       </section>
 
