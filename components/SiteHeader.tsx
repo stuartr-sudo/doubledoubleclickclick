@@ -32,6 +32,7 @@ export default function SiteHeader({ blogVisible = true }: SiteHeaderProps) {
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
             {blogVisible && <Link href="/blog">Blog</Link>}
+            <Link href="/guide" className="nav-cta-button">Apply to Work With Us</Link>
           </div>
 
           <button
