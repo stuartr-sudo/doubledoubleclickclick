@@ -1292,20 +1292,20 @@ img {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-md) var(--spacing-xl);
-  background: var(--color-text);
-  color: white;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
+  padding: var(--spacing-md) var(--spacing-2xl);
+  border-radius: 8px;
   text-decoration: none;
-  transition: all 0.2s ease;
+  font-size: 1.125rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
   width: fit-content;
 }
 
 .solution-button:hover {
-  background: #333;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 .solution-note {

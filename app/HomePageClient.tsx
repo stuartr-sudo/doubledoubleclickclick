@@ -905,8 +905,15 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 </p>
               </div>
               <div className="solution-cta">
-                <Link href="/guide" className="solution-button">
-                  Apply to work with us
+                <Link 
+                  href="/guide" 
+                  className="solution-button"
+                  style={{
+                    backgroundColor: heroCTABgColor,
+                    color: heroCTATextColor,
+                  }}
+                >
+                  Apply to Work With Us
                 </Link>
                 <p className="solution-note">
                   Limited capacity. We take on a small number of brands at a time.
