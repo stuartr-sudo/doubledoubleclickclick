@@ -73,18 +73,6 @@ export default function MobileMenu({ isOpen, onClose, blogVisible = true }: Mobi
         <Link href="/" className="mobile-menu-link" onClick={handleLinkClick}>
           Home
         </Link>
-        <Link href="/guide" className="mobile-menu-link" onClick={handleLinkClick}>
-          The Playbook
-        </Link>
-        <Link href="/course" className="mobile-menu-link" onClick={handleLinkClick}>
-          The Accelerator
-        </Link>
-        <Link href="/book-call" className="mobile-menu-link" onClick={handleLinkClick}>
-          Strategy Audit
-        </Link>
-        <Link href="/consulting" className="mobile-menu-link" onClick={handleLinkClick}>
-          Consulting
-        </Link>
         <Link href="/author/stuart-asta" className="mobile-menu-link" onClick={handleLinkClick}>
           Author
         </Link>
