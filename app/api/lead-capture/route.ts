@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       message,
       plan_type,
       source,
+      topic, // Topic from contact form
     } = body || {}
 
     // Use company_name if provided, otherwise fall back to company
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
       message: message || null,
       plan_type: plan_type || null,
       source: source || null,
+      topic: topic || null,
       ip_address: ipAddress,
     })
 
@@ -138,6 +140,12 @@ export async function POST(request: NextRequest) {
                     <tr>
                       <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Website:</td>
                       <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="${website}" target="_blank" style="color: #3b82f6; text-decoration: none;">${website}</a></td>
+                    </tr>
+                    ` : ''}
+                    ${topic ? `
+                    <tr>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Topic:</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${topic}</td>
                     </tr>
                     ` : ''}
                     ${source ? `

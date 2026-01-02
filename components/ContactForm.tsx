@@ -28,8 +28,8 @@ export default function ContactForm() {
           email: formData.email,
           phone: formData.phone,
           source: 'contact_form',
-          website: formData.topic,
-          message: `Topic: ${formData.topic}\n\n${formData.message}`
+          topic: formData.topic,
+          message: formData.message
         })
       })
 

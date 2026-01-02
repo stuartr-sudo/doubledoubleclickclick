@@ -13,6 +13,7 @@ interface LeadCapture {
   message: string | null
   plan_type: string | null
   source: string | null
+  topic: string | null
   created_at: string
 }
 
@@ -74,6 +75,7 @@ async function LeadsAdminPageInner() {
                     <th>Email</th>
                     <th>Company</th>
                     <th>Website</th>
+                    <th>Topic</th>
                     <th>Details</th>
                   </tr>
                 </thead>
@@ -92,6 +94,7 @@ async function LeadsAdminPageInner() {
                       <td>{lead.email}</td>
                       <td>{lead.company || '—'}</td>
                       <td>{lead.website || '—'}</td>
+                      <td>{lead.topic || '—'}</td>
                       <td>
                         <pre className="leads-message">{lead.message || '—'}</pre>
                       </td>
@@ -145,6 +148,12 @@ async function LeadsAdminPageInner() {
                         >
                           {lead.website}
                         </a>
+                      </div>
+                    )}
+                    {lead.topic && (
+                      <div className="lead-card-field">
+                        <span className="lead-card-label">Topic:</span>
+                        <span className="lead-card-value">{lead.topic}</span>
                       </div>
                     )}
                     {lead.message && (
