@@ -676,42 +676,42 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       {/* Site Header with shadow */}
       <SiteHeader blogVisible={blogSectionVisible} />
       
-      <main>
-        {/* JSON-LD for SEO */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-        />
-        
+    <main>
+      {/* JSON-LD for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      
         {/* Hero Section - Full Width */}
         <section 
           className="hero-stripe"
-          style={{
-            background: heroBgGradient,
-            color: heroTextColor
-          }}
-        >
+              style={{
+                background: heroBgGradient,
+                color: heroTextColor
+              }}
+            >
           {/* Main Content */}
           <div className="hero-stripe-content">
             {/* Full Width Hero Content */}
             <div className="hero-stripe-full">
               <div className="container">
                 <div className="hero-stripe-inner">
-                  <h1 className="hero-stripe-title">
-                    {heroTitle.split('\n').map((line, i) => (
-                      <span key={i} className="title-line">{line}</span>
-                    ))}
-                  </h1>
-                  <p className="hero-stripe-description">
-                    {heroDescription}
-                  </p>
+                <h1 className="hero-stripe-title">
+                  {heroTitle.split('\n').map((line, i) => (
+                    <span key={i} className="title-line">{line}</span>
+                  ))}
+                </h1>
+                <p className="hero-stripe-description">
+                  {heroDescription}
+                </p>
                   <div className="hero-cta-wrapper">
                     <Link 
                       href="/guide" 
                       className="hero-cta-button"
-                      style={{
-                        backgroundColor: heroCTABgColor,
-                        color: heroCTATextColor,
+                    style={{
+                      backgroundColor: heroCTABgColor,
+                      color: heroCTATextColor,
                       }}
                     >
                       Apply to Work With Us
@@ -736,8 +736,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
                   <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                </svg>
-              </div>
+                    </svg>
+                </div>
             </div>
             <div className="not-seo-content">
               <h1 className="not-seo-title">This Is Not Traditional SEO Or Paid Media</h1>
@@ -772,7 +772,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               {problemStatementPara1 && <p>{problemStatementPara1}</p>}
               {problemStatementPara2 && <p>{problemStatementPara2}</p>}
               {problemStatementPara3 && <p>{problemStatementPara3}</p>}
-            </div>
+                    </div>
             <div className="problem-statement-image">
               {problemStatementImage ? (
                 <Image 
@@ -861,6 +861,18 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           <div className="signals-conclusion-content">
             <h1 className="signals-conclusion-title">These Signals Don&apos;t Operate Independently.<br />They Reinforce Each Other.</h1>
             <p className="signals-conclusion-text">This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
+            <div className="signals-conclusion-cta">
+              <Link 
+                href="/guide" 
+                className="signals-conclusion-button"
+                  style={{ 
+                  backgroundColor: heroCTABgColor,
+                  color: heroCTATextColor,
+                }}
+              >
+                Apply to Work With Us
+              </Link>
+                    </div>
           </div>
         </div>
       </section>
@@ -916,15 +928,15 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                         loading="lazy"
                         style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
                       />
-                    </div>
+                  </div>
                     <div className="solution-testimonial-author-info">
                       <p className="solution-testimonial-author-name">James Neilson-Watt</p>
                       <p className="solution-testimonial-author-company">learnspark.io</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
             {/* Right Column - Pillars */}
             <div className="solution-pillars">
@@ -938,7 +950,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                     <path d="M21 21l-4.35-4.35"/>
                     <path d="M11 8v6M8 11h6"/>
                   </svg>
-                </div>
+        </div>
                 <div className="pillar-content">
                   <h4 className="pillar-title">Built for AI discovery, not traditional SEO</h4>
                   <p className="pillar-description">
@@ -947,8 +959,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <p className="pillar-description">
                     We specialise specifically in AI summaries and AI recommendations — how language models decide which brands to surface, cite, and suggest when users ask questions.
                   </p>
+                    </div>
                 </div>
-              </div>
 
               <div className="solution-pillar">
                 <div className="pillar-icon">
@@ -957,7 +969,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                     <path d="M9 12l2 2 4-4"/>
                   </svg>
-                </div>
+              </div>
                 <div className="pillar-content">
                   <h4 className="pillar-title">Authority over volume</h4>
                   <p className="pillar-description">
@@ -969,8 +981,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <p className="pillar-description">
                     Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.
                   </p>
+                    </div>
                 </div>
-              </div>
 
               <div className="solution-pillar">
                 <div className="pillar-icon">
@@ -978,7 +990,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
                   </svg>
-                </div>
+              </div>
                 <div className="pillar-content">
                   <h4 className="pillar-title">Designed to compound</h4>
                   <p className="pillar-description">
@@ -1238,12 +1250,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </section>
       )}
 
-        {/* Particle Animation */}
-        <ParticleAnimation 
-          isActive={showParticles} 
-          onComplete={() => setShowParticles(false)} 
-        />
-      </main>
+      {/* Particle Animation */}
+      <ParticleAnimation 
+        isActive={showParticles} 
+        onComplete={() => setShowParticles(false)} 
+      />
+    </main>
     </>
   )
 }

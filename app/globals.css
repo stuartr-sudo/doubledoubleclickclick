@@ -1151,7 +1151,32 @@ img {
   font-size: 1.25rem;
   line-height: 1.6;
   color: var(--color-text-muted);
-  margin: 0;
+  margin: 0 0 var(--spacing-xl) 0;
+}
+
+.signals-conclusion-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+}
+
+.signals-conclusion-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md) var(--spacing-2xl);
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 1.125rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.signals-conclusion-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 @media (max-width: 768px) {
