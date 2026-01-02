@@ -277,13 +277,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const proofResultsItems = homepageContent?.proof_results_items || [
     { id: '1', title: 'Case Study 1', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' },
     { id: '2', title: 'Case Study 2', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' },
-    { id: '3', title: 'Case Study 3', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' }
+    { id: '3', title: 'ChatGPT 5.2', description: 'Description of results achieved for this client...', image: '', cta_text: 'READ MORE', cta_link: '#' }
   ]
   const proofResultsBgColor = homepageContent?.proof_results_bg_color || '#ffffff'
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   
   // Problem Statement Section
-  const problemStatementTitle = homepageContent?.problem_statement_title || 'Publishing content isn\'t the problem.\nBeing recognised by AI is.'
+  const problemStatementTitle = homepageContent?.problem_statement_title || 'Publishing Content Isn\'t The Problem.\nBeing Recognised By AI Is.'
   const problemStatementPara1 = homepageContent?.problem_statement_para_1 || 'Businesses are waking up to the fact that customers aren\'t just searching anymore — they\'re having conversations with AI.'
   const problemStatementPara2 = homepageContent?.problem_statement_para_2 || 'The shift has happened faster than anyone expected, but the guidance hasn\'t caught up.'
   const problemStatementPara3 = homepageContent?.problem_statement_para_3 || 'Brands are being told to chase prompts and publish more content, without understanding how AI systems actually decide who to recommend.'
@@ -740,7 +740,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               </div>
             </div>
             <div className="not-seo-content">
-              <h1 className="not-seo-title">This is not traditional SEO or paid media</h1>
+              <h1 className="not-seo-title">This Is Not Traditional SEO Or Paid Media</h1>
               <div className="not-seo-body">
                 <p>Most marketing services are built around direct inputs.</p>
                 <p className="not-seo-list">
@@ -811,7 +811,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               </div>
             </div>
             <div className="connected-signals-text">
-              <h2 className="connected-signals-title">AI recommendations are shaped by connected signals</h2>
+              <h2 className="connected-signals-title">AI Recommendations Are Shaped By Connected Signals</h2>
               
               <p className="connected-signals-intro">
                 Content is the foundation — but it&apos;s not the whole system.
@@ -859,7 +859,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       <section className="signals-conclusion-section">
         <div className="container">
           <div className="signals-conclusion-content">
-            <h1 className="signals-conclusion-title">These signals don&apos;t operate independently.<br />They reinforce each other.</h1>
+            <h1 className="signals-conclusion-title">These Signals Don&apos;t Operate Independently.<br />They Reinforce Each Other.</h1>
             <p className="signals-conclusion-text">This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
           </div>
         </div>
