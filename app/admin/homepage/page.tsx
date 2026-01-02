@@ -58,6 +58,7 @@ interface HomepageContent {
   hero_title: string
   hero_description: string
   hero_image: string
+  hero_background_image?: string
   hero_cta_text: string
   hero_cta_link: string
   hero_footer_cta_text: string
@@ -203,6 +204,7 @@ function HomepageEditorPageInner() {
     hero_title: 'Make Your Brand the Answer Ai Recommends',
     hero_description: 'Hello, I\'m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let\'s create!',
     hero_image: '',
+    hero_background_image: '',
     hero_cta_text: 'Get Started',
     hero_cta_link: '#contact',
     hero_footer_cta_text: 'Get Started',
@@ -864,6 +866,20 @@ function HomepageEditorPageInner() {
                 defaultPromptProvider={aiProvider}
                 defaultPromptModel={aiModel}
               />
+            </div>
+
+            <div className="form-group">
+              <ImageUpload
+                value={formData.hero_background_image || ''}
+                onChange={(url) => setFormData({ ...formData, hero_background_image: url })}
+                label="Hero Background Image"
+                folder="hero"
+                defaultPromptProvider={aiProvider}
+                defaultPromptModel={aiModel}
+              />
+              <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+                If set, this image will be used as the hero section background instead of the gradient. A dark overlay will be applied for text readability.
+              </p>
             </div>
 
             <div className="form-row">

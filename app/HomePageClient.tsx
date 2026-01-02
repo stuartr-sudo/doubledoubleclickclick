@@ -95,6 +95,7 @@ interface HomepageContent {
   hero_title?: string
   hero_description?: string
   hero_image?: string
+  hero_background_image?: string
   about_image?: string
   hero_cta_text?: string
   hero_cta_link?: string
@@ -223,6 +224,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const heroFooterCTAText = homepageContent?.hero_footer_cta_text || 'Get Started'
   const heroFooterCTALink = homepageContent?.hero_footer_cta_link || 'mailto:hello@sewo.io'
   const heroImage = homepageContent?.hero_image || ''
+  const heroBackgroundImage = homepageContent?.hero_background_image || ''
   const heroBgGradient = homepageContent?.hero_bg_gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
   const heroTextColor = homepageContent?.hero_text_color || '#ffffff'
   const heroCTABgColor = homepageContent?.hero_cta_bg_color || '#000000'
@@ -746,7 +748,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         <section 
           className="hero-stripe"
               style={{
-                background: heroBgGradient,
+                background: heroBackgroundImage 
+                  ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${heroBackgroundImage})`
+                  : heroBgGradient,
+                backgroundSize: heroBackgroundImage ? 'cover' : 'auto',
+                backgroundPosition: heroBackgroundImage ? 'center' : 'auto',
+                backgroundRepeat: heroBackgroundImage ? 'no-repeat' : 'repeat',
                 color: heroTextColor
               }}
             >
@@ -1135,8 +1142,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           >
             Apply to Work With Us
           </Link>
+          </div>
         </div>
-      </div>
 
       {/* FAQ Section */}
       <section className="faq-section" style={{ background: faqBgColor }}>
