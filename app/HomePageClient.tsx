@@ -848,6 +848,44 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </div>
       </section>
 
+      {/* Connected Signals Section */}
+      <section className="connected-signals-section">
+        <div className="container">
+          <div className="connected-signals-content">
+            <h2 className="connected-signals-title">AI recommendations are shaped by connected signals</h2>
+            
+            <p className="connected-signals-intro">
+              Content is the foundation — but it&apos;s not the whole system.
+            </p>
+
+            <div className="connected-signals-body">
+              <p>AI systems look for consistency across:</p>
+              
+              <ul className="signals-list signals-list-primary">
+                <li>how your site is structured and understood</li>
+                <li>whether your expertise is supported by evidence</li>
+                <li>whether your brand appears active and credible beyond your website</li>
+                <li>whether claims are reinforced by real-world validation</li>
+              </ul>
+
+              <p>That includes elements like:</p>
+
+              <ul className="signals-list signals-list-secondary">
+                <li>site architecture and technical clarity</li>
+                <li>case studies and testimonials</li>
+                <li>visible activity across relevant social platforms</li>
+                <li>consistency between what you publish and how your brand shows up elsewhere</li>
+              </ul>
+
+              <div className="signals-conclusion">
+                <p className="signals-emphasis">These signals don&apos;t operate independently.<br />They reinforce each other.</p>
+                <p>This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* AI Visibility System Section */}
       <section className="solution-section">
         <div className="solution-container">
