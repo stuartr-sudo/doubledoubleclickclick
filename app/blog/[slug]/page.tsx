@@ -304,6 +304,20 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             dangerouslySetInnerHTML={{ __html: post.content || '' }}
           />
 
+          {/* CTA Button */}
+          <div className="blog-post-cta">
+            <Link 
+              href="/#apply-form" 
+              className="blog-post-cta-button"
+              style={{
+                backgroundColor: homepageContent?.hero_cta_bg_color || '#53eae7',
+                color: homepageContent?.hero_cta_text_color || '#fdfff5',
+              }}
+            >
+              Apply to Work With Us
+            </Link>
+          </div>
+
           {/* Article Reactions */}
           <ArticleReactions />
 
