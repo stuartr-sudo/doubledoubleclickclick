@@ -918,7 +918,7 @@ img {
 
 /* Connected Signals Section */
 .connected-signals-section {
-  padding: var(--spacing-4xl) var(--spacing-2xl) calc(var(--spacing-4xl) * 0.5) var(--spacing-2xl);
+  padding: var(--spacing-4xl) var(--spacing-2xl) var(--spacing-lg) var(--spacing-2xl);
   background: #f8f9fa;
 }
 
@@ -1063,7 +1063,7 @@ img {
 
 /* AI Consistency Signals Section */
 .ai-consistency-signals-section {
-  padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-4xl) var(--spacing-2xl);
+  padding: var(--spacing-lg) var(--spacing-2xl) var(--spacing-4xl) var(--spacing-2xl);
   background: #f8f9fa;
 }
 
@@ -1118,7 +1118,7 @@ img {
 
 @media (max-width: 768px) {
   .ai-consistency-signals-section {
-    padding: var(--spacing-xl) var(--spacing-md) var(--spacing-3xl) var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-md) var(--spacing-3xl) var(--spacing-md);
   }
 
   .ai-consistency-signals-grid {
@@ -1168,7 +1168,7 @@ img {
   }
 
   .connected-signals-section {
-    padding: var(--spacing-3xl) var(--spacing-md) calc(var(--spacing-3xl) * 0.5) var(--spacing-md);
+    padding: var(--spacing-3xl) var(--spacing-md) var(--spacing-md) var(--spacing-md);
   }
 
   .connected-signals-grid {
