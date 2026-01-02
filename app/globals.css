@@ -6151,7 +6151,8 @@ textarea::placeholder,
 
 /* Apply Form Section */
 .apply-form-section {
-  padding: var(--spacing-4xl) 0;
+  padding-top: calc(var(--spacing-4xl) * 0.5);
+  padding-bottom: var(--spacing-4xl);
   background: var(--color-bg);
 }
 
@@ -6284,7 +6285,8 @@ textarea::placeholder,
 
 @media (max-width: 768px) {
   .apply-form-section {
-    padding: var(--spacing-3xl) 0;
+    padding-top: calc(var(--spacing-3xl) * 0.5);
+    padding-bottom: var(--spacing-3xl);
   }
 
   .apply-form {
@@ -6302,7 +6304,8 @@ textarea::placeholder,
 
 @media (max-width: 640px) {
   .apply-form-section {
-    padding: var(--spacing-2xl) 0;
+    padding-top: calc(var(--spacing-2xl) * 0.5);
+    padding-bottom: var(--spacing-2xl);
   }
 
   .apply-form {
