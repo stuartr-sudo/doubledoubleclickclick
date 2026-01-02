@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
 import { getClientIP, isRateLimited, checkEmailExists } from '@/lib/spam-protection'
 
 export const dynamic = 'force-dynamic'
@@ -11,11 +12,15 @@ export async function POST(request: NextRequest) {
       name,
       email,
       company,
+      company_name, // Handle both company and company_name
       website,
       message,
       plan_type,
       source,
     } = body || {}
+
+    // Use company_name if provided, otherwise fall back to company
+    const companyName = company_name || company
 
     if (!email) {
       return NextResponse.json(
@@ -61,7 +66,7 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase.from('lead_captures').insert({
       name: name || 'Questions Discovery Lead',
       email,
-      company: company || null,
+      company: companyName || null,
       website: website || null,
       message: message || null,
       plan_type: plan_type || null,
@@ -75,6 +80,114 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Failed to save lead' },
         { status: 500 }
       )
+    }
+
+    // Send email notification via Resend
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        
+        // Format source for display
+        const sourceDisplay = source === 'apply_to_work_with_us' 
+          ? 'Apply to Work With Us Form' 
+          : source || 'Contact Form'
+
+        // Create HTML email content
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>New Lead: ${sourceDisplay}</title>
+            </head>
+            <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
+              <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+                <!-- Header -->
+                <div style="text-align: center; margin-bottom: 40px;">
+                  <h1 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 0 0 10px 0;">
+                    New Lead Submission
+                  </h1>
+                  <p style="color: #64748b; font-size: 16px; margin: 0;">
+                    ${sourceDisplay}
+                  </p>
+                </div>
+
+                <!-- Lead Details -->
+                <div style="background-color: #ffffff; border-radius: 12px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <h2 style="color: #1e293b; font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">
+                    Contact Information
+                  </h2>
+                  
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600; width: 140px;">Name:</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${name || 'Not provided'}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Email:</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="mailto:${email}" style="color: #3b82f6; text-decoration: none;">${email}</a></td>
+                    </tr>
+                    ${companyName ? `
+                    <tr>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Company:</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${companyName}</td>
+                    </tr>
+                    ` : ''}
+                    ${website ? `
+                    <tr>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Website:</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="${website}" target="_blank" style="color: #3b82f6; text-decoration: none;">${website}</a></td>
+                    </tr>
+                    ` : ''}
+                    ${source ? `
+                    <tr>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Source:</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sourceDisplay}</td>
+                    </tr>
+                    ` : ''}
+                  </table>
+                </div>
+
+                ${message ? `
+                <!-- Message Content -->
+                <div style="background-color: #ffffff; border-radius: 12px; padding: 30px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <h2 style="color: #1e293b; font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">
+                    Message
+                  </h2>
+                  <div style="color: #334155; font-size: 15px; line-height: 1.7; white-space: pre-wrap;">${message.replace(/\n/g, '<br>')}</div>
+                </div>
+                ` : ''}
+
+                <!-- Footer -->
+                <div style="margin-top: 30px; text-align: center; color: #94a3b8; font-size: 12px;">
+                  <p style="margin: 0;">
+                    This lead was captured from <a href="https://www.sewo.io" style="color: #3b82f6; text-decoration: none;">sewo.io</a>
+                  </p>
+                </div>
+              </div>
+            </body>
+          </html>
+        `
+
+        // Send email notification
+        const { data, error: emailError } = await resend.emails.send({
+          from: 'SEWO <stuartr@sewo.io>', // Update with your verified domain
+          to: ['hello@sewo.io'], // Notification recipient
+          subject: `New Lead: ${sourceDisplay} - ${companyName || name || email}`,
+          html: htmlContent,
+        })
+
+        if (emailError) {
+          console.error('Resend email error:', emailError)
+          // Don't fail the request if email fails, just log it
+        } else {
+          console.log('Email notification sent successfully:', data?.id)
+        }
+      } catch (emailErr) {
+        console.error('Error sending email notification:', emailErr)
+        // Don't fail the request if email fails, just log it
+      }
     }
 
     return NextResponse.json({ success: true })
