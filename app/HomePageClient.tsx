@@ -900,6 +900,30 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   Limited capacity. We take on a small number of brands at a time.
                 </p>
               </div>
+              
+              <div className="solution-testimonial">
+                <div className="solution-testimonial-content">
+                  <p className="solution-testimonial-quote">
+                    &quot;I really think is the future if you&apos;re serious about ranking in Ai search.&quot;
+                  </p>
+                  <div className="solution-testimonial-author">
+                    <div className="solution-testimonial-image">
+                      <Image
+                        src="https://framerusercontent.com/images/0WlUXwlUVlsMtOtPEH9RIoG0CFQ.jpeg?width=400&height=400"
+                        alt="James Neilson-Watt"
+                        width={56}
+                        height={56}
+                        loading="lazy"
+                        style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
+                      />
+                    </div>
+                    <div className="solution-testimonial-author-info">
+                      <p className="solution-testimonial-author-name">James Neilson-Watt</p>
+                      <p className="solution-testimonial-author-company">learnspark.io</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Right Column - Pillars */}

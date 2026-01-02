@@ -1289,6 +1289,55 @@ img {
   margin: 0;
 }
 
+.solution-testimonial {
+  margin-top: var(--spacing-2xl);
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid #e5e7eb;
+}
+
+.solution-testimonial-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.solution-testimonial-quote {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  font-style: italic;
+  margin: 0;
+}
+
+.solution-testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.solution-testimonial-image {
+  flex-shrink: 0;
+}
+
+.solution-testimonial-author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.solution-testimonial-author-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.solution-testimonial-author-company {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
 .solution-pillars {
   display: flex;
   flex-direction: column;
