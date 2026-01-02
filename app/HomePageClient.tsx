@@ -823,7 +823,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               </p>
 
               <div className="connected-signals-body">
-                <p>AI systems look for consistency across:</p>
+                <p><strong>AI systems look for consistency across:</strong></p>
                 
                 <ul className="signals-list signals-list-primary">
                   <li>how your site is structured and understood</li>
@@ -832,7 +832,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <li>whether claims are reinforced by real-world validation</li>
                 </ul>
 
-                <p>That includes elements like:</p>
+                <p><strong>That includes elements like:</strong></p>
 
                 <ul className="signals-list signals-list-secondary">
                   <li>site architecture and technical clarity</li>
