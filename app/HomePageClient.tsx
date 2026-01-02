@@ -1024,45 +1024,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         bgColor={howItWorksBgColor}
       />
 
-      {/* Quiz CTA Section */}
-      <section className="quiz-cta-section" style={{ background: quizCtaBgColor }}>
-        <div className="quiz-cta-container">
-          <h2 className="quiz-cta-title">Take the Quiz</h2>
-          <p className="quiz-cta-subtitle">{quizDescription}</p>
-          <button
-            type="button"
-            className="quiz-cta-button"
-            onClick={openMidQuiz}
-            style={{
-              backgroundColor: heroCTABgColor,
-              color: heroCTATextColor,
-              borderColor: quizCTABorderColor,
-              cursor: 'pointer'
-            }}
-          >
-            {quizCTAText}
-          </button>
-          <div
-            className="quiz-inline-container"
-            ref={midQuizRef}
-            style={{
-              maxWidth: '100%',
-              width: '100%',
-              background: 'transparent',
-              marginTop: '24px',
-              display: showMidQuiz ? 'block' : 'none'
-            }}
-          >
-            {showMidQuiz && (
-              <iframe
-                src="https://6737d373-c306-49a0-8469-66b624092e6f.scoreapp.com/questions?sa_target=_top"
-                style={{ width: '100%', border: '0', minHeight: '900px', background: 'transparent' }}
-                loading="lazy"
-              />
-            )}
-          </div>
-        </div>
-      </section>
       {/* Why Work With Us Section */}
       <section className="why-work-with-us-section" style={{ background: whyWorkWithUsBgColor }}>
         <div className="why-work-with-us-container">
