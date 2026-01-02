@@ -1440,6 +1440,14 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
         />
       </div>
 
+      <div className="form-limited-access">
+        <p className="form-limited-access-text">
+          We work with a limited number of brands at any one time to ensure focus, depth, and consistency.
+          <br />
+          Not every application is accepted.
+        </p>
+      </div>
+
       <div className="form-submit">
         <button
           type="submit"

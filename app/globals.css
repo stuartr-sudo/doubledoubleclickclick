@@ -6269,6 +6269,23 @@ textarea::placeholder,
   gap: var(--spacing-md);
 }
 
+.form-limited-access {
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  background: #f8f9fa;
+  border-left: 4px solid #64748b;
+  border-radius: 6px;
+}
+
+.form-limited-access-text {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: #475569;
+  line-height: 1.6;
+  text-align: center;
+}
+
 .form-submit {
   margin-top: var(--spacing-xl);
   text-align: center;
