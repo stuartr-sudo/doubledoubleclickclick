@@ -125,6 +125,7 @@ interface HomepageContent {
   problem_statement_para_5?: string
   problem_statement_image?: string
   problem_statement_bg_color?: string
+  not_seo_image?: string
   quiz_cta_bg_color?: string
   quiz_landing_title?: string
   quiz_landing_description?: string
@@ -305,6 +306,7 @@ function HomepageEditorPageInner() {
     problem_statement_para_5: 'And that visibility gap is the exact problem we\'re built to fix.',
     problem_statement_image: '',
     problem_statement_bg_color: '#f8f9fa',
+    not_seo_image: '',
     solution_kicker: 'Introducing',
     solution_headline: 'AI Visibility System',
     solution_subtitle: 'Our authority framework for AI search and summaries',
@@ -1259,6 +1261,25 @@ function HomepageEditorPageInner() {
                 onChange={(url) => setFormData({ ...formData, problem_statement_image: url })}
                 label="Section Image (Right Column)"
                 folder="problem-statement"
+                defaultPromptProvider={aiProvider}
+                defaultPromptModel={aiModel}
+              />
+            </div>
+          </div>
+
+          {/* Not Traditional SEO Section */}
+          <div className="form-section">
+            <h2 className="form-section-title">Not Traditional SEO Section</h2>
+            <p style={{ color: '#666', marginBottom: '1rem' }}>
+              This section appears above the Problem Statement section. Two columns: image on left, text on right.
+            </p>
+
+            <div className="form-group">
+              <ImageUpload
+                value={formData.not_seo_image || ''}
+                onChange={(url) => setFormData({ ...formData, not_seo_image: url })}
+                label="Section Image (Left Column)"
+                folder="not-seo"
                 defaultPromptProvider={aiProvider}
                 defaultPromptModel={aiModel}
               />

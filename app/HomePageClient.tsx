@@ -164,6 +164,7 @@ interface HomepageContent {
   problem_statement_para_5?: string
   problem_statement_image?: string
   problem_statement_bg_color?: string
+  not_seo_image?: string
   about_title?: string
   about_description?: string
   services_title?: string
@@ -312,6 +313,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const problemStatementPara5 = homepageContent?.problem_statement_para_5 || 'And that visibility gap is the exact problem we\'re built to fix.'
   const problemStatementImage = homepageContent?.problem_statement_image || ''
   const problemStatementBgColor = homepageContent?.problem_statement_bg_color || '#f8f9fa'
+  const notSeoImage = homepageContent?.not_seo_image || ''
 
   // AI Visibility System (Solution) Section
   const solutionKicker = homepageContent?.solution_kicker || 'Introducing'
@@ -802,13 +804,28 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         <div className="container">
           <div className="not-seo-grid">
             <div className="not-seo-image">
-              <div className="not-seo-image-placeholder">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                    </svg>
+              {notSeoImage ? (
+                <Image
+                  src={notSeoImage}
+                  alt="This Is Not Traditional SEO Or Paid Media"
+                  width={600}
+                  height={600}
+                  style={{ 
+                    width: '100%', 
+                    height: 'auto', 
+                    objectFit: 'cover',
+                    borderRadius: '8px'
+                  }}
+                />
+              ) : (
+                <div className="not-seo-image-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                  </svg>
                 </div>
+              )}
             </div>
             <div className="not-seo-content">
               <h1 className="not-seo-title">This Is Not Traditional SEO Or Paid Media</h1>
