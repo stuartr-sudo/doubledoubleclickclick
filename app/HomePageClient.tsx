@@ -1143,32 +1143,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* AI Strategies Section */}
-      <section id="pricing" className="pricing-section">
-        <div className="container">
-          <div className="pricing-header">
-            <h2 className="pricing-title">{pricingTitle}</h2>
-          </div>
-          <div className="pricing-grid">
-            {pricingTiers.map((tier) => (
-              <div key={tier.id} className={`pricing-card ${tier.featured ? 'pricing-card-featured' : ''}`}>
-                <div className="pricing-tier">{tier.name}</div>
-                <div className="pricing-price">{tier.price}<span className="pricing-period">/{tier.period}</span></div>
-                <p className="pricing-description">{tier.description}</p>
-                <ul className="pricing-features">
-                  {tier.features.map((feature, idx) => (
-                    <li key={idx}>{feature}</li>
-                  ))}
-                </ul>
-                <Link href={tier.cta_link} className="btn-pricing">
-                  {tier.cta_text}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Latest Blog Posts - 3x2 Grid */}
       {blogSectionVisible && latestPosts && latestPosts.length > 0 && (
         <section className="blog-grid-section" style={{ background: blogGridBgColor }}>
