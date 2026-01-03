@@ -220,7 +220,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const logoImage = homepageContent?.logo_image || ''
   const logoText = homepageContent?.logo_text || 'SEWO'
   const heroTitle = homepageContent?.hero_title || 'Make Your Brand the Answer Ai Recommends'
-  const heroDescription = homepageContent?.hero_description || 'AI search now shapes how customers discover and choose brands.\nWe specialise exclusively in positioning businesses so AI systems recognise and recommend them'
+  const heroDescription = homepageContent?.hero_description || 'Ai search now shapes how customers discover and choose brands.\nWe specialise exclusively in positioning businesses so Ai systems recognise and recommend them'
   const heroCTAText = homepageContent?.hero_cta_text || 'Get Started'
   const heroCTALink = homepageContent?.hero_cta_link || '#contact'
   const heroFooterCTAText = homepageContent?.hero_footer_cta_text || 'Get Started'
@@ -252,7 +252,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     { id: '1', number: '01', title: 'Simple Booking', description: 'Effortlessly schedule a consultation to discuss your business needs and challenges. We streamline the process to get started quickly.', image: '', link_text: 'Discover More', link_url: '#' }
   ]
   const aboutTitle = homepageContent?.about_title || 'about.'
-  const aboutDescription = homepageContent?.about_description || 'When customers ask AI assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search - it&apos;s happening now. We help brand owners ensure their websites rank in AI responses, driving visibility, traffic, and competitive advantage.'
+  const aboutDescription = homepageContent?.about_description || 'When customers ask Ai assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search - it&apos;s happening now. We help brand owners ensure their websites rank in Ai responses, driving visibility, traffic, and competitive advantage.'
   const aboutImage = homepageContent?.about_image || ''
   const contactCTAText = homepageContent?.contact_cta_text || 'Get Started'
   const contactCTALink = homepageContent?.contact_cta_link || 'mailto:hello@sewo.io'
@@ -305,26 +305,26 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const quizCtaBgColor = homepageContent?.quiz_cta_bg_color || '#ffffff'
   
   // Problem Statement Section
-  const problemStatementTitle = homepageContent?.problem_statement_title || 'Publishing Content Isn\'t The Problem.\nBeing Recognised By AI Is.'
-  const problemStatementPara1 = homepageContent?.problem_statement_para_1 || 'Businesses are waking up to the fact that customers aren\'t just searching anymore - they\'re having conversations with AI.'
+  const problemStatementTitle = homepageContent?.problem_statement_title || 'Publishing Content Isn\'t The Problem.\nBeing Recognised By Ai Is.'
+  const problemStatementPara1 = homepageContent?.problem_statement_para_1 || 'Businesses are waking up to the fact that customers aren\'t just searching anymore - they\'re having conversations with Ai.'
   const problemStatementPara2 = homepageContent?.problem_statement_para_2 || 'The shift has happened faster than anyone expected, but the guidance hasn\'t caught up.'
-  const problemStatementPara3 = homepageContent?.problem_statement_para_3 || 'Brands are being told to chase prompts and publish more content, without understanding how AI systems actually decide who to recommend.'
+  const problemStatementPara3 = homepageContent?.problem_statement_para_3 || 'Brands are being told to chase prompts and publish more content, without understanding how Ai systems actually decide who to recommend.'
   const problemStatementHighlight = homepageContent?.problem_statement_highlight || 'We exist to solve this.'
-  const problemStatementPara4 = homepageContent?.problem_statement_para_4 || 'Because when customers ask AI for answers, your brand either shows up - or it doesn\'t.'
+  const problemStatementPara4 = homepageContent?.problem_statement_para_4 || 'Because when customers ask Ai for answers, your brand either shows up - or it doesn\'t.'
   const problemStatementPara5 = homepageContent?.problem_statement_para_5 || 'And that visibility gap is the exact problem we\'re built to fix.'
   const problemStatementImage = homepageContent?.problem_statement_image || ''
   const problemStatementBgColor = homepageContent?.problem_statement_bg_color || '#f8f9fa'
   const notSeoImage = homepageContent?.not_seo_image || ''
   const connectedSignalsImage = homepageContent?.connected_signals_image || ''
 
-  // AI Visibility System (Solution) Section
+  // Ai Visibility System (Solution) Section
   const solutionKicker = homepageContent?.solution_kicker || 'Introducing'
-  const solutionHeadline = homepageContent?.solution_headline || 'AI Visibility System'
-  const solutionSubtitle = homepageContent?.solution_subtitle || 'Our authority framework for AI search and summaries'
-  const solutionBodyPara1 = homepageContent?.solution_body_para_1 || 'Most brands are guessing how to get recommended by AI.'
+  const solutionHeadline = homepageContent?.solution_headline || 'Ai Visibility System'
+  const solutionSubtitle = homepageContent?.solution_subtitle || 'Our authority framework for Ai search and summaries'
+  const solutionBodyPara1 = homepageContent?.solution_body_para_1 || 'Most brands are guessing how to get recommended by Ai.'
   const solutionBodyPara2 = homepageContent?.solution_body_para_2 || 'They\'re chasing prompts, publishing more content, and hoping something sticks - while the market fills with quick fixes, hacks, and tactics that don\'t translate into lasting visibility.'
-  const solutionBodyPara3 = homepageContent?.solution_body_para_3 || 'We built the AI Visibility System to remove that guesswork.'
-  const solutionBodyPara4 = homepageContent?.solution_body_para_4 || 'It\'s a structured approach to how AI systems interpret, trust, and reuse your brand\'s information - not just what you publish, but how your brand presents itself as a whole.'
+  const solutionBodyPara3 = homepageContent?.solution_body_para_3 || 'We built the Ai Visibility System to remove that guesswork.'
+  const solutionBodyPara4 = homepageContent?.solution_body_para_4 || 'It\'s a structured approach to how Ai systems interpret, trust, and reuse your brand\'s information - not just what you publish, but how your brand presents itself as a whole.'
   const solutionBodyPara5 = homepageContent?.solution_body_para_5 || 'This isn\'t a one-off optimisation. It\'s designed to compound - building durable authority that strengthens over time.'
   const solutionCTAText = homepageContent?.solution_cta_text || 'Apply to Work With Us'
   const solutionCTALink = homepageContent?.solution_cta_link || '/guide'
@@ -333,23 +333,23 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const solutionPillars = homepageContent?.solution_pillars || [
     {
       id: '1',
-      title: 'Built for AI discovery, not traditional SEO',
-      description: 'Traditional search optimisation and paid media focus on direct inputs. AI recommendations don\'t. We specialise specifically in AI summaries and AI recommendations - how language models decide which brands to surface, cite, and suggest when users ask questions.'
+      title: 'Built for Ai discovery, not traditional SEO',
+      description: 'Traditional search optimisation and paid media focus on direct inputs. Ai recommendations don\'t. We specialise specifically in Ai summaries and Ai recommendations - how language models decide which brands to surface, cite, and suggest when users ask questions.'
     },
     {
       id: '2',
       title: 'Authority over volume',
-      description: 'More content isn\'t the answer. AI systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints - not those publishing the most pages. Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.'
+      description: 'More content isn\'t the answer. Ai systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints - not those publishing the most pages. Our focus is on making your brand the trusted source Ai systems return to, not another voice in the noise.'
     },
     {
       id: '3',
       title: 'Designed to compound',
-      description: 'AI visibility isn\'t something you switch on. It\'s something you build. Each piece of work reinforces the next - content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time. That\'s why results don\'t reset every few months. They accumulate.'
+      description: 'Ai visibility isn\'t something you switch on. It\'s something you build. Each piece of work reinforces the next - content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time. That\'s why results don\'t reset every few months. They accumulate.'
     },
     {
       id: '4',
       title: 'Proven approach, low guesswork',
-      description: 'This work isn\'t experimental. Our process is refined, repeatable, and grounded in how AI systems actually behave - not theory, not trends, and not short-lived tactics. We don\'t attempt to game the system. We focus on building the conditions AI relies on to recommend brands with confidence.'
+      description: 'This work isn\'t experimental. Our process is refined, repeatable, and grounded in how Ai systems actually behave - not theory, not trends, and not short-lived tactics. We don\'t attempt to game the system. We focus on building the conditions Ai relies on to recommend brands with confidence.'
     }
   ]
   const solutionTestimonialQuote = homepageContent?.solution_testimonial_quote || 'I really think is the future if you\'re serious about ranking in Ai search.'
@@ -359,7 +359,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const solutionBgColor = homepageContent?.solution_bg_color || '#fafafa'
 
   // Product & Consulting Offerings
-  const pricingTitle = homepageContent?.pricing_title || 'AI Strategies'
+  const pricingTitle = homepageContent?.pricing_title || 'Ai Strategies'
   const pricingTiers = (homepageContent?.pricing && homepageContent.pricing.length > 0) ? homepageContent.pricing : [
     {
       id: 'guide',
@@ -368,7 +368,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       period: 'once',
       description: 'The complete blueprint for LLM ranking. Everything you need to self-implement.',
       features: [
-        'AI Visibility Roadmap',
+        'Ai Visibility Roadmap',
         'Custom Prompt Library',
         '30-Day Implementation Plan',
         'Lifetime Updates'
@@ -382,7 +382,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       name: 'Content Accelerator',
       price: '$249',
       period: 'once',
-      description: 'A deep-dive mini-course for teams building high-scale AI content systems.',
+      description: 'A deep-dive mini-course for teams building high-scale Ai content systems.',
       features: [
         'Advanced System Architecture',
         'High-Scale Workflows',
@@ -411,10 +411,10 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     },
     {
       id: 'fractional',
-      name: 'Fractional AI Growth Lead',
+      name: 'Fractional Ai Growth Lead',
       price: 'Custom',
       period: 'monthly',
-      description: 'A dedicated partner to own and scale your AI-powered search visibility program. Limited to 3 clients.',
+      description: 'A dedicated partner to own and scale your Ai-powered search visibility program. Limited to 3 clients.',
       features: [
         'Custom Strategy & Roadmap',
         'Content Architecture Audit',
@@ -430,12 +430,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   ]
 
   const outcomesTitle = homepageContent?.outcomes_title || 'Work With Me'
-  const outcomesSubtitle = homepageContent?.outcomes_subtitle || 'Fractional AI Growth Lead'
+  const outcomesSubtitle = homepageContent?.outcomes_subtitle || 'Fractional Ai Growth Lead'
   const outcomesList = (homepageContent?.outcomes && homepageContent.outcomes.length > 0) ? homepageContent.outcomes : [
     {
       id: 'fractional',
-      title: 'Fractional AI Growth Lead',
-      description: 'I work with select brands as a dedicated partner to own and scale their AI-powered search visibility program. Limited to 3 clients.'
+      title: 'Fractional Ai Growth Lead',
+      description: 'I work with select brands as a dedicated partner to own and scale their Ai-powered search visibility program. Limited to 3 clients.'
     }
   ]
 
@@ -692,17 +692,17 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     {
       id: '1',
       question: 'How does your consulting process work?',
-      answer: 'Our consulting process begins with a comprehensive analysis of your current LLM visibility. We assess how AI systems understand and rank your brand, then create a customized strategy to improve your positioning. Throughout the process, we provide ongoing guidance and optimization to ensure long-term success.'
+      answer: 'Our consulting process begins with a comprehensive analysis of your current LLM visibility. We assess how Ai systems understand and rank your brand, then create a customized strategy to improve your positioning. Throughout the process, we provide ongoing guidance and optimization to ensure long-term success.'
     },
     {
       id: '2',
       question: 'What industries do you specialize in?',
-      answer: 'We work with brands across various industries, from technology and SaaS to e-commerce, healthcare, finance, and professional services. Our approach is tailored to each industry\'s unique challenges and opportunities in AI-powered search.'
+      answer: 'We work with brands across various industries, from technology and SaaS to e-commerce, healthcare, finance, and professional services. Our approach is tailored to each industry\'s unique challenges and opportunities in Ai-powered search.'
     },
     {
       id: '3',
       question: 'How long does it take to see results?',
-      answer: 'Results can vary depending on your current visibility and the scope of optimization needed. Typically, you\'ll start seeing improvements in LLM rankings within 4-8 weeks, with more significant gains appearing over 3-6 months as AI systems index and understand your optimized content.'
+      answer: 'Results can vary depending on your current visibility and the scope of optimization needed. Typically, you\'ll start seeing improvements in LLM rankings within 4-8 weeks, with more significant gains appearing over 3-6 months as Ai systems index and understand your optimized content.'
     },
     {
       id: '4',
@@ -730,7 +730,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     name: 'SEWO',
     url: baseUrl,
     logo: logoImage || `${baseUrl}/logo.png`,
-    description: 'Expert LLM ranking optimization to boost your visibility in AI-powered search',
+    description: 'Expert LLM ranking optimization to boost your visibility in Ai-powered search',
     sameAs: [
       // Add social media URLs here if available
     ],
@@ -792,7 +792,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       Apply to Work With Us
                     </Link>
                     <p className="hero-cta-subtext">
-                      For established brands serious about AI-driven discovery.
+                      For established brands serious about Ai-driven discovery.
                     </p>
                   </div>
                 </div>
@@ -837,11 +837,11 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   Paid ads buy attention.<br />
                   Traditional SEO optimises pages for rankings.
                 </p>
-                <p>Both can work - but neither explains why AI recommends one brand and ignores another.</p>
-                <p className="not-seo-emphasis">AI systems don&apos;t respond to single tactics in isolation.</p>
+                <p>Both can work - but neither explains why Ai recommends one brand and ignores another.</p>
+                <p className="not-seo-emphasis">Ai systems don&apos;t respond to single tactics in isolation.</p>
                 <p>They evaluate patterns of trust across your content, your site structure, your brand presence, and your evidence.</p>
                 <p>That&apos;s why this work sits in a different category.</p>
-                <p>We specialise exclusively in AI search visibility - how AI systems decide which brands to surface, cite, and recommend when users ask questions.</p>
+                <p>We specialise exclusively in Ai search visibility - how Ai systems decide which brands to surface, cite, and recommend when users ask questions.</p>
                 <p>And that decision is influenced by far more than content alone.</p>
               </div>
             </div>
@@ -894,7 +894,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               {connectedSignalsImage ? (
                 <Image
                   src={connectedSignalsImage}
-                  alt="AI Recommendations Are Shaped By Connected Signals"
+                  alt="Ai Recommendations Are Shaped By Connected Signals"
                   width={600}
                   height={450}
                   style={{ 
@@ -916,14 +916,14 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               )}
             </div>
             <div className="connected-signals-text">
-              <h2 className="connected-signals-title">AI Recommendations Are Shaped By Connected Signals</h2>
+              <h2 className="connected-signals-title">Ai Recommendations Are Shaped By Connected Signals</h2>
               
               <p className="connected-signals-intro">
                 Content is the foundation - but it isn&apos;t the whole system.
               </p>
 
               <div className="connected-signals-body">
-                <p><strong>AI systems look for consistency across:</strong></p>
+                <p><strong>Ai systems look for consistency across:</strong></p>
                 <ul className="connected-signals-list">
                   <li>how your site is structured and understood</li>
                   <li>whether your expertise is supported by evidence</li>
@@ -941,19 +941,19 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 
                 <p>These signals don&apos;t operate independently.<br />They reinforce each other.</p>
                 
-                <p>That&apos;s why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
+                <p>That&apos;s why shortcuts, hacks, and isolated optimisations rarely lead to lasting Ai visibility.</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* AI Consistency Signals Section */}
+      {/* Ai Consistency Signals Section */}
       <section className="ai-consistency-signals-section">
         <div className="container">
           <div className="ai-consistency-signals-grid">
             <div className="ai-consistency-signals-column">
-              <p className="ai-consistency-signals-heading"><strong>AI systems look for consistency across:</strong></p>
+              <p className="ai-consistency-signals-heading"><strong>Ai systems look for consistency across:</strong></p>
               <ul className="ai-consistency-signals-list">
                 <li>how your site is structured and understood</li>
                 <li>whether your expertise is supported by evidence</li>
@@ -979,7 +979,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         <div className="container">
           <div className="signals-conclusion-content">
             <h1 className="signals-conclusion-title">These Signals Don&apos;t Operate Independently.<br />They Reinforce Each Other.</h1>
-            <p className="signals-conclusion-text">This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting AI visibility.</p>
+            <p className="signals-conclusion-text">This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting Ai visibility.</p>
             <div className="signals-conclusion-cta">
               <Link 
                 href="#apply-form" 
@@ -996,7 +996,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* AI Visibility System Section */}
+      {/* Ai Visibility System Section */}
       <section className="solution-section" style={{ background: solutionBgColor }}>
         <div className="solution-container">
           <div className="solution-grid">
@@ -1064,7 +1064,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               {solutionPillars.map((pillar, index) => {
                 // Icon mapping based on index
                 const icons = [
-                  // Icon 1: Search/AI
+                  // Icon 1: Search/Ai
                   <svg key="icon1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8"/>
                     <path d="M21 21l-4.35-4.35"/>
@@ -1116,16 +1116,16 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
           {/* Case Study Text Block */}
           <div className="proof-results-case-study">
-            <h3 className="proof-results-case-study-title">Case study: AI visibility in a highly competitive market</h3>
+            <h3 className="proof-results-case-study-title">Case study: Ai visibility in a highly competitive market</h3>
             <div className="proof-results-case-study-content">
               <p>
-                In a highly competitive U.S. skincare market, we applied our AI Visibility System to restructure how content, site signals, and brand authority were presented to AI systems.
+                In a highly competitive U.S. skincare market, we applied our Ai Visibility System to restructure how content, site signals, and brand authority were presented to Ai systems.
               </p>
               <p>
                 Rather than relying on shortcuts or volume, the work focused on clarity, trust signals, and consistency across content, structure, and supporting brand signals.
               </p>
               <p>
-                Within the first 30 days, the brand achieved top placement in AI-generated results, maintained that visibility, and saw a <strong>450% increase in organic traffic</strong> - driven by sustained inclusion in AI summaries and recommendations.
+                Within the first 30 days, the brand achieved top placement in Ai-generated results, maintained that visibility, and saw a <strong>450% increase in organic traffic</strong> - driven by sustained inclusion in Ai summaries and recommendations.
               </p>
               <p>
                 This outcome wasn&apos;t the result of a single tactic, but a connected system designed to compound over time.
@@ -1244,7 +1244,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
             <div className="apply-form-header">
               <h2>Apply to Work With Us</h2>
               <p className="apply-form-intro">
-                Tell us about your brand and how we can help you get recommended by AI.
+                Tell us about your brand and how we can help you get recommended by Ai.
               </p>
             </div>
 
@@ -1314,7 +1314,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   )
 }
 
-// Apply Form Component - Optimized for AI bots
+// Apply Form Component - Optimized for Ai bots
 interface ApplyFormProps {
   buttonBgColor: string
   buttonTextColor: string
@@ -1473,7 +1473,7 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
       </div>
 
       <div className="form-group">
-        <label htmlFor="current_challenges">What challenges are you facing with AI visibility?</label>
+        <label htmlFor="current_challenges">What challenges are you facing with Ai visibility?</label>
         <textarea
           id="current_challenges"
           name="current_challenges"
@@ -1481,7 +1481,7 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
           onChange={handleChange}
           required
           rows={4}
-          placeholder="Describe your current challenges with AI search, recommendations, or visibility."
+          placeholder="Describe your current challenges with Ai search, recommendations, or visibility."
           aria-required="true"
         />
       </div>

@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Contact Us',
-  description: 'Get in touch with SEWO. Let us help you get discovered by AI-powered search.',
+  description: 'Get in touch with SEWO. Let us help you get discovered by Ai-powered search.',
   openGraph: {
     title: 'Contact Us | SEWO',
-    description: 'Get in touch with SEWO. Let us help you get discovered by AI-powered search.',
+    description: 'Get in touch with SEWO. Let us help you get discovered by Ai-powered search.',
     type: 'website',
   },
   twitter: {

@@ -32,7 +32,7 @@ export default async function AboutPage() {
           <div className="container">
             <h1 className="about-title">About SEWO</h1>
             <p className="about-subtitle">
-              We help brands navigate the new era of AI-powered search.
+              We help brands navigate the new era of Ai-powered search.
             </p>
           </div>
         </section>
@@ -43,10 +43,10 @@ export default async function AboutPage() {
               <div className="about-text-main">
                 <h2>Our Mission</h2>
                 <p>
-                  In a world where consumers increasingly turn to AI assistants like ChatGPT, Claude, and Gemini for answers, being &quot;found&quot; has a new meaning. Traditional SEO is no longer enough.
+                  In a world where consumers increasingly turn to Ai assistants like ChatGPT, Claude, and Gemini for answers, being &quot;found&quot; has a new meaning. Traditional SEO is no longer enough.
                 </p>
                 <p>
-                  At SEWO, our mission is to ensure your brand is the answer AI suggests. We leverage deep research into LLM behavior and semantic search to optimize your visibility where it matters most.
+                  At SEWO, our mission is to ensure your brand is the answer Ai suggests. We leverage deep research into LLM behavior and semantic search to optimize your visibility where it matters most.
                 </p>
               </div>
               <div className="about-stats">
@@ -55,7 +55,7 @@ export default async function AboutPage() {
                   <span className="stat-label">Ranking Experts</span>
                 </div>
                 <div className="stat-item">
-                  <span className="stat-number">AI</span>
+                  <span className="stat-number">Ai</span>
                   <span className="stat-label">Search Pioneers</span>
                 </div>
               </div>
