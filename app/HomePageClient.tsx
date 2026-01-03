@@ -837,11 +837,11 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   Paid ads buy attention.<br />
                   Traditional SEO optimises pages for rankings.
                 </p>
-                <p>Both can work — but neither explains why AI recommends one brand and ignores another.</p>
+                <p>Both can work - but neither explains why AI recommends one brand and ignores another.</p>
                 <p className="not-seo-emphasis">AI systems don&apos;t respond to single tactics in isolation.</p>
                 <p>They evaluate patterns of trust across your content, your site structure, your brand presence, and your evidence.</p>
                 <p>That&apos;s why this work sits in a different category.</p>
-                <p>We specialise exclusively in AI search visibility — how AI systems decide which brands to surface, cite, and recommend when users ask questions.</p>
+                <p>We specialise exclusively in AI search visibility - how AI systems decide which brands to surface, cite, and recommend when users ask questions.</p>
                 <p>And that decision is influenced by far more than content alone.</p>
               </div>
             </div>
@@ -919,7 +919,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               <h2 className="connected-signals-title">AI Recommendations Are Shaped By Connected Signals</h2>
               
               <p className="connected-signals-intro">
-                Content is the foundation — but it isn&apos;t the whole system.
+                Content is the foundation - but it isn&apos;t the whole system.
               </p>
 
               <div className="connected-signals-body">

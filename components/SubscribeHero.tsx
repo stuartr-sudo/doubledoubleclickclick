@@ -54,7 +54,7 @@ export default function SubscribeHero({ source = 'hero' }: { source?: string }) 
             {status === 'loading' ? 'Submitting…' : 'Submit →'}
           </button>
         </form>
-        {status === 'success' && <p className="subscribe-note">Thanks — please check your inbox.</p>}
+        {status === 'success' && <p className="subscribe-note">Thanks - please check your inbox.</p>}
         {status === 'error' && <p className="subscribe-note error">Something went wrong. Try again.</p>}
       </div>
     </section>

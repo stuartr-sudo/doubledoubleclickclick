@@ -63,7 +63,7 @@ const demoPosts = [
     slug: 'the-latest-tech-trends-every-creator-should-know',
     title: 'The latest tech trends every creator should know',
     meta_title: 'The latest tech trends every creator should know',
-    meta_description: 'From AI tools to new platforms—what matters this year and how to adapt fast.',
+    meta_description: 'From AI tools to new platforms - what matters this year and how to adapt fast.',
     featured_image: null,
     published_date: null,
     created_date: '2025-01-01',

@@ -204,7 +204,7 @@ function HomepageEditorPageInner() {
     logo_image: '',
     logo_text: 'SEWO',
     hero_title: 'Make Your Brand the Answer Ai Recommends',
-    hero_description: 'Hello, I\'m a freelancer specializing in minimal design with 10 years of expertise — based in Tokyo, working remote. Let\'s create!',
+    hero_description: 'Hello, I\'m a freelancer specializing in minimal design with 10 years of expertise - based in Tokyo, working remote. Let\'s create!',
     hero_image: '',
     hero_background_image: '',
     hero_cta_text: 'Get Started',
@@ -299,11 +299,11 @@ function HomepageEditorPageInner() {
     proof_results_bg_color: '#ffffff',
     quiz_cta_bg_color: '#ffffff',
     problem_statement_title: 'Publishing content isn\'t the problem.\nBeing recognised by AI is.',
-    problem_statement_para_1: 'Businesses are waking up to the fact that customers aren\'t just searching anymore — they\'re having conversations with AI.',
+    problem_statement_para_1: 'Businesses are waking up to the fact that customers aren\'t just searching anymore - they\'re having conversations with AI.',
     problem_statement_para_2: 'The shift has happened faster than anyone expected, but the guidance hasn\'t caught up.',
     problem_statement_para_3: 'Brands are being told to chase prompts and publish more content, without understanding how AI systems actually decide who to recommend.',
     problem_statement_highlight: 'We exist to solve this.',
-    problem_statement_para_4: 'Because when customers ask AI for answers, your brand either shows up — or it doesn\'t.',
+    problem_statement_para_4: 'Because when customers ask AI for answers, your brand either shows up - or it doesn\'t.',
     problem_statement_para_5: 'And that visibility gap is the exact problem we\'re built to fix.',
     problem_statement_image: '',
     problem_statement_bg_color: '#f8f9fa',
@@ -313,10 +313,10 @@ function HomepageEditorPageInner() {
     solution_headline: 'AI Visibility System',
     solution_subtitle: 'Our authority framework for AI search and summaries',
     solution_body_para_1: 'Most brands are guessing how to get recommended by AI.',
-    solution_body_para_2: 'They\'re chasing prompts, publishing more content, and hoping something sticks — while the market fills with quick fixes, hacks, and tactics that don\'t translate into lasting visibility.',
+    solution_body_para_2: 'They\'re chasing prompts, publishing more content, and hoping something sticks - while the market fills with quick fixes, hacks, and tactics that don\'t translate into lasting visibility.',
     solution_body_para_3: 'We built the AI Visibility System to remove that guesswork.',
-    solution_body_para_4: 'It\'s a structured approach to how AI systems interpret, trust, and reuse your brand\'s information — not just what you publish, but how your brand presents itself as a whole.',
-    solution_body_para_5: 'This isn\'t a one-off optimisation. It\'s designed to compound — building durable authority that strengthens over time.',
+    solution_body_para_4: 'It\'s a structured approach to how AI systems interpret, trust, and reuse your brand\'s information - not just what you publish, but how your brand presents itself as a whole.',
+    solution_body_para_5: 'This isn\'t a one-off optimisation. It\'s designed to compound - building durable authority that strengthens over time.',
     solution_cta_text: 'Apply to Work With Us',
     solution_cta_link: '/guide',
     solution_note: 'Limited capacity. We take on a small number of brands at a time.',
@@ -325,22 +325,22 @@ function HomepageEditorPageInner() {
       {
         id: '1',
         title: 'Built for AI discovery, not traditional SEO',
-        description: 'Traditional search optimisation and paid media focus on direct inputs. AI recommendations don\'t. We specialise specifically in AI summaries and AI recommendations — how language models decide which brands to surface, cite, and suggest when users ask questions.'
+        description: 'Traditional search optimisation and paid media focus on direct inputs. AI recommendations don\'t. We specialise specifically in AI summaries and AI recommendations - how language models decide which brands to surface, cite, and suggest when users ask questions.'
       },
       {
         id: '2',
         title: 'Authority over volume',
-        description: 'More content isn\'t the answer. AI systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints — not those publishing the most pages. Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.'
+        description: 'More content isn\'t the answer. AI systems favour brands that demonstrate consistency, credibility, and clarity across multiple touchpoints - not those publishing the most pages. Our focus is on making your brand the trusted source AI systems return to, not another voice in the noise.'
       },
       {
         id: '3',
         title: 'Designed to compound',
-        description: 'AI visibility isn\'t something you switch on. It\'s something you build. Each piece of work reinforces the next — content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time. That\'s why results don\'t reset every few months. They accumulate.'
+        description: 'AI visibility isn\'t something you switch on. It\'s something you build. Each piece of work reinforces the next - content, site structure, brand signals, and proof working together to deepen trust and increase confidence over time. That\'s why results don\'t reset every few months. They accumulate.'
       },
       {
         id: '4',
         title: 'Proven approach, low guesswork',
-        description: 'This work isn\'t experimental. Our process is refined, repeatable, and grounded in how AI systems actually behave — not theory, not trends, and not short-lived tactics. We don\'t attempt to game the system. We focus on building the conditions AI relies on to recommend brands with confidence.'
+        description: 'This work isn\'t experimental. Our process is refined, repeatable, and grounded in how AI systems actually behave - not theory, not trends, and not short-lived tactics. We don\'t attempt to game the system. We focus on building the conditions AI relies on to recommend brands with confidence.'
       }
     ],
     solution_testimonial_quote: 'I really think is the future if you\'re serious about ranking in Ai search.',

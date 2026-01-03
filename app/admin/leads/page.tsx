@@ -89,14 +89,14 @@ async function LeadsAdminPageInner() {
                           day: 'numeric',
                         })}
                       </td>
-                      <td>{lead.plan_type || '—'}</td>
+                      <td>{lead.plan_type || '-'}</td>
                       <td>{lead.name}</td>
                       <td>{lead.email}</td>
-                      <td>{lead.company || '—'}</td>
-                      <td>{lead.website || '—'}</td>
-                      <td>{lead.topic || '—'}</td>
+                      <td>{lead.company || '-'}</td>
+                      <td>{lead.website || '-'}</td>
+                      <td>{lead.topic || '-'}</td>
                       <td>
-                        <pre className="leads-message">{lead.message || '—'}</pre>
+                        <pre className="leads-message">{lead.message || '-'}</pre>
                       </td>
                     </tr>
                   ))}

@@ -12,7 +12,7 @@ export default function GuidePage() {
             A practical, step‑by‑step system to make your brand the answer AI suggests. This is the exact blueprint I use for my high-ticket consulting clients.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
-            <Link href="https://buy.stripe.com/test_guide" className="btn btn-primary">Buy Playbook — $97</Link>
+            <Link href="https://buy.stripe.com/test_guide" className="btn btn-primary">Buy Playbook - $97</Link>
             <Link href="#what-you-get" className="btn btn-secondary">Learn More</Link>
           </div>
         </div>

@@ -91,7 +91,7 @@ export default function BetaPage() {
               <Link href="/" className="back-link">
                 ← Back to Home
               </Link>
-              <h1 className="tier-page-title">SEWO — Ai Visibility (Beta)</h1>
+              <h1 className="tier-page-title">SEWO - Ai Visibility (Beta)</h1>
               <p className="tier-page-subtitle">
                 Plan, publish, and monitor content for Ai ranking. Limited beta access for qualified brands.
               </p>

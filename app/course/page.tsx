@@ -12,7 +12,7 @@ export default function CoursePage() {
             A mini-course for teams who want to build an internal system for AI-powered search visibility. Learn how to transform your content into an AI-recommendation engine.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
-            <Link href="https://buy.stripe.com/test_course" className="btn btn-primary">Enroll Now — $249</Link>
+            <Link href="https://buy.stripe.com/test_course" className="btn btn-primary">Enroll Now - $249</Link>
             <Link href="/book-call" className="btn btn-secondary">Bulk Team Access</Link>
           </div>
         </div>

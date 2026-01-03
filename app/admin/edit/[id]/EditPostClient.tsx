@@ -146,7 +146,7 @@ export default function EditPostClient({ id }: { id: string }) {
           >
             <strong>Couldn&apos;t load this post.</strong> {loadError}
             <div style={{ marginTop: '0.5rem' }}>
-              Please refresh. If this keeps happening, the API is failing—don&apos;t save this form.
+              Please refresh. If this keeps happening, the API is failing - don&apos;t save this form.
             </div>
           </div>
         )}
