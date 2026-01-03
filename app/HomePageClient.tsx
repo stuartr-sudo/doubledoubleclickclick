@@ -742,13 +742,73 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'SEWO',
+    name: logoText || 'SEWO',
     url: baseUrl,
     logo: logoImage || `${baseUrl}/logo.png`,
-    description: 'Expert LLM ranking optimization to boost your visibility in Ai-powered search',
+    description: aboutDescription || 'Expert LLM ranking optimization to boost your visibility in Ai-powered search',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'Customer Service',
+      email: 'hello@sewo.io',
+    },
     sameAs: [
       // Add social media URLs here if available
     ],
+  }
+
+  // JSON-LD structured data for WebSite
+  const websiteJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: logoText || 'SEWO',
+    url: baseUrl,
+    description: aboutDescription || 'Expert LLM ranking optimization to boost your visibility in Ai-powered search',
+    publisher: {
+      '@type': 'Organization',
+      name: logoText || 'SEWO',
+      logo: logoImage || `${baseUrl}/logo.png`,
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${baseUrl}/blog?search={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
+  // JSON-LD structured data for FAQPage
+  const faqPageJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  }
+
+  // JSON-LD structured data for Service
+  const serviceJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    serviceType: 'Ai Visibility & LLM Ranking Optimization',
+    provider: {
+      '@type': 'Organization',
+      name: logoText || 'SEWO',
+      url: baseUrl,
+    },
+    description: aboutDescription || 'Expert LLM ranking optimization to boost your visibility in Ai-powered search',
+    areaServed: 'Worldwide',
+    availableChannel: {
+      '@type': 'ServiceChannel',
+      serviceUrl: `${baseUrl}/#apply-form`,
+      serviceType: 'Online',
+    },
   }
 
   return (
@@ -761,6 +821,20 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
+      {faqItems && faqItems.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageJsonLd) }}
+        />
+      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
       />
       
         {/* Hero Section - Full Width */}
