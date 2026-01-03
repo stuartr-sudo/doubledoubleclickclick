@@ -1005,7 +1005,7 @@ img {
 
 .connected-signals-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--spacing-4xl);
   align-items: center;
   max-width: 1140px;
@@ -1022,8 +1022,12 @@ img {
   font-weight: 700;
   line-height: 1.2;
   color: var(--color-text);
-  margin: 0 0 var(--spacing-lg) 0;
+  margin: 0 0 var(--spacing-md) 0;
   text-align: left;
+}
+
+.connected-signals-body .connected-signals-title {
+  margin-bottom: var(--spacing-md);
 }
 
 .connected-signals-intro {
@@ -1068,8 +1072,10 @@ img {
 .connected-signals-body {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  margin-top: 0;
+  gap: var(--spacing-md);
+  margin: 0 auto var(--spacing-2xl) auto;
+  max-width: 1140px;
+  padding: 0 var(--container-padding);
 }
 
 .connected-signals-body > p {

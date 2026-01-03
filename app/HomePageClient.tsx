@@ -911,6 +911,14 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
       {/* Connected Signals Section */}
       <section className="connected-signals-section">
+        <div className="connected-signals-body">
+          <h2 className="connected-signals-title">Ai Recommendations Are Shaped By Connected Signals</h2>
+          <p>Content is the foundation - but it isn&apos;t the whole system.</p>
+          <p>Ai systems look for coherence. They favour brands that present a clear, consistent picture over time, rather than isolated moments of optimization.</p>
+          <p>These signals don&apos;t operate independently.<br />They reinforce each other.</p>
+          <p>When everything points in the same direction, Ai systems become more confident in selecting, referencing, and recommending a brand. When it doesn&apos;t, even strong individual efforts tend to stall.</p>
+          <p>That&apos;s why shortcuts, hacks, and one-off changes rarely translate into lasting Ai visibility.</p>
+        </div>
         <div className="container">
           <div className="connected-signals-grid">
             <div className="connected-signals-image">
@@ -940,35 +948,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   </svg>
                 </div>
               )}
-            </div>
-            <div className="connected-signals-text">
-              <h2 className="connected-signals-title">Ai Recommendations Are Shaped By Connected Signals</h2>
-              
-              <p className="connected-signals-intro">
-                Content is the foundation - but it isn&apos;t the whole system.
-              </p>
-
-              <div className="connected-signals-body">
-                <p><strong>Ai systems look for consistency across:</strong></p>
-                <ul className="connected-signals-list">
-                  <li>how your site is structured and understood</li>
-                  <li>whether your expertise is supported by evidence</li>
-                  <li>whether your brand appears active and credible beyond your website</li>
-                  <li>whether your claims are reinforced by real-world validation</li>
-                </ul>
-                
-                <p><strong>That includes elements like:</strong></p>
-                <ul className="connected-signals-list">
-                  <li>site architecture and technical clarity</li>
-                  <li>case studies and testimonials</li>
-                  <li>visible activity across relevant social platforms</li>
-                  <li>consistency between what you publish and how your brand shows up elsewhere</li>
-                </ul>
-                
-                <p>These signals don&apos;t operate independently.<br />They reinforce each other.</p>
-                
-                <p>That&apos;s why shortcuts, hacks, and isolated optimisations rarely lead to lasting Ai visibility.</p>
-              </div>
             </div>
           </div>
         </div>
