@@ -1043,6 +1043,36 @@ img {
   font-weight: 500;
 }
 
+.connected-signals-body > p strong {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.connected-signals-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--spacing-md) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.connected-signals-list li {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  padding-left: var(--spacing-lg);
+  position: relative;
+}
+
+.connected-signals-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
 .connected-signals-highlight {
   font-size: 1.25rem;
   font-weight: 600;
