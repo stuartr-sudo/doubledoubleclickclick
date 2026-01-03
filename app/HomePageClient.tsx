@@ -718,6 +718,21 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       id: '6',
       question: 'How do I get started?',
       answer: 'Getting started is simple. Take our 12-step quiz to see where you\'re missing out on LLM visibility, or reach out directly through our contact form. We\'ll schedule a consultation to discuss your goals and create a customized plan for your brand.'
+    },
+    {
+      id: '7',
+      question: 'Is this just traditional SEO with Ai added on?',
+      answer: 'No. Traditional SEO focuses on keyword rankings and search engine algorithms. Our approach is specifically designed for how Ai systems (like ChatGPT, Claude, and Gemini) discover, understand, and recommend brands. This requires different strategies around content coherence, brand signals, and how information is structured for Ai consumption.'
+    },
+    {
+      id: '8',
+      question: 'How is this different from using ChatGPT or other Ai tools to create content?',
+      answer: 'Using Ai tools to create content is just one piece of the puzzle. Our work focuses on how Ai systems evaluate and recommend brands - which involves site architecture, brand consistency, evidence-based authority, and how all these signals work together. Creating content with Ai doesn\'t guarantee that Ai systems will recommend your brand.'
+    },
+    {
+      id: '9',
+      question: 'Do you guarantee Ai rankings or recommendations?',
+      answer: 'We don\'t guarantee specific rankings or recommendations, as Ai systems are constantly evolving. However, we do guarantee a systematic approach based on how Ai systems actually work. Our focus is on building durable visibility through coherence and consistency, which is what Ai systems look for when making recommendations.'
     }
   ]
 
