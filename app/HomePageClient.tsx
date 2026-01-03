@@ -911,14 +911,6 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
       {/* Connected Signals Section */}
       <section className="connected-signals-section">
-        <div className="connected-signals-body">
-          <h2 className="connected-signals-title">Ai Recommendations Are Shaped By Connected Signals</h2>
-          <p>Content is the foundation - but it isn&apos;t the whole system.</p>
-          <p>Ai systems look for coherence. They favour brands that present a clear, consistent picture over time, rather than isolated moments of optimization.</p>
-          <p>These signals don&apos;t operate independently.<br />They reinforce each other.</p>
-          <p>When everything points in the same direction, Ai systems become more confident in selecting, referencing, and recommending a brand. When it doesn&apos;t, even strong individual efforts tend to stall.</p>
-          <p>That&apos;s why shortcuts, hacks, and one-off changes rarely translate into lasting Ai visibility.</p>
-        </div>
         <div className="container">
           <div className="connected-signals-grid">
             <div className="connected-signals-image">
@@ -948,6 +940,16 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   </svg>
                 </div>
               )}
+            </div>
+            <div className="connected-signals-text">
+              <h2 className="connected-signals-title">Ai Recommendations Are Shaped By Connected Signals</h2>
+              <div className="connected-signals-body">
+                <p>Content is the foundation - but it isn&apos;t the whole system.</p>
+                <p>Ai systems look for coherence. They favour brands that present a clear, consistent picture over time, rather than isolated moments of optimization.</p>
+                <p>These signals don&apos;t operate independently.<br />They reinforce each other.</p>
+                <p>When everything points in the same direction, Ai systems become more confident in selecting, referencing, and recommending a brand. When it doesn&apos;t, even strong individual efforts tend to stall.</p>
+                <p>That&apos;s why shortcuts, hacks, and one-off changes rarely translate into lasting Ai visibility.</p>
+              </div>
             </div>
           </div>
         </div>

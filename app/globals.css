@@ -1005,7 +1005,7 @@ img {
 
 .connected-signals-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: var(--spacing-4xl);
   align-items: center;
   max-width: 1140px;
@@ -1072,10 +1072,8 @@ img {
 .connected-signals-body {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  margin: 0 auto var(--spacing-2xl) auto;
-  max-width: 1140px;
-  padding: 0 var(--container-padding);
+  gap: var(--spacing-sm);
+  margin-top: 0;
 }
 
 .connected-signals-body > p {
