@@ -835,13 +835,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 <p>Most marketing services are built around direct inputs.</p>
                 <p className="not-seo-list">
                   Paid ads buy attention.<br />
-                  Traditional SEO optimises pages for rankings.<br />
-                  Both can work - but neither explains why AI recommends one brand and ignores another.
+                  Traditional SEO optimises pages for rankings.
                 </p>
+                <p>Both can work — but neither explains why AI recommends one brand and ignores another.</p>
                 <p className="not-seo-emphasis">AI systems don&apos;t respond to single tactics in isolation.</p>
-                <p>They evaluate patterns of trust across content, structure, brand presence, and evidence.</p>
+                <p>They evaluate patterns of trust across your content, your site structure, your brand presence, and your evidence.</p>
                 <p>That&apos;s why this work sits in a different category.</p>
-                <p>We specialise specifically in AI summaries and AI recommendations - how AI systems decide which brands to surface, cite, and suggest when users ask questions.</p>
+                <p>We specialise exclusively in AI search visibility — how AI systems decide which brands to surface, cite, and recommend when users ask questions.</p>
                 <p>And that decision is influenced by far more than content alone.</p>
               </div>
             </div>
