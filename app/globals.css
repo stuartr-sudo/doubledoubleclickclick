@@ -238,6 +238,43 @@ img {
   padding-top: 80px; /* Account for fixed header */
 }
 
+/* Optimized Hero Background Image */
+.hero-background-image-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.hero-background-image {
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-background-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4));
+  z-index: 1;
+}
+
+/* Mobile optimization for hero background */
+@media (max-width: 768px) {
+  .hero-background-image-wrapper {
+    /* Reduce image quality on mobile for faster loading */
+    transform: scale(1.05); /* Slight scale to prevent edge gaps */
+  }
+  
+  .hero-stripe {
+    min-height: 70vh; /* Reduce height on mobile */
+  }
+}
+
 /* Hero Navigation - Desktop */
 .hero-nav {
   position: absolute;

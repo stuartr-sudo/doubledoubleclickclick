@@ -752,17 +752,34 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         <section 
           className="hero-stripe"
               style={{
-                background: heroBackgroundImage 
-                  ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${heroBackgroundImage})`
-                  : heroBgGradient,
-                backgroundSize: heroBackgroundImage ? 'cover' : 'auto',
-                backgroundPosition: heroBackgroundImage ? 'center' : 'auto',
-                backgroundRepeat: heroBackgroundImage ? 'no-repeat' : 'repeat',
-                color: heroTextColor
+                background: heroBackgroundImage ? 'transparent' : heroBgGradient,
+                color: heroTextColor,
+                position: 'relative',
+                overflow: 'hidden'
               }}
             >
+          {/* Optimized Hero Background Image */}
+          {heroBackgroundImage && (
+            <div className="hero-background-image-wrapper">
+              <Image
+                src={heroBackgroundImage}
+                alt=""
+                fill
+                priority
+                quality={85}
+                sizes="100vw"
+                style={{
+                  objectFit: 'cover',
+                  objectPosition: 'center',
+                  zIndex: 0
+                }}
+                className="hero-background-image"
+              />
+              <div className="hero-background-overlay" />
+            </div>
+          )}
           {/* Main Content */}
-          <div className="hero-stripe-content">
+          <div className="hero-stripe-content" style={{ position: 'relative', zIndex: 1 }}>
             {/* Full Width Hero Content */}
             <div className="hero-stripe-full">
               <div className="container">
@@ -812,6 +829,9 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   alt="This Is Not Traditional SEO Or Paid Media"
                   width={600}
                   height={600}
+                  loading="lazy"
+                  quality={85}
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   style={{ 
                     width: '100%', 
                     height: 'auto', 
@@ -870,6 +890,9 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   alt="Problem Statement" 
                   width={600}
                   height={450}
+                  loading="lazy"
+                  quality={85}
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   style={{ objectFit: 'cover', width: '100%', height: 'auto', borderRadius: '12px' }}
                 />
               ) : (
@@ -897,6 +920,9 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   alt="Ai Recommendations Are Shaped By Connected Signals"
                   width={600}
                   height={450}
+                  loading="lazy"
+                  quality={85}
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   style={{ 
                     width: '100%', 
                     height: 'auto', 
@@ -1042,7 +1068,9 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                             alt={solutionTestimonialAuthorName}
                             width={56}
                             height={56}
-                        loading="lazy"
+                            loading="lazy"
+                            quality={85}
+                            sizes="56px"
                             style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
                       />
                         </div>
@@ -1144,6 +1172,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                       width={400}
                       height={225}
                       loading="lazy"
+                      quality={85}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
                       style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     />
                   ) : (
@@ -1273,6 +1303,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                           src={post.featured_image} 
                           alt={post.title}
                           loading="lazy"
+                          quality={85}
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           width={400}
                           height={250}
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }}
