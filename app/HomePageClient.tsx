@@ -1450,17 +1450,17 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
     setErrorMessage('') // Clear previous error
 
     try {
-      const response = await fetch('/api/lead-capture', {
+      const response = await fetch('/api/apply-to-work-with-us', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.contact_name,
-          email: formData.email_address,
-          phone: '',
-          source: 'apply_to_work_with_us',
-          website: formData.website_url,
           company_name: formData.company_name,
-          message: `Company: ${formData.company_name}\nWebsite: ${formData.website_url}\n\nCompany Description:\n${formData.company_description}\n\nCurrent Challenges:\n${formData.current_challenges}\n\nGoals:\n${formData.goals}`
+          contact_name: formData.contact_name,
+          email_address: formData.email_address,
+          website_url: formData.website_url,
+          company_description: formData.company_description,
+          current_challenges: formData.current_challenges,
+          goals: formData.goals
         })
       })
 
