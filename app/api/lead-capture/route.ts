@@ -31,20 +31,38 @@ export async function POST(request: NextRequest) {
     }
 
     // Get client IP address
-    const ipAddress = getClientIP(request)
+    let ipAddress: string
+    try {
+      ipAddress = getClientIP(request)
+    } catch (error) {
+      console.error('Error getting client IP:', error)
+      ipAddress = 'unknown'
+    }
 
     // Check rate limiting by IP (more lenient for legitimate forms)
     // Allow different emails from same IP to prevent blocking legitimate users
-    const rateLimitKey = `${ipAddress}:${source || 'default'}:${email}`
-    if (isRateLimited(rateLimitKey, source)) {
-      return NextResponse.json(
-        { success: false, error: 'Too many submissions from this email address. Please wait a few minutes before trying again.' },
-        { status: 429 }
-      )
+    try {
+      const rateLimitKey = `${ipAddress}:${source || 'default'}:${email}`
+      if (isRateLimited(rateLimitKey, source)) {
+        return NextResponse.json(
+          { success: false, error: 'Too many submissions from this email address. Please wait a few minutes before trying again.' },
+          { status: 429 }
+        )
+      }
+    } catch (error) {
+      console.error('Error checking rate limit:', error)
+      // Continue processing if rate limit check fails (fail open)
     }
 
     // Check if email already exists (globally across all sources)
-    const emailExists = await checkEmailExists(email)
+    let emailExists = false
+    try {
+      emailExists = await checkEmailExists(email)
+    } catch (error) {
+      console.error('Error checking email existence:', error)
+      // Continue processing if email check fails (fail open)
+    }
+    
     if (emailExists) {
       return NextResponse.json(
         { success: false, error: 'This email has already been registered. Each email can only be used once.' },
@@ -65,22 +83,51 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const { error } = await supabase.from('lead_captures').insert({
-      name: name || 'Questions Discovery Lead',
-      email,
-      company: companyName || null,
-      website: website || null,
-      message: message || null,
-      plan_type: plan_type || null,
-      source: source || null,
-      topic: topic || null,
-      ip_address: ipAddress,
-    })
+    try {
+      const { data: insertData, error } = await supabase.from('lead_captures').insert({
+        name: name || 'Questions Discovery Lead',
+        email,
+        company: companyName || null,
+        website: website || null,
+        message: message || null,
+        plan_type: plan_type || null,
+        source: source || null,
+        topic: topic || null,
+        ip_address: ipAddress,
+      }).select()
 
-    if (error) {
-      console.error('Error inserting lead capture:', error)
+      if (error) {
+        console.error('Error inserting lead capture:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
+        
+        // Check for specific error types
+        if (error.code === '23505') { // Unique constraint violation
+          return NextResponse.json(
+            { success: false, error: 'This email has already been registered. Each email can only be used once.' },
+            { status: 400 }
+          )
+        }
+        
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Failed to save your submission. Please try again or contact us directly at hello@sewo.io.',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          },
+          { status: 500 }
+        )
+      }
+
+      console.log('Lead capture inserted successfully:', insertData)
+    } catch (insertError) {
+      console.error('Exception during lead capture insert:', insertError)
+      const errorMsg = insertError instanceof Error ? insertError.message : 'Unknown error'
       return NextResponse.json(
-        { success: false, error: 'Failed to save lead' },
+        { 
+          success: false, 
+          error: 'An error occurred while saving your submission. Please try again or contact us directly at hello@sewo.io.',
+          details: process.env.NODE_ENV === 'development' ? errorMsg : undefined
+        },
         { status: 500 }
       )
     }
@@ -202,8 +249,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Lead capture API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unexpected error'
+    const errorStack = error instanceof Error ? error.stack : String(error)
+    console.error('Error details:', { errorMessage, errorStack })
+    
     return NextResponse.json(
-      { success: false, error: 'Unexpected error' },
+      { 
+        success: false, 
+        error: 'An error occurred while processing your submission. Please try again or contact us directly at hello@sewo.io.',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     )
   }

@@ -1440,6 +1440,7 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
     e.preventDefault()
     setIsSubmitting(true)
     setSubmitStatus(null)
+    setErrorMessage('') // Clear previous error
 
     try {
       const response = await fetch('/api/lead-capture', {
@@ -1456,9 +1457,11 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
         })
       })
 
-      if (response.ok) {
+      const responseData = await response.json().catch(() => ({}))
+
+      if (response.ok && responseData.success !== false) {
         setSubmitStatus('success')
-        setErrorMessage('') // Clear any previous error
+        setErrorMessage('')
         setFormData({
           company_name: '',
           contact_name: '',
@@ -1469,15 +1472,17 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
           goals: ''
         })
         // Scroll to top of form to show success message
-        document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        setTimeout(() => {
+          document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 100)
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        const apiErrorMessage = errorData.error || 'There was an error submitting your application. Please try again or contact us directly.'
+        const apiErrorMessage = responseData.error || responseData.message || 'There was an error submitting your application. Please try again or contact us directly at hello@sewo.io.'
         setErrorMessage(apiErrorMessage)
         setSubmitStatus('error')
       }
     } catch (error) {
       console.error('Form submission error:', error)
+      setErrorMessage('Network error. Please check your connection and try again, or contact us directly at hello@sewo.io.')
       setSubmitStatus('error')
     } finally {
       setIsSubmitting(false)
@@ -1499,9 +1504,9 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
         </div>
       )}
 
-      {submitStatus === 'error' && (
+      {submitStatus === 'error' && errorMessage && (
         <div className="form-message form-message-error" role="alert">
-          <p id="error-message">{errorMessage || 'There was an error submitting your application. Please try again in a few minutes or contact us directly at hello@sewo.io.'}</p>
+          <p>{errorMessage}</p>
         </div>
       )}
 
