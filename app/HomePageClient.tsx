@@ -1497,13 +1497,17 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
         // Show the actual error from the server, including details in development
         const apiErrorMessage = responseData.error || responseData.message || `Server error: ${response.status} ${response.statusText}`
         const errorDetails = responseData.details ? `\n\nDetails: ${responseData.details}` : ''
-        setErrorMessage(`${apiErrorMessage}${errorDetails}`)
+        const fullError = `${apiErrorMessage}${errorDetails}`
+        setErrorMessage(fullError)
         setSubmitStatus('error')
         console.error('Form submission failed:', {
           status: response.status,
           statusText: response.statusText,
-          responseData
+          responseData,
+          fullError
         })
+        // Also log to console for debugging
+        console.error('Full error response:', JSON.stringify(responseData, null, 2))
       }
     } catch (error) {
       console.error('Form submission error:', error)

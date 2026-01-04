@@ -44,6 +44,16 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Insert into dedicated table
+    console.log('Inserting into apply_to_work_with_us table:', {
+      company_name,
+      contact_name,
+      email_address,
+      has_website: !!website_url,
+      has_description: !!company_description,
+      has_challenges: !!current_challenges,
+      has_goals: !!goals
+    })
+
     const { data: insertData, error } = await supabase
       .from('apply_to_work_with_us')
       .insert({
@@ -60,6 +70,23 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Database insert error:', error)
+      console.error('Error code:', error.code)
+      console.error('Error message:', error.message)
+      console.error('Error details:', error.details)
+      console.error('Error hint:', error.hint)
+      console.error('Full error:', JSON.stringify(error, null, 2))
+      
+      // Check if table doesn't exist
+      if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Database table not found. Please run the migration: 20250122_create_apply_to_work_with_us_table.sql',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          },
+          { status: 500 }
+        )
+      }
       
       // Check for duplicate email
       if (error.code === '23505') {
@@ -73,7 +100,7 @@ export async function POST(request: NextRequest) {
         { 
           success: false, 
           error: `Database error: ${error.message}. Please try again or contact support at stuartr@sewo.io.`,
-          details: process.env.NODE_ENV === 'development' ? JSON.stringify(error) : undefined
+          details: process.env.NODE_ENV === 'development' ? JSON.stringify(error, null, 2) : undefined
         },
         { status: 500 }
       )
