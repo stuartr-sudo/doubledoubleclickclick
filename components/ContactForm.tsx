@@ -76,7 +76,7 @@ export default function ContactForm() {
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M2.5 4.16667L9.16667 9.16667L15.8333 4.16667M2.5 15.8333H17.5V4.16667H2.5V15.8333Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <a href="mailto:hello@sewo.io">hello@sewo.io</a>
+                <a href="mailto:stuartr@sewo.io">stuartr@sewo.io</a>
               </div>
               
               <div className="contact-info-item">

@@ -224,7 +224,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const heroCTAText = homepageContent?.hero_cta_text || 'Get Started'
   const heroCTALink = homepageContent?.hero_cta_link || '#contact'
   const heroFooterCTAText = homepageContent?.hero_footer_cta_text || 'Get Started'
-  const heroFooterCTALink = homepageContent?.hero_footer_cta_link || 'mailto:hello@sewo.io'
+  const heroFooterCTALink = homepageContent?.hero_footer_cta_link || 'mailto:stuartr@sewo.io'
   const heroImage = homepageContent?.hero_image || ''
   const heroBackgroundImage = homepageContent?.hero_background_image || ''
   const heroBgGradient = homepageContent?.hero_bg_gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
@@ -255,7 +255,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const aboutDescription = homepageContent?.about_description || 'When customers ask Ai assistants about your industry, your brand needs to be the answer they get. LLM ranking isn&apos;t just the future of search - it&apos;s happening now. We help brand owners ensure their websites rank in Ai responses, driving visibility, traffic, and competitive advantage.'
   const aboutImage = homepageContent?.about_image || ''
   const contactCTAText = homepageContent?.contact_cta_text || 'Get Started'
-  const contactCTALink = homepageContent?.contact_cta_link || 'mailto:hello@sewo.io'
+  const contactCTALink = homepageContent?.contact_cta_link || 'mailto:stuartr@sewo.io'
   const linkedinUrl = homepageContent?.contact_linkedin_url || '#'
   const twitterUrl = homepageContent?.contact_twitter_url || '#'
   const behanceUrl = homepageContent?.contact_behance_url || '#'
@@ -752,7 +752,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'Customer Service',
-      email: 'hello@sewo.io',
+      email: 'stuartr@sewo.io',
     },
     sameAs: [
       // Add social media URLs here if available
@@ -1490,13 +1490,13 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
           document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }, 100)
       } else {
-        const apiErrorMessage = responseData.error || responseData.message || 'There was an error submitting your application. Please try again or contact us directly at hello@sewo.io.'
+        const apiErrorMessage = responseData.error || responseData.message || 'There was an error submitting your application. Please try again or contact us directly at stuartr@sewo.io.'
         setErrorMessage(apiErrorMessage)
         setSubmitStatus('error')
       }
     } catch (error) {
       console.error('Form submission error:', error)
-      setErrorMessage('Network error. Please check your connection and try again, or contact us directly at hello@sewo.io.')
+      setErrorMessage('Network error. Please check your connection and try again, or contact us directly at stuartr@sewo.io.')
       setSubmitStatus('error')
     } finally {
       setIsSubmitting(false)

@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             { 
               success: false, 
-              error: 'Database configuration error. Please contact support at hello@sewo.io.',
+              error: 'Database configuration error. Please contact support at stuartr@sewo.io.',
               details: process.env.NODE_ENV === 'development' ? error.message : undefined
             },
             { status: 500 }
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { 
             success: false, 
-            error: 'Failed to save your submission. Please try again or contact us directly at hello@sewo.io.',
+            error: 'Failed to save your submission. Please try again or contact us directly at stuartr@sewo.io.',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
           },
           { status: 500 }
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'An error occurred while saving your submission. Please try again or contact us directly at hello@sewo.io.',
+          error: 'An error occurred while saving your submission. Please try again or contact us directly at stuartr@sewo.io.',
           details: process.env.NODE_ENV === 'development' ? errorMsg : undefined
         },
         { status: 500 }
@@ -281,7 +281,7 @@ export async function POST(request: NextRequest) {
         // Send email notification
         const { data, error: emailError } = await resend.emails.send({
           from: 'SEWO <stuartr@sewo.io>', // Update with your verified domain
-          to: ['hello@sewo.io'], // Notification recipient
+          to: ['stuartr@sewo.io'], // Notification recipient
           subject: `New Lead: ${sanitize(sourceDisplay)} - ${sanitize(companyName || name || email)}`,
           html: htmlContent,
         })
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        error: 'An error occurred while processing your submission. Please try again or contact us directly at hello@sewo.io.',
+        error: 'An error occurred while processing your submission. Please try again or contact us directly at stuartr@sewo.io.',
         details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
       },
       { status: 500 }
