@@ -820,24 +820,28 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
       <SiteHeader blogVisible={blogSectionVisible} />
       
     <main>
-      {/* JSON-LD for SEO */}
+      {/* JSON-LD for SEO - Suppress hydration warning as these are SEO-only */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        suppressHydrationWarning
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        suppressHydrationWarning
       />
       {faqItems && faqItems.length > 0 && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageJsonLd) }}
+          suppressHydrationWarning
         />
       )}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
+        suppressHydrationWarning
       />
       
         {/* Hero Section - Full Width */}
@@ -1490,9 +1494,16 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
           document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }, 100)
       } else {
-        const apiErrorMessage = responseData.error || responseData.message || 'There was an error submitting your application. Please try again or contact us directly at stuartr@sewo.io.'
-        setErrorMessage(apiErrorMessage)
+        // Show the actual error from the server, including details in development
+        const apiErrorMessage = responseData.error || responseData.message || `Server error: ${response.status} ${response.statusText}`
+        const errorDetails = responseData.details ? `\n\nDetails: ${responseData.details}` : ''
+        setErrorMessage(`${apiErrorMessage}${errorDetails}`)
         setSubmitStatus('error')
+        console.error('Form submission failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          responseData
+        })
       }
     } catch (error) {
       console.error('Form submission error:', error)

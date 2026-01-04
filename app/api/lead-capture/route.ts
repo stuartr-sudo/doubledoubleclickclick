@@ -304,12 +304,19 @@ export async function POST(request: NextRequest) {
     const errorMessage = error instanceof Error ? error.message : 'Unexpected error'
     const errorStack = error instanceof Error ? error.stack : String(error)
     console.error('Error details:', { errorMessage, errorStack })
+    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
+    
+    // Always return error details in development, and in production if it's a known error type
+    const isDevelopment = process.env.NODE_ENV === 'development'
+    const errorDetails = isDevelopment ? errorMessage : undefined
     
     return NextResponse.json(
       { 
         success: false, 
         error: 'An error occurred while processing your submission. Please try again or contact us directly at stuartr@sewo.io.',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        details: errorDetails,
+        // Include stack trace in development for debugging
+        stack: isDevelopment ? errorStack : undefined
       },
       { status: 500 }
     )
