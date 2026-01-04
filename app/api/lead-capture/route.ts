@@ -142,6 +142,17 @@ export async function POST(request: NextRequest) {
           ? 'Apply to Work With Us Form' 
           : source || 'Contact Form'
 
+        // Sanitize strings for HTML to prevent injection
+        const sanitize = (str: string | null | undefined): string => {
+          if (!str) return ''
+          return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+        }
+
         // Create HTML email content
         const htmlContent = `
           <!DOCTYPE html>
@@ -172,34 +183,34 @@ export async function POST(request: NextRequest) {
                   <table style="width: 100%; border-collapse: collapse;">
                     <tr>
                       <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600; width: 140px;">Name:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${name || 'Not provided'}</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(name) || 'Not provided'}</td>
                     </tr>
                     <tr>
                       <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Email:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="mailto:${email}" style="color: #3b82f6; text-decoration: none;">${email}</a></td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="mailto:${sanitize(email)}" style="color: #3b82f6; text-decoration: none;">${sanitize(email)}</a></td>
                     </tr>
                     ${companyName ? `
                     <tr>
                       <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Company:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${companyName}</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(companyName)}</td>
                     </tr>
                     ` : ''}
                     ${website ? `
                     <tr>
                       <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Website:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="${website}" target="_blank" style="color: #3b82f6; text-decoration: none;">${website}</a></td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="${sanitize(website)}" target="_blank" style="color: #3b82f6; text-decoration: none;">${sanitize(website)}</a></td>
                     </tr>
                     ` : ''}
                     ${topic ? `
                     <tr>
                       <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Topic:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${topic}</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(topic)}</td>
                     </tr>
                     ` : ''}
                     ${source ? `
                     <tr>
                       <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Source:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sourceDisplay}</td>
+                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(sourceDisplay)}</td>
                     </tr>
                     ` : ''}
                   </table>
@@ -211,7 +222,7 @@ export async function POST(request: NextRequest) {
                   <h2 style="color: #1e293b; font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">
                     Message
                   </h2>
-                  <div style="color: #334155; font-size: 15px; line-height: 1.7; white-space: pre-wrap;">${message.replace(/\n/g, '<br>')}</div>
+                  <div style="color: #334155; font-size: 15px; line-height: 1.7; white-space: pre-wrap;">${sanitize(message).replace(/\n/g, '<br>')}</div>
                 </div>
                 ` : ''}
 
@@ -230,7 +241,7 @@ export async function POST(request: NextRequest) {
         const { data, error: emailError } = await resend.emails.send({
           from: 'SEWO <stuartr@sewo.io>', // Update with your verified domain
           to: ['hello@sewo.io'], // Notification recipient
-          subject: `New Lead: ${sourceDisplay} - ${companyName || name || email}`,
+          subject: `New Lead: ${sanitize(sourceDisplay)} - ${sanitize(companyName || name || email)}`,
           html: htmlContent,
         })
 
