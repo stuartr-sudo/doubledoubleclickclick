@@ -215,13 +215,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Apply to Work With Us API error:', error)
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error)
+    console.error('Error message:', error instanceof Error ? error.message : String(error))
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
+    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
+    
     const errorMessage = error instanceof Error ? error.message : 'Unexpected error'
+    const errorStack = error instanceof Error ? error.stack : String(error)
     
     return NextResponse.json(
       { 
         success: false, 
-        error: `An error occurred: ${errorMessage}. Please try again or contact support at stuartr@sewo.io.`,
-        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined
+        error: `Server error: ${errorMessage}. Please try again or contact support at stuartr@sewo.io.`,
+        details: errorStack,
+        errorType: error instanceof Error ? error.constructor.name : typeof error
       },
       { status: 500 }
     )

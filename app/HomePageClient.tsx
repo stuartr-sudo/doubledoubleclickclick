@@ -1469,12 +1469,15 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
         const contentType = response.headers.get('content-type')
         if (contentType && contentType.includes('application/json')) {
           responseData = await response.json()
+          console.log('API Response Data:', JSON.stringify(responseData, null, 2))
         } else {
           const text = await response.text()
           console.error('Non-JSON response:', text)
+          responseData = { error: `Server returned non-JSON: ${text.substring(0, 200)}` }
         }
       } catch (parseError) {
         console.error('Error parsing response:', parseError)
+        responseData = { error: `Failed to parse response: ${parseError instanceof Error ? parseError.message : String(parseError)}` }
       }
 
       if (response.ok && responseData.success !== false) {
