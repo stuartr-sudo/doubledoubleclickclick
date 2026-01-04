@@ -1457,7 +1457,18 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
         })
       })
 
-      const responseData = await response.json().catch(() => ({}))
+      let responseData: any = {}
+      try {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          responseData = await response.json()
+        } else {
+          const text = await response.text()
+          console.error('Non-JSON response:', text)
+        }
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError)
+      }
 
       if (response.ok && responseData.success !== false) {
         setSubmitStatus('success')
