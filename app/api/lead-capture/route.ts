@@ -72,8 +72,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get Supabase credentials - use service role key if available to bypass RLS
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseKey) {
       console.error('Supabase env vars missing for lead capture')
@@ -83,7 +84,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Use service role key if available to bypass RLS, otherwise use anon key
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false
+      }
+    })
 
     // Try to insert - but make topic optional if column doesn't exist
     const insertPayload: any = {
