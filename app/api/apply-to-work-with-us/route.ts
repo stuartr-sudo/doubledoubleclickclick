@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
     // Get client IP address
     const ipAddress = getClientIP(request)
 
-    // Get Supabase credentials
+    // Get Supabase credentials - use service role key if available for inserts
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseKey) {
       console.error('Supabase env vars missing')
@@ -41,7 +41,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Use service role key if available to bypass RLS, otherwise use anon key
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false
+      }
+    })
 
     // Insert into dedicated table
     console.log('Inserting into apply_to_work_with_us table:', {
