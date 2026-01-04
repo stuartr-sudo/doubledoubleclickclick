@@ -1459,6 +1459,18 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>('')
 
+  // Normalize website URL - add https:// if missing
+  const normalizeWebsiteUrl = (url: string): string => {
+    if (!url || !url.trim()) return ''
+    const trimmed = url.trim()
+    // If it already starts with http:// or https://, return as is
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed
+    }
+    // Otherwise, add https://
+    return `https://${trimmed}`
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -1466,6 +1478,9 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
     setErrorMessage('') // Clear previous error
 
     try {
+      // Normalize website URL before submission
+      const normalizedWebsiteUrl = formData.website_url ? normalizeWebsiteUrl(formData.website_url) : ''
+
       const response = await fetch('/api/apply-to-work-with-us', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1473,7 +1488,7 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
           company_name: formData.company_name,
           contact_name: formData.contact_name,
           email_address: formData.email_address,
-          website_url: formData.website_url,
+          website_url: normalizedWebsiteUrl,
           company_description: formData.company_description,
           current_challenges: formData.current_challenges,
           goals: formData.goals
@@ -1606,13 +1621,13 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
         <div className="form-group">
           <label htmlFor="website_url">Website URL</label>
           <input
-            type="url"
+            type="text"
             id="website_url"
             name="website_url"
             value={formData.website_url}
             onChange={handleChange}
             required
-            placeholder="https://www.yourcompany.com"
+            placeholder="yourcompany.com or www.yourcompany.com"
             aria-required="true"
           />
         </div>
