@@ -85,28 +85,34 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    try {
-      const insertPayload = {
-        name: name || 'Questions Discovery Lead',
-        email,
-        company: companyName || null,
-        website: website || null,
-        message: message || null,
-        plan_type: plan_type || null,
-        source: source || null,
-        topic: topic || null,
-        ip_address: ipAddress,
-      }
-      
-      console.log('Attempting to insert lead capture:', { 
-        email, 
-        source, 
-        hasName: !!name,
-        hasCompany: !!companyName,
-        hasWebsite: !!website,
-        hasMessage: !!message
-      })
+    // Try to insert - but make topic optional if column doesn't exist
+    const insertPayload: any = {
+      name: name || 'Questions Discovery Lead',
+      email,
+      company: companyName || null,
+      website: website || null,
+      message: message || null,
+      plan_type: plan_type || null,
+      source: source || null,
+      ip_address: ipAddress,
+    }
+    
+    // Only add topic if it's provided (column might not exist)
+    if (topic) {
+      insertPayload.topic = topic
+    }
+    
+    console.log('Attempting to insert lead capture:', { 
+      email, 
+      source, 
+      hasName: !!name,
+      hasCompany: !!companyName,
+      hasWebsite: !!website,
+      hasMessage: !!message,
+      hasTopic: !!topic
+    })
 
+    try {
       const { data: insertData, error } = await supabase
         .from('lead_captures')
         .insert(insertPayload)
@@ -128,34 +134,49 @@ export async function POST(request: NextRequest) {
           )
         }
         
-        // Check for missing column errors
+        // Check for missing column errors - try again without topic
         if (error.message?.includes('column') && error.message?.includes('does not exist')) {
-          console.error('DATABASE SCHEMA ERROR: Missing column detected')
+          console.error('DATABASE SCHEMA ERROR: Missing column detected, retrying without topic')
+          
+          // Remove topic and try again
+          const retryPayload = { ...insertPayload }
+          delete retryPayload.topic
+          
+          const { data: retryData, error: retryError } = await supabase
+            .from('lead_captures')
+            .insert(retryPayload)
+            .select()
+          
+          if (retryError) {
+            console.error('Retry also failed:', retryError)
+            return NextResponse.json(
+              { 
+                success: false, 
+                error: `Database error: ${retryError.message}. Please contact support at stuartr@sewo.io.`,
+                details: process.env.NODE_ENV === 'development' ? JSON.stringify(retryError) : undefined
+              },
+              { status: 500 }
+            )
+          }
+          
+          console.log('Lead capture inserted successfully (without topic):', retryData)
+          updateRateLimitCache(rateLimitKey, source)
+          // Continue to email sending
+        } else {
           return NextResponse.json(
             { 
               success: false, 
-              error: 'Database configuration error. Please contact support at stuartr@sewo.io.',
-              details: process.env.NODE_ENV === 'development' ? error.message : undefined
+              error: `Database error: ${error.message}. Please try again or contact support at stuartr@sewo.io.`,
+              details: process.env.NODE_ENV === 'development' ? JSON.stringify(error) : undefined
             },
             { status: 500 }
           )
         }
-        
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Failed to save your submission. Please try again or contact us directly at stuartr@sewo.io.',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
-          },
-          { status: 500 }
-        )
+      } else {
+        console.log('Lead capture inserted successfully:', insertData)
+        // Update rate limit cache AFTER successful submission
+        updateRateLimitCache(rateLimitKey, source)
       }
-
-      console.log('Lead capture inserted successfully:', insertData)
-      
-      // Update rate limit cache AFTER successful submission
-      // This prevents blocking legitimate retries after failed submissions
-      updateRateLimitCache(rateLimitKey, source)
     } catch (insertError) {
       console.error('Exception during lead capture insert:', insertError)
       console.error('Exception type:', insertError instanceof Error ? insertError.constructor.name : typeof insertError)
@@ -166,8 +187,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'An error occurred while saving your submission. Please try again or contact us directly at stuartr@sewo.io.',
-          details: process.env.NODE_ENV === 'development' ? errorMsg : undefined
+          error: `Exception: ${errorMsg}. Please contact support at stuartr@sewo.io.`,
+          details: process.env.NODE_ENV === 'development' ? (insertError instanceof Error ? insertError.stack : String(insertError)) : undefined
         },
         { status: 500 }
       )
