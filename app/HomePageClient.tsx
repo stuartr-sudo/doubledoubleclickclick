@@ -934,7 +934,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                     <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
                     <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                  </svg>
+                    </svg>
                 </div>
               )}
             </div>
@@ -1027,8 +1027,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                     <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
                   </svg>
-                </div>
-              )}
+                    </div>
+                  )}
             </div>
             <div className="connected-signals-text">
               <h2 className="connected-signals-title">Ai Recommendations Are Shaped By Connected Signals</h2>
@@ -1056,7 +1056,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 <li>whether your brand appears active and credible beyond your website</li>
                 <li>whether claims are reinforced by real-world validation</li>
               </ul>
-            </div>
+                  </div>
             <div className="ai-consistency-signals-column">
               <p className="ai-consistency-signals-heading"><strong>That includes elements like:</strong></p>
               <ul className="ai-consistency-signals-list">
@@ -1065,8 +1065,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 <li>visible activity across relevant social platforms</li>
                 <li>consistency between what you publish and how your brand shows up elsewhere</li>
               </ul>
-            </div>
-          </div>
+                </div>
+              </div>
         </div>
       </section>
 
@@ -1087,7 +1087,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
               >
                 Apply to Work With Us
               </Link>
-                    </div>
+            </div>
           </div>
         </div>
       </section>
@@ -1109,7 +1109,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                 {solutionBodyPara5 && <p>{solutionBodyPara5.split('\n').map((line, i) => (
                   <span key={i}>{line}{i < solutionBodyPara5.split('\n').length - 1 && <br />}</span>
                 ))}</p>}
-              </div>
+        </div>
               <div className="solution-cta">
                 <Link 
                   href="#apply-form" 
@@ -1143,17 +1143,17 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                             sizes="56px"
                             style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
                       />
-                        </div>
-                    )}
+                    </div>
+                  )}
                       <div className="solution-testimonial-author-info">
                         <p className="solution-testimonial-author-name">{solutionTestimonialAuthorName}</p>
                         <p className="solution-testimonial-author-company">{solutionTestimonialAuthorCompany}</p>
-                  </div>
                 </div>
               </div>
-            </div>
-              )}
-          </div>
+              </div>
+                    </div>
+                  )}
+                </div>
 
             {/* Right Column - Pillars */}
             <div className="solution-pillars">
@@ -1189,12 +1189,12 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   <div key={pillar.id} className="solution-pillar">
                     <div className="pillar-icon">
                       {icons[index % icons.length]}
-        </div>
+              </div>
                     <div className="pillar-content">
                       <h4 className="pillar-title">{pillar.title}</h4>
                       {pillar.description.split('\n').map((para, i) => (
                         <p key={i} className="pillar-description">{para}</p>
-                      ))}
+            ))}
                     </div>
                 </div>
                 )
@@ -1434,6 +1434,7 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string>('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1457,6 +1458,7 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
 
       if (response.ok) {
         setSubmitStatus('success')
+        setErrorMessage('') // Clear any previous error
         setFormData({
           company_name: '',
           contact_name: '',
@@ -1469,6 +1471,9 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
         // Scroll to top of form to show success message
         document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       } else {
+        const errorData = await response.json().catch(() => ({}))
+        const apiErrorMessage = errorData.error || 'There was an error submitting your application. Please try again or contact us directly.'
+        setErrorMessage(apiErrorMessage)
         setSubmitStatus('error')
       }
     } catch (error) {
@@ -1496,7 +1501,7 @@ function ApplyForm({ buttonBgColor, buttonTextColor }: ApplyFormProps) {
 
       {submitStatus === 'error' && (
         <div className="form-message form-message-error" role="alert">
-          <p>There was an error submitting your application. Please try again or contact us directly.</p>
+          <p id="error-message">{errorMessage || 'There was an error submitting your application. Please try again in a few minutes or contact us directly at hello@sewo.io.'}</p>
         </div>
       )}
 

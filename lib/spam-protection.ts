@@ -2,7 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 
 // Simple in-memory cache for rate limiting (resets on server restart)
 const submissionCache = new Map<string, number>()
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000 // 1 hour in milliseconds
+const RATE_LIMIT_WINDOW = 5 * 60 * 1000 // 5 minutes in milliseconds (reduced from 1 hour)
+const LEGITIMATE_SOURCES = ['apply_to_work_with_us', 'contact_form'] // More lenient sources
 
 // Create Supabase client for server-side use
 function getSupabaseClient() {
@@ -32,11 +33,15 @@ export function getClientIP(request: Request): string {
   return 'unknown'
 }
 
-export function isRateLimited(identifier: string): boolean {
+export function isRateLimited(identifier: string, source?: string): boolean {
   const now = Date.now()
   const lastSubmission = submissionCache.get(identifier)
   
-  if (lastSubmission && (now - lastSubmission) < RATE_LIMIT_WINDOW) {
+  // More lenient rate limiting for legitimate business forms
+  const isLegitimateSource = source && LEGITIMATE_SOURCES.includes(source)
+  const rateLimitWindow = isLegitimateSource ? RATE_LIMIT_WINDOW / 2 : RATE_LIMIT_WINDOW // 2.5 min for legitimate, 5 min for others
+  
+  if (lastSubmission && (now - lastSubmission) < rateLimitWindow) {
     return true
   }
   

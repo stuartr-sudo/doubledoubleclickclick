@@ -33,11 +33,12 @@ export async function POST(request: NextRequest) {
     // Get client IP address
     const ipAddress = getClientIP(request)
 
-    // Check rate limiting by IP (max 1 submission per hour per IP per source)
-    const rateLimitKey = `${ipAddress}:${source || 'default'}`
-    if (isRateLimited(rateLimitKey)) {
+    // Check rate limiting by IP (more lenient for legitimate forms)
+    // Allow different emails from same IP to prevent blocking legitimate users
+    const rateLimitKey = `${ipAddress}:${source || 'default'}:${email}`
+    if (isRateLimited(rateLimitKey, source)) {
       return NextResponse.json(
-        { success: false, error: 'Too many submissions. Please try again later.' },
+        { success: false, error: 'Too many submissions from this email address. Please wait a few minutes before trying again.' },
         { status: 429 }
       )
     }
