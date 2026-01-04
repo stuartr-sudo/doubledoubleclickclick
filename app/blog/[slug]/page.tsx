@@ -184,15 +184,32 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       const parsedSchema = JSON.parse(post.generated_llm_schema)
       
       // Remove FAQPage from blog post schemas to prevent duplicates
-      // FAQPage should only be on the homepage
-      if (parsedSchema['@graph']) {
-        // If it's a graph, filter out FAQPage
-        parsedSchema['@graph'] = parsedSchema['@graph'].filter((item: any) => item['@type'] !== 'FAQPage')
-        articleJsonLd = parsedSchema
+      // FAQPage should only be on the homepage - preserve all other schema types
+      if (parsedSchema['@graph'] && Array.isArray(parsedSchema['@graph'])) {
+        // If it's a graph array, filter out ONLY FAQPage, keep everything else
+        const filteredGraph = parsedSchema['@graph'].filter((item: any) => {
+          // Keep all items that are NOT FAQPage
+          return item['@type'] !== 'FAQPage'
+        })
+        
+        // If we removed FAQPage, update the graph
+        if (filteredGraph.length !== parsedSchema['@graph'].length) {
+          parsedSchema['@graph'] = filteredGraph
+        }
+        
+        // Only use the schema if there are still items in @graph
+        if (filteredGraph.length > 0) {
+          articleJsonLd = parsedSchema
+        } else {
+          // If @graph is now empty, don't use the schema
+          articleJsonLd = null
+        }
       } else if (parsedSchema['@type'] === 'FAQPage') {
-        // If the entire schema is FAQPage, don't use it
+        // If the entire schema is ONLY FAQPage, don't use it
+        // This preserves other schema types that might be mixed
         articleJsonLd = null
       } else {
+        // Schema doesn't contain FAQPage, use it as-is (preserves Article, BlogPosting, etc.)
         articleJsonLd = parsedSchema
       }
     } catch (e) {

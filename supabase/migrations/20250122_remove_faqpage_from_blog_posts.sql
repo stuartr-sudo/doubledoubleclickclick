@@ -27,14 +27,15 @@ BEGIN
       updated_schema := schema_json;
       has_faqpage := false;
 
-      -- Check if entire schema is FAQPage
-      IF schema_json->>'@type' = 'FAQPage' THEN
-        -- Remove entire schema
+      -- Check if entire schema is ONLY FAQPage (preserve other types)
+      IF schema_json->>'@type' = 'FAQPage' AND jsonb_typeof(schema_json) = 'object' THEN
+        -- Only remove if it's a single FAQPage object with no other types
+        -- This preserves schemas that might have multiple types
         UPDATE site_posts 
         SET generated_llm_schema = NULL 
         WHERE id = post_record.id;
         
-        RAISE NOTICE 'Removed FAQPage schema from post: % (%)', post_record.slug, post_record.title;
+        RAISE NOTICE 'Removed FAQPage-only schema from post: % (%)', post_record.slug, post_record.title;
         CONTINUE;
       END IF;
 
