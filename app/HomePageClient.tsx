@@ -814,35 +814,51 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     },
   }
 
+  // Inject JSON-LD schema only on client side to prevent hydration errors
+  useEffect(() => {
+    // Remove any existing schema scripts
+    const existingScripts = document.querySelectorAll('script[type="application/ld+json"]')
+    existingScripts.forEach(script => {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script)
+      }
+    })
+
+    // Add schema scripts to head
+    const head = document.head
+
+    const addScript = (jsonLd: object, id: string) => {
+      const script = document.createElement('script')
+      script.type = 'application/ld+json'
+      script.id = id
+      script.textContent = JSON.stringify(jsonLd)
+      head.appendChild(script)
+    }
+
+    addScript(organizationJsonLd, 'schema-organization')
+    addScript(websiteJsonLd, 'schema-website')
+    if (faqItems && faqItems.length > 0) {
+      addScript(faqPageJsonLd, 'schema-faq')
+    }
+    addScript(serviceJsonLd, 'schema-service')
+
+    // Cleanup function
+    return () => {
+      const scripts = document.querySelectorAll('script[id^="schema-"]')
+      scripts.forEach(script => {
+        if (script.parentNode) {
+          script.parentNode.removeChild(script)
+        }
+      })
+    }
+  }, [organizationJsonLd, websiteJsonLd, faqPageJsonLd, serviceJsonLd, faqItems])
+
   return (
     <>
       {/* Site Header with shadow */}
       <SiteHeader blogVisible={blogSectionVisible} />
       
     <main>
-      {/* JSON-LD for SEO - Suppress hydration warning as these are SEO-only */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-        suppressHydrationWarning
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
-        suppressHydrationWarning
-      />
-      {faqItems && faqItems.length > 0 && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageJsonLd) }}
-          suppressHydrationWarning
-        />
-      )}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
-        suppressHydrationWarning
-      />
       
         {/* Hero Section - Full Width */}
         <section 
