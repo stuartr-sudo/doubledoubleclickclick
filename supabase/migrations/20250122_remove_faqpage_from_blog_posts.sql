@@ -1,8 +1,6 @@
--- Remove FAQPage schema from blog posts to fix duplicate FAQPage errors in Google Search Console
--- FAQPage should only exist on the homepage, not on individual blog posts
-
--- This migration updates all blog posts that have FAQPage in their generated_llm_schema
--- It removes FAQPage from @graph arrays or removes the entire schema if it's only FAQPage
+-- Remove invalid/empty FAQPage schema from blog posts to fix duplicate FAQPage errors
+-- FAQPage with actual FAQ content (questions/answers) is kept - only empty/invalid FAQPage is removed
+-- This ensures blog posts with real FAQs keep their schema, while removing incorrectly generated ones
 
 DO $$
 DECLARE
@@ -12,6 +10,10 @@ DECLARE
   has_faqpage BOOLEAN := false;
   graph_items JSONB;
   filtered_items JSONB := '[]'::JSONB;
+  has_valid_faq BOOLEAN := false;
+  question_item JSONB;
+  faq_item JSONB;
+  i INTEGER;
 BEGIN
   -- Loop through all published posts with generated_llm_schema
   FOR post_record IN 
@@ -27,15 +29,38 @@ BEGIN
       updated_schema := schema_json;
       has_faqpage := false;
 
-      -- Check if entire schema is ONLY FAQPage (preserve other types)
+      -- Check if entire schema is FAQPage
       IF schema_json->>'@type' = 'FAQPage' AND jsonb_typeof(schema_json) = 'object' THEN
-        -- Only remove if it's a single FAQPage object with no other types
-        -- This preserves schemas that might have multiple types
+        -- Check if FAQPage has valid FAQ content (mainEntity with questions)
+        has_valid_faq := false;
+        IF schema_json ? 'mainEntity' 
+           AND jsonb_typeof(schema_json->'mainEntity') = 'array' 
+           AND jsonb_array_length(schema_json->'mainEntity') > 0 THEN
+          -- Check if at least one question has both name and acceptedAnswer
+          FOR question_item IN SELECT * FROM jsonb_array_elements(schema_json->'mainEntity')
+          LOOP
+            IF question_item->>'@type' = 'Question' 
+               AND question_item ? 'name' 
+               AND question_item ? 'acceptedAnswer'
+               AND question_item->'acceptedAnswer' ? 'text' THEN
+              has_valid_faq := true;
+              EXIT;
+            END IF;
+          END LOOP;
+        END IF;
+        
+        -- If FAQPage has valid FAQs, keep it
+        IF has_valid_faq THEN
+          RAISE NOTICE 'Keeping FAQPage with valid FAQs for post: % (%)', post_record.slug, post_record.title;
+          CONTINUE;
+        END IF;
+        
+        -- FAQPage is empty/invalid, remove it
         UPDATE site_posts 
         SET generated_llm_schema = NULL 
         WHERE id = post_record.id;
         
-        RAISE NOTICE 'Removed FAQPage-only schema from post: % (%)', post_record.slug, post_record.title;
+        RAISE NOTICE 'Removed invalid/empty FAQPage schema from post: % (%)', post_record.slug, post_record.title;
         CONTINUE;
       END IF;
 
@@ -44,13 +69,41 @@ BEGIN
         graph_items := schema_json->'@graph';
         filtered_items := '[]'::JSONB;
         
-        -- Filter out FAQPage items
+        -- Filter FAQPage items - only keep if they have valid FAQ content
         FOR i IN 0..jsonb_array_length(graph_items) - 1 LOOP
           IF graph_items->i->>'@type' != 'FAQPage' THEN
+            -- Keep all non-FAQPage items
             filtered_items := filtered_items || jsonb_build_array(graph_items->i);
           ELSE
-            has_faqpage := true;
-            RAISE NOTICE 'Found FAQPage in @graph for post: % (%)', post_record.slug, post_record.title;
+            -- Check if FAQPage has valid FAQ content
+            faq_item := graph_items->i;
+            has_valid_faq := false;
+            
+            IF faq_item ? 'mainEntity' 
+               AND jsonb_typeof(faq_item->'mainEntity') = 'array' 
+               AND jsonb_array_length(faq_item->'mainEntity') > 0 THEN
+              -- Check if at least one question has both name and acceptedAnswer
+              FOR question_item IN SELECT * FROM jsonb_array_elements(faq_item->'mainEntity')
+              LOOP
+                IF question_item->>'@type' = 'Question' 
+                   AND question_item ? 'name' 
+                   AND question_item ? 'acceptedAnswer'
+                   AND question_item->'acceptedAnswer' ? 'text' THEN
+                  has_valid_faq := true;
+                  EXIT;
+                END IF;
+              END LOOP;
+            END IF;
+            
+            IF has_valid_faq THEN
+              -- Keep FAQPage with valid FAQs
+              filtered_items := filtered_items || jsonb_build_array(faq_item);
+              RAISE NOTICE 'Keeping FAQPage with valid FAQs in @graph for post: % (%)', post_record.slug, post_record.title;
+            ELSE
+              -- Remove invalid/empty FAQPage
+              has_faqpage := true;
+              RAISE NOTICE 'Removing invalid/empty FAQPage from @graph for post: % (%)', post_record.slug, post_record.title;
+            END IF;
           END IF;
         END LOOP;
 

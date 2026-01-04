@@ -183,16 +183,34 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     try {
       const parsedSchema = JSON.parse(post.generated_llm_schema)
       
-      // Remove FAQPage from blog post schemas to prevent duplicates
-      // FAQPage should only be on the homepage - preserve all other schema types
+      // Handle FAQPage in blog posts: only keep if it has actual FAQ content
+      // FAQPage with real FAQs is valid, but empty/incorrect FAQPage should be removed
+      const hasValidFAQContent = (faqSchema: any): boolean => {
+        // Check if FAQPage has mainEntity with actual questions
+        if (faqSchema.mainEntity && Array.isArray(faqSchema.mainEntity) && faqSchema.mainEntity.length > 0) {
+          // Verify questions have both name and acceptedAnswer
+          return faqSchema.mainEntity.some((item: any) => 
+            item['@type'] === 'Question' && 
+            item.name && 
+            item.acceptedAnswer && 
+            item.acceptedAnswer.text
+          )
+        }
+        return false
+      }
+
       if (parsedSchema['@graph'] && Array.isArray(parsedSchema['@graph'])) {
-        // If it's a graph array, filter out ONLY FAQPage, keep everything else
+        // If it's a graph array, check each FAQPage item
         const filteredGraph = parsedSchema['@graph'].filter((item: any) => {
-          // Keep all items that are NOT FAQPage
-          return item['@type'] !== 'FAQPage'
+          // If it's FAQPage, only keep it if it has valid FAQ content
+          if (item['@type'] === 'FAQPage') {
+            return hasValidFAQContent(item)
+          }
+          // Keep all non-FAQPage items
+          return true
         })
         
-        // If we removed FAQPage, update the graph
+        // Update the graph if we filtered anything
         if (filteredGraph.length !== parsedSchema['@graph'].length) {
           parsedSchema['@graph'] = filteredGraph
         }
@@ -205,9 +223,14 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           articleJsonLd = null
         }
       } else if (parsedSchema['@type'] === 'FAQPage') {
-        // If the entire schema is ONLY FAQPage, don't use it
-        // This preserves other schema types that might be mixed
-        articleJsonLd = null
+        // If the entire schema is FAQPage, only keep it if it has valid FAQ content
+        if (hasValidFAQContent(parsedSchema)) {
+          // Keep FAQPage with real FAQs
+          articleJsonLd = parsedSchema
+        } else {
+          // Remove empty/invalid FAQPage
+          articleJsonLd = null
+        }
       } else {
         // Schema doesn't contain FAQPage, use it as-is (preserves Article, BlogPosting, etc.)
         articleJsonLd = parsedSchema
