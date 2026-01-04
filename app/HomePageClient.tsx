@@ -737,7 +737,9 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   ]
 
   // Use environment variable for consistent URL across server and client
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
+  // Use hardcoded production URL to prevent hydration mismatches
+  // Client components can have different env values during SSR vs hydration
+  const baseUrl = 'https://www.sewo.io'
   
   // JSON-LD structured data for Organization
   const organizationJsonLd = {

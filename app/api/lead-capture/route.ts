@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     try {
-      const { data: insertData, error } = await supabase.from('lead_captures').insert({
+      const insertPayload = {
         name: name || 'Questions Discovery Lead',
         email,
         company: companyName || null,
@@ -96,17 +96,48 @@ export async function POST(request: NextRequest) {
         source: source || null,
         topic: topic || null,
         ip_address: ipAddress,
-      }).select()
+      }
+      
+      console.log('Attempting to insert lead capture:', { 
+        email, 
+        source, 
+        hasName: !!name,
+        hasCompany: !!companyName,
+        hasWebsite: !!website,
+        hasMessage: !!message
+      })
+
+      const { data: insertData, error } = await supabase
+        .from('lead_captures')
+        .insert(insertPayload)
+        .select()
 
       if (error) {
-        console.error('Error inserting lead capture:', error)
-        console.error('Error details:', JSON.stringify(error, null, 2))
+        console.error('Supabase insert error:', error)
+        console.error('Error code:', error.code)
+        console.error('Error message:', error.message)
+        console.error('Error details:', error.details)
+        console.error('Error hint:', error.hint)
+        console.error('Full error object:', JSON.stringify(error, null, 2))
         
         // Check for specific error types
         if (error.code === '23505') { // Unique constraint violation
           return NextResponse.json(
             { success: false, error: 'This email has already been registered. Each email can only be used once.' },
             { status: 400 }
+          )
+        }
+        
+        // Check for missing column errors
+        if (error.message?.includes('column') && error.message?.includes('does not exist')) {
+          console.error('DATABASE SCHEMA ERROR: Missing column detected')
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'Database configuration error. Please contact support at hello@sewo.io.',
+              details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            },
+            { status: 500 }
           )
         }
         
@@ -127,6 +158,10 @@ export async function POST(request: NextRequest) {
       updateRateLimitCache(rateLimitKey, source)
     } catch (insertError) {
       console.error('Exception during lead capture insert:', insertError)
+      console.error('Exception type:', insertError instanceof Error ? insertError.constructor.name : typeof insertError)
+      console.error('Exception message:', insertError instanceof Error ? insertError.message : String(insertError))
+      console.error('Exception stack:', insertError instanceof Error ? insertError.stack : 'No stack trace')
+      
       const errorMsg = insertError instanceof Error ? insertError.message : 'Unknown error'
       return NextResponse.json(
         { 
