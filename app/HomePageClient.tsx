@@ -736,7 +736,8 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     }
   ]
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.sewo.io'
+  // Use environment variable for consistent URL across server and client
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
   
   // JSON-LD structured data for Organization
   const organizationJsonLd = {

@@ -45,8 +45,14 @@ export function isRateLimited(identifier: string, source?: string): boolean {
     return true
   }
   
-  submissionCache.set(identifier, now)
+  // DO NOT set cache here - only set after successful submission
+  // This prevents blocking legitimate retries after failed submissions
   return false
+}
+
+export function updateRateLimitCache(identifier: string, source?: string): void {
+  const now = Date.now()
+  submissionCache.set(identifier, now)
 }
 
 export async function checkEmailExists(email: string, source?: string): Promise<boolean> {

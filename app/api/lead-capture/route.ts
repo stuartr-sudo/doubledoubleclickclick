@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { getClientIP, isRateLimited, checkEmailExists } from '@/lib/spam-protection'
+import { getClientIP, isRateLimited, checkEmailExists, updateRateLimitCache } from '@/lib/spam-protection'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,10 +39,12 @@ export async function POST(request: NextRequest) {
       ipAddress = 'unknown'
     }
 
+    // Create rate limit key (used for both checking and updating)
+    const rateLimitKey = `${ipAddress}:${source || 'default'}:${email}`
+
     // Check rate limiting by IP (more lenient for legitimate forms)
     // Allow different emails from same IP to prevent blocking legitimate users
     try {
-      const rateLimitKey = `${ipAddress}:${source || 'default'}:${email}`
       if (isRateLimited(rateLimitKey, source)) {
         return NextResponse.json(
           { success: false, error: 'Too many submissions from this email address. Please wait a few minutes before trying again.' },
@@ -119,6 +121,10 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('Lead capture inserted successfully:', insertData)
+      
+      // Update rate limit cache AFTER successful submission
+      // This prevents blocking legitimate retries after failed submissions
+      updateRateLimitCache(rateLimitKey, source)
     } catch (insertError) {
       console.error('Exception during lead capture insert:', insertError)
       const errorMsg = insertError instanceof Error ? insertError.message : 'Unknown error'
