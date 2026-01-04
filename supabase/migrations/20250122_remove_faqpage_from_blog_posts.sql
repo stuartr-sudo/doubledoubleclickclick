@@ -49,7 +49,7 @@ BEGIN
           END LOOP;
         END IF;
         
-        -- If FAQPage has valid FAQs, keep it
+        -- If FAQPage has valid FAQs, keep it (skip removal)
         IF has_valid_faq THEN
           RAISE NOTICE 'Keeping FAQPage with valid FAQs for post: % (%)', post_record.slug, post_record.title;
           CONTINUE;
