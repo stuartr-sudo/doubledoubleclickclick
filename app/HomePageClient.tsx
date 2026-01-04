@@ -815,12 +815,18 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   }
 
   // Inject JSON-LD schema only on client side to prevent hydration errors
+  // Only add FAQPage schema on homepage - not on blog posts
   useEffect(() => {
-    // Remove any existing schema scripts
-    const existingScripts = document.querySelectorAll('script[type="application/ld+json"]')
-    existingScripts.forEach(script => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script)
+    // Only run on homepage (check if we're on the root path)
+    if (typeof window === 'undefined') return
+    if (window.location.pathname !== '/') return
+
+    // Remove any existing homepage schema scripts (by ID)
+    const schemaIds = ['schema-organization', 'schema-website', 'schema-faq', 'schema-service']
+    schemaIds.forEach(id => {
+      const existing = document.getElementById(id)
+      if (existing && existing.parentNode) {
+        existing.parentNode.removeChild(existing)
       }
     })
 
@@ -828,6 +834,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
     const head = document.head
 
     const addScript = (jsonLd: object, id: string) => {
+      // Check if script already exists
+      const existing = document.getElementById(id)
+      if (existing) {
+        existing.textContent = JSON.stringify(jsonLd)
+        return
+      }
+      
       const script = document.createElement('script')
       script.type = 'application/ld+json'
       script.id = id
@@ -837,6 +850,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
     addScript(organizationJsonLd, 'schema-organization')
     addScript(websiteJsonLd, 'schema-website')
+    // Only add FAQPage on homepage
     if (faqItems && faqItems.length > 0) {
       addScript(faqPageJsonLd, 'schema-faq')
     }
@@ -844,9 +858,9 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
 
     // Cleanup function
     return () => {
-      const scripts = document.querySelectorAll('script[id^="schema-"]')
-      scripts.forEach(script => {
-        if (script.parentNode) {
+      schemaIds.forEach(id => {
+        const script = document.getElementById(id)
+        if (script && script.parentNode) {
           script.parentNode.removeChild(script)
         }
       })

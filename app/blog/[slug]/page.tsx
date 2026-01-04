@@ -181,7 +181,20 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   let articleJsonLd
   if (post.generated_llm_schema) {
     try {
-      articleJsonLd = JSON.parse(post.generated_llm_schema)
+      const parsedSchema = JSON.parse(post.generated_llm_schema)
+      
+      // Remove FAQPage from blog post schemas to prevent duplicates
+      // FAQPage should only be on the homepage
+      if (parsedSchema['@graph']) {
+        // If it's a graph, filter out FAQPage
+        parsedSchema['@graph'] = parsedSchema['@graph'].filter((item: any) => item['@type'] !== 'FAQPage')
+        articleJsonLd = parsedSchema
+      } else if (parsedSchema['@type'] === 'FAQPage') {
+        // If the entire schema is FAQPage, don't use it
+        articleJsonLd = null
+      } else {
+        articleJsonLd = parsedSchema
+      }
     } catch (e) {
       console.error('Error parsing generated_llm_schema:', e)
     }
