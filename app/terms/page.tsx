@@ -127,7 +127,7 @@ export default function TermsPage() {
             <section>
               <h2>15. Changes to Terms</h2>
               <p>
-                We reserve the right to modify these Terms at any time. We will notify you of any material changes by posting the new Terms on this page and updating the "Last Updated" date. Your continued use of the Service after such changes constitutes acceptance of the new Terms.
+                We reserve the right to modify these Terms at any time. We will notify you of any material changes by posting the new Terms on this page and updating the &quot;Last Updated&quot; date. Your continued use of the Service after such changes constitutes acceptance of the new Terms.
               </p>
             </section>
 

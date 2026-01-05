@@ -164,7 +164,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2>11. Children's Privacy</h2>
+              <h2>11. Children&apos;s Privacy</h2>
               <p>
                 SEWO is not intended for children under 13 (or the applicable age in your jurisdiction). We do not knowingly collect data from children.
               </p>
