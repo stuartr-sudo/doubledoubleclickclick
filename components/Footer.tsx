@@ -22,6 +22,14 @@ export default function Footer() {
             </ul>
           </div>
           
+          <div className="footer-links">
+            <h4 className="footer-heading">Legal</h4>
+            <ul className="footer-list">
+              <li><Link href="/privacy">Privacy Policy</Link></li>
+              <li><Link href="/terms">Terms of Service</Link></li>
+            </ul>
+          </div>
+          
           <div className="footer-contact">
             <h4 className="footer-heading">Contact Us</h4>
             <ul className="footer-list">
