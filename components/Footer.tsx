@@ -51,15 +51,14 @@ export default function Footer() {
                 </a>
               </li>
             </ul>
-          </div>
-          
-          <div className="footer-address">
-            <h4 className="footer-heading">Location</h4>
-            <p className="footer-address-text">
-              4286, 1007 N Orange St. 4th Floor,<br />
-              Wilmington, DE, New Castle,<br />
-              US, 19801
-            </p>
+            <div className="footer-address">
+              <h4 className="footer-heading">Location</h4>
+              <p className="footer-address-text">
+                4286, 1007 N Orange St. 4th Floor,<br />
+                Wilmington, DE, New Castle,<br />
+                US, 19801
+              </p>
+            </div>
           </div>
         </div>
         
