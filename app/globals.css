@@ -6152,9 +6152,32 @@ img {
   color: #0066cc;
 }
 
+.footer-contact {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-contact-link {
+  color: #64748b;
+  text-decoration: none;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footer-contact-link:hover {
+  color: #0066cc;
+}
+
+.footer-address {
+  margin-top: var(--spacing-lg);
+}
+
 .footer-address-text {
   color: #64748b;
   line-height: 1.6;
+  margin: 0;
 }
 
 .footer-bottom {
