@@ -700,7 +700,7 @@ export default function QuestionsDiscovery({
                     Book a Discovery call and we&apos;ll show you exactly how to answer these questions to boost your Ai visibility.
                   </p>
                   <a 
-                    href="/book-call" 
+                    href="/#apply-form" 
                     className="btn btn-primary"
                     style={{
                       display: 'inline-flex',

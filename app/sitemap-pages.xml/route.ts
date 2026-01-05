@@ -26,14 +26,6 @@ export async function GET(request: Request) {
     <priority>0.8</priority>
   </url>
 
-  <!-- Privacy Policy -->
-  <url>
-    <loc>${baseUrl}/privacy</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
   <!-- Blog Hub - Ai optimization insights and guides -->
   <url>
     <loc>${baseUrl}/blog</loc>
@@ -42,20 +34,12 @@ export async function GET(request: Request) {
     <priority>0.9</priority>
   </url>
 
-  <!-- Quiz Landing Page - AI visibility assessment -->
+  <!-- About - Learn about SEWO -->
   <url>
-    <loc>${baseUrl}/quiz</loc>
+    <loc>${baseUrl}/about</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-
-  <!-- Find Questions Landing Page - Keyword question discovery tool -->
-  <url>
-    <loc>${baseUrl}/find-questions</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 
 </urlset>`

@@ -327,7 +327,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   const solutionBodyPara4 = homepageContent?.solution_body_para_4 || 'It\'s a structured approach to how Ai systems interpret, trust, and reuse your brand\'s information - not just what you publish, but how your brand presents itself as a whole.'
   const solutionBodyPara5 = homepageContent?.solution_body_para_5 || 'This isn\'t a one-off optimisation. It\'s designed to compound - building durable authority that strengthens over time.'
   const solutionCTAText = homepageContent?.solution_cta_text || 'Apply to Work With Us'
-  const solutionCTALink = homepageContent?.solution_cta_link || '/guide'
+  const solutionCTALink = homepageContent?.solution_cta_link || '/#apply-form'
   const solutionNote = homepageContent?.solution_note || 'Limited capacity. We take on a small number of brands at a time.'
   const solutionPillarsHeading = homepageContent?.solution_pillars_heading || 'Why this works differently'
   const solutionPillars = homepageContent?.solution_pillars || [
@@ -374,7 +374,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         'Lifetime Updates'
       ],
       cta_text: 'Buy Playbook',
-      cta_link: '/guide',
+      cta_link: '/#apply-form',
       featured: false
     },
     {
@@ -390,7 +390,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         'Team Training Templates'
       ],
       cta_text: 'Enroll Now',
-      cta_link: '/course',
+      cta_link: '/#apply-form',
       featured: true
     },
     {
@@ -406,7 +406,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         'Custom Ranking Plan'
       ],
       cta_text: 'Book Session',
-      cta_link: '/book-call',
+      cta_link: '/#apply-form',
       featured: false
     },
     {
@@ -424,7 +424,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
         'Unlimited Async Support'
       ],
       cta_text: 'Learn More',
-      cta_link: '/consulting',
+      cta_link: '/#apply-form',
       featured: false
     }
   ]

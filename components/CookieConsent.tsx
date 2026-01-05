@@ -192,14 +192,7 @@ export default function CookieConsent() {
               }}
             >
               We use cookies and similar technologies to analyze site traffic, personalize content, and serve targeted
-              advertisements. By clicking &ldquo;Accept All&rdquo;, you consent to our use of cookies.{' '}
-              <a
-                href="/privacy"
-                style={{ color: '#3b82f6', textDecoration: 'underline' }}
-                target="_blank"
-              >
-                Learn more in our Privacy Policy
-              </a>
+              advertisements. By clicking &ldquo;Accept All&rdquo;, you consent to our use of cookies.
             </p>
           </div>
 

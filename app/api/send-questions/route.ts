@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
               <p style="color: #64748b; font-size: 14px; margin: 0 0 20px 0;">
                 Book a free discovery call to learn how we can boost your Ai visibility
               </p>
-              <a href="https://www.sewo.io/book-call" style="display: inline-block; background-color: #3b82f6; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
-                Book a Discovery Call
+              <a href="https://www.sewo.io/#apply-form" style="display: inline-block; background-color: #3b82f6; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                Apply to Work With Us
               </a>
             </div>
 
