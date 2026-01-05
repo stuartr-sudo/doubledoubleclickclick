@@ -58,6 +58,14 @@ export async function GET(request: Request) {
     <priority>0.5</priority>
   </url>
 
+  <!-- Shipping & Returns -->
+  <url>
+    <loc>${baseUrl}/shipping</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
 </urlset>`
 
   return new NextResponse(sitemap, {

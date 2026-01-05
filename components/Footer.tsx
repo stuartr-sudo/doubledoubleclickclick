@@ -27,6 +27,7 @@ export default function Footer() {
             <ul className="footer-list">
               <li><Link href="/privacy">Privacy Policy</Link></li>
               <li><Link href="/terms">Terms of Service</Link></li>
+              <li><Link href="/shipping">Shipping & Returns</Link></li>
             </ul>
           </div>
           
@@ -70,6 +71,8 @@ export default function Footer() {
             <Link href="/privacy">Privacy Policy</Link>
             <span style={{ margin: '0 0.5rem', color: 'var(--color-text-light)' }}>|</span>
             <Link href="/terms">Terms of Service</Link>
+            <span style={{ margin: '0 0.5rem', color: 'var(--color-text-light)' }}>|</span>
+            <Link href="/shipping">Shipping & Returns</Link>
           </div>
         </div>
       </div>
