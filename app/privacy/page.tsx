@@ -15,113 +15,174 @@ export default function PrivacyPage() {
         <div className="container">
           <div className="privacy-content">
             <h1>Privacy Policy</h1>
-            <p className="last-updated">Last Updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p className="last-updated">Last updated: 6 January 2026</p>
 
             <section>
               <h2>1. Introduction</h2>
               <p>
-                SEWO ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website www.sewo.io (the "Site") and use our services.
+                SEWO ("we", "us", or "our") operates the website <a href="https://www.sewo.io" target="_blank" rel="noopener noreferrer">https://www.sewo.io</a> and provides AI-powered tools for content creation, optimization, and website analysis.
+              </p>
+              <p>
+                We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, and share information when you use SEWO.
+              </p>
+              <p>
+                If you have any questions about this policy, contact us at: <a href="mailto:privacy@sewo.io">privacy@sewo.io</a>
               </p>
             </section>
 
             <section>
               <h2>2. Information We Collect</h2>
+              <p>We collect information in the following ways:</p>
+              
               <h3>2.1 Information You Provide</h3>
-              <p>We may collect information that you voluntarily provide to us, including:</p>
+              <p>When you use SEWO, you may provide:</p>
               <ul>
-                <li>Name and contact information (email address, phone number)</li>
-                <li>Company information (company name, website URL, industry)</li>
-                <li>Information about your business challenges and goals</li>
-                <li>Any other information you choose to provide in forms or communications</li>
+                <li>Account information (name, email address)</li>
+                <li>Workspace or username information</li>
+                <li>Content you create, upload, or edit</li>
+                <li>Website URLs, sitemaps, and page content you submit for analysis</li>
+                <li>Brand guidelines and preferences</li>
+                <li>Payment and billing details (handled by third-party payment providers)</li>
               </ul>
 
-              <h3>2.2 Automatically Collected Information</h3>
-              <p>When you visit our Site, we may automatically collect certain information, including:</p>
+              <h3>2.2 Information Collected Automatically</h3>
+              <p>We may automatically collect:</p>
               <ul>
-                <li>IP address and location data</li>
-                <li>Browser type and version</li>
-                <li>Device information</li>
-                <li>Pages visited and time spent on pages</li>
-                <li>Referring website addresses</li>
-                <li>Cookies and similar tracking technologies</li>
+                <li>IP address</li>
+                <li>Browser type and device information</li>
+                <li>Usage data (features used, actions taken, timestamps)</li>
+                <li>Log data and error reports</li>
+                <li>Cookies and similar technologies (see Section 7)</li>
               </ul>
+
+              <h3>2.3 Content Processed by AI</h3>
+              <p>When you use AI-powered features, we process:</p>
+              <ul>
+                <li>Text, HTML, or URLs you submit</li>
+                <li>Generated or modified content created by our systems</li>
+                <li>Metadata related to content workflows (e.g. internal links, structure, headings)</li>
+              </ul>
+              <p>This content is processed only to provide the requested functionality.</p>
             </section>
 
             <section>
               <h2>3. How We Use Your Information</h2>
-              <p>We use the information we collect to:</p>
+              <p>We use your information to:</p>
               <ul>
-                <li>Provide, operate, and maintain our services</li>
-                <li>Respond to your inquiries and provide customer support</li>
-                <li>Send you marketing communications (with your consent)</li>
-                <li>Improve our website and services</li>
-                <li>Analyze usage patterns and trends</li>
-                <li>Detect, prevent, and address technical issues</li>
+                <li>Provide, operate, and improve SEWO</li>
+                <li>Process and optimize content using AI systems</li>
+                <li>Generate internal links, summaries, FAQs, and other outputs</li>
+                <li>Manage accounts, workspaces, and permissions</li>
+                <li>Process payments and subscriptions</li>
+                <li>Monitor usage, performance, and security</li>
+                <li>Communicate with you about updates or support requests</li>
                 <li>Comply with legal obligations</li>
               </ul>
+              <p>We do not sell your personal data.</p>
             </section>
 
             <section>
-              <h2>4. Cookies and Tracking Technologies</h2>
-              <p>
-                We use cookies and similar tracking technologies to track activity on our Site and store certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent. However, if you do not accept cookies, you may not be able to use some portions of our Site.
-              </p>
-            </section>
-
-            <section>
-              <h2>5. Data Sharing and Disclosure</h2>
-              <p>We may share your information in the following situations:</p>
+              <h2>4. AI & Third-Party Services</h2>
+              <p>SEWO uses trusted third-party services to operate its features, including:</p>
               <ul>
-                <li><strong>Service Providers:</strong> We may share your information with third-party service providers who perform services on our behalf</li>
-                <li><strong>Business Transfers:</strong> We may share or transfer your information in connection with any merger, sale of company assets, financing, or acquisition</li>
-                <li><strong>Legal Requirements:</strong> We may disclose your information if required to do so by law or in response to valid requests by public authorities</li>
-                <li><strong>With Your Consent:</strong> We may disclose your information for any other purpose with your consent</li>
+                <li>AI model providers (for content processing and generation)</li>
+                <li>Website crawling and mapping services</li>
+                <li>Payment processors</li>
+                <li>Hosting and infrastructure providers</li>
+                <li>Analytics and logging services</li>
+              </ul>
+              
+              <h3>AI Processing</h3>
+              <p>Content submitted to AI features is processed to generate outputs for you.</p>
+              <p>We do not use your private content to train public AI models unless explicitly stated and agreed.</p>
+              <p>AI providers may temporarily process data to generate responses, subject to their own privacy and security obligations.</p>
+            </section>
+
+            <section>
+              <h2>5. Data Storage & Retention</h2>
+              <ul>
+                <li>We store data only as long as necessary to provide the service.</li>
+                <li>Content and workspace data remain accessible to you while your account is active.</li>
+                <li>You may delete content or request account deletion at any time.</li>
+                <li>Some data may be retained for legal, security, or billing purposes.</li>
               </ul>
             </section>
 
             <section>
-              <h2>6. Data Security</h2>
-              <p>
-                We implement appropriate technical and organizational security measures to protect your personal information. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee absolute security.
-              </p>
-            </section>
-
-            <section>
-              <h2>7. Your Rights</h2>
-              <p>Depending on your location, you may have certain rights regarding your personal information, including:</p>
+              <h2>6. Data Sharing</h2>
+              <p>We may share information:</p>
               <ul>
-                <li>The right to access your personal information</li>
-                <li>The right to correct inaccurate information</li>
-                <li>The right to request deletion of your information</li>
-                <li>The right to object to processing of your information</li>
-                <li>The right to data portability</li>
-                <li>The right to withdraw consent</li>
+                <li>With service providers who help operate SEWO (under strict confidentiality)</li>
+                <li>When required by law or legal process</li>
+                <li>To protect the rights, safety, or security of SEWO and its users</li>
+                <li>As part of a business transfer (e.g. merger or acquisition)</li>
               </ul>
-              <p>To exercise these rights, please contact us at <a href="mailto:stuartr@sewo.io">stuartr@sewo.io</a>.</p>
+              <p>We do not share your data for advertising purposes.</p>
             </section>
 
             <section>
-              <h2>8. Children's Privacy</h2>
-              <p>
-                Our Site is not intended for children under the age of 18. We do not knowingly collect personal information from children under 18. If you are a parent or guardian and believe your child has provided us with personal information, please contact us.
-              </p>
-            </section>
-
-            <section>
-              <h2>9. Changes to This Privacy Policy</h2>
-              <p>
-                We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date. You are advised to review this Privacy Policy periodically for any changes.
-              </p>
-            </section>
-
-            <section>
-              <h2>10. Contact Us</h2>
-              <p>
-                If you have any questions about this Privacy Policy, please contact us:
-              </p>
+              <h2>7. Cookies & Tracking</h2>
+              <p>SEWO uses cookies and similar technologies to:</p>
               <ul>
-                <li>Email: <a href="mailto:stuartr@sewo.io">stuartr@sewo.io</a></li>
-                <li>Address: 4286, 1007 N Orange St. 4th Floor, Wilmington, DE, New Castle, US, 19801</li>
+                <li>Maintain sessions and authentication</li>
+                <li>Remember preferences</li>
+                <li>Analyze usage and improve performance</li>
+              </ul>
+              <p>You can control cookies through your browser settings. Some features may not work correctly if cookies are disabled.</p>
+            </section>
+
+            <section>
+              <h2>8. Security</h2>
+              <p>We take reasonable technical and organizational measures to protect your information, including:</p>
+              <ul>
+                <li>Secure hosting infrastructure</li>
+                <li>Encrypted connections (HTTPS)</li>
+                <li>Access controls and role-based permissions</li>
+                <li>Monitoring and logging for abuse and errors</li>
+              </ul>
+              <p>No system is 100% secure, but we work continuously to protect your data.</p>
+            </section>
+
+            <section>
+              <h2>9. Your Rights</h2>
+              <p>Depending on your location, you may have rights to:</p>
+              <ul>
+                <li>Access your personal data</li>
+                <li>Correct inaccurate information</li>
+                <li>Delete your data</li>
+                <li>Restrict or object to certain processing</li>
+                <li>Request data portability</li>
+              </ul>
+              <p>You can exercise these rights by contacting <a href="mailto:privacy@sewo.io">privacy@sewo.io</a>.</p>
+            </section>
+
+            <section>
+              <h2>10. International Users</h2>
+              <p>
+                SEWO may process data in countries other than your own. We take steps to ensure appropriate safeguards are in place when transferring data internationally.
+              </p>
+            </section>
+
+            <section>
+              <h2>11. Children's Privacy</h2>
+              <p>
+                SEWO is not intended for children under 13 (or the applicable age in your jurisdiction). We do not knowingly collect data from children.
+              </p>
+            </section>
+
+            <section>
+              <h2>12. Changes to This Policy</h2>
+              <p>
+                We may update this Privacy Policy from time to time. When we do, we will update the "Last updated" date and, where appropriate, notify users.
+              </p>
+            </section>
+
+            <section>
+              <h2>13. Contact Us</h2>
+              <p>If you have questions or concerns about this Privacy Policy or your data, contact us at:</p>
+              <ul>
+                <li>Email: <a href="mailto:privacy@sewo.io">privacy@sewo.io</a></li>
+                <li>Website: <a href="https://www.sewo.io" target="_blank" rel="noopener noreferrer">https://www.sewo.io</a></li>
               </ul>
             </section>
           </div>
