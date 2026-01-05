@@ -59,6 +59,11 @@ export default function Footer() {
           <p className="footer-copyright">
             &copy; {new Date().getFullYear()} SEWO - Get Found Everywhere. All rights reserved.
           </p>
+          <div className="footer-legal">
+            <Link href="/privacy">Privacy Policy</Link>
+            <span style={{ margin: '0 0.5rem', color: 'var(--color-text-light)' }}>|</span>
+            <Link href="/terms">Terms of Service</Link>
+          </div>
         </div>
       </div>
     </footer>

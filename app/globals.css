@@ -3742,6 +3742,122 @@ img {
   cursor: not-allowed;
 }
 
+/* Privacy & Terms Pages */
+.privacy-page,
+.terms-page {
+  padding-top: 100px;
+  padding-bottom: var(--spacing-2xl);
+  min-height: calc(100vh - 200px);
+}
+
+.privacy-content,
+.terms-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+}
+
+.privacy-content h1,
+.terms-content h1 {
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.privacy-content .last-updated,
+.terms-content .last-updated {
+  color: var(--color-text-light);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-xl);
+  font-style: italic;
+}
+
+.privacy-content section,
+.terms-content section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.privacy-content h2,
+.terms-content h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.privacy-content h3,
+.terms-content h3 {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.privacy-content p,
+.terms-content p {
+  font-size: var(--font-size-base);
+  line-height: 1.7;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-md);
+}
+
+.privacy-content ul,
+.terms-content ul {
+  margin-left: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.privacy-content li,
+.terms-content li {
+  font-size: var(--font-size-base);
+  line-height: 1.7;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-xs);
+}
+
+.privacy-content a,
+.terms-content a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.privacy-content a:hover,
+.terms-content a:hover {
+  color: #0052cc;
+}
+
+.privacy-content strong,
+.terms-content strong {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+@media (max-width: 768px) {
+  .privacy-content,
+  .terms-content {
+    padding: var(--spacing-md);
+  }
+
+  .privacy-content h1,
+  .terms-content h1 {
+    font-size: var(--font-size-3xl);
+  }
+
+  .privacy-content h2,
+  .terms-content h2 {
+    font-size: var(--font-size-xl);
+  }
+
+  .privacy-content h3,
+  .terms-content h3 {
+    font-size: var(--font-size-lg);
+  }
+}
+
 /* Contact Form Section */
 .contact-form-section {
   padding-top: calc(var(--spacing-3xl) * 1.25);
