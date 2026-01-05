@@ -20,7 +20,7 @@ export default function PrivacyPage() {
             <section>
               <h2>1. Introduction</h2>
               <p>
-                SEWO ("we", "us", or "our") operates the website <a href="https://www.sewo.io" target="_blank" rel="noopener noreferrer">https://www.sewo.io</a> and provides AI-powered tools for content creation, optimization, and website analysis.
+                SEWO (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) operates the website <a href="https://www.sewo.io" target="_blank" rel="noopener noreferrer">https://www.sewo.io</a> and provides AI-powered tools for content creation, optimization, and website analysis.
               </p>
               <p>
                 We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, and share information when you use SEWO.
@@ -173,7 +173,7 @@ export default function PrivacyPage() {
             <section>
               <h2>12. Changes to This Policy</h2>
               <p>
-                We may update this Privacy Policy from time to time. When we do, we will update the "Last updated" date and, where appropriate, notify users.
+                We may update this Privacy Policy from time to time. When we do, we will update the &quot;Last updated&quot; date and, where appropriate, notify users.
               </p>
             </section>
 

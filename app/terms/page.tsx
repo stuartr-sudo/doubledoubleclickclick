@@ -20,7 +20,7 @@ export default function TermsPage() {
             <section>
               <h2>1. Agreement to Terms</h2>
               <p>
-                By accessing or using the SEWO website (www.sewo.io) and services (the "Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not access or use the Service.
+                By accessing or using the SEWO website (www.sewo.io) and services (the &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, you may not access or use the Service.
               </p>
             </section>
 
@@ -89,7 +89,7 @@ export default function TermsPage() {
             <section>
               <h2>10. Disclaimer of Warranties</h2>
               <p>
-                THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+                THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
               </p>
               <p>
                 We do not guarantee specific results from our services. Ai visibility and search rankings are influenced by many factors beyond our control, including changes to Ai systems, algorithms, and market conditions.
