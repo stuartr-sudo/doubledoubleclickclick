@@ -52,7 +52,7 @@ export default function Footer() {
               </li>
             </ul>
             <div className="footer-address">
-              <h4 className="footer-heading">Location</h4>
+              <h4 className="footer-heading" style={{ marginTop: 'var(--spacing-lg)' }}>Location</h4>
               <p className="footer-address-text">
                 4286, 1007 N Orange St. 4th Floor,<br />
                 Wilmington, DE, New Castle,<br />
