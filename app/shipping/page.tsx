@@ -28,8 +28,7 @@ export default function ShippingPage() {
 
               <h3>Commencement & timelines</h3>
               <ul>
-                <li>A 50% deposit of the first month&apos;s service fee is required to secure your engagement.</li>
-                <li>The remaining 50% balance must be paid in full prior to the commencement of any work.</li>
+                <li>A deposit is required prior to the commencement of any work to secure your engagement.</li>
                 <li>Service delivery begins only once all required payments have been received.</li>
                 <li>Delivery timelines vary depending on the scope, complexity, and nature of the services agreed.</li>
                 <li>Once your engagement is confirmed, you will receive relevant confirmation emails and access details for your service dashboard or communication channels.</li>
@@ -50,13 +49,8 @@ export default function ShippingPage() {
               
               <h3>Deposits</h3>
               <ul>
-                <li>A 50% deposit of the first month&apos;s service fee is required to secure your engagement.</li>
+                <li>A deposit is required prior to the commencement of any work to secure your engagement.</li>
                 <li>Deposits are non-refundable, as they cover availability, onboarding, and preparatory work.</li>
-              </ul>
-
-              <h3>Balance payment</h3>
-              <ul>
-                <li>The remaining 50% balance must be paid in full before services commence.</li>
                 <li>SEWO will not begin any work until all required payments have been received.</li>
               </ul>
 

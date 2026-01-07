@@ -37,7 +37,11 @@ export default function SiteHeader({ blogVisible = true }: SiteHeaderProps) {
           <button
             type="button"
             className="site-header-menu-btn"
-            onClick={handleMenuToggle}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleMenuToggle()
+            }}
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
           >
