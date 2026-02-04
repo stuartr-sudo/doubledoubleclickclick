@@ -424,10 +424,30 @@ https://www.yourdomain.com/api/blog
 | `focus_keyword` | string | Primary SEO keyword |
 | `excerpt` | string | Short summary |
 
-**Example Request:**
+**Complete JSON Structure:**
+
+```json
+{
+  "postId": "unique-post-123",
+  "title": "My First Blog Post",
+  "content": "<h2>Introduction</h2><p>Your HTML content here...</p>",
+  "slug": "my-first-blog-post",
+  "status": "published",
+  "category": "Health",
+  "tags": ["wellness", "longevity", "research"],
+  "author": "Dr. Jane Smith",
+  "featured_image": "https://example.com/images/featured.jpg",
+  "excerpt": "A short summary of the post for listings and social sharing.",
+  "meta_title": "My First Blog Post | Modern Longevity",
+  "meta_description": "Learn about the latest research in longevity science.",
+  "focus_keyword": "longevity research"
+}
+```
+
+**Example cURL Request:**
 
 ```bash
-curl -X POST https://www.yourdomain.com/api/blog \
+curl -X POST https://www.modernlongevity.co/api/blog \
   -H "Content-Type: application/json" \
   -d '{
     "postId": "unique-post-123",
@@ -442,6 +462,29 @@ curl -X POST https://www.yourdomain.com/api/blog \
     "meta_description": "A brief description for search engines.",
     "featured_image": "https://example.com/image.jpg"
   }'
+```
+
+**Response (Success):**
+
+```json
+{
+  "success": true,
+  "message": "Post created successfully",
+  "post": {
+    "id": "uuid-here",
+    "slug": "my-first-blog-post",
+    "title": "My First Blog Post"
+  }
+}
+```
+
+**Response (Error):**
+
+```json
+{
+  "success": false,
+  "error": "Missing required field: title"
+}
 ```
 
 ### Unpublish / Delete a Post
