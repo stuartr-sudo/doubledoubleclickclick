@@ -5,13 +5,13 @@ export default function robots(): MetadataRoute.Robots {
   // Also normalize to our canonical host (www) to avoid sitemap URLs redirecting.
   const rawBaseUrl =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.modernlongevity.co')
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.sewo.io')
 
   let baseUrl = rawBaseUrl
   try {
     const u = new URL(rawBaseUrl)
-    if (u.hostname === 'modernlongevity.co') {
-      u.hostname = 'www.modernlongevity.co'
+    if (u.hostname === 'sewo.io') {
+      u.hostname = 'www.sewo.io'
       u.protocol = 'https:'
       baseUrl = u.origin
     } else {

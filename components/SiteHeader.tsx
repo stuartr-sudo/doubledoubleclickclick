@@ -23,8 +23,8 @@ export default function SiteHeader({ blogVisible = true }: SiteHeaderProps) {
     <header className="header site-header">
       <div className="container">
         <nav className="nav">
-          <Link href="/" className="logo" aria-label="Modern Longevity Home">
-            Modern Longevity
+          <Link href="/" className="logo" aria-label="SEWO Home">
+            SEWO
           </Link>
 
           <div className="nav-links">

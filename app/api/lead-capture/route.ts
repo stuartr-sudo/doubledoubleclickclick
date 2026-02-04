@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
               { 
                 success: false, 
-                error: `Database error: ${retryError.message}. Please contact support at stuartr@modernlongevity.co.`,
+                error: `Database error: ${retryError.message}. Please contact support at stuartr@sewo.io.`,
                 details: process.env.NODE_ENV === 'development' ? JSON.stringify(retryError) : undefined
               },
               { status: 500 }
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             { 
               success: false, 
-              error: `Database error: ${error.message}. Please try again or contact support at stuartr@modernlongevity.co.`,
+              error: `Database error: ${error.message}. Please try again or contact support at stuartr@sewo.io.`,
               details: process.env.NODE_ENV === 'development' ? JSON.stringify(error) : undefined
             },
             { status: 500 }
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: `Exception: ${errorMsg}. Please contact support at stuartr@modernlongevity.co.`,
+          error: `Exception: ${errorMsg}. Please contact support at stuartr@sewo.io.`,
           details: process.env.NODE_ENV === 'development' ? (insertError instanceof Error ? insertError.stack : String(insertError)) : undefined
         },
         { status: 500 }
@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
                 <!-- Footer -->
                 <div style="margin-top: 30px; text-align: center; color: #94a3b8; font-size: 12px;">
                   <p style="margin: 0;">
-                    This lead was captured from <a href="https://www.modernlongevity.co" style="color: #3b82f6; text-decoration: none;">modernlongevity.co</a>
+                    This lead was captured from <a href="https://www.sewo.io" style="color: #3b82f6; text-decoration: none;">sewo.io</a>
                   </p>
                 </div>
               </div>
@@ -307,8 +307,8 @@ export async function POST(request: NextRequest) {
 
         // Send email notification
         const { data, error: emailError } = await resend.emails.send({
-          from: 'Modern Longevity <stuartr@modernlongevity.co>', // Update with your verified domain
-          to: ['stuartr@modernlongevity.co'], // Notification recipient
+          from: 'SEWO <stuartr@sewo.io>', // Update with your verified domain
+          to: ['stuartr@sewo.io'], // Notification recipient
           subject: `New Lead: ${sanitize(sourceDisplay)} - ${sanitize(companyName || name || email)}`,
           html: htmlContent,
         })
@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        error: 'An error occurred while processing your submission. Please try again or contact us directly at stuartr@modernlongevity.co.',
+        error: 'An error occurred while processing your submission. Please try again or contact us directly at stuartr@sewo.io.',
         details: errorDetails,
         // Include stack trace in development for debugging
         stack: isDevelopment ? errorStack : undefined

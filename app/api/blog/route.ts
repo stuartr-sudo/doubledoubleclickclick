@@ -7,7 +7,7 @@ export const revalidate = 0
 /**
  * POST /api/blog - Create, Update, or Unpublish a blog post
  * 
- * THE RULES (FOR Modern Longevity ONLY):
+ * THE RULES (FOR SEWO ONLY):
  * 1. ONLY use 'site_posts' table. Never touch 'blog_posts'.
  * 2. If status is 'published':
  *    - Check if postId (external_id) exists.
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const supabase = createServiceClient()
     const body = await request.json()
     
-    console.log(`[${requestId}] 📥 Modern Longevity API REQUEST RECEIVED`)
+    console.log(`[${requestId}] 📥 SEWO API REQUEST RECEIVED`)
     
     // 1. Extract and Normalize Fields
     const {
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         success: true, 
         message: 'Post successfully unpublished (removed from live site)',
         operation: 'delete',
-        api_version: 'Modern Longevity-v3-FIXED'
+        api_version: 'SEWO-v3-FIXED'
       }, { status: 200 })
     }
 
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       slug: slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
       status: 'published', // FORCE published status in DB
       updated_date: new Date().toISOString(),
-      user_name: user_name || 'Modern Longevity'
+      user_name: user_name || 'SEWO'
     }
 
     // Add optional fields ONLY if provided in payload (don't overwrite with null/empty)
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
         status: data.status,
         operation: 'upsert'
       },
-      api_version: 'Modern Longevity-v3-FIXED'
+      api_version: 'SEWO-v3-FIXED'
     }, { status: 200 })
 
   } catch (error) {
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
 }
 
 /**
- * GET /api/blog - Fetch blog posts (Modern Longevity ONLY)
+ * GET /api/blog - Fetch blog posts (SEWO ONLY)
  */
 export async function GET(request: Request) {
   const requestId = `GET-${Date.now()}`
