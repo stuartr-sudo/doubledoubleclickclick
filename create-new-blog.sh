@@ -84,8 +84,9 @@ cp -r "$SCRIPT_DIR"/* "$NEW_BLOG_PATH/" 2>/dev/null
 cp "$SCRIPT_DIR"/.gitignore "$NEW_BLOG_PATH/" 2>/dev/null
 cp "$SCRIPT_DIR"/.eslintrc.json "$NEW_BLOG_PATH/" 2>/dev/null
 
-# Remove the create script from the new blog (it's only needed in the template)
+# Remove template-only files from the new blog
 rm -f "$NEW_BLOG_PATH/create-new-blog.sh"
+rm -f "$NEW_BLOG_PATH/.template-marker"
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}Error: Failed to copy files.${NC}"

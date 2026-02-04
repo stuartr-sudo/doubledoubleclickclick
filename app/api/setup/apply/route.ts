@@ -61,6 +61,17 @@ const filesToUpdate = [
 
 export async function POST(request: Request) {
   try {
+    const projectRoot = process.cwd()
+    
+    // SAFETY: Prevent running on the template
+    const templateMarker = path.join(projectRoot, '.template-marker')
+    if (fs.existsSync(templateMarker)) {
+      return NextResponse.json({
+        success: false,
+        message: 'ERROR: This is the TEMPLATE! Do not modify it directly. Create a clone first using: ./create-new-blog.sh your-site-name',
+      }, { status: 403 })
+    }
+    
     const config: Config = await request.json()
     
     // Validate required fields
@@ -70,8 +81,6 @@ export async function POST(request: Request) {
         message: 'Missing required fields: brandName, domain, and email are required.',
       }, { status: 400 })
     }
-
-    const projectRoot = process.cwd()
     let filesUpdated = 0
     let totalReplacements = 0
 
