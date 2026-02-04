@@ -19,15 +19,18 @@ CREATE TABLE IF NOT EXISTS public.homepage_content (
 ALTER TABLE public.homepage_content ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read access
+DROP POLICY IF EXISTS "Allow public read access" ON public.homepage_content;
 CREATE POLICY "Allow public read access" ON public.homepage_content
   FOR SELECT
   USING (true);
 
 -- Allow authenticated insert/update (you can add auth later)
+DROP POLICY IF EXISTS "Allow all insert" ON public.homepage_content;
 CREATE POLICY "Allow all insert" ON public.homepage_content
   FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow all update" ON public.homepage_content;
 CREATE POLICY "Allow all update" ON public.homepage_content
   FOR UPDATE
   USING (true);
@@ -38,18 +41,22 @@ VALUES ('images', 'images', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Set up storage policies
+DROP POLICY IF EXISTS "Public read access" ON storage.objects;
 CREATE POLICY "Public read access"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'images');
 
+DROP POLICY IF EXISTS "Authenticated users can upload images" ON storage.objects;
 CREATE POLICY "Authenticated users can upload images"
   ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'images');
 
+DROP POLICY IF EXISTS "Users can update own images" ON storage.objects;
 CREATE POLICY "Users can update own images"
   ON storage.objects FOR UPDATE
   USING (bucket_id = 'images');
 
+DROP POLICY IF EXISTS "Users can delete own images" ON storage.objects;
 CREATE POLICY "Users can delete own images"
   ON storage.objects FOR DELETE
   USING (bucket_id = 'images');

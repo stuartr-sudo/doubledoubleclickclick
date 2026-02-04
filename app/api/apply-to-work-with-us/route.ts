@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     if (!supabaseUrl || !supabaseKey) {
       console.error('Supabase env vars missing')
       return NextResponse.json(
-        { success: false, error: 'Server configuration error. Please contact support at stuartr@sewo.io.' },
+        { success: false, error: 'Server configuration error. Please contact support at stuartr@modernlongevity.co.' },
         { status: 500 }
       )
     }
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: `Database error: ${error.message}. Please try again or contact support at stuartr@sewo.io.`,
+          error: `Database error: ${error.message}. Please try again or contact support at stuartr@modernlongevity.co.`,
           details: process.env.NODE_ENV === 'development' ? JSON.stringify(error, null, 2) : undefined
         },
         { status: 500 }
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
 
                 <div style="margin-top: 30px; text-align: center; color: #94a3b8; font-size: 12px;">
                   <p style="margin: 0;">
-                    This application was submitted from <a href="https://www.sewo.io" style="color: #3b82f6; text-decoration: none;">sewo.io</a>
+                    This application was submitted from <a href="https://www.modernlongevity.co" style="color: #3b82f6; text-decoration: none;">modernlongevity.co</a>
                   </p>
                 </div>
               </div>
@@ -204,8 +204,8 @@ export async function POST(request: NextRequest) {
         `
 
         await resend.emails.send({
-          from: 'SEWO <stuartr@sewo.io>',
-          to: ['stuartr@sewo.io'],
+          from: 'Modern Longevity <stuartr@modernlongevity.co>',
+          to: ['stuartr@modernlongevity.co'],
           subject: `New Application: ${sanitize(company_name)} - ${sanitize(contact_name)}`,
           html: htmlContent,
         })
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        error: `Server error: ${errorMessage}. Please try again or contact support at stuartr@sewo.io.`,
+        error: `Server error: ${errorMessage}. Please try again or contact support at stuartr@modernlongevity.co.`,
         details: errorStack,
         errorType: error instanceof Error ? error.constructor.name : typeof error
       },

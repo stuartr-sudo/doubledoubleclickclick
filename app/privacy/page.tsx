@@ -3,8 +3,8 @@ import SiteHeader from '@/components/SiteHeader'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | SEWO - Get Found Everywhere',
-  description: 'Privacy Policy for SEWO - Learn how we collect, use, and protect your personal information.',
+  title: 'Privacy Policy | Modern Longevity - Modern Knowledge for Longevity',
+  description: 'Privacy Policy for Modern Longevity - Learn how we collect, use, and protect your personal information.',
 }
 
 export default function PrivacyPage() {
@@ -20,13 +20,13 @@ export default function PrivacyPage() {
             <section>
               <h2>1. Introduction</h2>
               <p>
-                SEWO (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) operates the website <a href="https://www.sewo.io" target="_blank" rel="noopener noreferrer">https://www.sewo.io</a> and provides AI-powered tools for content creation, optimization, and website analysis.
+                Modern Longevity (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) operates the website <a href="https://www.modernlongevity.co" target="_blank" rel="noopener noreferrer">https://www.modernlongevity.co</a> and provides AI-powered tools for content creation, optimization, and website analysis.
               </p>
               <p>
-                We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, and share information when you use SEWO.
+                We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, and share information when you use Modern Longevity.
               </p>
               <p>
-                If you have any questions about this policy, contact us at: <a href="mailto:privacy@sewo.io">privacy@sewo.io</a>
+                If you have any questions about this policy, contact us at: <a href="mailto:privacy@modernlongevity.co">privacy@modernlongevity.co</a>
               </p>
             </section>
 
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
               <p>We collect information in the following ways:</p>
               
               <h3>2.1 Information You Provide</h3>
-              <p>When you use SEWO, you may provide:</p>
+              <p>When you use Modern Longevity, you may provide:</p>
               <ul>
                 <li>Account information (name, email address)</li>
                 <li>Workspace or username information</li>
@@ -69,7 +69,7 @@ export default function PrivacyPage() {
               <h2>3. How We Use Your Information</h2>
               <p>We use your information to:</p>
               <ul>
-                <li>Provide, operate, and improve SEWO</li>
+                <li>Provide, operate, and improve Modern Longevity</li>
                 <li>Process and optimize content using AI systems</li>
                 <li>Generate internal links, summaries, FAQs, and other outputs</li>
                 <li>Manage accounts, workspaces, and permissions</li>
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2>4. AI & Third-Party Services</h2>
-              <p>SEWO uses trusted third-party services to operate its features, including:</p>
+              <p>Modern Longevity uses trusted third-party services to operate its features, including:</p>
               <ul>
                 <li>AI model providers (for content processing and generation)</li>
                 <li>Website crawling and mapping services</li>
@@ -112,9 +112,9 @@ export default function PrivacyPage() {
               <h2>6. Data Sharing</h2>
               <p>We may share information:</p>
               <ul>
-                <li>With service providers who help operate SEWO (under strict confidentiality)</li>
+                <li>With service providers who help operate Modern Longevity (under strict confidentiality)</li>
                 <li>When required by law or legal process</li>
-                <li>To protect the rights, safety, or security of SEWO and its users</li>
+                <li>To protect the rights, safety, or security of Modern Longevity and its users</li>
                 <li>As part of a business transfer (e.g. merger or acquisition)</li>
               </ul>
               <p>We do not share your data for advertising purposes.</p>
@@ -122,7 +122,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2>7. Cookies & Tracking</h2>
-              <p>SEWO uses cookies and similar technologies to:</p>
+              <p>Modern Longevity uses cookies and similar technologies to:</p>
               <ul>
                 <li>Maintain sessions and authentication</li>
                 <li>Remember preferences</li>
@@ -153,20 +153,20 @@ export default function PrivacyPage() {
                 <li>Restrict or object to certain processing</li>
                 <li>Request data portability</li>
               </ul>
-              <p>You can exercise these rights by contacting <a href="mailto:privacy@sewo.io">privacy@sewo.io</a>.</p>
+              <p>You can exercise these rights by contacting <a href="mailto:privacy@modernlongevity.co">privacy@modernlongevity.co</a>.</p>
             </section>
 
             <section>
               <h2>10. International Users</h2>
               <p>
-                SEWO may process data in countries other than your own. We take steps to ensure appropriate safeguards are in place when transferring data internationally.
+                Modern Longevity may process data in countries other than your own. We take steps to ensure appropriate safeguards are in place when transferring data internationally.
               </p>
             </section>
 
             <section>
               <h2>11. Children&apos;s Privacy</h2>
               <p>
-                SEWO is not intended for children under 13 (or the applicable age in your jurisdiction). We do not knowingly collect data from children.
+                Modern Longevity is not intended for children under 13 (or the applicable age in your jurisdiction). We do not knowingly collect data from children.
               </p>
             </section>
 
@@ -181,8 +181,8 @@ export default function PrivacyPage() {
               <h2>13. Contact Us</h2>
               <p>If you have questions or concerns about this Privacy Policy or your data, contact us at:</p>
               <ul>
-                <li>Email: <a href="mailto:privacy@sewo.io">privacy@sewo.io</a></li>
-                <li>Website: <a href="https://www.sewo.io" target="_blank" rel="noopener noreferrer">https://www.sewo.io</a></li>
+                <li>Email: <a href="mailto:privacy@modernlongevity.co">privacy@modernlongevity.co</a></li>
+                <li>Website: <a href="https://www.modernlongevity.co" target="_blank" rel="noopener noreferrer">https://www.modernlongevity.co</a></li>
               </ul>
             </section>
           </div>

@@ -30,7 +30,7 @@ export default async function AboutPage() {
       <main>
         <section className="about-hero">
           <div className="container">
-            <h1 className="about-title">About SEWO</h1>
+            <h1 className="about-title">About Modern Longevity</h1>
             <p className="about-subtitle">
               We help brands navigate the new era of Ai-powered search.
             </p>
@@ -46,7 +46,7 @@ export default async function AboutPage() {
                   In a world where consumers increasingly turn to Ai assistants like ChatGPT, Claude, and Gemini for answers, being &quot;found&quot; has a new meaning. Traditional SEO is no longer enough.
                 </p>
                 <p>
-                  At SEWO, our mission is to ensure your brand is the answer Ai suggests. We leverage deep research into LLM behavior and semantic search to optimize your visibility where it matters most.
+                  At Modern Longevity, our mission is to ensure your brand is the answer Ai suggests. We leverage deep research into LLM behavior and semantic search to optimize your visibility where it matters most.
                 </p>
               </div>
               <div className="about-stats">

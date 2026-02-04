@@ -13,8 +13,8 @@ export function middleware(req: NextRequest) {
 
   // Force canonical host (helps "duplicate without canonical" + "page with redirect" noise)
   // Note: protocol will be respected by the platform; we set https for safety.
-  if (host === 'sewo.io') {
-    url.host = 'www.sewo.io'
+  if (host === 'modernlongevity.co') {
+    url.host = 'www.modernlongevity.co'
     url.protocol = 'https:'
     return NextResponse.redirect(url, 308)
   }

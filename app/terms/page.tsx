@@ -3,8 +3,8 @@ import SiteHeader from '@/components/SiteHeader'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | SEWO - Get Found Everywhere',
-  description: 'Terms of Service for SEWO - Read our terms and conditions for using our services.',
+  title: 'Terms of Service | Modern Longevity - Modern Knowledge for Longevity',
+  description: 'Terms of Service for Modern Longevity - Read our terms and conditions for using our services.',
 }
 
 export default function TermsPage() {
@@ -20,17 +20,17 @@ export default function TermsPage() {
             <section>
               <h2>1. Agreement to Terms</h2>
               <p>
-                By accessing or using the SEWO website (<a href="https://www.sewo.io" target="_blank" rel="noopener noreferrer">https://www.sewo.io</a>) and related services (the &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, you must not access or use the Service.
+                By accessing or using the Modern Longevity website (<a href="https://www.modernlongevity.co" target="_blank" rel="noopener noreferrer">https://www.modernlongevity.co</a>) and related services (the &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, you must not access or use the Service.
               </p>
             </section>
 
             <section>
               <h2>2. Description of Service</h2>
               <p>
-                SEWO provides AI visibility optimisation and consulting services designed to help businesses improve their presence across AI-powered search and recommendation systems. Services may include, but are not limited to, content optimisation, site and entity structure analysis, brand authority development, strategic planning, and ongoing optimisation support.
+                Modern Longevity provides AI visibility optimisation and consulting services designed to help businesses improve their presence across AI-powered search and recommendation systems. Services may include, but are not limited to, content optimisation, site and entity structure analysis, brand authority development, strategic planning, and ongoing optimisation support.
               </p>
               <p>
-                SEWO does not guarantee specific rankings, placements, or outcomes.
+                Modern Longevity does not guarantee specific rankings, placements, or outcomes.
               </p>
             </section>
 
@@ -51,7 +51,7 @@ export default function TermsPage() {
             <section>
               <h2>5. Service Availability &amp; Acceptance</h2>
               <p>
-                SEWO works with a limited number of clients at any given time to maintain quality, focus, and consistency. Submission of an enquiry or application does not guarantee acceptance. SEWO reserves the right to accept or decline any service request at its sole discretion.
+                Modern Longevity works with a limited number of clients at any given time to maintain quality, focus, and consistency. Submission of an enquiry or application does not guarantee acceptance. Modern Longevity reserves the right to accept or decline any service request at its sole discretion.
               </p>
             </section>
 
@@ -66,7 +66,7 @@ export default function TermsPage() {
               <ul>
                 <li>A 50% deposit of the first month&apos;s service fee is required to secure an engagement.</li>
                 <li>The remaining 50% balance must be paid in full prior to the commencement of any work.</li>
-                <li>SEWO will not begin service delivery until all required payments have been received.</li>
+                <li>Modern Longevity will not begin service delivery until all required payments have been received.</li>
               </ul>
 
               <h3>Refund Policy</h3>
@@ -74,21 +74,21 @@ export default function TermsPage() {
                 <li>Due to the nature of digital consulting and optimisation services, all payments are non-refundable once services have commenced.</li>
                 <li>Deposits are non-refundable, as they secure availability, onboarding, and preparatory work.</li>
                 <li>No refunds are provided for partially or fully delivered services.</li>
-                <li>SEWO reserves the right to suspend or terminate services for non-payment.</li>
+                <li>Modern Longevity reserves the right to suspend or terminate services for non-payment.</li>
               </ul>
             </section>
 
             <section>
               <h2>7. Intellectual Property</h2>
               <p>
-                All content, materials, trademarks, logos, methodologies, and proprietary frameworks associated with the Service are owned by SEWO or its licensors and are protected by applicable intellectual property laws. Nothing in these Terms grants you ownership of SEWO intellectual property.
+                All content, materials, trademarks, logos, methodologies, and proprietary frameworks associated with the Service are owned by Modern Longevity or its licensors and are protected by applicable intellectual property laws. Nothing in these Terms grants you ownership of Modern Longevity intellectual property.
               </p>
             </section>
 
             <section>
               <h2>8. Client Content</h2>
               <p>
-                You retain ownership of any content or materials you provide to SEWO. By providing such content, you grant SEWO a non-exclusive, royalty-free license to use, modify, and display that content solely for the purpose of delivering the agreed services. You represent that you have the rights required to grant this license.
+                You retain ownership of any content or materials you provide to Modern Longevity. By providing such content, you grant Modern Longevity a non-exclusive, royalty-free license to use, modify, and display that content solely for the purpose of delivering the agreed services. You represent that you have the rights required to grant this license.
               </p>
             </section>
 
@@ -111,28 +111,28 @@ export default function TermsPage() {
                 THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE,&quot; WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
               </p>
               <p>
-                SEWO does not warrant or guarantee specific outcomes, rankings, visibility, or business results. AI systems, algorithms, and discovery mechanisms are subject to change and are outside SEWO&apos;s control.
+                Modern Longevity does not warrant or guarantee specific outcomes, rankings, visibility, or business results. AI systems, algorithms, and discovery mechanisms are subject to change and are outside Modern Longevity&apos;s control.
               </p>
             </section>
 
             <section>
               <h2>11. Limitation of Liability</h2>
               <p>
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, SEWO SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, REVENUE, DATA, GOODWILL, OR BUSINESS INTERRUPTION, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, Modern Longevity SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, REVENUE, DATA, GOODWILL, OR BUSINESS INTERRUPTION, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
               </p>
             </section>
 
             <section>
               <h2>12. Indemnification</h2>
               <p>
-                You agree to indemnify, defend, and hold harmless SEWO, its directors, officers, employees, and agents from any claims, liabilities, damages, losses, and expenses arising out of or related to your use of the Service or violation of these Terms.
+                You agree to indemnify, defend, and hold harmless Modern Longevity, its directors, officers, employees, and agents from any claims, liabilities, damages, losses, and expenses arising out of or related to your use of the Service or violation of these Terms.
               </p>
             </section>
 
             <section>
               <h2>13. Termination</h2>
               <p>
-                SEWO may suspend or terminate access to the Service at any time, with or without notice, including for breach of these Terms or non-payment. Termination does not entitle you to a refund of any fees paid.
+                Modern Longevity may suspend or terminate access to the Service at any time, with or without notice, including for breach of these Terms or non-payment. Termination does not entitle you to a refund of any fees paid.
               </p>
             </section>
 
@@ -146,7 +146,7 @@ export default function TermsPage() {
             <section>
               <h2>15. Changes to Terms</h2>
               <p>
-                SEWO may update these Terms from time to time. Material changes will be posted on this page with an updated &quot;Last Updated&quot; date. Continued use of the Service after changes constitutes acceptance of the revised Terms.
+                Modern Longevity may update these Terms from time to time. Material changes will be posted on this page with an updated &quot;Last Updated&quot; date. Continued use of the Service after changes constitutes acceptance of the revised Terms.
               </p>
             </section>
 
@@ -156,7 +156,7 @@ export default function TermsPage() {
                 For questions regarding these Terms of Service, please contact:
               </p>
               <ul>
-                <li>Email: <a href="mailto:stuartr@sewo.io">stuartr@sewo.io</a></li>
+                <li>Email: <a href="mailto:stuartr@modernlongevity.co">stuartr@modernlongevity.co</a></li>
                 <li>Address:<br />
                   4286<br />
                   1007 N Orange St, 4th Floor<br />

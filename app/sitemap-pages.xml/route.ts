@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     <priority>1.0</priority>
   </url>
 
-  <!-- Contact - Get in touch with SEWO -->
+  <!-- Contact - Get in touch with Modern Longevity -->
   <url>
     <loc>${baseUrl}/contact</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     <priority>0.9</priority>
   </url>
 
-  <!-- About - Learn about SEWO -->
+  <!-- About - Learn about Modern Longevity -->
   <url>
     <loc>${baseUrl}/about</loc>
     <lastmod>${new Date().toISOString()}</lastmod>

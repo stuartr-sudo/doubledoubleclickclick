@@ -3,8 +3,8 @@ import SiteHeader from '@/components/SiteHeader'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Service Delivery & Refunds | SEWO - Get Found Everywhere',
-  description: 'Service delivery information and refund policy for SEWO. Learn about our service availability, delivery process, and cancellation policy.',
+  title: 'Service Delivery & Refunds | Modern Longevity - Modern Knowledge for Longevity',
+  description: 'Service delivery information and refund policy for Modern Longevity. Learn about our service availability, delivery process, and cancellation policy.',
 }
 
 export default function ShippingPage() {
@@ -18,7 +18,7 @@ export default function ShippingPage() {
 
             <section>
               <h2>Service Delivery</h2>
-              <p>SEWO provides digital consulting and optimisation services designed to improve AI-powered search visibility. All services are delivered remotely and online.</p>
+              <p>Modern Longevity provides digital consulting and optimisation services designed to improve AI-powered search visibility. All services are delivered remotely and online.</p>
               
               <h3>Service availability</h3>
               <p>Services are available worldwide to businesses of all sizes.</p>
@@ -38,26 +38,26 @@ export default function ShippingPage() {
               <ul>
                 <li>All services are delivered remotely using online platforms and communication tools.</li>
                 <li>Delivery timeframes may vary based on project requirements.</li>
-                <li>SEWO operates during standard business hours (Monday to Friday, excluding public holidays).</li>
-                <li>For questions regarding service delivery or timelines, please contact <a href="mailto:hi@sewo.io">hi@sewo.io</a>.</li>
+                <li>Modern Longevity operates during standard business hours (Monday to Friday, excluding public holidays).</li>
+                <li>For questions regarding service delivery or timelines, please contact <a href="mailto:hi@modernlongevity.co">hi@modernlongevity.co</a>.</li>
               </ul>
             </section>
 
             <section>
               <h2>Payments, Deposits & Refunds</h2>
-              <p>Due to the nature of SEWO&apos;s digital consulting and optimisation services, refunds are not offered once services have commenced.</p>
+              <p>Due to the nature of Modern Longevity&apos;s digital consulting and optimisation services, refunds are not offered once services have commenced.</p>
               
               <h3>Deposits</h3>
               <ul>
                 <li>A deposit is required prior to the commencement of any work to secure your engagement.</li>
                 <li>Deposits are non-refundable, as they cover availability, onboarding, and preparatory work.</li>
-                <li>SEWO will not begin any work until all required payments have been received.</li>
+                <li>Modern Longevity will not begin any work until all required payments have been received.</li>
               </ul>
 
               <h3>Refund policy</h3>
               <ul>
                 <li>All payments are non-refundable once services have commenced, including where services are partially or fully delivered.</li>
-                <li>SEWO does not provide refunds for completed work, strategic materials, reports, or delivered services.</li>
+                <li>Modern Longevity does not provide refunds for completed work, strategic materials, reports, or delivered services.</li>
               </ul>
 
               <h3>Definition of commencement</h3>
@@ -86,13 +86,13 @@ export default function ShippingPage() {
                 <li>Any relevant documentation or screenshots</li>
                 <li>Your preferred method of contact</li>
               </ul>
-              <p>SEWO is committed to addressing service issues in a timely and professional manner and will work with you to resolve concerns where reasonably possible.</p>
+              <p>Modern Longevity is committed to addressing service issues in a timely and professional manner and will work with you to resolve concerns where reasonably possible.</p>
             </section>
 
             <section>
               <h2>Need Help?</h2>
-              <p>If you have questions about service delivery, payments, refunds, or your engagement with SEWO, please contact us at:</p>
-              <p><a href="mailto:hi@sewo.io">hi@sewo.io</a></p>
+              <p>If you have questions about service delivery, payments, refunds, or your engagement with Modern Longevity, please contact us at:</p>
+              <p><a href="mailto:hi@modernlongevity.co">hi@modernlongevity.co</a></p>
               <p>We&apos;re always happy to assist and ensure clarity around your engagement.</p>
             </section>
           </div>

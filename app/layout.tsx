@@ -15,11 +15,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'SEWO - Get Found Everywhere',
-    template: '%s | SEWO',
+    default: 'Modern Longevity - Modern Knowledge for Longevity',
+    template: '%s | Modern Longevity',
   },
-  description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'),
+  description: 'Information for longevity',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.modernlongevity.co'),
   alternates: {
     canonical: '/',
   },
@@ -33,15 +33,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io',
-    siteName: 'SEWO',
-    title: 'SEWO - Get Found Everywhere',
-    description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.modernlongevity.co',
+    siteName: 'Modern Longevity',
+    title: 'Modern Longevity - Modern Knowledge for Longevity',
+    description: 'Information for longevity',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SEWO - Get Found Everywhere',
-    description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
+    title: 'Modern Longevity - Modern Knowledge for Longevity',
+    description: 'Information for longevity',
   },
   robots: {
     index: true,

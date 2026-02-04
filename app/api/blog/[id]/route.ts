@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 export const revalidate = 0
 
 /**
- * GET /api/blog/[id] - Fetch a single blog post (SEWO ONLY)
+ * GET /api/blog/[id] - Fetch a single blog post (Modern Longevity ONLY)
  */
 export async function GET(
   request: Request,
@@ -22,7 +22,7 @@ export async function GET(
       .single()
     
     if (error || !data) {
-      return NextResponse.json({ error: 'Post not found in SEWO database' }, { status: 404 })
+      return NextResponse.json({ error: 'Post not found in Modern Longevity database' }, { status: 404 })
     }
 
     return NextResponse.json({ success: true, data }, { status: 200 })
@@ -33,7 +33,7 @@ export async function GET(
 }
 
 /**
- * PUT /api/blog/[id] - Update a blog post (SEWO ONLY)
+ * PUT /api/blog/[id] - Update a blog post (Modern Longevity ONLY)
  */
 export async function PUT(
   request: Request,
@@ -78,7 +78,7 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/blog/[id] - Delete a blog post (SEWO ONLY)
+ * DELETE /api/blog/[id] - Delete a blog post (Modern Longevity ONLY)
  */
 export async function DELETE(
   request: Request,
