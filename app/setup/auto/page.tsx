@@ -566,7 +566,7 @@ export default function SetupAutoPage() {
             {!categoryId ? (
               <>
                 <h2 style={heading}>What category is this blog in?</h2>
-                <p style={subtext}>Pick the broad topic area first. You'll narrow it down next.</p>
+                <p style={subtext}>Pick the broad topic area first. You&apos;ll narrow it down next.</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {categories.map((c) => (
                     <div
@@ -662,7 +662,7 @@ export default function SetupAutoPage() {
             <p style={stepLabel}>Step 3 of 6</p>
             <h2 style={heading}>Pick a brand direction</h2>
             <p style={subtext}>
-              AI-generated brand name ideas for a <strong>{niche.label}</strong> blog. Pick the one you like — we'll find available domains for it next.
+              AI-generated brand name ideas for a <strong>{niche.label}</strong> blog. Pick the one you like — we&apos;ll find available domains for it next.
             </p>
 
             {brandLoading && (
