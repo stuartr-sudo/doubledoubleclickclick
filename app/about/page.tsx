@@ -30,9 +30,9 @@ export default async function AboutPage() {
       <main>
         <section className="about-hero">
           <div className="container">
-            <h1 className="about-title">About SEWO</h1>
+            <h1 className="about-title">About Us</h1>
             <p className="about-subtitle">
-              We help brands navigate the new era of Ai-powered search.
+              Evidence-based guidance, practical insights, and clear recommendations.
             </p>
           </div>
         </section>
@@ -43,20 +43,20 @@ export default async function AboutPage() {
               <div className="about-text-main">
                 <h2>Our Mission</h2>
                 <p>
-                  In a world where consumers increasingly turn to Ai assistants like ChatGPT, Claude, and Gemini for answers, being &quot;found&quot; has a new meaning. Traditional SEO is no longer enough.
+                  We help readers make informed decisions with practical, trustworthy information.
                 </p>
                 <p>
-                  At SEWO, our mission is to ensure your brand is the answer Ai suggests. We leverage deep research into LLM behavior and semantic search to optimize your visibility where it matters most.
+                  Our focus is clear guidance, transparent recommendations, and useful content that supports long-term outcomes.
                 </p>
               </div>
               <div className="about-stats">
                 <div className="stat-item">
-                  <span className="stat-number">LLM</span>
-                  <span className="stat-label">Ranking Experts</span>
+                  <span className="stat-number">Evidence</span>
+                  <span className="stat-label">First Approach</span>
                 </div>
                 <div className="stat-item">
-                  <span className="stat-number">Ai</span>
-                  <span className="stat-label">Search Pioneers</span>
+                  <span className="stat-number">Practical</span>
+                  <span className="stat-label">Actionable Insights</span>
                 </div>
               </div>
             </div>

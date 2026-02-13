@@ -55,7 +55,11 @@ const colorPalettes = {
 // Files that need to be updated with brand info
 const filesToUpdate = [
   'package.json',
+  'app/HomePageClient.tsx',
+  'app/contact/page.tsx',
+  'app/blog/page.tsx',
   'components/SiteHeader.tsx',
+  'components/MobileMenu.tsx',
   'components/Footer.tsx',
   'components/Analytics.tsx',
   'app/layout.tsx',
@@ -87,14 +91,73 @@ const defaultValues = {
                 Wilmington, DE, New Castle,<br />
                 US, 19801`,
   oldAddressSimple: '4286, 1007 N Orange St. 4th Floor, Wilmington, DE, New Castle, US, 19801',
-  oldTagline: 'Get Found Everywhere',
-  oldDescription: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
-  oldFooterTagline: 'Expert LLM ranking optimization to boost your visibility in AI-powered search results.',
+  oldTagline: 'Trusted Guidance for Better Decisions',
+  oldDescription: 'Practical, evidence-based content that helps readers make better decisions with confidence.',
+  oldFooterTagline: 'Practical, evidence-based insights to help your audience make better decisions.',
   oldGaId: 'G-TT58X7D8RV',
   oldGtmId: 'GTM-M4RMX5TG',
   oldPrimaryColor: '#000000',
   oldAccentColor: '#0066ff',
 };
+
+function getArgValue(flag) {
+  const idx = process.argv.indexOf(flag);
+  if (idx === -1) return null;
+  return process.argv[idx + 1] || null;
+}
+
+function buildConfigWithDefaults(input = {}) {
+  const cfg = { ...input };
+  cfg.brandName = cfg.brandName || cfg.brand_name || '';
+  cfg.domain = cfg.domain || '';
+  cfg.email = cfg.email || cfg.primaryEmail || cfg.primary_email || '';
+  cfg.contactEmail = cfg.contactEmail || cfg.contact_email || (cfg.domain ? `contact@${cfg.domain}` : '');
+  cfg.privacyEmail = cfg.privacyEmail || cfg.privacy_email || (cfg.domain ? `privacy@${cfg.domain}` : '');
+  cfg.phone = cfg.phone || '';
+  cfg.addressLine1 = cfg.addressLine1 || cfg.address_line_1 || '';
+  cfg.addressLine2 = cfg.addressLine2 || cfg.address_line_2 || '';
+  cfg.addressLine3 = cfg.addressLine3 || cfg.address_line_3 || '';
+  cfg.tagline = cfg.tagline || defaultValues.oldTagline;
+  cfg.description = cfg.description || defaultValues.oldDescription;
+  cfg.footerTagline = cfg.footerTagline || cfg.footer_tagline || cfg.description.substring(0, 100);
+  cfg.primaryColor = cfg.primaryColor || cfg.primary_color || defaultValues.oldPrimaryColor;
+  cfg.accentColor = cfg.accentColor || cfg.accent_color || defaultValues.oldAccentColor;
+  cfg.gaId = cfg.gaId || cfg.ga_id || '';
+  cfg.gtmId = cfg.gtmId || cfg.gtm_id || '';
+  return cfg;
+}
+
+function validateRequiredConfig(config) {
+  const missing = [];
+  if (!config.brandName) missing.push('brandName');
+  if (!config.domain) missing.push('domain');
+  if (!config.email) missing.push('email');
+  return missing;
+}
+
+const validationTargets = [
+  'app/HomePageClient.tsx',
+  'app/about/page.tsx',
+  'app/contact/page.tsx',
+  'app/blog/page.tsx',
+  'components/SiteHeader.tsx',
+  'components/MobileMenu.tsx',
+  'components/Footer.tsx',
+  'app/privacy/page.tsx',
+  'app/terms/page.tsx',
+  'app/shipping/page.tsx',
+];
+
+const forbiddenPatterns = [
+  /SEWO/g,
+  /sewo\.io/g,
+  /The AI Field Guide/g,
+  /AI Visibility System/g,
+  /Apply to Work With Us/g,
+  /hello@sewo\.io/g,
+  /contact@sewo\.io/g,
+  /stuartr@sewo\.io/g,
+];
 
 async function main() {
   console.clear();
@@ -111,117 +174,137 @@ async function main() {
   log('Press Enter to keep the current/default value shown in [brackets].', 'yellow');
   console.log('');
 
-  // Collect new values
-  const config = {};
+  const configPath = getArgValue('--config');
+  const nonInteractive = Boolean(configPath);
+  let config = {};
 
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  log('STEP 1: BRAND IDENTITY', 'bright');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  console.log('');
-
-  config.brandName = await ask('Brand name (e.g., "Acme Blog"): ');
-  if (!config.brandName) {
-    log('Brand name is required!', 'red');
-    process.exit(1);
-  }
-
-  config.domain = await ask('Domain (without www, e.g., "acmeblog.com"): ');
-  if (!config.domain) {
-    log('Domain is required!', 'red');
-    process.exit(1);
-  }
-
-  config.tagline = await ask(`Tagline [${defaultValues.oldTagline}]: `) || defaultValues.oldTagline;
-  config.description = await ask(`Description (1-2 sentences about your site):\n`) || defaultValues.oldDescription;
-  config.footerTagline = await ask(`Footer tagline (shorter version):\n`) || config.description.substring(0, 100);
-
-  console.log('');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  log('STEP 2: CONTACT INFORMATION', 'bright');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  console.log('');
-
-  config.email = await ask('Primary email (for notifications): ');
-  if (!config.email) {
-    log('Email is required!', 'red');
-    process.exit(1);
-  }
-
-  config.contactEmail = await ask(`Contact email [contact@${config.domain}]: `) || `contact@${config.domain}`;
-  config.privacyEmail = await ask(`Privacy email [privacy@${config.domain}]: `) || `privacy@${config.domain}`;
-  config.phone = await ask('Phone number (e.g., "+1 555-123-4567"): ') || '';
-  
-  console.log('');
-  log('Enter your business address (or press Enter to skip):', 'yellow');
-  config.addressLine1 = await ask('Address line 1: ') || '';
-  config.addressLine2 = await ask('Address line 2 (city, state): ') || '';
-  config.addressLine3 = await ask('Address line 3 (country, zip): ') || '';
-
-  console.log('');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  log('STEP 3: COLOR PALETTE', 'bright');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  console.log('');
-
-  log('Choose a color palette for your site:', 'yellow');
-  console.log('');
-  for (const [key, palette] of Object.entries(colorPalettes)) {
-    if (key === 'custom') {
-      console.log(`  ${colors.cyan}${key}${colors.reset}. ${palette.name}`);
-    } else {
-      console.log(`  ${colors.cyan}${key}${colors.reset}. ${palette.name} (Primary: ${palette.primary}, Accent: ${palette.accent})`);
+  if (nonInteractive) {
+    const fullConfigPath = path.isAbsolute(configPath) ? configPath : path.join(process.cwd(), configPath);
+    if (!fs.existsSync(fullConfigPath)) {
+      log(`Config file not found: ${fullConfigPath}`, 'red');
+      process.exit(1);
     }
-  }
-  console.log('');
-
-  const paletteChoice = await ask('Enter number (1-8) or "custom" [1]: ') || '1';
-  
-  if (paletteChoice === 'custom') {
-    config.primaryColor = await ask('Primary color (hex, e.g., "#1a1a2e"): ') || '#000000';
-    config.accentColor = await ask('Accent color (hex, e.g., "#e94560"): ') || '#0066ff';
-  } else if (colorPalettes[paletteChoice]) {
-    config.primaryColor = colorPalettes[paletteChoice].primary;
-    config.accentColor = colorPalettes[paletteChoice].accent;
-    log(`Selected: ${colorPalettes[paletteChoice].name}`, 'green');
+    const raw = fs.readFileSync(fullConfigPath, 'utf8');
+    config = buildConfigWithDefaults(JSON.parse(raw));
+    const missing = validateRequiredConfig(config);
+    if (missing.length > 0) {
+      log(`Missing required config keys: ${missing.join(', ')}`, 'red');
+      process.exit(1);
+    }
+    log('Using non-interactive config mode.', 'green');
   } else {
-    config.primaryColor = colorPalettes['1'].primary;
-    config.accentColor = colorPalettes['1'].accent;
-    log('Invalid choice, using default (Classic Black & Blue)', 'yellow');
-  }
+    // Collect new values interactively
+    config = {};
 
-  console.log('');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  log('STEP 4: ANALYTICS (optional - press Enter to skip)', 'bright');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  console.log('');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    log('STEP 1: BRAND IDENTITY', 'bright');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    console.log('');
 
-  config.gaId = await ask('Google Analytics ID (e.g., "G-XXXXXXXXXX"): ') || '';
-  config.gtmId = await ask('Google Tag Manager ID (e.g., "GTM-XXXXXXX"): ') || '';
+    config.brandName = await ask('Brand name (e.g., "Acme Blog"): ');
+    if (!config.brandName) {
+      log('Brand name is required!', 'red');
+      process.exit(1);
+    }
 
-  console.log('');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  log('STEP 5: CONFIRMATION', 'bright');
-  log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
-  console.log('');
+    config.domain = await ask('Domain (without www, e.g., "acmeblog.com"): ');
+    if (!config.domain) {
+      log('Domain is required!', 'red');
+      process.exit(1);
+    }
 
-  log('Here\'s what will be configured:', 'yellow');
-  console.log('');
-  console.log(`  Brand Name:     ${colors.green}${config.brandName}${colors.reset}`);
-  console.log(`  Domain:         ${colors.green}${config.domain}${colors.reset}`);
-  console.log(`  Tagline:        ${colors.green}${config.tagline}${colors.reset}`);
-  console.log(`  Email:          ${colors.green}${config.email}${colors.reset}`);
-  console.log(`  Contact Email:  ${colors.green}${config.contactEmail}${colors.reset}`);
-  console.log(`  Phone:          ${colors.green}${config.phone || '(not set)'}${colors.reset}`);
-  console.log(`  Primary Color:  ${colors.green}${config.primaryColor}${colors.reset}`);
-  console.log(`  Accent Color:   ${colors.green}${config.accentColor}${colors.reset}`);
-  console.log(`  GA ID:          ${colors.green}${config.gaId || '(not set)'}${colors.reset}`);
-  console.log(`  GTM ID:         ${colors.green}${config.gtmId || '(not set)'}${colors.reset}`);
-  console.log('');
+    config.tagline = await ask(`Tagline [${defaultValues.oldTagline}]: `) || defaultValues.oldTagline;
+    config.description = await ask(`Description (1-2 sentences about your site):\n`) || defaultValues.oldDescription;
+    config.footerTagline = await ask(`Footer tagline (shorter version):\n`) || config.description.substring(0, 100);
 
-  const confirm = await ask('Proceed with these settings? (y/n): ');
-  if (confirm.toLowerCase() !== 'y' && confirm.toLowerCase() !== 'yes') {
-    log('Setup cancelled.', 'yellow');
-    process.exit(0);
+    console.log('');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    log('STEP 2: CONTACT INFORMATION', 'bright');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    console.log('');
+
+    config.email = await ask('Primary email (for notifications): ');
+    if (!config.email) {
+      log('Email is required!', 'red');
+      process.exit(1);
+    }
+
+    config.contactEmail = await ask(`Contact email [contact@${config.domain}]: `) || `contact@${config.domain}`;
+    config.privacyEmail = await ask(`Privacy email [privacy@${config.domain}]: `) || `privacy@${config.domain}`;
+    config.phone = await ask('Phone number (e.g., "+1 555-123-4567"): ') || '';
+    
+    console.log('');
+    log('Enter your business address (or press Enter to skip):', 'yellow');
+    config.addressLine1 = await ask('Address line 1: ') || '';
+    config.addressLine2 = await ask('Address line 2 (city, state): ') || '';
+    config.addressLine3 = await ask('Address line 3 (country, zip): ') || '';
+
+    console.log('');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    log('STEP 3: COLOR PALETTE', 'bright');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    console.log('');
+
+    log('Choose a color palette for your site:', 'yellow');
+    console.log('');
+    for (const [key, palette] of Object.entries(colorPalettes)) {
+      if (key === 'custom') {
+        console.log(`  ${colors.cyan}${key}${colors.reset}. ${palette.name}`);
+      } else {
+        console.log(`  ${colors.cyan}${key}${colors.reset}. ${palette.name} (Primary: ${palette.primary}, Accent: ${palette.accent})`);
+      }
+    }
+    console.log('');
+
+    const paletteChoice = await ask('Enter number (1-8) or "custom" [1]: ') || '1';
+    
+    if (paletteChoice === 'custom') {
+      config.primaryColor = await ask('Primary color (hex, e.g., "#1a1a2e"): ') || '#000000';
+      config.accentColor = await ask('Accent color (hex, e.g., "#e94560"): ') || '#0066ff';
+    } else if (colorPalettes[paletteChoice]) {
+      config.primaryColor = colorPalettes[paletteChoice].primary;
+      config.accentColor = colorPalettes[paletteChoice].accent;
+      log(`Selected: ${colorPalettes[paletteChoice].name}`, 'green');
+    } else {
+      config.primaryColor = colorPalettes['1'].primary;
+      config.accentColor = colorPalettes['1'].accent;
+      log('Invalid choice, using default (Classic Black & Blue)', 'yellow');
+    }
+
+    console.log('');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    log('STEP 4: ANALYTICS (optional - press Enter to skip)', 'bright');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    console.log('');
+
+    config.gaId = await ask('Google Analytics ID (e.g., "G-XXXXXXXXXX"): ') || '';
+    config.gtmId = await ask('Google Tag Manager ID (e.g., "GTM-XXXXXXX"): ') || '';
+
+    console.log('');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    log('STEP 5: CONFIRMATION', 'bright');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
+    console.log('');
+
+    log('Here\'s what will be configured:', 'yellow');
+    console.log('');
+    console.log(`  Brand Name:     ${colors.green}${config.brandName}${colors.reset}`);
+    console.log(`  Domain:         ${colors.green}${config.domain}${colors.reset}`);
+    console.log(`  Tagline:        ${colors.green}${config.tagline}${colors.reset}`);
+    console.log(`  Email:          ${colors.green}${config.email}${colors.reset}`);
+    console.log(`  Contact Email:  ${colors.green}${config.contactEmail}${colors.reset}`);
+    console.log(`  Phone:          ${colors.green}${config.phone || '(not set)'}${colors.reset}`);
+    console.log(`  Primary Color:  ${colors.green}${config.primaryColor}${colors.reset}`);
+    console.log(`  Accent Color:   ${colors.green}${config.accentColor}${colors.reset}`);
+    console.log(`  GA ID:          ${colors.green}${config.gaId || '(not set)'}${colors.reset}`);
+    console.log(`  GTM ID:         ${colors.green}${config.gtmId || '(not set)'}${colors.reset}`);
+    console.log('');
+
+    const confirm = await ask('Proceed with these settings? (y/n): ');
+    if (confirm.toLowerCase() !== 'y' && confirm.toLowerCase() !== 'yes') {
+      log('Setup cancelled.', 'yellow');
+      process.exit(0);
+    }
   }
 
   console.log('');
@@ -271,6 +354,11 @@ async function main() {
   replacements.push([/Get Found Everywhere/g, config.tagline]);
   replacements.push([/Make your brand the answer AI suggests\. Expert LLM ranking optimization to boost your visibility in AI-powered search\./g, config.description]);
   replacements.push([/Expert LLM ranking optimization to boost your visibility in AI-powered search results\./g, config.footerTagline]);
+  replacements.push([/The AI Field Guide/g, `${config.brandName} Blog`]);
+  replacements.push([/AI Visibility System/g, `${config.brandName} Framework`]);
+  replacements.push([/Ai Visibility System/g, `${config.brandName} Framework`]);
+  replacements.push([/Apply to Work With Us/g, 'Contact Us']);
+  replacements.push([/hello@sewo\.io/g, config.contactEmail]);
 
   // Process files
   let filesUpdated = 0;
@@ -369,9 +457,13 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 
 # Site URL
 NEXT_PUBLIC_SITE_URL=https://www.${config.domain}
+NEXT_PUBLIC_SITE_NAME=${config.brandName}
+NEXT_PUBLIC_BLOG_TITLE=Blog
 
 # Email (Resend)
 RESEND_API_KEY=re_xxxxxxxxxxxxx
+NEXT_PUBLIC_CONTACT_EMAIL=${config.contactEmail}
+NEXT_PUBLIC_CONTACT_PHONE=${config.phone}
 
 # Analytics (Optional)
 ${config.gaId ? `# Google Analytics configured in code: ${config.gaId}` : '# NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX'}
@@ -384,9 +476,23 @@ NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
   log(`  ✓ Created: .env.local.example`, 'green');
 
   // Save config for reference
-  const configPath = path.join(process.cwd(), '.site-config.json');
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+  const savedConfigPath = path.join(process.cwd(), '.site-config.json');
+  fs.writeFileSync(savedConfigPath, JSON.stringify(config, null, 2), 'utf8');
   log(`  ✓ Saved config: .site-config.json`, 'green');
+
+  // Validate critical user-facing files for legacy defaults/branding leaks
+  const validationErrors = [];
+  for (const filePath of validationTargets) {
+    const fullPath = path.join(process.cwd(), filePath);
+    if (!fs.existsSync(fullPath)) continue;
+    const content = fs.readFileSync(fullPath, 'utf8');
+    for (const pattern of forbiddenPatterns) {
+      const match = content.match(pattern);
+      if (match) {
+        validationErrors.push(`${filePath}: found ${match.length} match(es) for ${pattern}`);
+      }
+    }
+  }
 
   console.log('');
   log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
@@ -403,10 +509,7 @@ NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
   console.log('');
   console.log('  1. Create Supabase project and run migrations');
   console.log('  2. Copy .env.local.example to .env.local and fill in values');
-  console.log('  3. Review and update legal pages:');
-  console.log('     • app/privacy/page.tsx');
-  console.log('     • app/terms/page.tsx');
-  console.log('     • app/shipping/page.tsx');
+  console.log('  3. Seed homepage content/images via /api/homepage (or script)');
   console.log('  4. Update favicon: public/favicon.svg');
   console.log('  5. Deploy to Vercel');
   console.log('');
@@ -419,6 +522,16 @@ NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
   }
   if (!config.phone) {
     log('⚠ No phone number provided - phone link removed from footer', 'yellow');
+  }
+
+  if (validationErrors.length > 0) {
+    log('❌ Legacy content check failed. Resolve these before deploy:', 'red');
+    validationErrors.forEach((err) => console.log(`  • ${err}`));
+    console.log('');
+    log('Tip: run setup again after updating templates, or manually edit the files above.', 'yellow');
+    process.exitCode = 1;
+  } else {
+    log('✅ Legacy content check passed (no SEWO/old defaults in user-facing pages).', 'green');
   }
 
   console.log('');

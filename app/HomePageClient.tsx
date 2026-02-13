@@ -11,7 +11,6 @@ import SiteHeader from '@/components/SiteHeader'
 
 // Dynamic imports for code splitting - load below-the-fold components lazily
 const SubscribeHero = dynamic(() => import('@/components/SubscribeHero'), { ssr: false })
-const HowItWorks = dynamic(() => import('@/components/HowItWorks'), { ssr: true })
 const ParticleAnimation = dynamic(() => import('@/components/ParticleAnimation'), { ssr: false })
 
 interface Service {
@@ -292,7 +291,7 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   ]
   const servicesBgColor = homepageContent?.services_bg_color || '#ffffff'
   const blogGridBgColor = homepageContent?.blog_grid_bg_color || '#ffffff'
-  const blogGridTitle = homepageContent?.blog_grid_title || 'Latest from the blog'
+  const blogGridTitle = homepageContent?.blog_grid_title || 'Blog Posts'
   const blogSectionVisible = homepageContent?.blog_section_visible ?? true
   const proofResultsTitle = homepageContent?.proof_results_title || 'Proof of Results'
   const proofResultsSubtitle = homepageContent?.proof_results_subtitle || 'Real outcomes from our LLM optimization work'
@@ -870,7 +869,13 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
   return (
     <>
       {/* Site Header with shadow */}
-      <SiteHeader blogVisible={blogSectionVisible} />
+      <SiteHeader
+        blogVisible={blogSectionVisible}
+        logoText={logoText}
+        logoImage={logoImage || undefined}
+        ctaText={heroCTAText}
+        ctaLink={heroCTALink}
+      />
       
     <main>
       
@@ -924,19 +929,16 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
                   ))}
                 </p>
                   <div className="hero-cta-wrapper">
-                    <Link 
-                      href="#apply-form" 
+                    <Link
+                      href={heroCTALink}
                       className="hero-cta-button"
-                    style={{
-                      backgroundColor: heroCTABgColor,
-                      color: heroCTATextColor,
+                      style={{
+                        backgroundColor: heroCTABgColor,
+                        color: heroCTATextColor,
                       }}
                     >
-                      Apply to Work With Us
+                      {heroCTAText}
                     </Link>
-                    <p className="hero-cta-subtext">
-                      For established brands serious about Ai-driven discovery.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -944,454 +946,41 @@ function HomePageClient({ latestPosts, homepageContent }: HomePageClientProps) {
           </div>
         </section>
 
-      {/* Not Traditional SEO Section */}
-      <section className="not-seo-section">
-        <div className="container">
-          <div className="not-seo-grid">
-            <div className="not-seo-image">
-              {notSeoImage ? (
-                <Image
-                  src={notSeoImage}
-                  alt="This Is Not Traditional SEO Or Paid Media"
-                  width={600}
-                  height={600}
-                  loading="lazy"
-                  quality={85}
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  style={{ 
-                    width: '100%', 
-                    height: 'auto', 
-                    objectFit: 'cover',
-                    borderRadius: '8px'
-                  }}
-                />
-              ) : (
-                <div className="not-seo-image-placeholder">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                    </svg>
-                </div>
-              )}
-            </div>
-            <div className="not-seo-content">
-              <h1 className="not-seo-title">This Is Not Traditional SEO Or Paid Media</h1>
-              <div className="not-seo-body">
-                <p>Most marketing services are built around direct inputs.</p>
-                <p className="not-seo-list">
-                  Paid ads buy attention.<br />
-                  Traditional SEO optimises pages for rankings.
-                </p>
-                <p>Both can work - but neither explains why Ai recommends one brand and ignores another.</p>
-                <p className="not-seo-emphasis">Ai systems don&apos;t respond to single tactics in isolation.</p>
-                <p>They evaluate patterns of trust across your content, your site structure, your brand presence, and your evidence.</p>
-                <p>That&apos;s why this work sits in a different category.</p>
-                <p>We specialise exclusively in Ai search visibility - how Ai systems decide which brands to surface, cite, and recommend when users ask questions.</p>
-                <p>And that decision is influenced by far more than content alone.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Problem Statement Section */}
-      <section className="problem-statement-section" style={{ background: problemStatementBgColor }}>
-        <div className="container">
-          <h1 className="problem-statement-title">
-            {problemStatementTitle.split('\n').map((line, i) => (
-              <span key={i}>{line}{i < problemStatementTitle.split('\n').length - 1 && <br />}</span>
-            ))}
-          </h1>
-          <div className="problem-statement-grid">
-            <div className="problem-statement-text">
-              {problemStatementPara1 && <p>{problemStatementPara1}</p>}
-              {problemStatementPara2 && <p>{problemStatementPara2}</p>}
-              {problemStatementPara3 && <p>{problemStatementPara3}</p>}
-                    </div>
-            <div className="problem-statement-image">
-              {problemStatementImage ? (
-                <Image 
-                  src={problemStatementImage} 
-                  alt="Problem Statement" 
-                  width={600}
-                  height={450}
-                  loading="lazy"
-                  quality={85}
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  style={{ objectFit: 'cover', width: '100%', height: 'auto', borderRadius: '12px' }}
-                />
-              ) : (
-                <div className="problem-statement-image-placeholder">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                  </svg>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Connected Signals Section */}
-      <section className="connected-signals-section">
-        <div className="container">
-          <div className="connected-signals-grid">
-            <div className="connected-signals-image">
-              {connectedSignalsImage ? (
-                <Image
-                  src={connectedSignalsImage}
-                  alt="Ai Recommendations Are Shaped By Connected Signals"
-                  width={600}
-                  height={450}
-                  loading="lazy"
-                  quality={85}
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  style={{ 
-                    width: '100%', 
-                    height: 'auto', 
-                    objectFit: 'cover',
-                    borderRadius: '8px'
-                  }}
-                />
-              ) : (
-                <div className="connected-signals-image-placeholder">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                  </svg>
-                    </div>
-                  )}
-            </div>
-            <div className="connected-signals-text">
-              <h2 className="connected-signals-title">Ai Recommendations Are Shaped By Connected Signals</h2>
-              <div className="connected-signals-body">
-                <p>Content is the foundation - but it isn&apos;t the whole system.</p>
-                <p>Ai systems look for coherence. They favour brands that present a clear, consistent picture over time, rather than isolated moments of optimization.</p>
-                <p>These signals don&apos;t operate independently.<br />They reinforce each other.</p>
-                <p>When everything points in the same direction, Ai systems become more confident in selecting, referencing, and recommending a brand. When it doesn&apos;t, even strong individual efforts tend to stall.</p>
-                <p>That&apos;s why shortcuts, hacks, and one-off changes rarely translate into lasting Ai visibility.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Ai Consistency Signals Section */}
-      <section className="ai-consistency-signals-section">
-        <div className="container">
-          <div className="ai-consistency-signals-grid">
-            <div className="ai-consistency-signals-column">
-              <p className="ai-consistency-signals-heading"><strong>Ai systems look for consistency across:</strong></p>
-              <ul className="ai-consistency-signals-list">
-                <li>how your site is structured and understood</li>
-                <li>whether your expertise is supported by evidence</li>
-                <li>whether your brand appears active and credible beyond your website</li>
-                <li>whether claims are reinforced by real-world validation</li>
-              </ul>
-                  </div>
-            <div className="ai-consistency-signals-column">
-              <p className="ai-consistency-signals-heading"><strong>That includes elements like:</strong></p>
-              <ul className="ai-consistency-signals-list">
-                <li>site architecture and technical clarity</li>
-                <li>case studies and testimonials</li>
-                <li>visible activity across relevant social platforms</li>
-                <li>consistency between what you publish and how your brand shows up elsewhere</li>
-              </ul>
-                </div>
-              </div>
-        </div>
-      </section>
-
-      {/* Signals Conclusion Section */}
-      <section className="signals-conclusion-section">
-        <div className="container">
-          <div className="signals-conclusion-content">
-            <h1 className="signals-conclusion-title">These Signals Don&apos;t Operate Independently.<br />They Reinforce Each Other.</h1>
-            <p className="signals-conclusion-text">This is why shortcuts, hacks, and isolated optimisations rarely lead to lasting Ai visibility.</p>
-            <div className="signals-conclusion-cta">
-              <Link 
-                href="#apply-form" 
-                className="signals-conclusion-button"
-                  style={{ 
-                  backgroundColor: heroCTABgColor,
-                  color: heroCTATextColor,
-                }}
-              >
-                Apply to Work With Us
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Ai Visibility System Section */}
-      <section className="solution-section" style={{ background: solutionBgColor }}>
-        <div className="solution-container">
-          <div className="solution-grid">
-            {/* Left Column - Narrative */}
-            <div className="solution-narrative">
-              <span className="solution-kicker">{solutionKicker}</span>
-              <h2 className="solution-headline">{solutionHeadline}</h2>
-              <p className="solution-subtitle">{solutionSubtitle}</p>
-              <div className="solution-body">
-                {solutionBodyPara1 && <p>{solutionBodyPara1}</p>}
-                {solutionBodyPara2 && <p>{solutionBodyPara2}</p>}
-                {solutionBodyPara3 && <p className="solution-emphasis">{solutionBodyPara3}</p>}
-                {solutionBodyPara4 && <p>{solutionBodyPara4}</p>}
-                {solutionBodyPara5 && <p>{solutionBodyPara5.split('\n').map((line, i) => (
-                  <span key={i}>{line}{i < solutionBodyPara5.split('\n').length - 1 && <br />}</span>
-                ))}</p>}
-        </div>
-              <div className="solution-cta">
-                <Link 
-                  href="#apply-form" 
-                  className="solution-button"
-                      style={{
-                    backgroundColor: heroCTABgColor,
-                    color: heroCTATextColor,
-                  }}
-                >
-                  {solutionCTAText}
-                </Link>
-                {solutionNote && <p className="solution-note">{solutionNote}</p>}
-                    </div>
-              
-              {solutionTestimonialQuote && (
-                <div className="solution-testimonial">
-                  <div className="solution-testimonial-content">
-                    <p className="solution-testimonial-quote">
-                      &quot;{solutionTestimonialQuote}&quot;
-                    </p>
-                    <div className="solution-testimonial-author">
-                      {solutionTestimonialAuthorImage && (
-                        <div className="solution-testimonial-image">
-                          <Image
-                            src={solutionTestimonialAuthorImage}
-                            alt={solutionTestimonialAuthorName}
-                            width={56}
-                            height={56}
-                            loading="lazy"
-                            quality={85}
-                            sizes="56px"
-                            style={{ objectFit: 'cover', borderRadius: '50%', width: '56px', height: '56px' }}
-                      />
-                    </div>
-                  )}
-                      <div className="solution-testimonial-author-info">
-                        <p className="solution-testimonial-author-name">{solutionTestimonialAuthorName}</p>
-                        <p className="solution-testimonial-author-company">{solutionTestimonialAuthorCompany}</p>
-                </div>
-              </div>
-              </div>
-                    </div>
-                  )}
-                </div>
-
-            {/* Right Column - Pillars */}
-            <div className="solution-pillars">
-              {solutionPillarsHeading && <h3 className="pillars-heading">{solutionPillarsHeading}</h3>}
-              
-              {solutionPillars.map((pillar, index) => {
-                // Icon mapping based on index
-                const icons = [
-                  // Icon 1: Search/Ai
-                  <svg key="icon1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="M21 21l-4.35-4.35"/>
-                    <path d="M11 8v6M8 11h6"/>
-                  </svg>,
-                  // Icon 2: Authority/Shield
-                  <svg key="icon2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    <path d="M9 12l2 2 4-4"/>
-                  </svg>,
-                  // Icon 3: Growth/Compound
-                  <svg key="icon3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                  </svg>,
-                  // Icon 4: Proven/Target
-                  <svg key="icon4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <circle cx="12" cy="12" r="6"/>
-                    <circle cx="12" cy="12" r="2"/>
-                  </svg>
-                ]
-                
-                return (
-                  <div key={pillar.id} className="solution-pillar">
-                    <div className="pillar-icon">
-                      {icons[index % icons.length]}
-              </div>
-                    <div className="pillar-content">
-                      <h4 className="pillar-title">{pillar.title}</h4>
-                      {pillar.description.split('\n').map((para, i) => (
-                        <p key={i} className="pillar-description">{para}</p>
-            ))}
-                    </div>
-                </div>
-                )
-              })}
-              </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Proof of Results Section */}
-      <section className="proof-results-section" style={{ background: proofResultsBgColor }}>
-        <div className="proof-results-container">
-          <div className="proof-results-header">
-            <h2 className="proof-results-title">{proofResultsTitle}</h2>
-            <p className="proof-results-subtitle">{proofResultsSubtitle}</p>
-          </div>
-
-          {/* Case Study Text Block */}
-          <div className="proof-results-case-study">
-            <h3 className="proof-results-case-study-title">Case study: Ai visibility in a highly competitive market</h3>
-            <div className="proof-results-case-study-content">
-              <p>
-                In a highly competitive U.S. skincare market, we applied our Ai Visibility System to restructure how content, site signals, and brand authority were presented to Ai systems.
-              </p>
-              <p>
-                Rather than relying on shortcuts or volume, the work focused on clarity, trust signals, and consistency across content, structure, and supporting brand signals.
-              </p>
-              <p>
-                Within the first 30 days, the brand achieved top placement in Ai-generated results, maintained that visibility, and saw a <strong>450% increase in organic traffic</strong> - driven by sustained inclusion in Ai summaries and recommendations.
-              </p>
-              <p>
-                This outcome wasn&apos;t the result of a single tactic, but a connected system designed to compound over time.
-              </p>
-            </div>
-          </div>
-
-          <div className="proof-results-grid">
-            {proofResultsItems.map((item) => (
-              <article key={item.id} className="proof-result-card">
-                <div className="proof-result-image">
-                  {item.image ? (
-                    <Image 
-                      src={item.image} 
-                      alt={item.title} 
-                      width={400}
-                      height={225}
-                      loading="lazy"
-                      quality={85}
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
-                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                    />
-                  ) : (
-                    <div className="proof-result-image-placeholder">
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                        <path d="M3 15l4-4a2 2 0 012.828 0L17 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M13 13l2-2a2 2 0 012.828 0L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div className="proof-result-content">
-                  <h3 className="proof-result-card-title">{item.title}</h3>
-                  <p className="proof-result-description">{item.description}</p>
-                  <Link href={item.cta_link} className="proof-result-cta">
-                    {item.cta_text}
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <HowItWorks
-        title={howItWorksTitle}
-        steps={howItWorksSteps}
-        bgColor={howItWorksBgColor}
-      />
-
-      {/* FAQ CTA - Above FAQ Section */}
-      <div className="faq-cta-wrapper">
-        <div className="faq-cta">
-          <Link 
-            href="#apply-form" 
-            className="faq-cta-button"
-            style={{
-              backgroundColor: heroCTABgColor,
-              color: heroCTATextColor,
-            }}
-          >
-            Apply to Work With Us
-          </Link>
-          </div>
-        </div>
-
-      {/* FAQ Section */}
-      <section className="faq-section" style={{ background: faqBgColor }}>
-        <div className="faq-container">
-          <div className="faq-header">
-            <span className="faq-label">FAQ</span>
-            <h2 className="faq-title">Answers to your most common questions</h2>
-          </div>
-          <div className="faq-list">
-            {faqItems.map((item, index) => (
-              <div key={index} className="faq-item">
-                <button
-                  className="faq-question"
-                  onClick={() => toggleFaq(index)}
-                  aria-expanded={openFaqIndex === index}
-                >
-                  <span className="faq-question-text">{item.question}</span>
-                  <svg
-                    className={`faq-chevron ${openFaqIndex === index ? 'faq-chevron-open' : ''}`}
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M6 9L12 15L18 9"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-                {openFaqIndex === index && (
-                  <div className="faq-answer">
-                    <p>{item.answer}</p>
-                  </div>
+      {/* About Section - optional for basic blog homepage */}
+      {(aboutTitle || aboutDescription) && (
+        <section className="about-section" style={{ background: '#fafafa' }}>
+          <div className="container">
+            <div className="about-section-inner">
+              <div className="about-section-content">
+                {aboutTitle && <h2 className="about-section-title">{aboutTitle}</h2>}
+                {aboutDescription && (
+                  <p className="about-section-description">
+                    {aboutDescription.split('\n').map((line, i) => (
+                      <span key={i}>{line}{i < aboutDescription.split('\n').length - 1 && <br />}</span>
+                    ))}
+                  </p>
                 )}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Apply to Work With Us Form */}
-      <section id="apply-form" className="apply-form-section">
-        <div className="container">
-          <div className="apply-form-wrapper">
-            <div className="apply-form-header">
-              <h2>Apply to Work With Us</h2>
-              <p className="apply-form-intro">
-                Tell us about your brand and how we can help you get recommended by Ai.
-              </p>
+              {aboutImage && (
+                <div className="about-section-image">
+                  <Image
+                    src={aboutImage}
+                    alt={aboutTitle || 'About'}
+                    width={400}
+                    height={300}
+                    loading="lazy"
+                    quality={85}
+                    sizes="(max-width: 768px) 100vw, 400px"
+                    style={{ width: '100%', height: 'auto', objectFit: 'cover', borderRadius: '8px' }}
+                  />
+                </div>
+              )}
             </div>
-
-            <ApplyForm 
-              buttonBgColor={heroCTABgColor}
-              buttonTextColor={heroCTATextColor}
-            />
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Basic blog homepage: Hero → About (optional) → Blog grid only */}
 
       {/* Latest Blog Posts - 3x2 Grid */}
       {blogSectionVisible && latestPosts && latestPosts.length > 0 && (

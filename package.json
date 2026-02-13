@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "setup": "node scripts/setup-new-site.js"
+    "setup": "node scripts/setup-new-site.js",
+    "clone:validate": "node scripts/validate-clone.js",
+    "clone:auto": "node scripts/clone-blog-auto.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.39.0",
     "bcryptjs": "^2.4.3",

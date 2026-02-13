@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 type Step = 'brand' | 'contact' | 'colors' | 'analytics' | 'review' | 'apply' | 'external'
 
@@ -164,6 +165,11 @@ export default function SetupPage() {
           </h1>
           <p style={{ color: '#64748b' }}>
             Configure your new blog in a few simple steps
+          </p>
+          <p style={{ marginTop: '0.75rem' }}>
+            <Link href="/setup/auto" style={{ color: '#2563eb', fontWeight: 600 }}>
+              Prefer no typing? Open automated setup →
+            </Link>
           </p>
         </div>
 

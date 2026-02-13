@@ -37,6 +37,38 @@ This single command will:
 
 **That's it for the code!** The visual setup wizard will guide you through configuring your brand, colors, and contact info.
 
+## Zero-Typing Automation (Profile-Driven)
+
+If you want cloning with no manual typing, use the automated profile runner:
+
+1. Copy `docs/CLONE_PROFILE_TEMPLATE.json` to a new file (e.g. `docs/profiles/modernlongevity.json`)
+2. Fill the profile once (or have the agent generate it)
+3. Run:
+
+```bash
+npm run clone:auto -- --profile docs/profiles/modernlongevity.json --output-base ~/Documents/GitHub
+```
+
+This will:
+- create the clone folder
+- install dependencies
+- run non-interactive setup with your profile
+- run legacy-content validation (`clone:validate`)
+- create initial git commit
+
+### Mandatory no-miss workflow (new)
+
+After creating the clone, always run:
+
+```bash
+cd ~/Documents/GitHub/YOUR-BLOG-FOLDER
+npm run setup
+npm run clone:validate
+```
+
+- `npm run setup` now updates additional user-facing files (including homepage/blog/contact defaults) and generates env defaults for contact/blog branding.
+- `npm run clone:validate` fails if legacy strings still exist in user-facing pages (e.g. `SEWO`, `sewo.io`, `The AI Field Guide`, `AI Visibility System`, `Apply to Work With Us`).
+
 ---
 
 ## After the Setup Wizard
@@ -48,6 +80,19 @@ Once you've configured your blog in the wizard, you still need to:
 3. **Deploy to Vercel**
 
 See the detailed steps below.
+
+### Critical: Avoid legacy text/branding leaks
+
+Before first production deploy, always run the hardening checklist in:
+
+- `docs/CLONE_CHECKLIST.md`
+
+This prevents the most common issues we hit during cloning:
+
+- Legacy `SEWO` text still present in About/Contact/legal pages
+- Old AI/agency copy still present in homepage database fields
+- `/blog` title still showing old defaults (e.g. AI Field Guide)
+- Header/logo and CTA not aligned with the new brand
 
 ---
 
@@ -387,6 +432,163 @@ Test everything works:
 
 ---
 
+## What the Setup Wizard Changes
+
+When you run the setup wizard and click "Apply Changes", it automatically updates branding across **25+ files**. Here's the complete reference:
+
+### Files Updated by the Clone Feature
+
+#### Core Files
+| File | What Gets Changed |
+|------|-------------------|
+| `package.json` | Package name |
+| `middleware.ts` | Domain redirects |
+
+#### App Pages
+| File | What Gets Changed |
+|------|-------------------|
+| `app/layout.tsx` | Site title, meta description, Open Graph, Twitter cards, siteName |
+| `app/page.tsx` | Page title, description, canonical URL, Open Graph, Twitter metadata |
+| `app/HomePageClient.tsx` | Logo text, email addresses, baseUrl, JSON-LD structured data, serviceType |
+| `app/robots.ts` | Base URL, hostname |
+| `app/sitemap-pages.xml/route.ts` | Comment references |
+
+#### Legal/Info Pages
+| File | What Gets Changed |
+|------|-------------------|
+| `app/privacy/page.tsx` | Title, description, all SEWO references, URLs, email addresses |
+| `app/terms/page.tsx` | Title, description, all SEWO references, URLs, email addresses |
+| `app/shipping/page.tsx` | Title, description, all SEWO references, contact email |
+| `app/about/page.tsx` | Page title, mission statement |
+
+#### Contact Pages
+| File | What Gets Changed |
+|------|-------------------|
+| `app/contact/page.tsx` | Heading, email link |
+| `app/contact/layout.tsx` | Meta description, Open Graph title/description, Twitter title/description |
+
+#### Blog Pages
+| File | What Gets Changed |
+|------|-------------------|
+| `app/blog/page.tsx` | Title, description, canonical URL, Open Graph, Twitter metadata |
+| `app/blog/[slug]/page.tsx` | Demo post authors, baseUrl fallbacks, JSON-LD author/publisher names |
+
+#### Admin Pages
+| File | What Gets Changed |
+|------|-------------------|
+| `app/admin/homepage/page.tsx` | Default logo_text, default email, placeholder text |
+
+#### Components
+| File | What Gets Changed |
+|------|-------------------|
+| `components/SiteHeader.tsx` | Brand references |
+| `components/Footer.tsx` | Brand name, contact info, address |
+| `components/Analytics.tsx` | Analytics IDs |
+| `components/StructuredData.tsx` | Organization name, description, social links |
+| `components/ContactForm.tsx` | Contact email link |
+
+#### API Routes
+| File | What Gets Changed |
+|------|-------------------|
+| `app/api/lead-capture/route.ts` | Email addresses, domain references, brand name in emails |
+| `app/api/apply-to-work-with-us/route.ts` | Email addresses, domain references, brand name |
+| `app/api/send-questions/route.ts` | URLs, "Your Friends at SEWO" text, from email |
+| `app/api/homepage/route.ts` | Default logo_text |
+| `app/api/blog/route.ts` | Comments, api_version, default user_name |
+| `app/api/blog/[id]/route.ts` | Comment references |
+
+---
+
+### Replacement Patterns
+
+The setup wizard performs these find/replace operations (in order):
+
+#### Brand Name Replacements
+| Find | Replace With |
+|------|--------------|
+| `SEWO Editorial Team` | `{Brand Name} Editorial Team` |
+| `Your Friends at SEWO` | `{Brand Name}` |
+| `SEWO-v3-FIXED` | `{BRAND-NAME}-v3-FIXED` |
+| `SEWO` | `{Brand Name}` |
+
+#### Domain Replacements
+| Find | Replace With |
+|------|--------------|
+| `https://www.sewo.io` | `https://www.{domain}` |
+| `https://sewo.io` | `https://{domain}` |
+| `www.sewo.io` | `www.{domain}` |
+| `sewo.io` | `{domain}` |
+
+#### Social Link Replacements
+| Find | Replace With |
+|------|--------------|
+| `twitter.com/sewo_io` | `twitter.com/{twitterHandle}` |
+| `linkedin.com/company/sewo` | `linkedin.com/company/{linkedinCompany}` |
+
+#### Email Replacements
+| Find | Replace With |
+|------|--------------|
+| `stuartr@sewo.io` | `{email}` (primary contact) |
+| `contact@sewo.io` | `{contactEmail}` or `contact@{domain}` |
+| `privacy@sewo.io` | `{privacyEmail}` or `privacy@{domain}` |
+| `hi@sewo.io` | `{contactEmail}` or `contact@{domain}` |
+
+#### Other Replacements
+| Find | Replace With |
+|------|--------------|
+| `"sewo-website"` | `"{brand-name}-website"` (package name) |
+| `Get Found Everywhere` | `{tagline}` |
+| `+1 342223434` | `{phone}` |
+| `G-TT58X7D8RV` | `{gaId}` (if provided) |
+| `GTM-M4RMX5TG` | `{gtmId}` (if provided) |
+
+---
+
+### Configuration Options
+
+When calling the setup API, you can provide these fields:
+
+#### Required Fields
+| Field | Description | Example |
+|-------|-------------|---------|
+| `brandName` | Your brand/company name | `Modern Longevity` |
+| `domain` | Your domain (without www) | `modernlongevity.io` |
+| `email` | Primary contact email | `contact@modernlongevity.io` |
+
+#### Optional Fields
+| Field | Description | Default |
+|-------|-------------|---------|
+| `tagline` | Short catchphrase | — |
+| `description` | Site description (1-2 sentences) | — |
+| `footerTagline` | Footer description text | — |
+| `contactEmail` | Public contact email | `contact@{domain}` |
+| `privacyEmail` | Privacy-related email | `privacy@{domain}` |
+| `phone` | Contact phone number | — |
+| `addressLine1` | Address line 1 | — |
+| `addressLine2` | Address line 2 | — |
+| `addressLine3` | Address line 3 | — |
+| `primaryColor` | Primary brand color (hex) | `#000000` |
+| `accentColor` | Accent color (hex) | `#0066ff` |
+| `gaId` | Google Analytics ID | — |
+| `gtmId` | Google Tag Manager ID | — |
+| `twitterHandle` | Twitter handle (without @) | Auto-generated from brand |
+| `linkedinCompany` | LinkedIn company slug | Auto-generated from brand |
+
+---
+
+### Manual Verification After Setup
+
+After running the setup, verify these key areas:
+
+1. **Browser Tab** - Check page titles show your brand name
+2. **Footer** - Verify brand name and contact info
+3. **Contact Forms** - Check email addresses in "Have a Question?" section
+4. **Legal Pages** - Review Privacy Policy, Terms, and Shipping pages
+5. **Structured Data** - Use Google's Rich Results Test to verify JSON-LD
+6. **API Routes** - Test form submissions to confirm emails are correct
+
+---
+
 ## API Reference
 
 Once your site is deployed, you can create blog posts via API.
@@ -619,3 +821,887 @@ After your site is live:
 3. **Set up analytics** - Create Google Analytics property
 4. **Update legal pages** - Edit privacy policy and terms
 5. **Add your logo** - Replace `public/favicon.svg`
+
+---
+---
+
+# AUTONOMOUS AGENT (OpenClaw / BlogCloner) - Complete Orchestration Guide
+
+This section is written for an autonomous AI agent that needs to set up a full blog clone **without human intervention**. Every API call, terminal command, wait time, verification step, and error-handling path is documented.
+
+---
+
+## Agent Overview
+
+**Agent Name:** BlogCloner  
+**Purpose:** Clone the template repo, brand it, provision infrastructure, deploy, and verify  
+**Runtime:** ~15-25 minutes end-to-end (mostly waiting for Elestio provisioning)  
+**Template Source Repo:** `doubleclicker-1` (the GitHub repo containing this file)
+
+---
+
+## Input Data the Agent Receives
+
+The agent needs these values to start. They come from the user or from an upstream orchestrator agent.
+
+### Required Inputs
+
+| Field | Type | Example | Description |
+|-------|------|---------|-------------|
+| `brandName` | string | `Modern Longevity` | The brand/company name |
+| `domain` | string | `modernlongevity.io` | Domain without www |
+| `email` | string | `contact@modernlongevity.io` | Primary contact email (receives form notifications) |
+| `nicheDescription` | string | `Science-backed longevity research` | Brief niche description for tagline/description |
+
+### Optional Inputs (Agent can derive defaults)
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `tagline` | string | Derived from nicheDescription | Short catchphrase |
+| `description` | string | Derived from nicheDescription | 1-2 sentence site description |
+| `contactEmail` | string | `contact@{domain}` | Public contact email |
+| `privacyEmail` | string | `privacy@{domain}` | Privacy page email |
+| `primaryColor` | string | `#000000` | Hex color |
+| `accentColor` | string | `#0066ff` | Hex color |
+| `githubOrg` | string | User's GitHub account | Where to create the repo |
+| `elestioRegion` | string | `fsn1` (Hetzner Falkenstein) | Elestio datacenter region |
+| `vercelTeam` | string | User's default team | Vercel team/account |
+
+### Credentials the Agent Needs Access To
+
+| Credential | Where Stored | Format |
+|------------|-------------|--------|
+| GitHub Personal Access Token | Agent secrets / env | `ghp_xxxxxxxxxxxx` |
+| Elestio API Key | Agent secrets / env | Bearer token |
+| Vercel API Token | Agent secrets / env | `Bearer xxxxx` |
+| Resend API Key | Agent secrets / env | `re_xxxxxxxxxxxx` |
+
+---
+
+## Complete Orchestration Workflow
+
+### High-Level Step Sequence
+
+```
+PHASE 1: CODE SETUP (Steps 1-3)       ~2 min
+  1. Create GitHub repo
+  2. Clone template & push files
+  3. Run branding find/replace
+
+PHASE 2: INFRASTRUCTURE (Steps 4-7)   ~10-15 min
+  4. Create Elestio Supabase instance
+  5. Poll until Elestio is ready
+  6. Extract Supabase credentials
+  7. Run database migrations via SQL
+
+PHASE 3: DEPLOYMENT (Steps 8-11)      ~3-5 min
+  8. Create Vercel project from GitHub repo
+  9. Set environment variables on Vercel
+  10. Trigger deployment
+  11. Add custom domain to Vercel
+
+PHASE 4: VERIFICATION (Step 12)       ~1 min
+  12. Verify site is live and functional
+```
+
+---
+
+### Step 1: Create GitHub Repository
+
+**API:** GitHub REST API  
+**Endpoint:** `POST https://api.github.com/user/repos`
+
+```bash
+curl -X POST https://api.github.com/user/repos \
+  -H "Authorization: token {GITHUB_TOKEN}" \
+  -H "Accept: application/vnd.github.v3+json" \
+  -d '{
+    "name": "{repo-name}",
+    "description": "{brandName} - {nicheDescription}",
+    "private": true,
+    "auto_init": false
+  }'
+```
+
+**Derive `repo-name`:** Kebab-case the brand name: `Modern Longevity` -> `modern-longevity`
+
+**Success Response:** HTTP 201
+
+```json
+{
+  "full_name": "username/modern-longevity",
+  "clone_url": "https://github.com/username/modern-longevity.git",
+  "html_url": "https://github.com/username/modern-longevity"
+}
+```
+
+**Extract & Store:**
+- `repoFullName` = response `full_name`
+- `repoCloneUrl` = response `clone_url`
+
+**Error Handling:**
+- HTTP 422: Repo name already exists. Append a number (e.g., `modern-longevity-2`) and retry.
+- HTTP 401: Token invalid. Abort and report credential error.
+
+---
+
+### Step 2: Clone Template & Push Files
+
+**Method:** Terminal commands  
+**Working Directory:** A temp directory
+
+```bash
+# Clone the template
+cd /tmp
+git clone https://github.com/{TEMPLATE_OWNER}/doubleclicker-1.git {repo-name}
+cd {repo-name}
+
+# Remove template-only files
+rm -f create-new-blog.sh
+rm -f .template-marker
+
+# Re-initialize git pointing to the NEW repo
+rm -rf .git
+git init
+git remote add origin https://{GITHUB_TOKEN}@github.com/{repoFullName}.git
+git add .
+git commit -m "Initial commit from template"
+git branch -M main
+git push -u origin main
+```
+
+**Verification:** Check that `git push` exits with code 0.
+
+**Error Handling:**
+- If push fails, check that repo was created correctly in Step 1.
+- If template clone fails, verify template repo URL and access.
+
+---
+
+### Step 3: Run Branding Find/Replace
+
+**Method:** Terminal commands (direct find/replace on files using `sed` or `node`)  
+**Alternative:** Start dev server and call the setup API (slower, but uses the same logic as the wizard)
+
+#### Option A: Direct File Replacement (Recommended for Agent - Faster)
+
+The agent should perform the same replacements that `app/api/setup/apply/route.ts` does. Run these `sed` commands from the repo root:
+
+**IMPORTANT: Order matters. More-specific patterns must be replaced before less-specific ones.**
+
+```bash
+cd /tmp/{repo-name}
+
+# --- Brand Name Replacements (specific first) ---
+# 1. "SEWO Editorial Team" -> "{brandName} Editorial Team"
+find . -type f \( -name "*.tsx" -o -name "*.ts" -o -name "*.json" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/SEWO Editorial Team/{brandName} Editorial Team/g' {} +
+
+# 2. "Your Friends at SEWO" -> "{brandName}"
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/Your Friends at SEWO/{brandName}/g' {} +
+
+# 3. "SEWO" -> "{brandName}" (catch-all)
+find . -type f \( -name "*.tsx" -o -name "*.ts" -o -name "*.json" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/SEWO/{brandName}/g' {} +
+
+# --- Domain Replacements (specific first) ---
+# 4. "https://www.sewo.io" -> "https://www.{domain}"
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's|https://www\.sewo\.io|https://www.{domain}|g' {} +
+
+# 5. "https://sewo.io" -> "https://{domain}"
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's|https://sewo\.io|https://{domain}|g' {} +
+
+# 6. "www.sewo.io" -> "www.{domain}"
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/www\.sewo\.io/www.{domain}/g' {} +
+
+# 7. "sewo.io" -> "{domain}"
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/sewo\.io/{domain}/g' {} +
+
+# --- Email Replacements ---
+# 8. stuartr@sewo.io -> {email}
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/stuartr@sewo\.io/{email}/g' {} +
+
+# 9. contact@sewo.io -> {contactEmail}
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/contact@sewo\.io/{contactEmail}/g' {} +
+
+# 10. privacy@sewo.io -> {privacyEmail}
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/privacy@sewo\.io/{privacyEmail}/g' {} +
+
+# 11. hi@sewo.io -> {contactEmail}
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/hi@sewo\.io/{contactEmail}/g' {} +
+
+# --- Package Name ---
+# 12. "sewo-website" -> "{kebab-brand-name}-website"
+sed -i '' 's/"sewo-website"/"{kebab-brand-name}-website"/g' package.json
+
+# --- Tagline (if provided) ---
+find . -type f \( -name "*.tsx" -o -name "*.ts" \) \
+  -not -path "./node_modules/*" -not -path "./.git/*" \
+  -exec sed -i '' 's/Get Found Everywhere/{tagline}/g' {} +
+```
+
+**Note for Linux agents:** Remove the `''` after `-i` in `sed` commands (macOS requires it, Linux does not).
+
+#### Option B: Call the Setup API (Alternative)
+
+```bash
+cd /tmp/{repo-name}
+npm install
+npm run dev &
+sleep 10  # Wait for dev server to start
+
+curl -X POST http://localhost:3003/api/setup/apply \
+  -H "Content-Type: application/json" \
+  -d '{
+    "brandName": "{brandName}",
+    "domain": "{domain}",
+    "tagline": "{tagline}",
+    "description": "{description}",
+    "footerTagline": "{footerTagline}",
+    "email": "{email}",
+    "contactEmail": "{contactEmail}",
+    "privacyEmail": "{privacyEmail}",
+    "primaryColor": "{primaryColor}",
+    "accentColor": "{accentColor}"
+  }'
+
+# Kill the dev server
+kill %1
+```
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully updated 22 files with 147 replacements.",
+  "filesUpdated": 22,
+  "totalReplacements": 147,
+  "updatedFiles": ["package.json (1 changes)", "middleware.ts (2 changes)", ...]
+}
+```
+
+#### After Branding: Commit & Push
+
+```bash
+cd /tmp/{repo-name}
+git add .
+git commit -m "Configure branding for {brandName}"
+git push origin main
+```
+
+---
+
+### Step 4: Create Elestio Supabase Instance
+
+**API:** Elestio REST API  
+**Docs:** https://docs.elest.io/books/elestio-api  
+**Endpoint:** `POST https://api.elest.io/api/v1/services`
+
+```bash
+curl -X POST https://api.elest.io/api/v1/services \
+  -H "Authorization: Bearer {ELESTIO_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "{elestio_project_id}",
+    "serverName": "{kebab-brand-name}-supabase",
+    "serverType": "SMALL-1C-2G",
+    "templateId": 68,
+    "provider": "hetzner",
+    "datacenter": "fsn1",
+    "support_level": "level1",
+    "admin_email": "{email}",
+    "app_password": "{generate-random-password}"
+  }'
+```
+
+**Notes:**
+- `templateId: 68` is Supabase on Elestio (verify this in Elestio docs - may change)
+- `serverType: "SMALL-1C-2G"` is the cheapest option (~$32/month)
+- `provider: "hetzner"` and `datacenter: "fsn1"` are cheapest. Alternatives: `"netcup"`, `"aws"`, `"gce"`
+- Store the `app_password` - you'll need it to access Supabase Studio
+
+**Success Response:** HTTP 200/201
+
+```json
+{
+  "id": "service-uuid-here",
+  "serverName": "modern-longevity-supabase",
+  "status": "creating",
+  "cname": "supabase-xxxxx-uxxxxx.vm.elestio.app"
+}
+```
+
+**Extract & Store:**
+- `elestioServiceId` = response `id`
+- `supabaseCname` = response `cname`
+
+**Error Handling:**
+- HTTP 402: Payment required. Abort and notify user.
+- HTTP 400: Invalid parameters. Check templateId and serverType.
+
+---
+
+### Step 5: Poll Until Elestio Is Ready
+
+**Endpoint:** `GET https://api.elest.io/api/v1/services/{elestioServiceId}`
+
+```bash
+curl -X GET "https://api.elest.io/api/v1/services/{elestioServiceId}" \
+  -H "Authorization: Bearer {ELESTIO_API_KEY}"
+```
+
+**Poll Strategy:**
+- Check every 30 seconds
+- Maximum wait: 15 minutes (30 polls)
+- Look for `status` field
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| `creating` | Still provisioning | Keep polling |
+| `running` | Ready to use | Proceed to Step 6 |
+| `error` | Provisioning failed | Abort, report error |
+
+**After status = `running`**, wait an additional 60 seconds for all Supabase internal services to stabilize.
+
+---
+
+### Step 6: Extract Supabase Credentials from Elestio
+
+**Endpoint:** `GET https://api.elest.io/api/v1/services/{elestioServiceId}`
+
+The service details response includes environment variables. Look for:
+
+```json
+{
+  "env": {
+    "ANON_KEY": "eyJhbGciOiJIUzI1NiI...",
+    "SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiI...",
+    "SITE_URL": "https://supabase-xxxxx-uxxxxx.vm.elestio.app",
+    "POSTGRES_PASSWORD": "xxxxx"
+  }
+}
+```
+
+**Alternative:** If env vars are not in the main response, try:  
+`GET https://api.elest.io/api/v1/services/{elestioServiceId}/config`
+
+**Extract & Store:**
+
+| Variable | Source | Store As |
+|----------|--------|----------|
+| `ANON_KEY` | Elestio env | `supabaseAnonKey` |
+| `SERVICE_ROLE_KEY` | Elestio env | `supabaseServiceRoleKey` |
+| `SITE_URL` or `cname` | Elestio env/response | `supabaseUrl` (format: `https://{cname}`) |
+
+**The Supabase REST API URL is:**  
+`https://{supabaseCname}/rest/v1/`
+
+**The Supabase Studio URL is:**  
+`https://{supabaseCname}` (login: `root` / `{app_password}` from Step 4)
+
+---
+
+### Step 7: Run Database Migrations
+
+**Method:** Execute SQL via Supabase REST API (using the service role key)
+
+The complete SQL is in `supabase/COMPLETE_SETUP.sql`. The agent should read this file and execute it.
+
+**Endpoint:** `POST https://{supabaseCname}/rest/v1/rpc/` won't work for DDL. Instead, use the Supabase Management API or the SQL Editor API.
+
+**Recommended: Use the Supabase SQL endpoint directly:**
+
+```bash
+curl -X POST "https://{supabaseCname}/pg/query" \
+  -H "Authorization: Bearer {supabaseServiceRoleKey}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "{CONTENTS_OF_COMPLETE_SETUP_SQL}"
+  }'
+```
+
+**Alternative: If the above endpoint isn't available, use psql via terminal:**
+
+The Elestio service provides PostgreSQL connection details:
+- Host: `{supabaseCname}` (or a dedicated postgres hostname)
+- Port: `5432` (or `6543` for connection pooler)
+- Database: `postgres`
+- User: `postgres`
+- Password: `{POSTGRES_PASSWORD}` from Elestio env
+
+```bash
+PGPASSWORD="{POSTGRES_PASSWORD}" psql \
+  -h {supabaseCname} \
+  -p 5432 \
+  -U postgres \
+  -d postgres \
+  -f /tmp/{repo-name}/supabase/COMPLETE_SETUP.sql
+```
+
+**What the SQL creates:**
+
+| Table | Purpose |
+|-------|---------|
+| `homepage_content` | CMS content for homepage |
+| `site_posts` | Blog posts (main table) |
+| `blog_posts` | Legacy compatibility |
+| `newsletter_subscribers` | Email subscribers |
+| `lead_captures` | Contact form submissions |
+| `cta_conversions` | CTA tracking |
+| `authors` | Blog authors |
+| `landing_pages` | Custom landing pages |
+| `apply_to_work_with_us` | Application form submissions |
+| `admin_users` | Admin login accounts |
+| `admin_sessions` | Admin session tokens |
+
+It also:
+- Enables Row Level Security on all tables
+- Creates RLS policies (public read for posts, service role for writes)
+- Creates `images` storage bucket (public read)
+- Creates default admin user: `admin` / `admin123`
+
+**Verification:** Query to confirm tables exist:
+
+```bash
+curl "https://{supabaseCname}/rest/v1/admin_users?select=username&limit=1" \
+  -H "apikey: {supabaseServiceRoleKey}" \
+  -H "Authorization: Bearer {supabaseServiceRoleKey}"
+```
+
+Expected response: `[{"username":"admin"}]`
+
+---
+
+### Step 8: Create Vercel Project
+
+**API:** Vercel REST API  
+**Endpoint:** `POST https://api.vercel.com/v10/projects`
+
+```bash
+curl -X POST "https://api.vercel.com/v10/projects" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "{kebab-brand-name}",
+    "framework": "nextjs",
+    "gitRepository": {
+      "type": "github",
+      "repo": "{repoFullName}"
+    },
+    "buildCommand": "next build",
+    "outputDirectory": ".next",
+    "installCommand": "npm install"
+  }'
+```
+
+**Success Response:** HTTP 200
+
+```json
+{
+  "id": "prj_xxxxxxxxxxxx",
+  "name": "modern-longevity",
+  "link": {
+    "type": "github",
+    "repo": "username/modern-longevity"
+  }
+}
+```
+
+**Extract & Store:**
+- `vercelProjectId` = response `id`
+- `vercelProjectName` = response `name`
+
+**Error Handling:**
+- HTTP 409: Project name already exists. Append number and retry.
+- HTTP 403: No access to GitHub repo. Check GitHub integration in Vercel.
+
+---
+
+### Step 9: Set Environment Variables on Vercel
+
+**Endpoint:** `POST https://api.vercel.com/v10/projects/{vercelProjectId}/env`
+
+Set each variable individually:
+
+```bash
+# 1. Supabase URL
+curl -X POST "https://api.vercel.com/v10/projects/{vercelProjectId}/env" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "NEXT_PUBLIC_SUPABASE_URL",
+    "value": "{supabaseUrl}",
+    "type": "plain",
+    "target": ["production", "preview", "development"]
+  }'
+
+# 2. Supabase Anon Key
+curl -X POST "https://api.vercel.com/v10/projects/{vercelProjectId}/env" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "value": "{supabaseAnonKey}",
+    "type": "plain",
+    "target": ["production", "preview", "development"]
+  }'
+
+# 3. Supabase Service Role Key (secret!)
+curl -X POST "https://api.vercel.com/v10/projects/{vercelProjectId}/env" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "SUPABASE_SERVICE_ROLE_KEY",
+    "value": "{supabaseServiceRoleKey}",
+    "type": "encrypted",
+    "target": ["production", "preview", "development"]
+  }'
+
+# 4. Site URL
+curl -X POST "https://api.vercel.com/v10/projects/{vercelProjectId}/env" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "NEXT_PUBLIC_SITE_URL",
+    "value": "https://www.{domain}",
+    "type": "plain",
+    "target": ["production", "preview", "development"]
+  }'
+
+# 5. Resend API Key
+curl -X POST "https://api.vercel.com/v10/projects/{vercelProjectId}/env" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "RESEND_API_KEY",
+    "value": "{RESEND_API_KEY}",
+    "type": "encrypted",
+    "target": ["production", "preview", "development"]
+  }'
+```
+
+**All 5 Environment Variables Required:**
+
+| Key | Value | Type |
+|-----|-------|------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://{supabaseCname}` | `plain` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJ...` | `plain` |
+| `SUPABASE_SERVICE_ROLE_KEY` | `eyJ...` | `encrypted` |
+| `NEXT_PUBLIC_SITE_URL` | `https://www.{domain}` | `plain` |
+| `RESEND_API_KEY` | `re_...` | `encrypted` |
+
+---
+
+### Step 10: Trigger Deployment
+
+**Endpoint:** `POST https://api.vercel.com/v13/deployments`
+
+```bash
+curl -X POST "https://api.vercel.com/v13/deployments" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "{kebab-brand-name}",
+    "project": "{vercelProjectId}",
+    "gitSource": {
+      "type": "github",
+      "ref": "main",
+      "repoId": "{github-repo-id}"
+    },
+    "target": "production"
+  }'
+```
+
+**Alternative: Just push a commit to trigger auto-deploy** (if Vercel is connected to GitHub, any push to `main` triggers a deployment automatically).
+
+```bash
+cd /tmp/{repo-name}
+git commit --allow-empty -m "Trigger deployment"
+git push origin main
+```
+
+**Poll Deployment Status:**
+
+```bash
+curl "https://api.vercel.com/v13/deployments?projectId={vercelProjectId}&limit=1" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}"
+```
+
+**Poll Strategy:**
+- Check every 15 seconds
+- Maximum wait: 5 minutes (20 polls)
+- Look for `readyState` field
+
+| readyState | Meaning | Action |
+|------------|---------|--------|
+| `QUEUED` | Waiting to build | Keep polling |
+| `BUILDING` | Building | Keep polling |
+| `READY` | Deployed successfully | Proceed to Step 11 |
+| `ERROR` | Build failed | Check build logs, abort |
+| `CANCELED` | Deployment canceled | Retry |
+
+**Extract & Store:**
+- `vercelDeploymentUrl` = response `url` (e.g., `modern-longevity-xxxxx.vercel.app`)
+
+---
+
+### Step 11: Add Custom Domain to Vercel
+
+**Endpoint:** `POST https://api.vercel.com/v10/projects/{vercelProjectId}/domains`
+
+```bash
+# Add www subdomain (primary)
+curl -X POST "https://api.vercel.com/v10/projects/{vercelProjectId}/domains" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "www.{domain}"
+  }'
+
+# Add root domain (redirect to www)
+curl -X POST "https://api.vercel.com/v10/projects/{vercelProjectId}/domains" \
+  -H "Authorization: Bearer {VERCEL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "{domain}",
+    "redirect": "www.{domain}",
+    "redirectStatusCode": 308
+  }'
+```
+
+**DNS Records Required (output to user/upstream agent):**
+
+The user (or DNS management agent) must add these DNS records:
+
+| Type | Name | Value | Purpose |
+|------|------|-------|---------|
+| `A` | `@` | `76.76.21.21` | Root domain to Vercel |
+| `CNAME` | `www` | `cname.vercel-dns.com` | www subdomain to Vercel |
+
+**Note:** DNS propagation takes 1-60 minutes typically, up to 48 hours in rare cases.
+
+---
+
+### Step 12: Verification
+
+After deployment, verify the site is functional.
+
+#### 12.1 Check Site Is Live
+
+```bash
+# Check homepage returns 200
+curl -s -o /dev/null -w "%{http_code}" "https://{vercelDeploymentUrl}"
+# Expected: 200
+
+# Check blog page
+curl -s -o /dev/null -w "%{http_code}" "https://{vercelDeploymentUrl}/blog"
+# Expected: 200
+
+# Check admin page
+curl -s -o /dev/null -w "%{http_code}" "https://{vercelDeploymentUrl}/admin"
+# Expected: 200
+
+# Check API endpoint
+curl -s -o /dev/null -w "%{http_code}" "https://{vercelDeploymentUrl}/api/blog"
+# Expected: 200
+
+# Check robots.txt
+curl -s "https://{vercelDeploymentUrl}/robots.txt"
+# Should contain sitemap URLs with the correct domain
+```
+
+#### 12.2 Check Database Connection
+
+```bash
+# Try fetching homepage content (should return empty object or default content)
+curl -s "https://{vercelDeploymentUrl}/api/homepage"
+# Expected: JSON object (even if empty)
+```
+
+#### 12.3 Check Branding Was Applied
+
+```bash
+# Fetch homepage and check title
+curl -s "https://{vercelDeploymentUrl}" | grep -o '<title>[^<]*</title>'
+# Should contain {brandName}, NOT "SEWO"
+
+# Check for old branding (should return nothing)
+curl -s "https://{vercelDeploymentUrl}" | grep -i "sewo"
+# Should return empty (no matches)
+```
+
+---
+
+## Output Data (What the Agent Returns)
+
+When BlogCloner completes, it should return this data to the orchestrator or store it:
+
+```json
+{
+  "status": "success",
+  "brandName": "Modern Longevity",
+  "domain": "modernlongevity.io",
+  
+  "github": {
+    "repoFullName": "username/modern-longevity",
+    "repoUrl": "https://github.com/username/modern-longevity",
+    "branch": "main"
+  },
+  
+  "supabase": {
+    "elestioServiceId": "service-uuid",
+    "studioUrl": "https://supabase-xxxxx-uxxxxx.vm.elestio.app",
+    "apiUrl": "https://supabase-xxxxx-uxxxxx.vm.elestio.app",
+    "anonKey": "eyJ...",
+    "serviceRoleKey": "eyJ...",
+    "adminCredentials": {
+      "username": "admin",
+      "password": "admin123"
+    }
+  },
+  
+  "vercel": {
+    "projectId": "prj_xxxxxxxxxxxx",
+    "projectName": "modern-longevity",
+    "deploymentUrl": "modern-longevity-xxxxx.vercel.app",
+    "productionUrl": "https://www.modernlongevity.io"
+  },
+  
+  "endpoints": {
+    "site": "https://www.modernlongevity.io",
+    "admin": "https://www.modernlongevity.io/admin",
+    "blogApi": "https://www.modernlongevity.io/api/blog",
+    "leadCapture": "https://www.modernlongevity.io/api/lead-capture"
+  },
+  
+  "dnsRecordsNeeded": [
+    {"type": "A", "name": "@", "value": "76.76.21.21"},
+    {"type": "CNAME", "name": "www", "value": "cname.vercel-dns.com"}
+  ],
+  
+  "resendDomainVerification": "Pending - domain needs to be added in Resend dashboard"
+}
+```
+
+---
+
+## Error Recovery Playbook
+
+| Error | Detection | Recovery |
+|-------|-----------|----------|
+| GitHub repo name taken | HTTP 422 on create | Append `-2`, `-3`, etc. and retry |
+| Elestio provisioning stuck | Status still `creating` after 15 min | Check Elestio dashboard, may need manual intervention |
+| Elestio provisioning failed | Status = `error` | Delete service, recreate with different region |
+| Database migration fails | SQL error response | Check SQL syntax, verify Supabase is fully running, retry after 60s |
+| Vercel build fails | `readyState: ERROR` | Fetch build logs: `GET /v13/deployments/{id}/events`. Common fix: missing env vars |
+| Domain already on Vercel | HTTP 409 on domain add | Remove from old project first, or use different domain |
+| DNS not propagated | Site returns Vercel 404 | Wait longer (up to 48h). Check DNS with `dig www.{domain}` |
+| Branding not replaced | `grep -r "SEWO"` finds matches | Re-run branding step, check file permissions |
+
+---
+
+## Resend Domain Setup (Post-Deployment)
+
+This step is typically manual or handled by a separate DNS/email agent:
+
+1. **Add domain in Resend:**
+   ```
+   POST https://api.resend.com/domains
+   Authorization: Bearer {RESEND_API_KEY}
+   {"name": "{domain}"}
+   ```
+
+2. **Get DNS records from Resend:**
+   ```
+   GET https://api.resend.com/domains/{domain_id}
+   ```
+
+3. **Add the provided DNS records** (SPF, DKIM, DMARC)
+
+4. **Verify domain in Resend:**
+   ```
+   POST https://api.resend.com/domains/{domain_id}/verify
+   ```
+
+Until Resend domain is verified, emails send from `onboarding@resend.dev` (functional but not branded).
+
+---
+
+## Blog API Reference (For Content Agents)
+
+Once the site is live, content agents can publish posts:
+
+### Create/Update Post
+
+```bash
+POST https://www.{domain}/api/blog
+Content-Type: application/json
+
+{
+  "postId": "unique-external-id",
+  "title": "Post Title",
+  "content": "<h2>HTML content</h2><p>Goes here</p>",
+  "slug": "post-title-slug",
+  "status": "published",
+  "category": "Category Name",
+  "tags": ["tag1", "tag2"],
+  "author": "Author Name",
+  "featured_image": "https://example.com/image.jpg",
+  "meta_title": "SEO Title | {brandName}",
+  "meta_description": "SEO description under 160 chars",
+  "focus_keyword": "primary keyword"
+}
+```
+
+### Delete/Unpublish Post
+
+```bash
+POST https://www.{domain}/api/blog
+Content-Type: application/json
+
+{
+  "postId": "unique-external-id",
+  "status": "draft"
+}
+```
+
+### List Posts
+
+```bash
+GET https://www.{domain}/api/blog?limit=50
+```
+
+---
+
+## Architecture Notes for Agent Developers
+
+- **Framework:** Next.js 14 (App Router)
+- **Dev server port:** 3003 (configured in `package.json`: `"dev": "next dev -p 3003"`)
+- **Database:** PostgreSQL via Supabase (self-hosted on Elestio)
+- **ORM:** None - uses Supabase JS client directly
+- **Email:** Resend (API-based, no SMTP)
+- **Hosting:** Vercel (serverless)
+- **Image hosting:** Supabase Storage (bucket: `images`, public read)
+- **Auth:** Custom bcrypt-based admin auth (not Supabase Auth)
+- **Admin credentials:** `admin` / `admin123` (bcrypt hash in DB)
+- **No API authentication on blog endpoints** - POST to `/api/blog` is open (secured by obscurity + rate limiting only)

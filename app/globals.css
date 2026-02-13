@@ -139,6 +139,22 @@ img {
   transform: scale(1.02);
 }
 
+.logo-image-wrap {
+  display: inline-block;
+  max-height: 40px;
+  line-height: 0;
+}
+
+.logo-image-wrap .logo-image,
+.logo img {
+  height: auto;
+  max-height: 40px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
 .nav-links {
   display: flex;
   gap: var(--spacing-lg);
@@ -1718,6 +1734,64 @@ img {
 .quiz-cta-button:hover {
   background: var(--color-bg);
   color: var(--color-primary);
+}
+
+/* About Section (basic blog homepage) */
+.about-section {
+  padding: var(--spacing-4xl) var(--spacing-2xl);
+}
+
+.about-section .container {
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.about-section-inner {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--spacing-4xl);
+  align-items: center;
+}
+
+.about-section-image {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.about-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.about-section-title {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.about-section-description {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .about-section-inner {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2xl);
+  }
+
+  .about-section-image {
+    order: 1;
+  }
+
+  .about-section-content {
+    order: 0;
+  }
 }
 
 /* Not Traditional SEO Section */

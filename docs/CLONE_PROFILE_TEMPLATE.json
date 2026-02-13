@@ -1,0 +1,16 @@
+{
+  "username": "examplebrand",
+  "brandName": "Example Brand",
+  "domain": "examplebrand.com",
+  "email": "hello@examplebrand.com",
+  "contactEmail": "contact@examplebrand.com",
+  "privacyEmail": "privacy@examplebrand.com",
+  "phone": "+1 555-123-4567",
+  "tagline": "Trusted Guidance for Better Decisions",
+  "description": "Practical, evidence-based content that helps readers make better decisions with confidence.",
+  "footerTagline": "Practical, evidence-based insights for everyday decisions.",
+  "primaryColor": "#1e3a5f",
+  "accentColor": "#14b8a6",
+  "gaId": "",
+  "gtmId": ""
+}

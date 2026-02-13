@@ -19,6 +19,9 @@ interface Config {
   accentColor: string
   gaId: string
   gtmId: string
+  // Social media URLs (optional)
+  twitterHandle: string
+  linkedinCompany: string
 }
 
 const defaultValues = {
@@ -36,27 +39,53 @@ const defaultValues = {
   oldGtmId: 'GTM-M4RMX5TG',
   oldPrimaryColor: '#000000',
   oldAccentColor: '#0066ff',
+  oldTwitter: 'sewo_io',
+  oldLinkedin: 'sewo',
 }
 
 const filesToUpdate = [
+  // Core files
   'package.json',
-  'components/SiteHeader.tsx',
-  'components/Footer.tsx',
-  'components/Analytics.tsx',
+  'middleware.ts',
+  
+  // App pages
   'app/layout.tsx',
+  'app/page.tsx',
+  'app/HomePageClient.tsx',
+  'app/robots.ts',
+  'app/sitemap-pages.xml/route.ts',
+  
+  // Legal/Info pages
   'app/privacy/page.tsx',
   'app/terms/page.tsx',
   'app/shipping/page.tsx',
   'app/about/page.tsx',
+  
+  // Contact pages
+  'app/contact/page.tsx',
+  'app/contact/layout.tsx',
+  
+  // Blog pages
+  'app/blog/page.tsx',
+  'app/blog/[slug]/page.tsx',
+  
+  // Admin pages
+  'app/admin/homepage/page.tsx',
+  
+  // Components
+  'components/SiteHeader.tsx',
+  'components/Footer.tsx',
+  'components/Analytics.tsx',
+  'components/StructuredData.tsx',
+  'components/ContactForm.tsx',
+  
+  // API routes
   'app/api/lead-capture/route.ts',
   'app/api/apply-to-work-with-us/route.ts',
   'app/api/send-questions/route.ts',
   'app/api/homepage/route.ts',
   'app/api/blog/route.ts',
   'app/api/blog/[id]/route.ts',
-  'app/robots.ts',
-  'app/sitemap-pages.xml/route.ts',
-  'middleware.ts',
 ]
 
 export async function POST(request: Request) {
@@ -83,19 +112,28 @@ export async function POST(request: Request) {
     }
     let filesUpdated = 0
     let totalReplacements = 0
+    const updatedFilesList: string[] = []
+    const skippedFiles: string[] = []
 
     // Build replacement pairs
     const replacements: [RegExp, string][] = [
-      // Brand name
+      // Brand name variations (order matters - more specific first)
+      [/SEWO Editorial Team/g, `${config.brandName} Editorial Team`],
+      [/Your Friends at SEWO/g, config.brandName],
+      [/SEWO-v3-FIXED/g, `${config.brandName.toUpperCase().replace(/\s+/g, '-')}-v3-FIXED`],
       [/SEWO/g, config.brandName],
       
-      // Domain variations
-      [/sewo\.io/g, config.domain],
-      [/www\.sewo\.io/g, `www.${config.domain}`],
+      // Domain variations (order matters - more specific first)
       [/https:\/\/www\.sewo\.io/g, `https://www.${config.domain}`],
       [/https:\/\/sewo\.io/g, `https://${config.domain}`],
+      [/www\.sewo\.io/g, `www.${config.domain}`],
+      [/sewo\.io/g, config.domain],
       
-      // Emails
+      // Social links (use provided handles or generate from brand name)
+      [/twitter\.com\/sewo_io/g, `twitter.com/${config.twitterHandle || config.brandName.toLowerCase().replace(/\s+/g, '')}`],
+      [/linkedin\.com\/company\/sewo/g, `linkedin.com/company/${config.linkedinCompany || config.brandName.toLowerCase().replace(/\s+/g, '-')}`],
+      
+      // Emails (order matters - more specific first)
       [/stuartr@sewo\.io/g, config.email],
       [/contact@sewo\.io/g, config.contactEmail || `contact@${config.domain}`],
       [/privacy@sewo\.io/g, config.privacyEmail || `privacy@${config.domain}`],
@@ -137,6 +175,7 @@ export async function POST(request: Request) {
       const fullPath = path.join(projectRoot, filePath)
       
       if (!fs.existsSync(fullPath)) {
+        skippedFiles.push(filePath)
         continue
       }
 
@@ -155,6 +194,7 @@ export async function POST(request: Request) {
         fs.writeFileSync(fullPath, content, 'utf8')
         filesUpdated++
         totalReplacements += fileReplacements
+        updatedFilesList.push(`${filePath} (${fileReplacements} changes)`)
       }
     }
 
@@ -239,6 +279,8 @@ NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
       message: `Successfully updated ${filesUpdated} files with ${totalReplacements} replacements.`,
       filesUpdated,
       totalReplacements,
+      updatedFiles: updatedFilesList,
+      skippedFiles: skippedFiles.length > 0 ? skippedFiles : undefined,
     })
 
   } catch (error) {

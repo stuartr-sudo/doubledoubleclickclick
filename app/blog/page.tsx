@@ -6,22 +6,21 @@ import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 import SiteHeader from '@/components/SiteHeader'
 
+const blogTitle = process.env.NEXT_PUBLIC_BLOG_TITLE || 'Blog'
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Site'
+
 export const metadata: Metadata = {
-  title: 'Blog | SEWO - Get Found Everywhere',
-  description: 'Expert insights on LLM ranking, AI search optimization, and making your brand the answer AI suggests.',
-  alternates: {
-    canonical: 'https://www.sewo.io/blog',
-  },
+  title: `${blogTitle} | ${siteName}`,
+  description: 'Latest articles and updates.',
   openGraph: {
-    title: 'Blog | SEWO',
-    description: 'Expert insights on LLM ranking, AI search optimization, and making your brand the answer AI suggests.',
+    title: `${blogTitle} | ${siteName}`,
+    description: 'Latest articles and updates.',
     type: 'website',
-    url: 'https://www.sewo.io/blog',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Blog | SEWO',
-    description: 'Expert insights on LLM ranking and AI search optimization.',
+    title: `${blogTitle} | ${siteName}`,
+    description: 'Latest articles and updates.',
   },
 }
 
@@ -70,7 +69,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
         {/* Page Title */}
       <section className="blog-page-header" style={{ padding: 'var(--spacing-sm) 0', marginBottom: '0', background: 'var(--color-bg)' }}>
         <div className="container">
-          <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-sm)', textAlign: 'center' }}>The AI Field Guide</h1>
+          <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-sm)', textAlign: 'center' }}>{process.env.NEXT_PUBLIC_BLOG_TITLE || 'Blog'}</h1>
         </div>
       </section>
 
