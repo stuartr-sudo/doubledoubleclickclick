@@ -450,7 +450,7 @@ export default function SetupAutoPage() {
           audience,
           region,
           monetization,
-          categoryLabel: niche.category || '',
+          categoryLabel: category?.label || '',
           domain: selectedDomain || '',
         }),
       })
