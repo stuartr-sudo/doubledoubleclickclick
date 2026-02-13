@@ -253,6 +253,7 @@ export default function SetupAutoPage() {
   const [productUrl, setProductUrl] = useState('')
   const [affiliateLink, setAffiliateLink] = useState('')
   const [isAffiliate, setIsAffiliate] = useState(false)
+  const [additionalUrls, setAdditionalUrls] = useState('')
   const [seedKeywords, setSeedKeywords] = useState('')
   const [competitorDomains, setCompetitorDomains] = useState('')
   const [articlesPerDay, setArticlesPerDay] = useState(10)
@@ -498,7 +499,10 @@ export default function SetupAutoPage() {
         is_affiliate: isAffiliate,
         create_product_page: isAffiliate,
         niche_group: niche.id,
-        additional_urls: [] as string[],
+        additional_urls: additionalUrls
+          .split(',')
+          .map((u) => u.trim())
+          .filter(Boolean),
       },
       brand: {
         brand_blurb: research?.brand_blurb || niche.description,
@@ -1014,14 +1018,27 @@ export default function SetupAutoPage() {
                 </div>
 
                 <div>
-                  <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Product URL</label>
+                  <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Product URL <span style={{ color: '#dc2626', fontSize: 11 }}>(scraped into RAG)</span></label>
                   <input
                     type="url"
                     value={productUrl}
                     onChange={(e) => setProductUrl(e.target.value)}
-                    placeholder="https://..."
+                    placeholder="https://yourproduct.com"
                     style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' as const }}
                   />
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>Main product page — will be scraped for AI context</p>
+                </div>
+
+                <div>
+                  <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Additional URLs <span style={{ color: '#64748b', fontSize: 11 }}>(optional, comma-separated)</span></label>
+                  <input
+                    type="text"
+                    value={additionalUrls}
+                    onChange={(e) => setAdditionalUrls(e.target.value)}
+                    placeholder="https://yourproduct.com/features, https://yourproduct.com/pricing"
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' as const }}
+                  />
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>Extra pages to scrape into RAG for richer AI content</p>
                 </div>
 
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
@@ -1095,13 +1112,14 @@ export default function SetupAutoPage() {
             <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '1rem', border: '1px solid #86efac', marginBottom: 24 }}>
               <h3 style={{ margin: '0 0 8px', fontSize: 14, color: '#166534' }}>Pipeline payload summary</h3>
               <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>
-                {[
+                {([
                   ['Brand', selectedBrand.name],
                   ['Username', selectedBrand.slug],
                   ['Blog URL', `https://${selectedDomain}`],
+                  ['Product URL', productUrl || '(none)'],
                   ['Author', research?.default_author_name || selectedBrand.name],
                   ['Niche group', niche.id],
-                ].map(([label, value]) => (
+                ] as [string, string][]).map(([label, value]) => (
                   <div key={label} style={{ display: 'flex', gap: 8 }}>
                     <span style={{ fontWeight: 600, minWidth: 110, color: '#166534' }}>{label}</span>
                     <span style={{ color: '#334155' }}>{value}</span>
