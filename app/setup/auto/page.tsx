@@ -255,6 +255,8 @@ export default function SetupAutoPage() {
   const [isAffiliate, setIsAffiliate] = useState(false)
   const [additionalUrls, setAdditionalUrls] = useState('')
   const [seedKeywords, setSeedKeywords] = useState('')
+  const [keywordsLoading, setKeywordsLoading] = useState(false)
+  const [keywordReasoning, setKeywordReasoning] = useState('')
   const [competitorDomains, setCompetitorDomains] = useState('')
   const [articlesPerDay, setArticlesPerDay] = useState(10)
   const [pipelineRunning, setPipelineRunning] = useState(false)
@@ -458,10 +460,7 @@ export default function SetupAutoPage() {
       const json = await res.json()
       if (json.success && json.research) {
         setResearch(json.research)
-        // Pre-fill fields from research
-        if (json.research.seed_keywords?.length) {
-          setSeedKeywords(json.research.seed_keywords.join(', '))
-        }
+        // Pre-fill competitor domains from research (seed keywords come from product-specific generation)
         if (json.research.competitor_domains?.length) {
           setCompetitorDomains(json.research.competitor_domains.join(', '))
         }
@@ -482,6 +481,37 @@ export default function SetupAutoPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
+
+  /* ── Generate product-specific seed keywords via LLM ──── */
+  const generateKeywords = async () => {
+    if (!niche) return
+    setKeywordsLoading(true)
+    setKeywordReasoning('')
+    try {
+      const res = await fetch('/api/setup/generate-keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: productName || selectedBrand?.name || '',
+          productUrl: productUrl || '',
+          niche: niche.label,
+          nicheDescription: niche.description,
+          audience,
+          region,
+          monetization,
+        }),
+      })
+      const json = await res.json()
+      if (json.success && json.seed_keywords?.length) {
+        setSeedKeywords(json.seed_keywords.join(', '))
+        setKeywordReasoning(json.keyword_reasoning || '')
+      }
+    } catch (e: any) {
+      console.error('Keyword generation failed:', e)
+    } finally {
+      setKeywordsLoading(false)
+    }
+  }
 
   /* ── Launch content pipeline ────────────────────────────── */
   const launchPipeline = async () => {
@@ -1070,14 +1100,26 @@ export default function SetupAutoPage() {
 
               <div style={{ display: 'grid', gap: 14 }}>
                 <div>
-                  <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Seed keywords (comma-separated)</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <label style={{ fontWeight: 600, fontSize: 13 }}>Seed keywords</label>
+                    <button
+                      style={{ ...btnSecondary, padding: '3px 12px', fontSize: 12 }}
+                      disabled={keywordsLoading}
+                      onClick={generateKeywords}
+                    >
+                      {keywordsLoading ? 'Generating...' : productUrl ? 'Generate from product' : 'Generate from niche'}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={seedKeywords}
                     onChange={(e) => setSeedKeywords(e.target.value)}
-                    placeholder={researchLoading ? 'Researching...' : `e.g. ${niche.label.toLowerCase()}`}
+                    placeholder={keywordsLoading ? 'Generating product keywords...' : 'Click generate, or type comma-separated keywords'}
                     style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' as const }}
                   />
+                  {keywordReasoning && (
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: '#2563eb', fontStyle: 'italic' }}>{keywordReasoning}</p>
+                  )}
                 </div>
 
                 <div>
