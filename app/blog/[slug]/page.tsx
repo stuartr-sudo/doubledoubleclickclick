@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Script from 'next/script'
@@ -80,7 +80,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   let post: any = null
 
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const { data } = await supabase
       .from('site_posts')
       .select('title, meta_title, meta_description, featured_image, published_date, created_date, author, tags')
@@ -146,7 +146,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   let homepageContent: any = null
 
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const { data } = await supabase
       .from('site_posts')
       .select('*')

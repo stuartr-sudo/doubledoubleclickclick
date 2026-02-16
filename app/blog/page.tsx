@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import BlogCarousel from '@/components/BlogCarousel'
 import ContactForm from '@/components/ContactForm'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import type { Metadata } from 'next'
 import SiteHeader from '@/components/SiteHeader'
 
@@ -32,7 +32,7 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
   let posts = null
   
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     
     // Fetch ALL published blog posts (no limit - shows all posts)
     const { data } = await supabase
