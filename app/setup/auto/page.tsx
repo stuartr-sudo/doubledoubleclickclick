@@ -270,10 +270,13 @@ export default function SetupAutoPage() {
     seed_keywords: string[]
     competitor_domains: string[]
     default_author_name: string
+    author_bio: string
+    niche_group: string
   }
   const [research, setResearch] = useState<BrandResearch | null>(null)
   const [researchLoading, setResearchLoading] = useState(false)
   const [researchError, setResearchError] = useState('')
+  const [authorSocialUrls, setAuthorSocialUrls] = useState('')
 
   /* Requirements (checked once on mount) */
   const [requirements, setRequirements] = useState<RequirementItem[]>([])
@@ -519,31 +522,44 @@ export default function SetupAutoPage() {
     setPipelineRunning(true)
     setPipelineResult(null)
 
-    const blogUrl = `https://${selectedDomain}`
+    const baseDomain = `https://${selectedDomain}`
+    const authorName = research?.default_author_name || `${selectedBrand.name} Editorial Team`
+
     const payload = {
       username: selectedBrand.slug,
+
       product: {
         name: productName || selectedBrand.name,
         url: productUrl || '',
         affiliate_link: affiliateLink || '',
         is_affiliate: isAffiliate,
         create_product_page: isAffiliate,
-        niche_group: niche.id,
+        niche_group: research?.niche_group || niche.label,
         additional_urls: additionalUrls
           .split(',')
           .map((u) => u.trim())
           .filter(Boolean),
       },
+
       brand: {
-        brand_blurb: research?.brand_blurb || niche.description,
         target_market_description: research?.target_market_description || generatedTargetMarket,
+        brand_blurb: research?.brand_blurb || niche.description,
         brand_voice: research?.brand_voice || generatedVoice,
       },
+
       publishing: {
-        blog_url: blogUrl,
-        default_author: research?.default_author_name || selectedBrand.name,
-        auto_create_categories: true,
+        platform: 'custom_api' as const,
+        blog_url: `${baseDomain}/api/blog`,
+        default_author: authorName,
+        author_bio: research?.author_bio || '',
+        author_image_url: `${baseDomain}/images/author-team.jpg`,
+        author_url: `${baseDomain}/about`,
+        author_social_urls: authorSocialUrls
+          .split(',')
+          .map((u) => u.trim())
+          .filter(Boolean),
       },
+
       config: {
         seed_keywords: seedKeywords
           .split(',')
@@ -554,12 +570,10 @@ export default function SetupAutoPage() {
           .map((d) => d.trim())
           .filter(Boolean),
         articles_per_day: articlesPerDay,
-        use_content_analysis: true,
-        use_business_reviews: false,
         existing_content_check: true,
-        skip_paa: false,
+        use_content_analysis: true,
+        use_competitor_keywords: true,
       },
-      expand: false,
     }
 
     try {
@@ -975,26 +989,28 @@ export default function SetupAutoPage() {
                     <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13, color: '#1e40af' }}>Brand description</p>
                     <p style={{ margin: 0, fontSize: 13, color: '#334155', lineHeight: 1.5 }}>{research.brand_blurb}</p>
                   </div>
-                  <div>
-                    <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13, color: '#1e40af' }}>Author</p>
-                    <p style={{ margin: 0, fontSize: 13, color: '#334155' }}>{research.default_author_name}</p>
-                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
-                      <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13, color: '#1e40af' }}>Seed keywords (researched)</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
-                        {research.seed_keywords.map((kw: string) => (
-                          <span key={kw} style={{ background: '#dbeafe', color: '#1e40af', fontSize: 12, padding: '2px 8px', borderRadius: 12 }}>{kw}</span>
-                        ))}
-                      </div>
+                      <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13, color: '#1e40af' }}>Author</p>
+                      <p style={{ margin: 0, fontSize: 13, color: '#334155' }}>{research.default_author_name}</p>
                     </div>
                     <div>
-                      <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13, color: '#1e40af' }}>Competitors (researched)</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
-                        {research.competitor_domains.map((d: string) => (
-                          <span key={d} style={{ background: '#dbeafe', color: '#1e40af', fontSize: 12, padding: '2px 8px', borderRadius: 12 }}>{d}</span>
-                        ))}
-                      </div>
+                      <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13, color: '#1e40af' }}>Niche group</p>
+                      <p style={{ margin: 0, fontSize: 13, color: '#334155' }}>{research.niche_group}</p>
+                    </div>
+                  </div>
+                  {research.author_bio && (
+                    <div>
+                      <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13, color: '#1e40af' }}>Author bio</p>
+                      <p style={{ margin: 0, fontSize: 13, color: '#334155', lineHeight: 1.5 }}>{research.author_bio}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13, color: '#1e40af' }}>Competitors (researched)</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
+                      {research.competitor_domains.map((d: string) => (
+                        <span key={d} style={{ background: '#dbeafe', color: '#1e40af', fontSize: 12, padding: '2px 8px', borderRadius: 12 }}>{d}</span>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1147,6 +1163,18 @@ export default function SetupAutoPage() {
                     ))}
                   </div>
                 </div>
+
+                <div>
+                  <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Author social URLs <span style={{ color: '#64748b', fontSize: 11 }}>(optional, comma-separated)</span></label>
+                  <input
+                    type="text"
+                    value={authorSocialUrls}
+                    onChange={(e) => setAuthorSocialUrls(e.target.value)}
+                    placeholder="https://twitter.com/brand, https://linkedin.com/company/brand"
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' as const }}
+                  />
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>Used in Person schema sameAs array for SEO</p>
+                </div>
               </div>
             </div>
 
@@ -1155,12 +1183,14 @@ export default function SetupAutoPage() {
               <h3 style={{ margin: '0 0 8px', fontSize: 14, color: '#166534' }}>Pipeline payload summary</h3>
               <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>
                 {([
-                  ['Brand', selectedBrand.name],
                   ['Username', selectedBrand.slug],
-                  ['Blog URL', `https://${selectedDomain}`],
+                  ['Platform', 'custom_api'],
+                  ['Blog API', `https://${selectedDomain}/api/blog`],
+                  ['Product', productName || selectedBrand.name],
                   ['Product URL', productUrl || '(none)'],
-                  ['Author', research?.default_author_name || selectedBrand.name],
-                  ['Niche group', niche.id],
+                  ['Niche group', research?.niche_group || niche.label],
+                  ['Author', research?.default_author_name || `${selectedBrand.name} Editorial Team`],
+                  ['Author page', `https://${selectedDomain}/about`],
                 ] as [string, string][]).map(([label, value]) => (
                   <div key={label} style={{ display: 'flex', gap: 8 }}>
                     <span style={{ fontWeight: 600, minWidth: 110, color: '#166534' }}>{label}</span>

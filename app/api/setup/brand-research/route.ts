@@ -51,12 +51,14 @@ Based on your knowledge of this niche and market, produce the following. Be spec
 Return ONLY a JSON object (no markdown, no code fences). The object must have these exact keys:
 
 {
-  "brand_voice": "A 2-3 sentence description of the exact tone, style, and editorial voice this brand should use. Reference specific writing techniques and content approaches that work in this niche. Be prescriptive.",
-  "target_market_description": "A 3-4 sentence detailed description of exactly who reads this site. Include demographics, psychographics, what they're searching for, their buying behavior, and what frustrates them about existing content in this space.",
-  "brand_blurb": "A 2-3 sentence brand description that could appear on an About page. It should position the brand clearly, state the unique value prop, and signal credibility.",
+  "brand_voice": "A concise tone directive for the LLM, e.g. 'First-person, conversational, technically sharp but accessible'. Keep it under 15 words.",
+  "target_market_description": "A 1-2 sentence description of exactly who reads this site. Include age range, interests, and what they search for.",
+  "brand_blurb": "A 1-2 sentence brand description for the About page. Position the brand clearly and state the unique value prop.",
   "seed_keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5", "keyword6", "keyword7", "keyword8"],
   "competitor_domains": ["competitor1.com", "competitor2.com", "competitor3.com"],
-  "default_author_name": "A realistic pen name or brand author name that fits this niche"
+  "default_author_name": "Brand Name + Editorial Team or a fitting pen name",
+  "author_bio": "A 1-2 sentence bio for the editorial team/author. Reference the niche expertise and what the team reviews or writes about.",
+  "niche_group": "A short product category label, e.g. 'NMN Supplements', 'AI Writing Tools', 'Keto Meal Kits'. 2-4 words max."
 }`
 
   try {
@@ -86,6 +88,8 @@ Return ONLY a JSON object (no markdown, no code fences). The object must have th
           ? research.competitor_domains.map((d: any) => String(d).trim()).filter(Boolean)
           : [],
         default_author_name: String(research.default_author_name || brandName).trim(),
+        author_bio: String(research.author_bio || '').trim(),
+        niche_group: String(research.niche_group || '').trim(),
       },
     })
   } catch (error: any) {
