@@ -16,6 +16,7 @@ export function middleware(req: NextRequest) {
   if (host === 'sewo.io') {
     url.host = 'www.sewo.io'
     url.protocol = 'https:'
+    url.port = ''   // strip internal container port (e.g. 3000) from the redirect
     return NextResponse.redirect(url, 308)
   }
 
