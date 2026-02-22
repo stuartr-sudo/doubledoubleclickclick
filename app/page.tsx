@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import HomePageClient from './HomePageClient'
+import HomePageClientLegacy from './HomePageClientLegacy'
 import type { Metadata } from 'next'
 
 // Force dynamic rendering
@@ -55,5 +56,8 @@ export default async function HomePage() {
 
   const latest = sortedPosts.slice(0, 6)
 
-  return <HomePageClient latestPosts={latest} homepageContent={homepageContent} />
+  const siteVariant = process.env.NEXT_PUBLIC_SITE_VARIANT || 'template'
+  const ClientComponent = siteVariant === 'legacy' ? HomePageClientLegacy : HomePageClient
+
+  return <ClientComponent latestPosts={latest} homepageContent={homepageContent} />
 }
