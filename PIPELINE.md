@@ -9,50 +9,59 @@
 
 1. [Architecture Overview](#1-architecture-overview)
 2. [The Three-App System](#2-the-three-app-system)
-3. [Provisioning — The 6-Phase Flow](#3-provisioning--the-6-phase-flow)
-4. [Domain Verification](#4-domain-verification)
-5. [Multi-Tenancy — How One Codebase Serves Many Sites](#5-multi-tenancy--how-one-codebase-serves-many-sites)
-6. [Content Display — How Articles Appear](#6-content-display--how-articles-appear)
-7. [Lead Capture](#7-lead-capture)
-8. [Email System](#8-email-system)
-9. [SEO & Structured Data](#9-seo--structured-data)
-10. [Fly.io API Integration](#10-flyio-api-integration)
-11. [Frontend Pages & Routes](#11-frontend-pages--routes)
-12. [API Endpoint Reference](#12-api-endpoint-reference)
-13. [Database Tables Used](#13-database-tables-used)
-14. [Environment Variables](#14-environment-variables)
-15. [Deployment](#15-deployment)
-16. [Timing & Performance](#16-timing--performance)
-17. [FAQ / Likely Questions](#17-faq--likely-questions)
+3. [Provisioning — The 9-Phase Flow](#3-provisioning--the-9-phase-flow)
+4. [Admin Provisioning UI](#4-admin-provisioning-ui)
+5. [Google Services Integration](#5-google-services-integration)
+6. [Domain Lifecycle](#6-domain-lifecycle)
+7. [Domain Verification](#7-domain-verification)
+8. [Multi-Tenancy — How One Codebase Serves Many Sites](#8-multi-tenancy--how-one-codebase-serves-many-sites)
+9. [Content Display — How Articles Appear](#9-content-display--how-articles-appear)
+10. [Lead Capture](#10-lead-capture)
+11. [Email System](#11-email-system)
+12. [SEO & Structured Data](#12-seo--structured-data)
+13. [Fly.io API Integration](#13-flyio-api-integration)
+14. [Frontend Pages & Routes](#14-frontend-pages--routes)
+15. [API Endpoint Reference](#15-api-endpoint-reference)
+16. [Database Tables Used](#16-database-tables-used)
+17. [Environment Variables](#17-environment-variables)
+18. [Deployment](#18-deployment)
+19. [Timing & Performance](#19-timing--performance)
+20. [FAQ / Likely Questions](#20-faq--likely-questions)
 
 ---
 
 ## 1. Architecture Overview
 
 ```
-Caller (admin dashboard, script, etc.)
+Admin UI (/admin/provision)
         │
-        │  POST /api/provision
-        │  Bearer: PROVISION_SECRET
-        │  { username, display_name, domain, niche, product_url, ... }
+        │  Enter niche, brand details, domain
+        │  Toggle Google services (GA4, GTM, GSC)
+        │  Approve discovered products
         ▼
 Blog Cloner (this app — Next.js 14)
         │
         ├─ Phase 1: Seed brand data into shared Supabase
-        ├─ Phase 2: Call Doubleclicker auto-onboard (content pipeline)
-        ├─ Phase 3: Deploy new Fly.io app (Docker)
-        ├─ Phase 4: Add custom domain + TLS certificate
-        ├─ Phase 5: Email user DNS records via Resend
-        └─ Phase 6: Log provisioning event
+        ├─ Phase 2: Create Google services (GA4 property, GTM container)
+        ├─ Phase 3: Call Doubleclicker auto-onboard (content pipeline)
+        ├─ Phase 4: Purchase domain via Google Cloud Domains
+        ├─ Phase 5: Deploy new Fly.io app (Docker)
+        ├─ Phase 6: Add custom domain + TLS certificate
+        ├─ Phase 7: Add to Google Search Console + DNS verification token
+        ├─ Phase 8: Auto-configure DNS records via Cloud DNS
+        └─ Phase 9: Email DNS records + log event
         │
         ▼
 New site live at: https://{username}-blog.fly.dev
-Custom domain:    https://www.{domain} (after DNS setup)
+Custom domain:    https://www.{domain} (auto-configured if purchased)
 ```
 
 **What this app does:**
 - Provisions new branded blog sites on Fly.io
 - Seeds brand/author data into the shared Supabase database
+- Creates Google Analytics, Tag Manager, and Search Console for each site
+- Searches for and purchases domains via Google Cloud Domains
+- Auto-configures DNS records (A, AAAA, CNAME, TXT) when domain is purchased
 - Triggers Doubleclicker's content pipeline
 - Handles custom domains, TLS certificates, and DNS verification
 - Serves the blog frontend (shared Next.js codebase, tenant-specific env vars)
@@ -84,81 +93,98 @@ Blog Cloner ──HTTP──▶ Doubleclicker ──shared DB──▶ Stitch
 - Doubleclicker → Stitch: Shared `stitch_queue` table (no HTTP)
 - Doubleclicker → Blog sites: Writes to `blog_posts` table, sites render via SSR
 
-**This app only needs two values to talk to Doubleclicker:**
-
-| Variable | Value |
-| --- | --- |
-| `DOUBLECLICKER_API_URL` | `https://doubleclicker.fly.dev` |
-| `PROVISION_SECRET` | `provision-41e10c5215230ab1eae10acf3b42b836bc321b618e78fd9e` |
-
 ---
 
-## 3. Provisioning — The 6-Phase Flow
+## 3. Provisioning — The 9-Phase Flow
 
 **Endpoint:** `POST /api/provision`
 **Auth:** `Bearer {PROVISION_SECRET}`
 
-One API call provisions an entire site — brand data, content pipeline, Fly.io deployment, custom domain, and notification email.
+One API call provisions an entire site — brand data, Google services, content pipeline, domain purchase, Fly.io deployment, DNS configuration, and notification email.
 
 ### Input:
 
 ```json
 {
-  "username": "airfryer-reviews",
-  "display_name": "Air Fryer Reviews",
-  "website_url": "https://airfryer-reviews.com",
+  "username": "pure-glow-skincare",
+  "display_name": "Pure Glow Skincare",
   "contact_email": "owner@example.com",
-  "domain": "airfryer-reviews.com",
-  "blurb": "Expert air fryer reviews and buying guides",
-  "target_market": "Home cooks looking for healthier cooking",
-  "brand_voice_tone": "Friendly, expert, conversational",
-  "primary_color": "#ff6b35",
-  "accent_color": "#004e89",
+  "niche": "natural skincare",
+  "website_url": "https://pureglow.com",
+  "domain": "purenaturalskincare.com",
+  "blurb": "Clean beauty and natural skincare products",
+  "target_market": "Health-conscious consumers seeking clean beauty",
+  "brand_voice_tone": "Warm, knowledgeable, trustworthy",
+  "primary_color": "#2d5016",
+  "accent_color": "#c8a951",
   "logo_url": "https://example.com/logo.png",
-  "heading_font": "Inter",
-  "body_font": "Open Sans",
-  "author_name": "Sarah Kitchen",
-  "author_bio": "Air fryer enthusiast and recipe developer",
+  "heading_font": "Playfair Display",
+  "body_font": "Lato",
+  "author_name": "Dr. Sarah Green",
+  "author_bio": "Dermatologist and clean beauty advocate",
   "author_image_url": "https://example.com/sarah.jpg",
-  "product_url": "https://amazon.com/ninja-foodi",
-  "niche": "kitchen appliances",
+  "product_url": "https://amazon.com/natural-skincare",
+  "seed_keywords": ["natural skincare", "organic moisturizer"],
+  "image_style": "Clean, bright product photography with natural elements",
   "fly_region": "syd",
   "skip_pipeline": false,
-  "skip_deploy": false
+  "skip_deploy": false,
+  "setup_google_analytics": true,
+  "setup_google_tag_manager": true,
+  "setup_search_console": true,
+  "purchase_domain": true,
+  "domain_yearly_price": { "currencyCode": "USD", "units": "12" },
+  "domain_notices": [],
+  "approved_products": [
+    { "name": "Vitamin C Serum", "url": "https://amazon.com/...", "description": "..." }
+  ]
 }
 ```
 
+**Niche-first mode:** `website_url` is optional. If only `niche` is provided, Doubleclicker researches the niche, discovers products, and generates content autonomously.
+
 ### Phase 1: Seed the shared database (~2s)
 
-Upserts four tables with brand identity:
+Inserts (select-first pattern) into four tables with brand identity:
 
 | Table | What gets seeded |
 | --- | --- |
-| `brand_guidelines` | Brand name, website URL, voice/tone, default author, author bio/image |
+| `brand_guidelines` | Brand name, website URL, voice/tone, default author, author bio/image, image style, seed keywords |
 | `brand_specifications` | Primary/accent colors, logo URL, heading/body fonts |
 | `company_information` | Website, email, blurb, target market |
 | `authors` | Default author with name, bio, slug, profile image |
 
-All upserts use `onConflict` to handle re-provisioning safely.
+### Phase 2: Create Google services (~3s)
 
-### Phase 2: Trigger Doubleclicker content pipeline (~1s to trigger, ~20–30 min to complete)
+If `GOOGLE_SERVICE_ACCOUNT_JSON` is configured:
+
+| Service | What happens | Output |
+| --- | --- | --- |
+| **GA4** | Creates property + web data stream | Measurement ID (`G-XXXXXXX`) |
+| **GTM** | Creates web container | Public ID (`GTM-XXXXXXX`) |
+
+The Measurement ID and GTM Public ID are passed as env vars to the Fly.io machine (`NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_GTM_ID`). The blog layout already renders GA4/GTM scripts when these are set.
+
+Skipped if service account not configured or toggles are off.
+
+### Phase 3: Trigger Doubleclicker content pipeline (~1s to trigger, ~20-30 min to complete)
 
 Calls `POST {DOUBLECLICKER_API_URL}/api/strategy/auto-onboard`:
 
 ```json
 {
-  "username": "airfryer-reviews",
-  "displayName": "Air Fryer Reviews",
-  "websiteUrl": "https://airfryer-reviews.com",
+  "username": "pure-glow-skincare",
+  "displayName": "Pure Glow Skincare",
+  "websiteUrl": "https://pureglow.com",
   "assignToEmail": "owner@example.com",
-  "productUrl": "https://amazon.com/ninja-foodi",
-  "niche": "kitchen appliances"
+  "productUrl": "https://amazon.com/natural-skincare",
+  "niche": "natural skincare"
 }
 ```
 
 Doubleclicker then orchestrates the full chain:
 1. Create workspace
-2. Auto-generate brand profile from URL
+2. Auto-generate brand profile from URL (or research niche if no URL)
 3. Discover affiliate products
 4. Discover keywords (DataForSEO)
 5. Build topical map + content clusters
@@ -170,7 +196,18 @@ Doubleclicker then orchestrates the full chain:
 
 Skipped if `skip_pipeline=true` or `DOUBLECLICKER_API_URL` not set.
 
-### Phase 3: Deploy to Fly.io (~30–60s)
+### Phase 4: Purchase domain via Google Cloud Domains (~5s)
+
+If `purchase_domain=true` and the domain was selected from suggestions:
+
+1. Calls `registrations:register` on the Cloud Domains API
+2. Domain contacts use `contact_email` with WHOIS privacy redaction
+3. Returns a long-running operation — domain becomes ACTIVE within 1-2 minutes
+4. Charges the billing account linked to the GCP project
+
+Skipped if `purchase_domain=false`, service account not configured, or missing price data.
+
+### Phase 5: Deploy to Fly.io (~30-60s)
 
 Creates a new Fly.io app and deploys the blog:
 
@@ -180,32 +217,28 @@ Creates a new Fly.io app and deploys the blog:
 | 2 | Create new app: `{username}-blog` |
 | 3 | Set secrets via GraphQL: Supabase URL/keys, Resend API key |
 | 4 | Allocate IPv4 + IPv6 addresses (required for custom domains) |
-| 5 | Create machine with tenant-specific env vars |
+| 5 | Create machine with tenant-specific env vars (including GA/GTM IDs) |
 
 **Machine env vars (what makes each site unique):**
 
 ```
-NEXT_PUBLIC_BRAND_USERNAME=airfryer-reviews
-NEXT_PUBLIC_SITE_URL=https://www.airfryer-reviews.com
-NEXT_PUBLIC_SITE_NAME=Air Fryer Reviews
+NEXT_PUBLIC_BRAND_USERNAME=pure-glow-skincare
+NEXT_PUBLIC_SITE_URL=https://www.purenaturalskincare.com
+NEXT_PUBLIC_SITE_NAME=Pure Glow Skincare
 NEXT_PUBLIC_CONTACT_EMAIL=owner@example.com
+NEXT_PUBLIC_GA_ID=G-XXXXXXX
+NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX
 ```
-
-**Machine specs:**
-- Region: `syd` (configurable via `fly_region`)
-- Memory: 512MB
-- CPU: 1 shared vCPU
-- Auto-stop: stops when idle, auto-starts on traffic
 
 Skipped if `skip_deploy=true` or `FLY_API_TOKEN` not set.
 
-### Phase 4: Custom domain + TLS certificate (~5s)
+### Phase 6: Custom domain + TLS certificate (~5s)
 
-If a `domain` was provided and Phase 3 succeeded:
+If a `domain` was provided and Phase 5 succeeded:
 
 1. Request ACME certificate for `www.{domain}`
 2. Request ACME certificate for `{domain}` (apex)
-3. Build DNS records for the user:
+3. Build DNS records:
 
 ```
 Type   | Name | Value
@@ -215,23 +248,45 @@ A      | @    | {allocated IPv4}
 AAAA   | @    | {allocated IPv6}
 ```
 
-### Phase 5: Email DNS setup instructions (~2s)
+### Phase 7: Google Search Console (~3s)
 
-Sends an HTML email via Resend to the contact email containing:
-- Link to the live Fly.io URL (`{username}-blog.fly.dev`)
-- DNS records table (Type, Name, Value)
-- "Verify Domain" button linking to `/api/provision/verify-domain`
+If `setup_search_console=true` and service account is configured:
 
-### Phase 6: Log provisioning event (~1s)
+1. Requests a DNS TXT verification token from the Site Verification API
+2. Adds the site to Search Console (pre-verification)
+3. Appends the TXT record to the DNS records list
 
-Inserts into `analytics_events` table with full provisioning details.
+After DNS propagates (or is auto-configured in Phase 8), call `verifySearchConsoleSite()` to complete verification.
+
+### Phase 8: Auto-configure DNS via Cloud DNS (~3s)
+
+**This is what removes you as a blocker.** If the domain was purchased via Cloud Domains (Phase 4):
+
+1. Finds the Cloud DNS managed zone (auto-created by Cloud Domains)
+2. Sets A record → Fly.io IPv4
+3. Sets AAAA record → Fly.io IPv6
+4. Sets CNAME `www` → `{username}-blog.fly.dev`
+5. Sets TXT records (Search Console verification, etc.)
+
+All records are set with 300s TTL. Existing records of the same type are replaced.
+
+If the domain registration hasn't completed yet (takes 1-2 min), this phase is marked as "deferred" — the DNS records are included in the email for manual setup as a fallback.
+
+**Skipped** if the domain was not purchased via Cloud Domains (user brought their own domain → they need to set DNS at their registrar).
+
+### Phase 9: Email DNS records + log event (~3s)
+
+- Sends an HTML email via Resend with DNS records table and "Verify Domain" button
+- If DNS was auto-configured (Phase 8), the email serves as confirmation
+- If DNS was not auto-configured, the email tells the user what to set at their registrar
+- Logs the full provisioning event to `analytics_events` table
 
 ### Response:
 
 ```json
 {
   "success": true,
-  "message": "Site provisioned for airfryer-reviews",
+  "message": "Site provisioned for pure-glow-skincare",
   "data": {
     "brand_guidelines": [...],
     "brand_specifications": [...],
@@ -239,33 +294,167 @@ Inserts into `analytics_events` table with full provisioning details.
     "author": [...]
   },
   "notifications": {
+    "google_analytics": { "status": "created", "measurement_id": "G-XXXXXXX" },
+    "google_tag_manager": { "status": "created", "public_id": "GTM-XXXXXXX" },
     "doubleclicker": { "status": "triggered" },
-    "fly": { "status": "deployed", "app": "airfryer-reviews-blog", "url": "https://airfryer-reviews-blog.fly.dev" },
+    "domain_purchase": { "status": "registration_pending", "domain": "purenaturalskincare.com" },
+    "fly": { "status": "deployed", "app": "pure-glow-skincare-blog", "url": "https://pure-glow-skincare-blog.fly.dev" },
     "domain": { "status": "certificates_requested" },
-    "email": { "status": "sent", "to": "owner@example.com" }
+    "search_console": { "status": "added", "verification_token": "google-site-verification=..." },
+    "dns_auto_config": { "status": "configured", "records": [...] },
+    "email": { "status": "sent" }
   },
   "fly": {
-    "app": "airfryer-reviews-blog",
-    "url": "https://airfryer-reviews-blog.fly.dev",
+    "app": "pure-glow-skincare-blog",
+    "url": "https://pure-glow-skincare-blog.fly.dev",
     "ipv4": "149.248.xxx.xxx",
     "ipv6": "2a09:xxx::xxx"
   },
+  "google": {
+    "ga_measurement_id": "G-XXXXXXX",
+    "gtm_public_id": "GTM-XXXXXXX"
+  },
   "dns_records": [
-    { "type": "CNAME", "name": "www", "value": "airfryer-reviews-blog.fly.dev" },
+    { "type": "CNAME", "name": "www", "value": "pure-glow-skincare-blog.fly.dev" },
     { "type": "A", "name": "@", "value": "149.248.xxx.xxx" },
-    { "type": "AAAA", "name": "@", "value": "2a09:xxx::xxx" }
+    { "type": "AAAA", "name": "@", "value": "2a09:xxx::xxx" },
+    { "type": "TXT", "name": "@", "value": "google-site-verification=..." }
   ]
 }
 ```
 
 ---
 
-## 4. Domain Verification
+## 4. Admin Provisioning UI
+
+**Route:** `/admin/provision`
+**Auth:** Requires `PROVISION_SECRET` (entered in the UI)
+
+A step-by-step wizard for provisioning new blog sites. Supports two modes:
+
+### Niche-First Mode (no website URL)
+
+1. Enter a niche (e.g., "natural skincare") → system researches and generates everything
+2. "Generate Brand Profile from Niche" button calls Doubleclicker's enhance-brand endpoint
+3. "Discover Products" button previews products DC will find for the niche
+4. Domain suggestions pulled from Google Cloud Domains API
+
+### Website Mode (has existing URL)
+
+1. Enter the brand's existing website URL
+2. "Generate All with AI" button scrapes the site and auto-fills brand profile
+3. Manual product entry supported
+
+### Wizard Sections (step-by-step navigation)
+
+| Step | Section | Description |
+| --- | --- | --- |
+| 1 | Brand Profile | Niche, username, display name, website URL, brand voice, target market, blurb, seed keywords |
+| 2 | Image Style | Default image generation style for article hero images |
+| 3 | Products & Discovery | Manual product entry or niche-based auto-discovery with approval checkboxes |
+| 4 | Appearance | Primary/accent colors, logo, heading/body fonts. "Suggest from Niche" for auto-palette |
+| 5 | Author | Default author name, bio, profile image |
+| 6 | Domain & Hosting | Domain field with suggestions from Cloud Domains, Fly.io region selector |
+| 7 | Google Services | GA4, GTM, Search Console toggles (default: all on). Domain purchase confirmation |
+| 8 | Launch | Contact email, skip_deploy/skip_pipeline toggles, Launch button |
+
+### Pipeline Phases Sidebar
+
+The sidebar shows real-time progress through all 9 provisioning phases with status indicators (pending, running, completed, failed, skipped).
+
+### Domain Suggestions
+
+Clicking "Suggest Domains" calls `POST /api/admin/domain-suggestions` with the niche and brand name. Returns available domains under $15/yr with pricing. Selecting a domain stores the full pricing data for the purchase step.
+
+---
+
+## 5. Google Services Integration
+
+**Library:** `lib/google.ts`
+**Auth:** GCP service account via `google-auth-library`
+
+All Google management APIs use OAuth2 service account authentication. The service account credentials are stored in `GOOGLE_SERVICE_ACCOUNT_JSON`.
+
+### Service Account Setup
+
+| Service | Permission needed | How to grant |
+| --- | --- | --- |
+| GA4 | Editor on GA account | analytics.google.com → Admin → Account Access Management |
+| GTM | Edit Containers | tagmanager.google.com → Admin → User Management |
+| Search Console | (automatic) | SA becomes verified owner via API |
+| Cloud Domains | `roles/domains.admin` | GCP IAM console |
+| Cloud DNS | (included in Cloud Domains) | Managed zones auto-created on domain registration |
+
+### Functions
+
+| Function | API | Purpose |
+| --- | --- | --- |
+| `createGA4Property()` | Analytics Admin API | Create GA4 property + web data stream → returns Measurement ID |
+| `createGTMContainer()` | Tag Manager API | Create GTM web container → returns Public ID |
+| `addSearchConsoleSite()` | Site Verification + Webmasters API | Add site + get DNS TXT verification token |
+| `verifySearchConsoleSite()` | Site Verification API | Complete verification after DNS propagates |
+| `getRegistrationParams()` | Cloud Domains API | Get domain price/availability |
+| `registerDomain()` | Cloud Domains API | Purchase a domain (charges GCP billing) |
+| `getDnsZone()` | Cloud DNS API | Find the managed zone for a domain |
+| `configureDnsRecords()` | Cloud DNS API | Set A, AAAA, CNAME, TXT records |
+
+### Domain Search (Suggestions)
+
+**Endpoint:** `POST /api/admin/domain-suggestions`
+
+Takes `{ niche, brand_name }`, generates up to 5 search queries, calls Cloud Domains `searchDomains` for each, and returns available domains under $15/yr with full pricing data (needed for purchase).
+
+### DNS Auto-Configuration Flow
+
+When a domain is purchased via Cloud Domains:
+
+```
+Cloud Domains registers domain
+        ↓
+Cloud DNS managed zone auto-created
+        ↓
+Phase 8: configureDnsRecords() sets:
+  - A     @ → Fly IPv4
+  - AAAA  @ → Fly IPv6
+  - CNAME www → {app}.fly.dev
+  - TXT   @ → Search Console verification
+        ↓
+DNS propagates (5-30 min)
+        ↓
+Fly.io auto-issues TLS certificate
+        ↓
+Site live at https://www.{domain}
+```
+
+---
+
+## 6. Domain Lifecycle
+
+### Purchased via Cloud Domains (fully automated)
+
+1. User selects domain from suggestions in the admin UI
+2. Domain purchased in Phase 4
+3. DNS records auto-configured in Phase 8
+4. DNS propagates (5-30 min)
+5. Fly.io auto-issues TLS certificate
+6. Site live — no manual steps needed
+
+### User-provided domain (manual DNS)
+
+1. User enters their own domain in the admin UI
+2. Fly.io certificates requested in Phase 6
+3. DNS records emailed to user in Phase 9
+4. User adds DNS records at their registrar
+5. DNS propagates → certificate issues → site live
+
+---
+
+## 7. Domain Verification
 
 **Endpoint:** `GET /api/provision/verify-domain?username={username}&domain={domain}`
 **Auth:** None (public — linked from email)
 
-After the user adds DNS records at their registrar:
+After DNS records are configured (automatically or manually):
 
 1. User clicks the verification link from the email
 2. This endpoint checks the TLS certificate status via Fly API
@@ -280,7 +469,7 @@ After the user adds DNS records at their registrar:
 
 ---
 
-## 5. Multi-Tenancy — How One Codebase Serves Many Sites
+## 8. Multi-Tenancy — How One Codebase Serves Many Sites
 
 Every deployed site runs the **same Next.js codebase** (same Docker image). What makes each site unique is the environment variables set on its Fly.io machine:
 
@@ -289,6 +478,8 @@ NEXT_PUBLIC_BRAND_USERNAME  → filters all DB queries to this tenant
 NEXT_PUBLIC_SITE_URL        → canonical URL, used in meta tags + sitemap
 NEXT_PUBLIC_SITE_NAME       → displayed in header, footer, title tags
 NEXT_PUBLIC_CONTACT_EMAIL   → shown on contact page, used for lead emails
+NEXT_PUBLIC_GA_ID           → GA4 Measurement ID (auto-created per site)
+NEXT_PUBLIC_GTM_ID          → GTM Public ID (auto-created per site)
 ```
 
 ### How it works:
@@ -309,7 +500,7 @@ This means deploying a code update to the base app automatically makes the new i
 
 ---
 
-## 6. Content Display — How Articles Appear
+## 9. Content Display — How Articles Appear
 
 This app doesn't create content — it just displays it. Articles are written by Doubleclicker and published to the shared `blog_posts` table.
 
@@ -337,7 +528,7 @@ All blog queries use `revalidate: 0` (force-dynamic) — every page load gets fr
 
 ---
 
-## 7. Lead Capture
+## 10. Lead Capture
 
 **Endpoint:** `POST /api/lead-capture`
 
@@ -366,7 +557,7 @@ Handles contact form submissions from the blog frontend.
 
 ---
 
-## 8. Email System
+## 11. Email System
 
 All emails sent via **Resend** (`RESEND_API_KEY`).
 
@@ -380,7 +571,7 @@ All emails use inline-styled HTML (no template engine).
 
 ---
 
-## 9. SEO & Structured Data
+## 12. SEO & Structured Data
 
 ### Meta tags (per page):
 
@@ -407,7 +598,7 @@ All emails use inline-styled HTML (no template engine).
 
 ---
 
-## 10. Fly.io API Integration
+## 13. Fly.io API Integration
 
 The `lib/fly.ts` module wraps two Fly APIs:
 
@@ -431,7 +622,7 @@ The `lib/fly.ts` module wraps two Fly APIs:
 
 ---
 
-## 11. Frontend Pages & Routes
+## 14. Frontend Pages & Routes
 
 | Route | Type | Purpose |
 | --- | --- | --- |
@@ -442,30 +633,35 @@ The `lib/fly.ts` module wraps two Fly APIs:
 | `/contact` | Page | Contact form (lead capture) |
 | `/privacy` | Page | Privacy policy |
 | `/terms` | Page | Terms of service |
+| `/admin/provision` | Page | Admin provisioning wizard (step-by-step) |
 
 ### Analytics:
 
-- Google Analytics 4 (via `NEXT_PUBLIC_GA_ID`)
-- Google Tag Manager (via `NEXT_PUBLIC_GTM_ID`)
+- Google Analytics 4 (via `NEXT_PUBLIC_GA_ID` — auto-created per site)
+- Google Tag Manager (via `NEXT_PUBLIC_GTM_ID` — auto-created per site)
 - PostHog (optional, via `NEXT_PUBLIC_POSTHOG_KEY`)
 
 Events tracked: `blog_view`, `blog_read_progress`, `blog_time_spent`, `cta_click`, `lead_capture`, `scroll_depth`, `form_submission`
 
 ---
 
-## 12. API Endpoint Reference
+## 15. API Endpoint Reference
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| `POST` | `/api/provision` | Bearer token | Main provisioning endpoint (6 phases) |
+| `POST` | `/api/provision` | Bearer token | Main provisioning endpoint (9 phases) |
 | `GET` | `/api/provision/verify-domain` | None | Domain verification + TLS check |
+| `POST` | `/api/admin/domain-suggestions` | None | Search available domains via Cloud Domains |
+| `POST` | `/api/admin/dc-proxy` | None | Proxy to Doubleclicker API (enhance-brand, etc.) |
+| `GET` | `/api/admin/pipeline-status` | None | Check Doubleclicker pipeline progress |
+| `GET` | `/api/admin/provision-secret` | None | Verify provision secret |
 | `GET` | `/api/blog` | None | Fetch published blog posts (query: limit, category) |
 | `GET` | `/api/blog/categories` | None | Get all blog categories |
 | `POST` | `/api/lead-capture` | None | Contact form submission |
 
 ---
 
-## 13. Database Tables Used
+## 16. Database Tables Used
 
 This app reads and writes to the shared Supabase database.
 
@@ -473,11 +669,13 @@ This app reads and writes to the shared Supabase database.
 
 | Table | Operation | Key fields |
 | --- | --- | --- |
-| `brand_guidelines` | Upsert | `user_name`, `name`, `website_url`, `brand_personality`, `default_author`, `author_bio` |
-| `brand_specifications` | Upsert | `brand_guideline_id`, `user_name`, `primary_color`, `accent_color`, `logo_url`, fonts |
-| `company_information` | Upsert | `username`, `client_website`, `email`, `blurb`, `target_market` |
-| `authors` | Upsert | `user_name`, `name`, `bio`, `slug`, `profile_image_url` |
+| `brand_guidelines` | Select-first insert/update | `user_name`, `name`, `website_url`, `brand_personality`, `default_author`, `author_bio`, `image_style`, `seed_keywords` |
+| `brand_specifications` | Select-first insert/update | `guideline_id`, `user_name`, `primary_color`, `accent_color`, `logo_url`, fonts |
+| `company_information` | Select-first insert/update | `username`, `client_website`, `email`, `blurb`, `target_market` |
+| `authors` | Select-first insert/update | `user_name`, `name`, `bio`, `slug`, `profile_image_url` |
 | `analytics_events` | Insert | `event_name`, `properties` (JSON) |
+
+**Note:** No unique constraints on `user_name` in these tables — must use select-first-then-insert/update pattern, NOT upsert. The `brand_specifications` FK column is `guideline_id` (not `brand_guideline_id`).
 
 ### Updated during domain verification:
 
@@ -503,12 +701,12 @@ This app reads and writes to the shared Supabase database.
 
 ---
 
-## 14. Environment Variables
+## 17. Environment Variables
 
 ### Required — provisioning
 
 ```
-PROVISION_SECRET=provision-41e10c5215230ab1eae10acf3b42b836bc321b618e78fd9e
+PROVISION_SECRET=provision-{secret}
 DOUBLECLICKER_API_URL=https://doubleclicker.fly.dev
 ```
 
@@ -523,7 +721,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 ### Required — Fly.io deployment
 
 ```
-FLY_API_TOKEN=FlyV1 fm2_lJPE...
+FLY_API_TOKEN=FlyV1 fm2_...
 FLY_ORG_SLUG=personal
 FLY_BASE_APP=doubledoubleclickclick
 ```
@@ -535,27 +733,36 @@ RESEND_API_KEY=re_...
 RESEND_FROM_EMAIL=noreply@doubleclicker.app
 ```
 
+### Required — Google services
+
+```
+GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"...","private_key":"...","client_email":"..."}
+GOOGLE_CLOUD_PROJECT=gen-lang-client-0071841353
+GOOGLE_ANALYTICS_ACCOUNT_ID=379034639
+GOOGLE_TAG_MANAGER_ACCOUNT_ID=6325445642
+```
+
 ### Per-site (set on each deployed machine)
 
 ```
-NEXT_PUBLIC_BRAND_USERNAME=airfryer-reviews
-NEXT_PUBLIC_SITE_URL=https://www.airfryer-reviews.com
-NEXT_PUBLIC_SITE_NAME=Air Fryer Reviews
+NEXT_PUBLIC_BRAND_USERNAME=pure-glow-skincare
+NEXT_PUBLIC_SITE_URL=https://www.purenaturalskincare.com
+NEXT_PUBLIC_SITE_NAME=Pure Glow Skincare
 NEXT_PUBLIC_CONTACT_EMAIL=owner@example.com
+NEXT_PUBLIC_GA_ID=G-XXXXXXX
+NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX
 ```
 
 ### Optional — analytics
 
 ```
-NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
-NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX
 NEXT_PUBLIC_POSTHOG_KEY=phc_...
 NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 ```
 
 ---
 
-## 15. Deployment
+## 18. Deployment
 
 ### Base app (this repo)
 
@@ -599,43 +806,62 @@ Currently, provisioned sites keep their Docker image at deploy time. To update:
 
 ---
 
-## 16. Timing & Performance
+## 19. Timing & Performance
 
-### Provisioning (total ~60–90s)
+### Provisioning (total ~60-90s)
 
 | Phase | Duration | Notes |
 | --- | --- | --- |
-| Phase 1: Seed database | ~2s | 4 upserts |
-| Phase 2: Trigger Doubleclicker | ~1s | Fire-and-forget HTTP call |
-| Phase 3: Deploy to Fly.io | ~30–60s | App create + secrets + IPs + machine |
-| Phase 4: Add domain + TLS | ~5s | Certificate request (issuance is async) |
-| Phase 5: Send email | ~2s | Resend API call |
-| Phase 6: Log event | ~1s | DB insert |
+| Phase 1: Seed database | ~2s | 4 inserts/updates |
+| Phase 2: Google services | ~3s | GA4 property + GTM container |
+| Phase 3: Trigger Doubleclicker | ~1s | Fire-and-forget HTTP call |
+| Phase 4: Domain purchase | ~5s | Cloud Domains registration (async completion) |
+| Phase 5: Deploy to Fly.io | ~30-60s | App create + secrets + IPs + machine |
+| Phase 6: Domain + TLS | ~5s | Certificate request (issuance is async) |
+| Phase 7: Search Console | ~3s | Site verification token |
+| Phase 8: Auto DNS | ~3s | Cloud DNS record configuration |
+| Phase 9: Email + log | ~3s | Resend API + DB insert |
 
 ### Content appearance:
 
-- Doubleclicker strategy pipeline: ~20–30 min (runs in background after Phase 2)
-- First articles: within 24 hours (daily writer cron runs 21:00–02:00 UTC, 5 articles/day)
+- Doubleclicker strategy pipeline: ~20-30 min (runs in background after Phase 3)
+- First articles: within 24 hours (daily writer cron runs 21:00-02:00 UTC, 5 articles/day)
 - Articles visible immediately on the blog once published (SSR, no cache)
 
 ### DNS propagation:
 
-- Typically 5–30 minutes
+- Auto-configured (purchased domain): 5-30 minutes
+- Manual (user's registrar): typically 5-30 minutes, can take up to 48 hours
 - User clicks verification link to check
 - Certificate auto-issued once DNS resolves
 
 ---
 
-## 17. FAQ / Likely Questions
+## 20. FAQ / Likely Questions
 
 **Q: What happens if I call provision twice for the same username?**
-All database operations are upserts (`onConflict`), so re-provisioning is safe. The Fly.io app creation will fail on the second call (app already exists) — handle this gracefully in the caller.
+Database operations use select-first-then-insert/update pattern, so re-provisioning is safe for the database. The Fly.io app creation will fail on the second call (app already exists) — handle this gracefully in the caller.
 
 **Q: Can I provision without deploying to Fly.io?**
 Yes — pass `skip_deploy: true`. This seeds the database and triggers Doubleclicker but skips Fly.io deployment. Useful for testing the content pipeline.
 
 **Q: Can I provision without triggering the content pipeline?**
 Yes — pass `skip_pipeline: true`. This seeds the database and deploys the site but doesn't start content generation. Useful for testing deployment.
+
+**Q: Can I provision with just a niche and no website URL?**
+Yes — this is the "niche-first" mode. Doubleclicker will research the niche, discover products, and generate content autonomously. The admin UI supports this workflow with "Generate from Niche" buttons.
+
+**Q: Do I need to manually set up DNS for purchased domains?**
+No. When you purchase a domain through the provisioning flow (Cloud Domains), DNS records are auto-configured via Cloud DNS in Phase 8. The entire flow from purchase to live site is automated.
+
+**Q: Do I need to manually set up DNS for my own domains?**
+Yes — if you bring your own domain (not purchased through Cloud Domains), you need to add the DNS records at your registrar. The records are emailed to you in Phase 9.
+
+**Q: How do Google Analytics and Tag Manager get installed?**
+During provisioning, GA4 properties and GTM containers are auto-created via the Google APIs. The Measurement ID (`G-XXXXXXX`) and GTM Public ID (`GTM-XXXXXXX`) are passed as env vars to the Fly.io machine. The blog layout already renders the GA4/GTM scripts when these env vars are present.
+
+**Q: What if the Google service account isn't configured?**
+Google services phases are skipped gracefully. The site still deploys and works — it just won't have GA4, GTM, Search Console, or domain purchase capabilities. The response includes `status: 'skipped'` with the reason.
 
 **Q: How do I update an existing site's code?**
 Deploy new code to the base app. For existing sites, you'd need to update the machine's image. Currently this is manual — a rolling update script is a future enhancement.
@@ -653,4 +879,4 @@ The `NEXT_PUBLIC_BRAND_USERNAME` env var is set on each Fly.io machine. Every da
 The base app (`doubledoubleclickclick`) is the canonical deployment of this repo. It serves as the image source for provisioned sites. Provisioned sites (`{username}-blog`) are clones with different env vars. They all run the same code.
 
 **Q: How do custom domains work?**
-During provisioning, Fly.io ACME certificates are requested for both `www.{domain}` and `{domain}`. The user adds DNS records (CNAME for www, A/AAAA for apex). Once DNS propagates, Fly auto-issues the TLS cert. The middleware redirects apex → www for canonical URLs.
+During provisioning, Fly.io ACME certificates are requested for both `www.{domain}` and `{domain}`. If the domain was purchased via Cloud Domains, DNS is auto-configured. Otherwise, the user adds DNS records at their registrar. Once DNS propagates, Fly auto-issues the TLS cert. The middleware redirects apex → www for canonical URLs.

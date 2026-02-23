@@ -1600,6 +1600,13 @@ function PipelinePhases({ phase, pipelineStatus, provisionResult, skipDeploy, se
         : n?.domain ? 'completed' : 'pending',
     },
     {
+      label: 'Auto DNS',
+      status: !purchaseDomain ? 'skipped'
+        : n?.dns_auto_config?.status === 'configured' ? 'completed'
+        : n?.dns_auto_config?.status === 'deferred' ? 'failed'
+        : 'pending',
+    },
+    {
       label: 'Email DNS',
       status: n?.dns_email?.status === 'skipped' ? 'skipped'
         : provisionResult?.dnsRecords?.length > 0 ? 'completed' : 'pending',

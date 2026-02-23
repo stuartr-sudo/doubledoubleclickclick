@@ -527,7 +527,42 @@ export async function POST(request: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // PHASE 7: Email user with DNS records via Resend
+    // PHASE 7: Auto-configure DNS (if domain purchased via Cloud Domains)
+    // ─────────────────────────────────────────────────────────────
+
+    const domainWasPurchased = (notifications.domain_purchase as any)?.status === 'registration_pending'
+
+    if (domainWasPurchased && domain && flyIpv4 && flyIpv6 && google.isGoogleServiceConfigured()) {
+      try {
+        // Collect TXT records (Search Console verification, etc.)
+        const txtRecords = dnsRecords
+          .filter(r => r.type === 'TXT')
+          .map(r => r.value)
+
+        const dnsResult = await google.configureDnsRecords(domain, {
+          ipv4: flyIpv4,
+          ipv6: flyIpv6,
+          flyAppHostname: `${flyAppName}.fly.dev`,
+          txtRecords: txtRecords.length > 0 ? txtRecords : undefined,
+        })
+        console.log(`DNS auto-configured for ${domain}: ${dnsResult.status}`)
+        notifications.dns_auto_config = {
+          status: 'configured',
+          records: dnsResult.additions,
+        }
+      } catch (err) {
+        console.error('Error auto-configuring DNS:', err)
+        // Non-fatal — domain may not be active yet (registration takes 1-2 min)
+        notifications.dns_auto_config = {
+          status: 'deferred',
+          reason: err instanceof Error ? err.message : String(err),
+          note: 'Domain registration may still be in progress. DNS records can be configured manually or will be set on domain verification.',
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // PHASE 8: Email user with DNS records via Resend
     // ─────────────────────────────────────────────────────────────
 
     if (dnsRecords.length > 0 && process.env.RESEND_API_KEY) {
@@ -609,7 +644,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // PHASE 8: Log the provisioning event
+    // PHASE 9: Log the provisioning event
     // ─────────────────────────────────────────────────────────────
 
     try {

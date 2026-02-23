@@ -283,3 +283,119 @@ export async function registerDomain(
     status: 'REGISTRATION_PENDING',
   }
 }
+
+/* ─────────────────────────────────────────────────
+   Google Cloud DNS — Auto-configure DNS records
+   ───────────────────────────────────────────────── */
+
+/**
+ * Find the Cloud DNS managed zone for a domain registered via Cloud Domains.
+ * Cloud Domains automatically creates a managed zone when a domain is registered.
+ */
+export async function getDnsZone(domainName: string) {
+  const project = process.env.GOOGLE_CLOUD_PROJECT
+  if (!project) throw new Error('GOOGLE_CLOUD_PROJECT not configured')
+
+  const data = await googleFetch(
+    `https://dns.googleapis.com/dns/v1/projects/${project}/managedZones`
+  )
+
+  // Find the zone whose dnsName matches our domain (dnsName has trailing dot)
+  const target = domainName.endsWith('.') ? domainName : `${domainName}.`
+  const zone = data.managedZones?.find((z: any) => z.dnsName === target)
+
+  if (!zone) {
+    throw new Error(`No Cloud DNS managed zone found for ${domainName}. Zone may not be created yet (domain registration can take 1-2 minutes).`)
+  }
+
+  return { zoneName: zone.name as string, dnsName: zone.dnsName as string }
+}
+
+/**
+ * Configure DNS records on a Cloud DNS managed zone.
+ * Sets A, AAAA, and CNAME records for Fly.io hosting.
+ * Also sets TXT records if provided (e.g., Search Console verification).
+ */
+export async function configureDnsRecords(
+  domainName: string,
+  records: {
+    ipv4: string
+    ipv6: string
+    flyAppHostname: string
+    txtRecords?: string[]
+  }
+) {
+  const project = process.env.GOOGLE_CLOUD_PROJECT
+  if (!project) throw new Error('GOOGLE_CLOUD_PROJECT not configured')
+
+  const { zoneName } = await getDnsZone(domainName)
+  const apex = domainName.endsWith('.') ? domainName : `${domainName}.`
+  const www = `www.${apex}`
+
+  // Build the additions for the change request
+  const additions: any[] = [
+    {
+      name: apex,
+      type: 'A',
+      ttl: 300,
+      rrdatas: [records.ipv4],
+    },
+    {
+      name: apex,
+      type: 'AAAA',
+      ttl: 300,
+      rrdatas: [records.ipv6],
+    },
+    {
+      name: www,
+      type: 'CNAME',
+      ttl: 300,
+      rrdatas: [`${records.flyAppHostname}.`],
+    },
+  ]
+
+  if (records.txtRecords && records.txtRecords.length > 0) {
+    additions.push({
+      name: apex,
+      type: 'TXT',
+      ttl: 300,
+      rrdatas: records.txtRecords.map(t => `"${t}"`),
+    })
+  }
+
+  // First, get existing records so we can delete them before adding (Cloud DNS requires this)
+  const deletions: any[] = []
+  try {
+    const existing = await googleFetch(
+      `https://dns.googleapis.com/dns/v1/projects/${project}/managedZones/${zoneName}/rrsets`
+    )
+    for (const rrset of existing.rrsets || []) {
+      // Only delete record types we're about to set (skip NS and SOA)
+      if (rrset.name === apex && ['A', 'AAAA', 'TXT'].includes(rrset.type)) {
+        deletions.push(rrset)
+      }
+      if (rrset.name === www && rrset.type === 'CNAME') {
+        deletions.push(rrset)
+      }
+    }
+  } catch {
+    // No existing records to delete — that's fine
+  }
+
+  // Apply the change
+  const change = await googleFetch(
+    `https://dns.googleapis.com/dns/v1/projects/${project}/managedZones/${zoneName}/changes`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        additions,
+        deletions,
+      }),
+    }
+  )
+
+  return {
+    status: change.status as string,
+    additions: additions.map(a => ({ type: a.type, name: a.name, value: a.rrdatas.join(', ') })),
+  }
+}
