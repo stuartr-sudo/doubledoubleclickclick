@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { GoogleAuth } from 'google-auth-library'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,19 +10,45 @@ export const dynamic = 'force-dynamic'
  * Generates search queries from the niche and brand name, then filters
  * results to available domains under $15/year.
  *
- * Requires env vars:
- *   GOOGLE_DOMAINS_API_KEY — Google Cloud API key with Cloud Domains enabled
- *   GOOGLE_CLOUD_PROJECT  — GCP project ID (required for Cloud Domains API path)
+ * Uses service account auth (GOOGLE_SERVICE_ACCOUNT_JSON) for the Cloud Domains API.
  */
+
+let cachedAuth: GoogleAuth | null = null
+
+function getAccessToken(): Promise<string> {
+  const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+  if (!keyJson) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not configured')
+
+  if (!cachedAuth) {
+    cachedAuth = new GoogleAuth({
+      credentials: JSON.parse(keyJson),
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    })
+  }
+
+  return cachedAuth.getClient()
+    .then(c => c.getAccessToken())
+    .then(t => {
+      if (!t.token) throw new Error('Failed to get access token')
+      return t.token
+    })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { niche, brand_name } = await req.json()
-    const apiKey = process.env.GOOGLE_DOMAINS_API_KEY
     const project = process.env.GOOGLE_CLOUD_PROJECT
 
-    if (!apiKey) {
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
       return NextResponse.json(
-        { success: false, error: 'GOOGLE_DOMAINS_API_KEY not configured. Add it to your environment variables.' },
+        { success: false, error: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured.' },
+        { status: 500 }
+      )
+    }
+
+    if (!project) {
+      return NextResponse.json(
+        { success: false, error: 'GOOGLE_CLOUD_PROJECT not configured.' },
         { status: 500 }
       )
     }
@@ -33,10 +60,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Cloud Domains API requires a project path
-    const location = project
-      ? `projects/${project}/locations/global`
-      : 'projects/-/locations/global'
+    const token = await getAccessToken()
+    const location = `projects/${project}/locations/global`
 
     // Generate diverse search queries from niche + brand name
     const queries = generateQueries(niche, brand_name)
@@ -47,8 +72,10 @@ export async function POST(req: NextRequest) {
 
     for (const query of queries) {
       try {
-        const url = `https://domains.googleapis.com/v1/${location}/registrations:searchDomains?query=${encodeURIComponent(query)}&key=${apiKey}`
-        const res = await fetch(url)
+        const url = `https://domains.googleapis.com/v1/${location}/registrations:searchDomains?query=${encodeURIComponent(query)}`
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
 
         if (!res.ok) {
           const errBody = await res.json().catch(() => ({ error: { message: res.statusText } }))
@@ -58,13 +85,13 @@ export async function POST(req: NextRequest) {
           if (res.status === 403 || res.status === 401) {
             return NextResponse.json({
               success: false,
-              error: `Google Cloud Domains API auth error: ${msg}. Check GOOGLE_DOMAINS_API_KEY and ensure Cloud Domains API is enabled.`,
+              error: `Google Cloud Domains API auth error: ${msg}`,
             }, { status: 502 })
           }
           if (res.status === 404) {
             return NextResponse.json({
               success: false,
-              error: `Google Cloud Domains API project error: ${msg}. Set GOOGLE_CLOUD_PROJECT env var to your GCP project ID.`,
+              error: `Google Cloud Domains API project error: ${msg}. Check GOOGLE_CLOUD_PROJECT.`,
             }, { status: 502 })
           }
 
