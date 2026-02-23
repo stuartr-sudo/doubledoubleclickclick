@@ -7094,3 +7094,382 @@ textarea::placeholder,
     padding: var(--spacing-lg);
   }
 }
+
+/* ========================================
+   Admin Provision Page
+   ======================================== */
+.admin-provision {
+  min-height: 100vh;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: var(--font-inter), -apple-system, sans-serif;
+  padding: 2rem;
+}
+
+.admin-header {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+}
+
+.admin-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 0.25rem;
+}
+
+.admin-header p {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.admin-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.admin-panel {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.admin-panel-dark {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+.admin-panel-dark h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin-bottom: 1rem;
+}
+
+.admin-fieldset {
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-fieldset:disabled {
+  opacity: 0.5;
+}
+
+.admin-fieldset legend {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #90ddf0;
+  padding: 0 0.5rem;
+}
+
+.admin-field {
+  margin-bottom: 0.75rem;
+}
+
+.admin-field label {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 0.25rem;
+}
+
+.admin-field input[type="text"],
+.admin-field input[type="url"],
+.admin-field input[type="email"],
+.admin-field textarea,
+.admin-field select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.admin-field input:focus,
+.admin-field textarea:focus,
+.admin-field select:focus {
+  outline: none;
+  border-color: #90ddf0;
+  box-shadow: 0 0 0 2px rgba(144, 221, 240, 0.15);
+}
+
+.admin-field textarea {
+  resize: vertical;
+}
+
+.admin-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.admin-color-input {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-color-input input[type="color"] {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 2px;
+  background: #0f172a;
+  cursor: pointer;
+}
+
+.admin-color-input input[type="text"] {
+  flex: 1;
+}
+
+.admin-toggles {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.admin-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.admin-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #90ddf0;
+}
+
+.admin-error {
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  color: #fca5a5;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.admin-submit {
+  width: 100%;
+  padding: 0.75rem;
+  background: #2c666e;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-submit:hover {
+  background: #07393c;
+}
+
+.admin-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Phase indicators */
+.admin-phases {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-phase {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.admin-phase-icon {
+  width: 20px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.admin-phase-completed { color: #4ade80; }
+.admin-phase-running { color: #90ddf0; }
+.admin-phase-failed { color: #f87171; }
+.admin-phase-skipped { color: #64748b; }
+.admin-phase-pending { color: #475569; }
+
+/* Pipeline steps */
+.admin-pipeline-steps {
+  margin-bottom: 1.5rem;
+}
+
+.admin-pipeline-steps h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+}
+
+.admin-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  font-size: 0.8rem;
+}
+
+.admin-step-icon { width: 16px; text-align: center; }
+.admin-step-completed { color: #4ade80; }
+.admin-step-running { color: #90ddf0; }
+.admin-step-failed { color: #f87171; }
+.admin-step-label { color: #cbd5e1; }
+.admin-step-detail { color: #64748b; font-size: 0.75rem; }
+
+.admin-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #90ddf0;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: admin-spin 0.8s linear infinite;
+}
+
+@keyframes admin-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Logs */
+.admin-logs {
+  margin-bottom: 1.5rem;
+}
+
+.admin-logs h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+}
+
+.admin-logs-scroll {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 0.75rem;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.admin-logs-empty {
+  color: #475569;
+  font-style: italic;
+}
+
+.admin-log {
+  color: #94a3b8;
+}
+
+.admin-log-error {
+  color: #f87171;
+}
+
+/* Result */
+.admin-result {
+  border-top: 1px solid #1e293b;
+  padding-top: 1rem;
+}
+
+.admin-result h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4ade80;
+  margin-bottom: 0.75rem;
+}
+
+.admin-result a {
+  color: #90ddf0;
+  text-decoration: underline;
+}
+
+.admin-dns {
+  margin-top: 1rem;
+}
+
+.admin-dns h4 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+}
+
+.admin-dns table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.admin-dns th {
+  text-align: left;
+  color: #64748b;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #1e293b;
+}
+
+.admin-dns td {
+  padding: 0.35rem 0.5rem;
+  color: #cbd5e1;
+  border-bottom: 1px solid #1e293b;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+}
+
+.admin-reset {
+  margin-top: 1rem;
+  padding: 0.5rem 1.5rem;
+  background: #334155;
+  color: #e2e8f0;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-reset:hover {
+  background: #475569;
+}
+
+@media (max-width: 900px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-row {
+    grid-template-columns: 1fr;
+  }
+}
