@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import * as fly from '@/lib/fly'
+import * as google from '@/lib/google'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,6 +69,12 @@ export async function POST(request: NextRequest) {
       fly_region = 'syd',
       skip_pipeline = false,
       skip_deploy = false,
+      setup_google_analytics = false,
+      setup_google_tag_manager = false,
+      setup_search_console = false,
+      purchase_domain = false,
+      domain_yearly_price,
+      domain_notices,
     } = body
 
     // Validate required fields
@@ -262,7 +269,56 @@ export async function POST(request: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // PHASE 2: Notify Doubleclicker to start content pipeline
+    // PHASE 2: Create Google services (GA4, GTM)
+    //
+    // Creates tracking properties that get injected as env vars
+    // into the Fly.io app. Requires GOOGLE_SERVICE_ACCOUNT_JSON.
+    // ─────────────────────────────────────────────────────────────
+
+    let gaId = ''
+    let gtmId = ''
+
+    if (google.isGoogleServiceConfigured()) {
+      const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${username}-blog.fly.dev`
+
+      if (setup_google_analytics) {
+        try {
+          const ga = await google.createGA4Property(display_name, siteUrl)
+          gaId = ga.measurementId || ''
+          console.log(`GA4 property created: ${ga.propertyName}, Measurement ID: ${gaId}`)
+          notifications.google_analytics = {
+            status: 'created',
+            measurement_id: gaId,
+            property_id: ga.propertyId,
+          }
+        } catch (err) {
+          console.error('Error creating GA4 property:', err)
+          notifications.google_analytics = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+        }
+      }
+
+      if (setup_google_tag_manager) {
+        try {
+          const gtm = await google.createGTMContainer(display_name)
+          gtmId = gtm.publicId || ''
+          console.log(`GTM container created: ${gtm.path}, Public ID: ${gtmId}`)
+          notifications.google_tag_manager = {
+            status: 'created',
+            public_id: gtmId,
+            container_id: gtm.containerId,
+          }
+        } catch (err) {
+          console.error('Error creating GTM container:', err)
+          notifications.google_tag_manager = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+        }
+      }
+    } else {
+      if (setup_google_analytics) notifications.google_analytics = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
+      if (setup_google_tag_manager) notifications.google_tag_manager = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // PHASE 3: Notify Doubleclicker to start content pipeline
     //
     // Doubleclicker orchestrates the full chain:
     //   create_workspace → auto_brand → save_brand → discover_products
@@ -342,14 +398,17 @@ export async function POST(request: NextRequest) {
         flyIpv6 = await fly.allocateIpv6(flyAppName)
         console.log(`Allocated IPs: ${flyIpv4} / ${flyIpv6}`)
 
-        // 5. Create machine with site-specific env vars
+        // 5. Create machine with site-specific env vars (including GA/GTM IDs if created)
         const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${flyAppName}.fly.dev`
-        await fly.createMachine(flyAppName, imageRef, {
+        const machineEnv: Record<string, string> = {
           NEXT_PUBLIC_BRAND_USERNAME: username,
           NEXT_PUBLIC_SITE_URL: siteUrl,
           NEXT_PUBLIC_SITE_NAME: display_name,
           NEXT_PUBLIC_CONTACT_EMAIL: contact_email,
-        }, fly_region)
+        }
+        if (gaId) machineEnv.NEXT_PUBLIC_GA_ID = gaId
+        if (gtmId) machineEnv.NEXT_PUBLIC_GTM_ID = gtmId
+        await fly.createMachine(flyAppName, imageRef, machineEnv, fly_region)
         console.log(`Machine created in ${flyAppName}`)
 
         notifications.fly = {
@@ -371,7 +430,39 @@ export async function POST(request: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // PHASE 4: Add custom domain + request TLS certificate
+    // PHASE 4: Purchase domain via Google Cloud Domains (optional)
+    // ─────────────────────────────────────────────────────────────
+
+    if (purchase_domain && domain && domain_yearly_price && google.isGoogleServiceConfigured()) {
+      try {
+        const regResult = await google.registerDomain(
+          domain,
+          contact_email,
+          domain_yearly_price,
+          domain_notices || []
+        )
+        console.log(`Domain registration initiated: ${domain} (${regResult.operationName})`)
+        notifications.domain_purchase = {
+          status: 'registration_pending',
+          domain,
+          operation: regResult.operationName,
+          price: domain_yearly_price,
+        }
+      } catch (err) {
+        console.error('Error registering domain:', err)
+        notifications.domain_purchase = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+      }
+    } else if (purchase_domain) {
+      notifications.domain_purchase = {
+        status: 'skipped',
+        reason: !google.isGoogleServiceConfigured()
+          ? 'GOOGLE_SERVICE_ACCOUNT_JSON not configured'
+          : !domain_yearly_price ? 'Missing yearly price data' : 'Missing domain',
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // PHASE 5: Add custom domain + request TLS certificate
     // ─────────────────────────────────────────────────────────────
 
     const dnsRecords: Array<{ type: string; name: string; value: string }> = []
@@ -405,7 +496,38 @@ export async function POST(request: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // PHASE 5: Email user with DNS records via Resend
+    // PHASE 6: Add to Google Search Console + get verification token
+    // ─────────────────────────────────────────────────────────────
+
+    if (setup_search_console && google.isGoogleServiceConfigured()) {
+      const siteUrl = domain ? `https://www.${domain}` : `https://${flyAppName}.fly.dev`
+      try {
+        const gsc = await google.addSearchConsoleSite(siteUrl)
+        console.log(`Search Console site added: ${siteUrl}`)
+        notifications.search_console = {
+          status: 'added',
+          site_url: gsc.siteUrl,
+          verification_token: gsc.verificationToken,
+          verification_method: gsc.verificationMethod,
+        }
+        // Add verification TXT record to DNS records list
+        if (domain && gsc.verificationToken) {
+          dnsRecords.push({
+            type: 'TXT',
+            name: '@',
+            value: gsc.verificationToken,
+          })
+        }
+      } catch (err) {
+        console.error('Error adding to Search Console:', err)
+        notifications.search_console = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+      }
+    } else if (setup_search_console) {
+      notifications.search_console = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // PHASE 7: Email user with DNS records via Resend
     // ─────────────────────────────────────────────────────────────
 
     if (dnsRecords.length > 0 && process.env.RESEND_API_KEY) {
@@ -487,7 +609,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // PHASE 6: Log the provisioning event
+    // PHASE 8: Log the provisioning event
     // ─────────────────────────────────────────────────────────────
 
     try {
@@ -518,6 +640,10 @@ export async function POST(request: NextRequest) {
         ipv6: flyIpv6,
       },
       dns_records: dnsRecords.length > 0 ? dnsRecords : undefined,
+      google: {
+        ga_measurement_id: gaId || undefined,
+        gtm_public_id: gtmId || undefined,
+      },
     })
   } catch (error) {
     console.error('Provision API error:', error)

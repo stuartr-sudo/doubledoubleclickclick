@@ -88,6 +88,8 @@ export async function POST(req: NextRequest) {
                   available: true,
                   price,
                   currency: param.yearlyPrice?.currencyCode || 'USD',
+                  yearlyPrice: param.yearlyPrice,
+                  domainNotices: param.domainNotices,
                 })
               }
             }
@@ -117,6 +119,8 @@ interface DomainSuggestion {
   available: boolean
   price: number
   currency: string
+  yearlyPrice: { currencyCode: string; units: string; nanos?: number }
+  domainNotices?: string[]
 }
 
 /**

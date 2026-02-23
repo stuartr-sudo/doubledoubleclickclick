@@ -67,6 +67,8 @@ interface DomainSuggestion {
   available: boolean
   price: number
   currency: string
+  yearlyPrice?: { currencyCode: string; units: string; nanos?: number }
+  domainNotices?: string[]
 }
 
 interface DiscoveredProduct {
@@ -148,6 +150,13 @@ export default function ProvisionForm() {
   const [skipPipeline, setSkipPipeline] = useState(false)
   const [skipDeploy, setSkipDeploy] = useState(false)
   const [stitchEnabled, setStitchEnabled] = useState(false)
+
+  /* ── Google services ── */
+  const [setupGA, setSetupGA] = useState(true)
+  const [setupGTM, setSetupGTM] = useState(true)
+  const [setupGSC, setSetupGSC] = useState(true)
+  const [purchaseDomain, setPurchaseDomain] = useState(false)
+  const [selectedDomainData, setSelectedDomainData] = useState<DomainSuggestion | null>(null)
 
   /* ── UI state ── */
   const [activeSection, setActiveSection] = useState(0)
@@ -250,10 +259,14 @@ export default function ProvisionForm() {
     }
   }
 
-  const selectDomain = (domainName: string) => {
+  const selectDomain = (domainName: string, suggestion?: DomainSuggestion) => {
     setDomain(domainName)
     setWebsiteUrl((prev) => prev || `https://www.${domainName}`)
     setContactEmail((prev) => prev || `hello@${domainName}`)
+    if (suggestion) {
+      setSelectedDomainData(suggestion)
+      setPurchaseDomain(true)
+    }
   }
 
   const generateFromNiche = async () => {
@@ -482,6 +495,12 @@ export default function ProvisionForm() {
           fly_region: flyRegion,
           skip_pipeline: skipPipeline,
           skip_deploy: skipDeploy,
+          setup_google_analytics: setupGA,
+          setup_google_tag_manager: setupGTM,
+          setup_search_console: setupGSC,
+          purchase_domain: purchaseDomain && !!selectedDomainData,
+          domain_yearly_price: selectedDomainData?.yearlyPrice || undefined,
+          domain_notices: selectedDomainData?.domainNotices || undefined,
           approved_products: discoveredProducts.filter(p => p.selected).map(p => ({
             name: p.name,
             url: p.url,
@@ -496,8 +515,20 @@ export default function ProvisionForm() {
       setProvisionResult(data)
       addLog('Phase 1: DB seeded successfully')
 
+      // Google services
+      if (data.notifications?.google_analytics?.status === 'created') {
+        addLog(`Phase 2: GA4 created — ${data.google?.ga_measurement_id}`)
+      } else if (data.notifications?.google_analytics?.status === 'error') {
+        addLog(`Phase 2: GA4 failed — ${data.notifications.google_analytics.error}`)
+      }
+      if (data.notifications?.google_tag_manager?.status === 'created') {
+        addLog(`Phase 2: GTM created — ${data.google?.gtm_public_id}`)
+      } else if (data.notifications?.google_tag_manager?.status === 'error') {
+        addLog(`Phase 2: GTM failed — ${data.notifications.google_tag_manager.error}`)
+      }
+
       if (data.notifications?.doubleclicker?.status === 'triggered') {
-        addLog('Phase 2: Doubleclicker auto-onboard triggered')
+        addLog('Phase 3: Doubleclicker auto-onboard triggered')
         const trackingUrl = data.notifications.doubleclicker.data?.tracking_url
         const onboardId = data.notifications.doubleclicker.data?.onboard_id
 
@@ -510,14 +541,21 @@ export default function ProvisionForm() {
           setPhase('done')
         }
       } else {
-        addLog('Phase 2: Doubleclicker — ' + (data.notifications?.doubleclicker?.reason || 'skipped'))
+        addLog('Phase 3: Doubleclicker — ' + (data.notifications?.doubleclicker?.reason || 'skipped'))
         setPhase('done')
       }
 
+      // Domain purchase
+      if (data.notifications?.domain_purchase?.status === 'registration_pending') {
+        addLog(`Phase 4: Domain "${data.notifications.domain_purchase.domain}" purchase initiated`)
+      } else if (data.notifications?.domain_purchase?.status === 'error') {
+        addLog(`Phase 4: Domain purchase failed — ${data.notifications.domain_purchase.error}`)
+      }
+
       if (data.notifications?.fly?.status === 'skipped') {
-        addLog(`Phase 3-5: Fly deploy skipped (${data.notifications.fly.reason})`)
+        addLog(`Phase 5: Fly deploy skipped (${data.notifications.fly.reason})`)
       } else if (data.fly?.app) {
-        addLog(`Phase 3: Fly app "${data.fly.app}" deployed`)
+        addLog(`Phase 5: Fly app "${data.fly.app}" deployed`)
         if (data.fly.ipv4) addLog(`  IPv4: ${data.fly.ipv4}`)
         if (data.fly.ipv6) addLog(`  IPv6: ${data.fly.ipv6}`)
       }
@@ -596,6 +634,11 @@ export default function ProvisionForm() {
     setAccentColor('#0066ff')
     setDomainSuggestions([])
     setDiscoveredProducts([])
+    setSetupGA(true)
+    setSetupGTM(true)
+    setSetupGSC(true)
+    setPurchaseDomain(false)
+    setSelectedDomainData(null)
     setError('')
     setActiveSection(0)
   }
@@ -643,6 +686,10 @@ export default function ProvisionForm() {
               pipelineStatus={pipelineStatus}
               provisionResult={provisionResult}
               skipDeploy={skipDeploy}
+              setupGA={setupGA}
+              setupGTM={setupGTM}
+              setupGSC={setupGSC}
+              purchaseDomain={purchaseDomain && !!selectedDomainData}
             />
           </div>
         )}
@@ -811,7 +858,7 @@ export default function ProvisionForm() {
                                 key={s.domain}
                                 type="button"
                                 className={`dc-domain-chip ${domain === s.domain ? 'dc-domain-chip-selected' : ''}`}
-                                onClick={() => selectDomain(s.domain)}
+                                onClick={() => selectDomain(s.domain, s)}
                               >
                                 <span className="dc-domain-chip-name">{s.domain}</span>
                                 <span className="dc-domain-chip-price">${s.price}/{s.currency === 'USD' ? 'yr' : s.currency}</span>
@@ -1283,6 +1330,56 @@ export default function ProvisionForm() {
                   </div>
                 </div>
 
+                {/* Google Services */}
+                <div className="dc-card">
+                  <div className="dc-card-header"><h3>Google Services</h3></div>
+                  <div className="dc-card-body">
+                    <p className="dc-hint dc-hint-spaced">
+                      Automatically create and configure Google services for this site. Requires a GCP service account.
+                    </p>
+                    <div className="dc-toggles">
+                      <label className="dc-toggle">
+                        <input type="checkbox" checked={setupGA}
+                          onChange={(e) => setSetupGA(e.target.checked)} />
+                        <span>Google Analytics (GA4) — creates a property + web data stream, installs tracking code</span>
+                      </label>
+                      <label className="dc-toggle">
+                        <input type="checkbox" checked={setupGTM}
+                          onChange={(e) => setSetupGTM(e.target.checked)} />
+                        <span>Google Tag Manager — creates a container, installs GTM snippet</span>
+                      </label>
+                      <label className="dc-toggle">
+                        <input type="checkbox" checked={setupGSC}
+                          onChange={(e) => setSetupGSC(e.target.checked)} />
+                        <span>Google Search Console — adds site, provides DNS verification token</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Domain Purchase */}
+                {selectedDomainData && (
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Domain Purchase</h3></div>
+                    <div className="dc-card-body">
+                      <div className="dc-domain-purchase-info">
+                        <div className="dc-domain-purchase-name">{selectedDomainData.domain}</div>
+                        <div className="dc-domain-purchase-price">
+                          ${selectedDomainData.price}/{selectedDomainData.currency === 'USD' ? 'yr' : selectedDomainData.currency}
+                        </div>
+                      </div>
+                      <label className="dc-toggle">
+                        <input type="checkbox" checked={purchaseDomain}
+                          onChange={(e) => setPurchaseDomain(e.target.checked)} />
+                        <span>Purchase this domain via Google Cloud Domains (charged to your GCP billing account)</span>
+                      </label>
+                      {!purchaseDomain && (
+                        <p className="dc-hint">If unchecked, you can purchase the domain separately and configure DNS manually.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <StepNav activeSection={activeSection} totalSections={SECTIONS.length}
                   onNavigate={setActiveSection} onLaunch={handleProvision}
                   canLaunch={!!(username && displayName && contactEmail && (niche || websiteUrl))} />
@@ -1454,29 +1551,58 @@ function ComboField({ label, value, options, onChange }: {
   )
 }
 
-function PipelinePhases({ phase, pipelineStatus, provisionResult, skipDeploy }: {
+function PipelinePhases({ phase, pipelineStatus, provisionResult, skipDeploy, setupGA, setupGTM, setupGSC, purchaseDomain }: {
   phase: Phase; pipelineStatus: PipelineStatus | null; provisionResult: any; skipDeploy: boolean
+  setupGA: boolean; setupGTM: boolean; setupGSC: boolean; purchaseDomain: boolean
 }) {
+  const n = provisionResult?.notifications
+  const wantsGoogle = setupGA || setupGTM
   const phases = [
     { label: 'Seed Database', status: provisionResult ? 'completed' : 'pending' },
+    {
+      label: 'Google Services',
+      status: !wantsGoogle ? 'skipped'
+        : n?.google_analytics?.status === 'error' || n?.google_tag_manager?.status === 'error' ? 'failed'
+        : n?.google_analytics || n?.google_tag_manager ? 'completed'
+        : provisionResult ? 'pending' : 'pending',
+    },
     {
       label: 'Doubleclicker',
       status: phase === 'tracking' ? 'running'
         : pipelineStatus?.status === 'completed' ? 'completed'
         : pipelineStatus?.status === 'failed' ? 'failed'
-        : provisionResult?.notifications?.doubleclicker?.status === 'skipped' ? 'skipped'
+        : n?.doubleclicker?.status === 'skipped' ? 'skipped'
         : phase === 'done' ? 'completed' : 'pending',
+    },
+    {
+      label: 'Domain Purchase',
+      status: !purchaseDomain ? 'skipped'
+        : n?.domain_purchase?.status === 'error' ? 'failed'
+        : n?.domain_purchase ? 'completed'
+        : n?.domain_purchase?.status === 'skipped' ? 'skipped' : 'pending',
     },
     {
       label: 'Fly.io Deploy',
       status: skipDeploy ? 'skipped'
         : provisionResult?.fly?.app ? 'completed'
-        : provisionResult?.notifications?.fly?.status === 'skipped' ? 'skipped' : 'pending',
+        : n?.fly?.status === 'skipped' ? 'skipped' : 'pending',
+    },
+    {
+      label: 'Search Console',
+      status: !setupGSC ? 'skipped'
+        : n?.search_console?.status === 'error' ? 'failed'
+        : n?.search_console ? 'completed'
+        : n?.search_console?.status === 'skipped' ? 'skipped' : 'pending',
     },
     {
       label: 'Domain & Certs',
-      status: provisionResult?.notifications?.domain?.status === 'skipped' ? 'skipped'
-        : provisionResult?.notifications?.domain ? 'completed' : 'pending',
+      status: n?.domain?.status === 'skipped' ? 'skipped'
+        : n?.domain ? 'completed' : 'pending',
+    },
+    {
+      label: 'Email DNS',
+      status: n?.dns_email?.status === 'skipped' ? 'skipped'
+        : provisionResult?.dnsRecords?.length > 0 ? 'completed' : 'pending',
     },
   ]
 

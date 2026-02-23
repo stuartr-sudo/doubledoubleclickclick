@@ -7732,6 +7732,35 @@ body:has(.dc-layout) > header {
   border-radius: 4px;
 }
 
+/* Domain purchase card */
+.dc-domain-purchase-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #0f1d2f;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.dc-domain-purchase-name {
+  font-weight: 700;
+  font-size: 16px;
+  color: #f1f5f9;
+}
+
+.dc-domain-purchase-price {
+  font-size: 14px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+/* Hint with spacing */
+.dc-hint-spaced {
+  margin-bottom: 12px;
+}
+
 /* Form fields */
 .dc-field {
   margin-bottom: 12px;
