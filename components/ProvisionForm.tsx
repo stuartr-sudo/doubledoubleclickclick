@@ -729,6 +729,10 @@ export default function ProvisionForm() {
                     </div>
                   </div>
                 </div>
+
+                <StepNav activeSection={activeSection} totalSections={SECTIONS.length}
+                  onNavigate={setActiveSection} onLaunch={handleProvision}
+                  canLaunch={!!(username && displayName && contactEmail && (niche || websiteUrl))} />
               </div>
             )}
 
@@ -814,6 +818,10 @@ export default function ProvisionForm() {
                     </label>
                   </div>
                 </div>
+
+                <StepNav activeSection={activeSection} totalSections={SECTIONS.length}
+                  onNavigate={setActiveSection} onLaunch={handleProvision}
+                  canLaunch={!!(username && displayName && contactEmail && (niche || websiteUrl))} />
               </div>
             )}
 
@@ -922,6 +930,10 @@ export default function ProvisionForm() {
                     </div>
                   </div>
                 </div>
+
+                <StepNav activeSection={activeSection} totalSections={SECTIONS.length}
+                  onNavigate={setActiveSection} onLaunch={handleProvision}
+                  canLaunch={!!(username && displayName && contactEmail && (niche || websiteUrl))} />
               </div>
             )}
 
@@ -984,14 +996,9 @@ export default function ProvisionForm() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="dc-btn dc-btn-launch"
-                  onClick={handleProvision}
-                  disabled={!username || !displayName || !contactEmail || (!niche && !websiteUrl)}
-                >
-                  Launch Provisioning
-                </button>
+                <StepNav activeSection={activeSection} totalSections={SECTIONS.length}
+                  onNavigate={setActiveSection} onLaunch={handleProvision}
+                  canLaunch={!!(username && displayName && contactEmail && (niche || websiteUrl))} />
               </div>
             )}
           </>
@@ -1091,6 +1098,31 @@ export default function ProvisionForm() {
 /* ═══════════════════════════════════════════════════════════
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════════ */
+
+function StepNav({ activeSection, totalSections, onNavigate, onLaunch, canLaunch }: {
+  activeSection: number; totalSections: number; onNavigate: (i: number) => void; onLaunch: () => void; canLaunch: boolean
+}) {
+  const isLast = activeSection === totalSections - 1
+  return (
+    <div className="dc-step-nav">
+      {activeSection > 0 && (
+        <button type="button" className="dc-btn dc-btn-secondary" onClick={() => onNavigate(activeSection - 1)}>
+          Back
+        </button>
+      )}
+      <div className="dc-step-nav-spacer" />
+      {isLast ? (
+        <button type="button" className="dc-btn dc-btn-launch" onClick={onLaunch} disabled={!canLaunch}>
+          Launch Provisioning
+        </button>
+      ) : (
+        <button type="button" className="dc-btn dc-btn-primary" onClick={() => onNavigate(activeSection + 1)}>
+          Next
+        </button>
+      )}
+    </div>
+  )
+}
 
 function EnhanceButton({ loading, onClick }: { loading?: boolean; onClick: () => void }) {
   return (

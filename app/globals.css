@@ -7430,17 +7430,42 @@ body:has(.dc-layout) > header {
 }
 
 .dc-btn-launch {
-  width: 100%;
-  padding: 14px 20px;
+  padding: 12px 28px;
   background: #4f46e5;
   color: #ffffff;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   border-radius: 10px;
 }
 
 .dc-btn-launch:hover:not(:disabled) {
   background: #4338ca;
+}
+
+.dc-btn-primary {
+  padding: 10px 24px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+}
+
+.dc-btn-primary:hover {
+  background: #4338ca;
+}
+
+/* Step navigation bar */
+.dc-step-nav {
+  display: flex;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.dc-step-nav-spacer {
+  flex: 1;
 }
 
 .dc-btn-link {
