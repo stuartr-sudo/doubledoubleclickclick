@@ -62,6 +62,21 @@ interface PipelineStatus {
 
 type Phase = 'form' | 'provisioning' | 'tracking' | 'done'
 
+interface DomainSuggestion {
+  domain: string
+  available: boolean
+  price: number
+  currency: string
+}
+
+interface DiscoveredProduct {
+  name: string
+  url: string
+  score: number
+  selected: boolean
+  description?: string
+}
+
 const emptyImageStyle: ImageStyle = {
   style_name: 'Default Style',
   visual_style: '',
@@ -144,6 +159,14 @@ export default function ProvisionForm() {
   const [generating, setGenerating] = useState<Record<string, boolean>>({})
   const [saved, setSaved] = useState<Record<string, boolean>>({})
 
+  /* ── domain suggestions ── */
+  const [domainSuggestions, setDomainSuggestions] = useState<DomainSuggestion[]>([])
+  const [loadingDomains, setLoadingDomains] = useState(false)
+
+  /* ── product discovery ── */
+  const [discoveredProducts, setDiscoveredProducts] = useState<DiscoveredProduct[]>([])
+  const [loadingDiscovery, setLoadingDiscovery] = useState(false)
+
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const seenStepsRef = useRef<Set<string>>(new Set())
@@ -183,6 +206,150 @@ export default function ProvisionForm() {
   }
 
   /* ═══════════════════════════════════════
+     NICHE-AWARE HELPERS
+     ═══════════════════════════════════════ */
+
+  const suggestNicheColors = (nicheStr: string): { primary: string; accent: string } => {
+    const lower = nicheStr.toLowerCase()
+    if (/health|wellness|longevity|supplement|vitamin|organic|natural/.test(lower)) return { primary: '#1a5632', accent: '#c4a35a' }
+    if (/tech|ai|software|digital|cyber|code|dev|saas/.test(lower)) return { primary: '#0f172a', accent: '#3b82f6' }
+    if (/beauty|fashion|style|luxury|cosmetic|skincare/.test(lower)) return { primary: '#2d1b33', accent: '#d4a574' }
+    if (/finance|invest|money|crypto|trading|wealth|banking/.test(lower)) return { primary: '#0c1f3f', accent: '#c4a35a' }
+    if (/food|cook|recipe|nutrition|diet|restaurant/.test(lower)) return { primary: '#4a2511', accent: '#e67e22' }
+    if (/fitness|gym|sport|athletic|workout|training/.test(lower)) return { primary: '#1a1a2e', accent: '#e94560' }
+    if (/travel|adventure|explore|outdoor|tourism/.test(lower)) return { primary: '#1b3a4b', accent: '#4ecdc4' }
+    if (/education|learn|study|course|tutor|academic/.test(lower)) return { primary: '#1a237e', accent: '#ff6f00' }
+    if (/home|interior|garden|diy|furniture|decor/.test(lower)) return { primary: '#3e2723', accent: '#66bb6a' }
+    if (/pet|animal|dog|cat|veterinar/.test(lower)) return { primary: '#33691e', accent: '#ff8f00' }
+    if (/gaming|game|esport|stream/.test(lower)) return { primary: '#1a0a2e', accent: '#7c3aed' }
+    if (/music|audio|podcast|sound/.test(lower)) return { primary: '#1c1c1c', accent: '#ff4081' }
+    return { primary: '#0f172a', accent: '#0066ff' }
+  }
+
+  const suggestDomains = async () => {
+    if (!niche && !displayName) return
+    setLoadingDomains(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/domain-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche: niche.trim(), brand_name: displayName.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setDomainSuggestions(data.suggestions || [])
+        if (!data.suggestions?.length) setError('No domains found under $15/year. Try a different niche or brand name.')
+      } else {
+        setError(data.error || 'Failed to search domains')
+      }
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoadingDomains(false)
+    }
+  }
+
+  const selectDomain = (domainName: string) => {
+    setDomain(domainName)
+    setWebsiteUrl((prev) => prev || `https://www.${domainName}`)
+    setContactEmail((prev) => prev || `hello@${domainName}`)
+  }
+
+  const generateFromNiche = async () => {
+    if (!niche) return
+    setGenerating((g) => ({ ...g, niche_all: true }))
+    setError('')
+    const brandCtx = `Brand in the "${niche}" niche${displayName ? `, called "${displayName}"` : ''}.`
+    try {
+      const [voice, market, blurb, keywords, style] = await Promise.allSettled([
+        dcPost('/api/strategy/enhance-brand', { section: 'brand_voice', current_content: `${brandCtx} Generate an authoritative, engaging brand voice for this niche.`, niche }),
+        dcPost('/api/strategy/enhance-brand', { section: 'target_market', current_content: `${brandCtx} Define the ideal target audience.`, niche }),
+        dcPost('/api/strategy/enhance-brand', { section: 'brand_blurb', current_content: `${brandCtx} Write a compelling 2-3 sentence brand description.`, niche }),
+        dcPost('/api/strategy/enhance-brand', { section: 'seed_keywords', current_content: `${brandCtx} Generate 10-15 seed keyword phrases for SEO.`, niche }),
+        dcPost('/api/strategy/enhance-brand', { section: 'image_style', current_content: { ...emptyImageStyle, style_name: `${niche} Style` }, niche }),
+      ])
+
+      if (voice.status === 'fulfilled' && voice.value.brand_voice) setBrandVoice(voice.value.brand_voice)
+      if (market.status === 'fulfilled' && market.value.target_market) setTargetMarket(market.value.target_market)
+      if (blurb.status === 'fulfilled' && blurb.value.brand_blurb) setBrandBlurb(blurb.value.brand_blurb)
+      if (keywords.status === 'fulfilled' && keywords.value.seed_keywords) setSeedKeywords(keywords.value.seed_keywords)
+      if (style.status === 'fulfilled' && style.value.image_style) setImageStyle((prev) => ({ ...prev, ...style.value.image_style }))
+
+      // Apply niche-derived colors
+      const colors = suggestNicheColors(niche)
+      setPrimaryColor(colors.primary)
+      setAccentColor(colors.accent)
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate from niche')
+    } finally {
+      setGenerating((g) => ({ ...g, niche_all: false }))
+    }
+  }
+
+  const generateStyleFromNiche = async () => {
+    if (!niche) return
+    setGenerating((g) => ({ ...g, niche_style: true }))
+    setError('')
+    const brandCtx = `Brand in the "${niche}" niche${displayName ? `, called "${displayName}"` : ''}.`
+    try {
+      const data = await dcPost('/api/strategy/enhance-brand', {
+        section: 'image_style',
+        current_content: { ...emptyImageStyle, style_name: `${niche} Style` },
+        niche,
+        context: brandCtx,
+      })
+      if (data.image_style) setImageStyle((prev) => ({ ...prev, ...data.image_style }))
+      else setError('No image style returned — DC may need niche support in enhance-brand.')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setGenerating((g) => ({ ...g, niche_style: false }))
+    }
+  }
+
+  const generateColorsFromNiche = () => {
+    if (!niche) return
+    const colors = suggestNicheColors(niche)
+    setPrimaryColor(colors.primary)
+    setAccentColor(colors.accent)
+  }
+
+  const discoverProducts = async () => {
+    if (!niche && !username) return
+    setLoadingDiscovery(true)
+    setError('')
+    try {
+      const data = await dcPost('/api/strategy/auto-onboard', {
+        username: username || 'preview',
+        niche,
+        discover_only: true,
+      })
+      if (data.products && Array.isArray(data.products)) {
+        setDiscoveredProducts(data.products.map((p: any) => ({
+          name: p.name || p.product_name || 'Unknown',
+          url: p.url || p.product_url || '',
+          score: p.score || p.content_potential || 0,
+          description: p.description || p.summary || '',
+          selected: true,
+        })))
+      } else if (data.success === false) {
+        setError(data.error || 'Discovery failed — DC may not support discover_only mode yet.')
+      } else {
+        setError('No products returned. Discovery may take longer — products will be found during provisioning.')
+      }
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoadingDiscovery(false)
+    }
+  }
+
+  const toggleProduct = (idx: number) => {
+    setDiscoveredProducts((prev) => prev.map((p, i) => i === idx ? { ...p, selected: !p.selected } : p))
+  }
+
+  /* ═══════════════════════════════════════
      AI GENERATION
      ═══════════════════════════════════════ */
   const generateAll = async () => {
@@ -218,6 +385,7 @@ export default function ProvisionForm() {
         section,
         current_content: currentContent,
         website_url: websiteUrl || undefined,
+        niche: niche || undefined,
       })
       if (!data.success) throw new Error(data.error || 'Enhancement failed')
 
@@ -314,6 +482,11 @@ export default function ProvisionForm() {
           fly_region: flyRegion,
           skip_pipeline: skipPipeline,
           skip_deploy: skipDeploy,
+          approved_products: discoveredProducts.filter(p => p.selected).map(p => ({
+            name: p.name,
+            url: p.url,
+            description: p.description,
+          })),
         }),
       })
 
@@ -421,6 +594,8 @@ export default function ProvisionForm() {
     setSignalUrls([''])
     setPrimaryColor('#0F172A')
     setAccentColor('#0066ff')
+    setDomainSuggestions([])
+    setDiscoveredProducts([])
     setError('')
     setActiveSection(0)
   }
@@ -538,8 +713,20 @@ export default function ProvisionForm() {
                     <div className="dc-mode-banner-icon">&#x1f50d;</div>
                     <div>
                       <h3>Niche Discovery Mode</h3>
-                      <p>Doubleclicker will research the <strong>{niche}</strong> niche, discover relevant products across multiple sources (Exa, Google, Reddit, ProductHunt), score them for content potential, and launch content pipelines automatically. Brand voice and target market will be derived from niche research.</p>
+                      <p>Doubleclicker will research the <strong>{niche}</strong> niche, discover relevant products across multiple sources (Exa, Google, Reddit, ProductHunt), score them for content potential, and launch content pipelines automatically.</p>
                     </div>
+                    <button
+                      type="button"
+                      className="dc-btn dc-btn-ai"
+                      onClick={generateFromNiche}
+                      disabled={generating.niche_all}
+                    >
+                      {generating.niche_all ? (
+                        <><span className="dc-spinner" /> Generating...</>
+                      ) : (
+                        'Generate Brand Profile from Niche'
+                      )}
+                    </button>
                   </div>
                 ) : (
                   <div className="dc-mode-banner dc-mode-banner-neutral">
@@ -605,6 +792,35 @@ export default function ProvisionForm() {
                           placeholder="hello@acmecorp.com" />
                       </div>
                     </div>
+
+                    {/* Domain Suggestions */}
+                    {(niche || displayName) && (
+                      <div className="dc-domain-suggest-row">
+                        <button
+                          type="button"
+                          className="dc-btn dc-btn-secondary dc-btn-sm"
+                          onClick={suggestDomains}
+                          disabled={loadingDomains}
+                        >
+                          {loadingDomains ? <><span className="dc-spinner" /> Searching...</> : 'Find Available Domains'}
+                        </button>
+                        {domainSuggestions.length > 0 && (
+                          <div className="dc-domain-suggestions">
+                            {domainSuggestions.map((s) => (
+                              <button
+                                key={s.domain}
+                                type="button"
+                                className={`dc-domain-chip ${domain === s.domain ? 'dc-domain-chip-selected' : ''}`}
+                                onClick={() => selectDomain(s.domain)}
+                              >
+                                <span className="dc-domain-chip-name">{s.domain}</span>
+                                <span className="dc-domain-chip-price">${s.price}/{s.currency === 'USD' ? 'yr' : s.currency}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="dc-field-row">
                       <div className="dc-field">
@@ -742,7 +958,15 @@ export default function ProvisionForm() {
                 <div className="dc-card">
                   <div className="dc-card-header">
                     <h3>Imagineer Image Style Guidelines</h3>
-                    <EnhanceButton loading={generating.image_style} onClick={() => enhanceField('image_style', imageStyle)} />
+                    <div className="dc-card-header-actions">
+                      {niche && !hasWebsite && (
+                        <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm"
+                          onClick={generateStyleFromNiche} disabled={generating.niche_style}>
+                          {generating.niche_style ? <><span className="dc-spinner" /> Generating...</> : 'Generate from Niche'}
+                        </button>
+                      )}
+                      <EnhanceButton loading={generating.image_style} onClick={() => enhanceField('image_style', imageStyle)} />
+                    </div>
                   </div>
                   <div className="dc-card-body">
                     <div className="dc-field">
@@ -851,6 +1075,63 @@ export default function ProvisionForm() {
                   </div>
                 )}
 
+                {/* Product Discovery & Approval */}
+                {niche && (
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Discover &amp; Approve Products</h3>
+                      <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm"
+                        onClick={discoverProducts} disabled={loadingDiscovery || !niche}>
+                        {loadingDiscovery ? <><span className="dc-spinner" /> Discovering...</> : 'Preview Product Discovery'}
+                      </button>
+                    </div>
+                    <div className="dc-card-body">
+                      {discoveredProducts.length === 0 && !loadingDiscovery && (
+                        <div className="dc-info-box">
+                          <p>Click <strong>Preview Product Discovery</strong> to search for products in the <strong>{niche}</strong> niche. You can approve or reject each product before launching content pipelines.</p>
+                          <p className="dc-hint">Note: Full discovery runs 7 phases and may take a minute. Products not found here will still be discovered during provisioning.</p>
+                        </div>
+                      )}
+                      {loadingDiscovery && (
+                        <div className="dc-discovery-loading">
+                          <span className="dc-spinner" /> Searching across Exa, Google, Reddit, ProductHunt...
+                        </div>
+                      )}
+                      {discoveredProducts.length > 0 && (
+                        <div className="dc-product-list">
+                          <div className="dc-product-list-header">
+                            <span>{discoveredProducts.filter(p => p.selected).length} of {discoveredProducts.length} products selected</span>
+                            <button type="button" className="dc-btn-link"
+                              onClick={() => setDiscoveredProducts(prev => prev.map(p => ({ ...p, selected: true })))}>
+                              Select All
+                            </button>
+                            <button type="button" className="dc-btn-link"
+                              onClick={() => setDiscoveredProducts(prev => prev.map(p => ({ ...p, selected: false })))}>
+                              Deselect All
+                            </button>
+                          </div>
+                          {discoveredProducts.map((product, idx) => (
+                            <label key={idx} className={`dc-product-item ${product.selected ? 'dc-product-selected' : 'dc-product-deselected'}`}>
+                              <input type="checkbox" checked={product.selected}
+                                onChange={() => toggleProduct(idx)} />
+                              <div className="dc-product-info">
+                                <div className="dc-product-name">{product.name}</div>
+                                {product.url && <div className="dc-product-url">{product.url}</div>}
+                                {product.description && <div className="dc-product-desc">{product.description}</div>}
+                              </div>
+                              {product.score > 0 && (
+                                <div className="dc-product-score" title="Content potential score">
+                                  {Math.round(product.score * 100)}%
+                                </div>
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="dc-card">
                   <div className="dc-card-header">
                     <h3>{!hasWebsite && niche ? 'Add a Product (Optional)' : 'Product Details'}</h3>
@@ -943,6 +1224,12 @@ export default function ProvisionForm() {
                 <div className="dc-card">
                   <div className="dc-card-header">
                     <h3>Appearance</h3>
+                    {niche && (
+                      <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm"
+                        onClick={generateColorsFromNiche}>
+                        Suggest from Niche
+                      </button>
+                    )}
                   </div>
                   <div className="dc-card-body">
                     <div className="dc-field-row">

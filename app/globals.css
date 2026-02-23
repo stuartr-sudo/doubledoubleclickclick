@@ -7518,6 +7518,12 @@ body:has(.dc-layout) > header {
   display: flex;
   align-items: flex-start;
   gap: 14px;
+  flex-wrap: wrap;
+}
+
+.dc-mode-banner .dc-btn {
+  flex-shrink: 0;
+  margin-top: 4px;
 }
 
 .dc-mode-banner-neutral {
@@ -7571,6 +7577,159 @@ body:has(.dc-layout) > header {
 
 .dc-discovery-steps li {
   margin-bottom: 2px;
+}
+
+/* Domain suggestions */
+.dc-domain-suggest-row {
+  margin-bottom: 12px;
+}
+
+.dc-domain-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dc-domain-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+
+.dc-domain-chip:hover {
+  border-color: #3b82f6;
+  background: #1e3a5f;
+}
+
+.dc-domain-chip-selected {
+  border-color: #3b82f6;
+  background: #1e3a5f;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.dc-domain-chip-name {
+  font-weight: 600;
+}
+
+.dc-domain-chip-price {
+  font-size: 11px;
+  color: #16a34a;
+  font-weight: 500;
+}
+
+/* Card header actions row */
+.dc-card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Small button variant */
+.dc-btn-sm {
+  padding: 5px 12px !important;
+  font-size: 12px !important;
+}
+
+/* Product discovery & approval */
+.dc-discovery-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.dc-product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dc-product-list-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 12px;
+  color: #94a3b8;
+  border-bottom: 1px solid #1e293b;
+  margin-bottom: 4px;
+}
+
+.dc-product-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dc-product-item:hover {
+  border-color: #475569;
+}
+
+.dc-product-selected {
+  background: #0f1d2f;
+  border-color: #3b82f6;
+}
+
+.dc-product-deselected {
+  opacity: 0.5;
+  background: transparent;
+}
+
+.dc-product-item input[type="checkbox"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.dc-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dc-product-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #f1f5f9;
+}
+
+.dc-product-url {
+  font-size: 12px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-product-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.dc-product-score {
+  flex-shrink: 0;
+  background: #16a34a22;
+  color: #16a34a;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
 }
 
 /* Form fields */
