@@ -25,7 +25,7 @@ const SUBJECTS = ['People', 'Technology', 'Nature', 'Architecture', 'Abstract Sh
 const SECTIONS = [
   { key: 'brand', label: 'Brand Profile', icon: '🏷️' },
   { key: 'image', label: 'Image Style', icon: '🎨' },
-  { key: 'product', label: 'Product Details', icon: '📦' },
+  { key: 'product', label: 'Products & Discovery', icon: '📦' },
   { key: 'deploy', label: 'Deploy & Launch', icon: '🚀' },
 ]
 
@@ -92,6 +92,7 @@ async function dcPost(endpoint: string, body: Record<string, any> = {}) {
    ═══════════════════════════════════════════════════════════ */
 export default function ProvisionForm() {
   /* ── brand identity ── */
+  const [niche, setNiche] = useState('')
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [domain, setDomain] = useState('')
@@ -146,6 +147,9 @@ export default function ProvisionForm() {
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const seenStepsRef = useRef<Set<string>>(new Set())
+
+  /* ── derived mode ── */
+  const hasWebsite = websiteUrl.trim().length > 0
 
   /* ── auto-fill from domain ── */
   useEffect(() => {
@@ -272,8 +276,8 @@ export default function ProvisionForm() {
      PROVISIONING (deploy)
      ═══════════════════════════════════════ */
   const handleProvision = async () => {
-    if (!username || !displayName || !websiteUrl || !contactEmail) {
-      setError('Username, display name, website URL, and contact email are required.')
+    if (!username || !displayName || !contactEmail || (!niche && !websiteUrl)) {
+      setError('Username, display name, contact email, and at least a niche or website URL are required.')
       return
     }
 
@@ -296,10 +300,10 @@ export default function ProvisionForm() {
         body: JSON.stringify({
           username: username.trim().toLowerCase(),
           display_name: displayName.trim(),
-          website_url: websiteUrl.trim(),
+          website_url: websiteUrl.trim() || undefined,
           contact_email: contactEmail.trim(),
           domain: domain.trim() || undefined,
-          niche: seedKeywords.split(',')[0]?.trim() || undefined,
+          niche: niche.trim() || undefined,
           blurb: brandBlurb.trim() || undefined,
           target_market: targetMarket.trim() || undefined,
           brand_voice_tone: brandVoice.trim() || undefined,
@@ -390,6 +394,7 @@ export default function ProvisionForm() {
     setProvisionResult(null)
     setPipelineStatus(null)
     setLogs([])
+    setNiche('')
     setUsername('')
     setDisplayName('')
     setDomain('')
@@ -508,35 +513,54 @@ export default function ProvisionForm() {
             {/* ── Section 0: Brand Profile ── */}
             {activeSection === 0 && (
               <div className="dc-section-wrap">
-                {/* AI generate bar */}
-                <div className="dc-ai-bar">
-                  <div className="dc-ai-bar-info">
-                    <h3>AI Brand Setup</h3>
-                    <p>Scrapes your website and generates Brand Voice, Target Market, Brand Blurb, Seed Keywords, and Image Style. Refine each section individually below, or enhance with AI until it&apos;s right.</p>
+                {/* Mode-aware context banner */}
+                {hasWebsite ? (
+                  <div className="dc-ai-bar">
+                    <div className="dc-ai-bar-info">
+                      <h3>AI Brand Setup</h3>
+                      <p>Scrapes your website and generates Brand Voice, Target Market, Brand Blurb, Seed Keywords, and Image Style. Refine each section individually below, or enhance with AI until it&apos;s right.</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="dc-btn dc-btn-ai"
+                      onClick={generateAll}
+                      disabled={generating.all || !websiteUrl}
+                    >
+                      {generating.all ? (
+                        <><span className="dc-spinner" /> Generating...</>
+                      ) : (
+                        'Generate All with AI'
+                      )}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className="dc-btn dc-btn-ai"
-                    onClick={generateAll}
-                    disabled={generating.all || !websiteUrl}
-                  >
-                    {generating.all ? (
-                      <><span className="dc-spinner" /> Generating...</>
-                    ) : (
-                      'Generate All with AI'
-                    )}
-                  </button>
-                </div>
+                ) : niche ? (
+                  <div className="dc-mode-banner">
+                    <div className="dc-mode-banner-icon">&#x1f50d;</div>
+                    <div>
+                      <h3>Niche Discovery Mode</h3>
+                      <p>Doubleclicker will research the <strong>{niche}</strong> niche, discover relevant products across multiple sources (Exa, Google, Reddit, ProductHunt), score them for content potential, and launch content pipelines automatically. Brand voice and target market will be derived from niche research.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="dc-mode-banner dc-mode-banner-neutral">
+                    <div className="dc-mode-banner-icon">&#x2139;&#xfe0f;</div>
+                    <div>
+                      <h3>Getting Started</h3>
+                      <p>Enter a <strong>niche</strong> for research-first discovery, or a <strong>website URL</strong> to scrape an existing brand. You can provide both.</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Basic fields */}
                 <div className="dc-card">
                   <div className="dc-card-header"><h3>Brand Identity</h3></div>
                   <div className="dc-card-body">
                     <div className="dc-field">
-                      <label>Website URL <span className="dc-required">*</span></label>
-                      <input type="url" value={websiteUrl}
-                        onChange={(e) => setWebsiteUrl(e.target.value)}
-                        placeholder="https://yourwebsite.com" />
+                      <label>Niche <span className="dc-required">*</span></label>
+                      <input type="text" value={niche}
+                        onChange={(e) => setNiche(e.target.value)}
+                        placeholder="e.g., Longevity Supplements, AI Productivity Tools, Sustainable Home Living" />
+                      <span className="dc-hint">The topical niche Doubleclicker will research and build content around.</span>
                     </div>
 
                     <div className="dc-field-row">
@@ -557,6 +581,14 @@ export default function ProvisionForm() {
                           onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                           placeholder="acmecorp" />
                       </div>
+                    </div>
+
+                    <div className="dc-field">
+                      <label>Website URL</label>
+                      <input type="url" value={websiteUrl}
+                        onChange={(e) => setWebsiteUrl(e.target.value)}
+                        placeholder="https://yourwebsite.com" />
+                      <span className="dc-hint">Optional — provide if the brand already has a website. Enables AI brand scraping.</span>
                     </div>
 
                     <div className="dc-field-row">
@@ -636,12 +668,13 @@ export default function ProvisionForm() {
                 <div className="dc-card">
                   <div className="dc-card-header">
                     <h3>Brand Voice</h3>
-                    <EnhanceButton loading={generating.brand_voice} onClick={() => enhanceField('brand_voice', brandVoice)} />
+                    {hasWebsite && <EnhanceButton loading={generating.brand_voice} onClick={() => enhanceField('brand_voice', brandVoice)} />}
                   </div>
                   <div className="dc-card-body">
                     <div className="dc-field">
                       <textarea value={brandVoice} onChange={(e) => setBrandVoice(e.target.value)}
                         placeholder="First-person, conversational, technically sharp but accessible" rows={3} />
+                      {!hasWebsite && <span className="dc-field-optional-hint">Optional — Doubleclicker will derive this from niche research if left blank.</span>}
                     </div>
                   </div>
                 </div>
@@ -650,13 +683,14 @@ export default function ProvisionForm() {
                 <div className="dc-card">
                   <div className="dc-card-header">
                     <h3>Target Market</h3>
-                    <EnhanceButton loading={generating.target_market} onClick={() => enhanceField('target_market', targetMarket)} />
+                    {hasWebsite && <EnhanceButton loading={generating.target_market} onClick={() => enhanceField('target_market', targetMarket)} />}
                   </div>
                   <div className="dc-card-body">
                     <div className="dc-field">
                       <textarea value={targetMarket} onChange={(e) => setTargetMarket(e.target.value)}
                         placeholder={'Describe your ideal customer in detail. Include:\n• Who they are (role, company size, industry)\n• Their core problem or goal\n• Their level of technical sophistication\n• What they care about when evaluating a solution'}
                         rows={5} />
+                      {!hasWebsite && <span className="dc-field-optional-hint">Optional — Doubleclicker will derive this from niche research if left blank.</span>}
                     </div>
                   </div>
                 </div>
@@ -665,13 +699,14 @@ export default function ProvisionForm() {
                 <div className="dc-card">
                   <div className="dc-card-header">
                     <h3>Brand Blurb / Guidelines</h3>
-                    <EnhanceButton loading={generating.brand_blurb} onClick={() => enhanceField('brand_blurb', brandBlurb)} />
+                    {hasWebsite && <EnhanceButton loading={generating.brand_blurb} onClick={() => enhanceField('brand_blurb', brandBlurb)} />}
                   </div>
                   <div className="dc-card-body">
                     <div className="dc-field">
                       <textarea value={brandBlurb} onChange={(e) => setBrandBlurb(e.target.value)}
                         placeholder="2–4 sentences describing the brand for AI context. This is injected into every article prompt so AI understands the brand position."
                         rows={4} />
+                      {!hasWebsite && <span className="dc-field-optional-hint">Optional — Doubleclicker will derive this from niche research if left blank.</span>}
                     </div>
                   </div>
                 </div>
@@ -680,14 +715,17 @@ export default function ProvisionForm() {
                 <div className="dc-card">
                   <div className="dc-card-header">
                     <h3>Seed Keywords</h3>
-                    <EnhanceButton loading={generating.seed_keywords} onClick={() => enhanceField('seed_keywords', seedKeywords)} />
+                    {hasWebsite && <EnhanceButton loading={generating.seed_keywords} onClick={() => enhanceField('seed_keywords', seedKeywords)} />}
                   </div>
                   <div className="dc-card-body">
                     <div className="dc-field">
                       <textarea value={seedKeywords} onChange={(e) => setSeedKeywords(e.target.value)}
                         placeholder="Enter comma-separated keyword phrases (2–4 words each) that represent your core topics. AI will expand these during discovery."
                         rows={3} />
-                      <span className="dc-hint">Comma-separated phrases (not single words). AI adds more seeds during keyword discovery — these set the topical direction.</span>
+                      {hasWebsite
+                        ? <span className="dc-hint">Comma-separated phrases (not single words). AI adds more seeds during keyword discovery — these set the topical direction.</span>
+                        : <span className="dc-field-optional-hint">Optional — Doubleclicker expands keywords automatically from niche research (250-350 keywords).</span>
+                      }
                     </div>
                   </div>
                 </div>
@@ -779,11 +817,36 @@ export default function ProvisionForm() {
               </div>
             )}
 
-            {/* ── Section 2: Product Details ── */}
+            {/* ── Section 2: Products & Discovery ── */}
             {activeSection === 2 && (
               <div className="dc-section-wrap">
+                {/* Niche discovery info */}
+                {!hasWebsite && niche && (
+                  <div className="dc-card dc-card-info">
+                    <div className="dc-card-header"><h3>Automatic Product Discovery</h3></div>
+                    <div className="dc-card-body">
+                      <div className="dc-info-box">
+                        <strong>7-Phase Discovery Pipeline</strong>
+                        <p>Doubleclicker will autonomously discover products in the <strong>{niche}</strong> niche:</p>
+                        <ol className="dc-discovery-steps">
+                          <li>Expand niche into 15-25 search queries</li>
+                          <li>Search across Exa, Google, Reddit, and ProductHunt</li>
+                          <li>Deduplicate and rank candidates</li>
+                          <li>Scrape top product pages</li>
+                          <li>AI-score each product (affiliate viability, market demand, content potential)</li>
+                          <li>Auto-ingest qualifying products</li>
+                          <li>Launch content pipelines per product</li>
+                        </ol>
+                        <p>You can optionally add a known product below, but it is not required.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="dc-card">
-                  <div className="dc-card-header"><h3>Product Details</h3></div>
+                  <div className="dc-card-header">
+                    <h3>{!hasWebsite && niche ? 'Add a Product (Optional)' : 'Product Details'}</h3>
+                  </div>
                   <div className="dc-card-body">
                     <div className="dc-field-row">
                       <div className="dc-field">
@@ -925,7 +988,7 @@ export default function ProvisionForm() {
                   type="button"
                   className="dc-btn dc-btn-launch"
                   onClick={handleProvision}
-                  disabled={!username || !displayName || !websiteUrl || !contactEmail}
+                  disabled={!username || !displayName || !contactEmail || (!niche && !websiteUrl)}
                 >
                   Launch Provisioning
                 </button>

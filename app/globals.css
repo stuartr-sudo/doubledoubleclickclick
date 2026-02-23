@@ -7484,6 +7484,70 @@ body:has(.dc-layout) > header {
   max-width: 480px;
 }
 
+/* Mode banners */
+.dc-mode-banner {
+  background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.dc-mode-banner-neutral {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-color: #cbd5e1;
+}
+
+.dc-mode-banner-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.dc-mode-banner h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #14532d;
+  margin-bottom: 4px;
+}
+
+.dc-mode-banner-neutral h3 {
+  color: #334155;
+}
+
+.dc-mode-banner p {
+  font-size: 13px;
+  color: #15803d;
+  line-height: 1.5;
+}
+
+.dc-mode-banner-neutral p {
+  color: #64748b;
+}
+
+/* Optional field hint (niche mode) */
+.dc-field-optional-hint {
+  display: block;
+  font-size: 12px;
+  color: #16a34a;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* Discovery steps list */
+.dc-discovery-steps {
+  margin: 8px 0 12px 20px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.dc-discovery-steps li {
+  margin-bottom: 2px;
+}
+
 /* Form fields */
 .dc-field {
   margin-bottom: 12px;

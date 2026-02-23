@@ -71,9 +71,15 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    if (!username || !display_name || !website_url || !contact_email) {
+    if (!username || !display_name || !contact_email) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: username, display_name, website_url, contact_email' },
+        { success: false, error: 'Missing required fields: username, display_name, contact_email' },
+        { status: 400 }
+      )
+    }
+    if (!website_url && !niche) {
+      return NextResponse.json(
+        { success: false, error: 'At least one of website_url or niche is required' },
         { status: 400 }
       )
     }
@@ -106,7 +112,7 @@ export async function POST(request: NextRequest) {
     const guidelinesPayload = {
       user_name: username,
       name: display_name,
-      website_url: website_url,
+      website_url: website_url || null,
       brand_personality: brand_voice_tone || null,
       default_author: author_name || display_name,
       author_bio: author_bio || null,
@@ -190,7 +196,7 @@ export async function POST(request: NextRequest) {
     // 3. company_information
     const companyPayload = {
       username: username,
-      client_website: website_url,
+      client_website: website_url || null,
       email: contact_email,
       blurb: blurb || null,
       target_market: target_market || null,
@@ -273,9 +279,9 @@ export async function POST(request: NextRequest) {
         const onboardPayload: Record<string, unknown> = {
           username,
           displayName: display_name,
-          websiteUrl: website_url,
           assignToEmail: contact_email,
         }
+        if (website_url) onboardPayload.websiteUrl = website_url
         if (product_url) onboardPayload.productUrl = product_url
         if (niche) onboardPayload.niche = niche
 
@@ -337,7 +343,7 @@ export async function POST(request: NextRequest) {
         console.log(`Allocated IPs: ${flyIpv4} / ${flyIpv6}`)
 
         // 5. Create machine with site-specific env vars
-        const siteUrl = domain ? `https://www.${domain}` : website_url
+        const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${flyAppName}.fly.dev`
         await fly.createMachine(flyAppName, imageRef, {
           NEXT_PUBLIC_BRAND_USERNAME: username,
           NEXT_PUBLIC_SITE_URL: siteUrl,
