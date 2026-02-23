@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Script from 'next/script'
 
 export default function Analytics() {
-  const GA_MEASUREMENT_ID = 'G-TT58X7D8RV'
+  const gaId = process.env.NEXT_PUBLIC_GA_ID || ''
 
   useEffect(() => {
     const init = async () => {
@@ -24,27 +24,27 @@ export default function Analytics() {
     init()
   }, [])
 
+  if (!gaId) return null
+
   return (
     <>
-      {/* Google Analytics with consent mode */}
       <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
         strategy="afterInteractive"
       />
       <Script id="google-analytics" strategy="afterInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
-          
-          // Set default consent to 'denied' (GDPR compliant)
+
           gtag('consent', 'default', {
             'analytics_storage': 'denied',
             'ad_storage': 'denied',
             'wait_for_update': 500
           });
-          
+
           gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}', {
+          gtag('config', '${gaId}', {
             'anonymize_ip': true
           });
         `}
@@ -52,5 +52,3 @@ export default function Analytics() {
     </>
   )
 }
-
-

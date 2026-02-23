@@ -15,10 +15,10 @@ type SiteHeaderProps = {
 
 export default function SiteHeader({
   blogVisible = true,
-  logoText = 'SEWO',
+  logoText = 'Site',
   logoImage,
-  ctaText = 'Apply to Work With Us',
-  ctaLink = '/#apply-form',
+  ctaText = 'Contact Us',
+  ctaLink = '/contact',
 }: SiteHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -75,5 +75,3 @@ export default function SiteHeader({
     </header>
   )
 }
-
-

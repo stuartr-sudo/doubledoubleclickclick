@@ -1,63 +1,86 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import HomePageClient from './HomePageClient'
-import HomePageClientLegacy from './HomePageClientLegacy'
+import { getBrandData } from '@/lib/brand'
+import { getPublishedPosts } from '@/lib/posts'
+import { getTenantConfig } from '@/lib/tenant'
+import SiteHeader from '@/components/SiteHeader'
+import BlogCarousel from '@/components/BlogCarousel'
 import type { Metadata } from 'next'
 
-// Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'SEWO - Get Found Everywhere | LLM Ranking & AI Search Optimization',
-  description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search results. Get discovered by ChatGPT, Claude, Gemini & more.',
-  alternates: {
-    canonical: 'https://www.sewo.io',
-  },
-  openGraph: {
-    title: 'SEWO - Get Found Everywhere',
-    description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization to boost your visibility in AI-powered search.',
-    type: 'website',
-    url: 'https://www.sewo.io',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'SEWO - Get Found Everywhere',
-    description: 'Make your brand the answer AI suggests. Expert LLM ranking optimization.',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const config = getTenantConfig()
+  let description = ''
+
+  try {
+    const brand = await getBrandData()
+    description = brand.company?.blurb || brand.guidelines?.brand_personality || ''
+  } catch {}
+
+  return {
+    title: config.siteName,
+    description,
+    alternates: { canonical: config.siteUrl },
+    openGraph: {
+      title: config.siteName,
+      description,
+      type: 'website',
+      url: config.siteUrl,
+    },
+  }
 }
 
 export default async function HomePage() {
-  const supabase = await createClient()
-  
-  // Fetch homepage content
-  const { data: homepageContent } = await supabase
-    .from('homepage_content')
-    .select('*')
-    .single()
-  
-  // Fetch blog posts for homepage preview (limit to 6)
-  // We prioritize 'popular' posts if they are flagged, then fall back to latest by published date
-  const { data: allPosts } = await supabase
-    .from('site_posts')
-    .select('id, title, slug, meta_description, featured_image, created_date, published_date, is_popular')
-    .eq('status', 'published')
-    .limit(50) // Fetch enough to sort manually
+  const config = getTenantConfig()
+  const brand = await getBrandData()
+  const posts = await getPublishedPosts(6)
 
-  const sortedPosts = (allPosts || []).sort((a, b) => {
-    // 1. Popular first
-    if (a.is_popular && !b.is_popular) return -1
-    if (!a.is_popular && b.is_popular) return 1
-    
-    // 2. Then by published_date (or created_date) newest first
-    const dateA = new Date(a.published_date || a.created_date).getTime()
-    const dateB = new Date(b.published_date || b.created_date).getTime()
-    return dateB - dateA
-  })
+  const brandName = brand.guidelines?.name || config.siteName
+  const tagline = brand.company?.blurb || brand.guidelines?.brand_personality || ''
 
-  const latest = sortedPosts.slice(0, 6)
+  return (
+    <>
+      <SiteHeader
+        logoText={brandName}
+        logoImage={brand.specs?.logo_url || undefined}
+      />
+      <main>
+        {/* Hero Section */}
+        <section className="hero-section">
+          <div className="container">
+            <div className="hero-content">
+              <h1 className="hero-title">{brandName}</h1>
+              {tagline && <p className="hero-description">{tagline}</p>}
+              <div className="hero-actions">
+                <Link href="/blog" className="btn btn-primary">
+                  Read Our Blog
+                </Link>
+                <Link href="/about" className="btn btn-secondary">
+                  About Us
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
 
-  const siteVariant = process.env.NEXT_PUBLIC_SITE_VARIANT || 'template'
-  const ClientComponent = siteVariant === 'legacy' ? HomePageClientLegacy : HomePageClient
+        {/* About Intro */}
+        {(brand.guidelines?.brand_personality || brand.guidelines?.voice_and_tone) && (
+          <section className="about-intro-section">
+            <div className="container">
+              <h2>About</h2>
+              <p>{brand.guidelines?.brand_personality || brand.guidelines?.voice_and_tone}</p>
+              <Link href="/about" className="about-link">
+                Learn more about us &rarr;
+              </Link>
+            </div>
+          </section>
+        )}
 
-  return <ClientComponent latestPosts={latest} homepageContent={homepageContent} />
+        {/* Blog Carousel */}
+        {posts.length > 0 && (
+          <BlogCarousel posts={posts} title="Latest Posts" />
+        )}
+      </main>
+    </>
+  )
 }

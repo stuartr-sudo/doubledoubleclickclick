@@ -16,13 +16,12 @@ export default function MobileMenu({
   isOpen,
   onClose,
   blogVisible = true,
-  ctaText = 'Apply to Work With Us',
-  ctaLink = '/#apply-form',
+  ctaText = 'Contact Us',
+  ctaLink = '/contact',
 }: MobileMenuProps) {
   const pathname = usePathname()
   const prevPathnameRef = useRef(pathname)
 
-  // Close menu when pathname changes (meaning we've navigated to a new page)
   useEffect(() => {
     if (isOpen && pathname !== prevPathnameRef.current) {
       onClose()
@@ -36,7 +35,7 @@ export default function MobileMenu({
     } else {
       document.body.style.overflow = ''
     }
-    
+
     return () => {
       document.body.style.overflow = ''
     }
@@ -46,14 +45,12 @@ export default function MobileMenu({
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const href = e.currentTarget.getAttribute('href')
-    
-    // If clicking a link to the current page, close the menu manually
+
     if (href === pathname || href === '/') {
       onClose()
     }
-    
+
     if (href?.startsWith('#')) {
-      // Smooth scroll to anchor
       e.preventDefault()
       const targetId = href.substring(1)
       const element = document.getElementById(targetId)
@@ -66,9 +63,9 @@ export default function MobileMenu({
 
   return (
     <div className="mobile-menu-overlay">
-      <button 
-        className="mobile-menu-close-btn" 
-        onClick={onClose} 
+      <button
+        className="mobile-menu-close-btn"
+        onClick={onClose}
         aria-label="Close Menu"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -99,4 +96,3 @@ export default function MobileMenu({
     </div>
   )
 }
-

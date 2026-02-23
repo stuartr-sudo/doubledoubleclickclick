@@ -76,14 +76,7 @@ export default function ContactForm() {
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M2.5 4.16667L9.16667 9.16667L15.8333 4.16667M2.5 15.8333H17.5V4.16667H2.5V15.8333Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <a href="mailto:stuartr@sewo.io">stuartr@sewo.io</a>
-              </div>
-              
-              <div className="contact-info-item">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M2.5 4.16667C2.5 3.24619 3.24619 2.5 4.16667 2.5H6.66667C7.12691 2.5 7.53024 2.79875 7.66667 3.23333L8.75 7C8.86458 7.38194 8.75694 7.79861 8.46667 8.08333L6.66667 9.88333C7.82639 12.2569 9.74306 14.1736 12.1167 15.3333L13.9167 13.5333C14.2014 13.2431 14.6181 13.1354 15 13.25L18.7667 14.3333C19.2013 14.4698 19.5 14.8731 19.5 15.3333V17.8333C19.5 18.7538 18.7538 19.5 17.8333 19.5H17.5C8.3873 19.5 0.5 11.6127 0.5 2.5V2.16667C0.5 1.24619 1.24619 0.5 2.16667 0.5H4.66667C5.12691 0.5 5.53024 0.79875 5.66667 1.23333L6.75 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span>TBA</span>
+                <span>Fill out the form and we&apos;ll be in touch</span>
               </div>
             </div>
           </div>
@@ -147,9 +140,8 @@ export default function ContactForm() {
                   className="form-input form-select"
                 >
                   <option value="">*Select your topic</option>
-                  <option value="Work with Us">Work with Us</option>
-                  <option value="Partnership White Label">Partnership White Label</option>
-                  <option value="Consulting">Consulting</option>
+                  <option value="General Enquiry">General Enquiry</option>
+                  <option value="Partnership">Partnership</option>
                   <option value="Feedback">Feedback</option>
                   <option value="Other">Other</option>
                 </select>

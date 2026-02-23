@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 3600 // Revalidate every hour
+export const revalidate = 3600
 
 export async function GET(request: Request) {
   const baseUrl = new URL(request.url).origin
@@ -11,10 +11,6 @@ export async function GET(request: Request) {
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
     <loc>${baseUrl}/sitemap-pages.xml</loc>
-    <lastmod>${lastMod}</lastmod>
-  </sitemap>
-  <sitemap>
-    <loc>${baseUrl}/sitemap-services.xml</loc>
     <lastmod>${lastMod}</lastmod>
   </sitemap>
   <sitemap>
@@ -30,5 +26,3 @@ export async function GET(request: Request) {
     },
   })
 }
-
-

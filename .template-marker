@@ -1,8 +1,0 @@
-# This file marks this directory as the TEMPLATE
-# DO NOT modify this codebase directly - create a clone first!
-# 
-# To create a new site:
-#   ./create-new-blog.sh my-new-site
-#
-# This file is automatically deleted in clones.
-TEMPLATE=true

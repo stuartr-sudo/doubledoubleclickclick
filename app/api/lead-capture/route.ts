@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { getClientIP, isRateLimited, checkEmailExists, updateRateLimitCache } from '@/lib/spam-protection'
+import { getClientIP, isRateLimited, updateRateLimitCache } from '@/lib/spam-protection'
+import { getTenantConfig } from '@/lib/tenant'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    const config = getTenantConfig()
     const body = await request.json()
     const {
       name,
       email,
       company,
-      company_name, // Handle both company and company_name
+      company_name,
       website,
       message,
-      plan_type,
       source,
-      topic, // Topic from contact form
+      topic,
     } = body || {}
 
-    // Use company_name if provided, otherwise fall back to company
     const companyName = company_name || company
 
     if (!email) {
@@ -39,178 +39,93 @@ export async function POST(request: NextRequest) {
       ipAddress = 'unknown'
     }
 
-    // Create rate limit key (used for both checking and updating)
+    // Check rate limiting
     const rateLimitKey = `${ipAddress}:${source || 'default'}:${email}`
-
-    // Check rate limiting by IP (more lenient for legitimate forms)
-    // Allow different emails from same IP to prevent blocking legitimate users
     try {
       if (isRateLimited(rateLimitKey, source)) {
         return NextResponse.json(
-          { success: false, error: 'Too many submissions from this email address. Please wait a few minutes before trying again.' },
+          { success: false, error: 'Too many submissions. Please wait a few minutes before trying again.' },
           { status: 429 }
         )
       }
     } catch (error) {
       console.error('Error checking rate limit:', error)
-      // Continue processing if rate limit check fails (fail open)
     }
 
-    // Check if email already exists (globally across all sources)
-    let emailExists = false
-    try {
-      emailExists = await checkEmailExists(email)
-    } catch (error) {
-      console.error('Error checking email existence:', error)
-      // Continue processing if email check fails (fail open)
-    }
-    
-    if (emailExists) {
-      return NextResponse.json(
-        { success: false, error: 'This email has already been registered. Each email can only be used once.' },
-        { status: 400 }
-      )
-    }
-
-    // Get Supabase credentials - use service role key if available to bypass RLS
+    // Get Supabase credentials
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseKey) {
       console.error('Supabase env vars missing for lead capture')
       return NextResponse.json(
-        { success: false, error: 'Supabase not configured' },
+        { success: false, error: 'Database not configured' },
         { status: 500 }
       )
     }
 
-    // Use service role key if available to bypass RLS, otherwise use anon key
     const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false
-      }
+      auth: { persistSession: false }
     })
 
-    // Try to insert - but make topic optional if column doesn't exist
-    const insertPayload: any = {
-      name: name || 'Questions Discovery Lead',
+    // Insert into the shared Doubleclicker `leads` table
+    const insertPayload: Record<string, unknown> = {
+      name: name || 'Contact Form Lead',
       email,
       company: companyName || null,
       website: website || null,
       message: message || null,
-      plan_type: plan_type || null,
-      source: source || null,
+      tag: source || 'contact_form',
+      brand_id: config.username,
+      author_username: config.username,
       ip_address: ipAddress,
     }
-    
-    // Only add topic if it's provided (column might not exist)
+
     if (topic) {
       insertPayload.topic = topic
     }
-    
-    console.log('Attempting to insert lead capture:', { 
-      email, 
-      source, 
-      hasName: !!name,
-      hasCompany: !!companyName,
-      hasWebsite: !!website,
-      hasMessage: !!message,
-      hasTopic: !!topic
-    })
 
     try {
       const { data: insertData, error } = await supabase
-        .from('lead_captures')
+        .from('leads')
         .insert(insertPayload)
         .select()
 
       if (error) {
         console.error('Supabase insert error:', error)
-        console.error('Error code:', error.code)
-        console.error('Error message:', error.message)
-        console.error('Error details:', error.details)
-        console.error('Error hint:', error.hint)
-        console.error('Full error object:', JSON.stringify(error, null, 2))
-        
-        // Check for specific error types
-        if (error.code === '23505') { // Unique constraint violation
+
+        if (error.code === '23505') {
           return NextResponse.json(
-            { success: false, error: 'This email has already been registered. Each email can only be used once.' },
+            { success: false, error: 'This email has already been submitted.' },
             { status: 400 }
           )
         }
-        
-        // Check for missing column errors - try again without topic
-        if (error.message?.includes('column') && error.message?.includes('does not exist')) {
-          console.error('DATABASE SCHEMA ERROR: Missing column detected, retrying without topic')
-          
-          // Remove topic and try again
-          const retryPayload = { ...insertPayload }
-          delete retryPayload.topic
-          
-          const { data: retryData, error: retryError } = await supabase
-            .from('lead_captures')
-            .insert(retryPayload)
-            .select()
-          
-          if (retryError) {
-            console.error('Retry also failed:', retryError)
-            return NextResponse.json(
-              { 
-                success: false, 
-                error: `Database error: ${retryError.message}. Please contact support at stuartr@sewo.io.`,
-                details: process.env.NODE_ENV === 'development' ? JSON.stringify(retryError) : undefined
-              },
-              { status: 500 }
-            )
-          }
-          
-          console.log('Lead capture inserted successfully (without topic):', retryData)
-          updateRateLimitCache(rateLimitKey, source)
-          // Continue to email sending
-        } else {
-          return NextResponse.json(
-            { 
-              success: false, 
-              error: `Database error: ${error.message}. Please try again or contact support at stuartr@sewo.io.`,
-              details: process.env.NODE_ENV === 'development' ? JSON.stringify(error) : undefined
-            },
-            { status: 500 }
-          )
-        }
-      } else {
-        console.log('Lead capture inserted successfully:', insertData)
-        // Update rate limit cache AFTER successful submission
-        updateRateLimitCache(rateLimitKey, source)
+
+        return NextResponse.json(
+          { success: false, error: 'Failed to save your submission. Please try again.' },
+          { status: 500 }
+        )
       }
+
+      console.log('Lead inserted successfully:', insertData?.[0]?.id)
+      updateRateLimitCache(rateLimitKey, source)
     } catch (insertError) {
-      console.error('Exception during lead capture insert:', insertError)
-      console.error('Exception type:', insertError instanceof Error ? insertError.constructor.name : typeof insertError)
-      console.error('Exception message:', insertError instanceof Error ? insertError.message : String(insertError))
-      console.error('Exception stack:', insertError instanceof Error ? insertError.stack : 'No stack trace')
-      
-      const errorMsg = insertError instanceof Error ? insertError.message : 'Unknown error'
+      console.error('Exception during lead insert:', insertError)
       return NextResponse.json(
-        { 
-          success: false, 
-          error: `Exception: ${errorMsg}. Please contact support at stuartr@sewo.io.`,
-          details: process.env.NODE_ENV === 'development' ? (insertError instanceof Error ? insertError.stack : String(insertError)) : undefined
-        },
+        { success: false, error: 'An unexpected error occurred. Please try again.' },
         { status: 500 }
       )
     }
 
     // Send email notification via Resend
-    if (process.env.RESEND_API_KEY) {
+    const notificationEmail = process.env.NOTIFICATION_EMAIL || config.contactEmail
+    if (process.env.RESEND_API_KEY && notificationEmail) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY)
-        
-        // Format source for display
-        const sourceDisplay = source === 'apply_to_work_with_us' 
-          ? 'Apply to Work With Us Form' 
-          : source || 'Contact Form'
+        const fromEmail = process.env.RESEND_FROM_EMAIL || `noreply@${new URL(config.siteUrl).hostname}`
 
-        // Sanitize strings for HTML to prevent injection
+        const sourceDisplay = source || 'Contact Form'
+
         const sanitize = (str: string | null | undefined): string => {
           if (!str) return ''
           return String(str)
@@ -221,133 +136,55 @@ export async function POST(request: NextRequest) {
             .replace(/'/g, '&#x27;')
         }
 
-        // Create HTML email content
         const htmlContent = `
           <!DOCTYPE html>
           <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>New Lead: ${sourceDisplay}</title>
-            </head>
-            <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
+            <head><meta charset="utf-8"><title>New Lead: ${sourceDisplay}</title></head>
+            <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc;">
               <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-                <!-- Header -->
                 <div style="text-align: center; margin-bottom: 40px;">
-                  <h1 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 0 0 10px 0;">
-                    New Lead Submission
-                  </h1>
-                  <p style="color: #64748b; font-size: 16px; margin: 0;">
-                    ${sourceDisplay}
-                  </p>
+                  <h1 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 0 0 10px 0;">New Lead Submission</h1>
+                  <p style="color: #64748b; font-size: 16px; margin: 0;">${sourceDisplay} - ${sanitize(config.siteName)}</p>
                 </div>
-
-                <!-- Lead Details -->
                 <div style="background-color: #ffffff; border-radius: 12px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                  <h2 style="color: #1e293b; font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">
-                    Contact Information
-                  </h2>
-                  
+                  <h2 style="color: #1e293b; font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">Contact Information</h2>
                   <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600; width: 140px;">Name:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(name) || 'Not provided'}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Email:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="mailto:${sanitize(email)}" style="color: #3b82f6; text-decoration: none;">${sanitize(email)}</a></td>
-                    </tr>
-                    ${companyName ? `
-                    <tr>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Company:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(companyName)}</td>
-                    </tr>
-                    ` : ''}
-                    ${website ? `
-                    <tr>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Website:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="${sanitize(website)}" target="_blank" style="color: #3b82f6; text-decoration: none;">${sanitize(website)}</a></td>
-                    </tr>
-                    ` : ''}
-                    ${topic ? `
-                    <tr>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Topic:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(topic)}</td>
-                    </tr>
-                    ` : ''}
-                    ${source ? `
-                    <tr>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Source:</td>
-                      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(sourceDisplay)}</td>
-                    </tr>
-                    ` : ''}
+                    <tr><td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600; width: 140px;">Name:</td><td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(name) || 'Not provided'}</td></tr>
+                    <tr><td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Email:</td><td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;"><a href="mailto:${sanitize(email)}" style="color: #3b82f6; text-decoration: none;">${sanitize(email)}</a></td></tr>
+                    ${companyName ? `<tr><td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Company:</td><td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(companyName)}</td></tr>` : ''}
+                    ${topic ? `<tr><td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; font-weight: 600;">Topic:</td><td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">${sanitize(topic)}</td></tr>` : ''}
                   </table>
                 </div>
-
-                ${message ? `
-                <!-- Message Content -->
-                <div style="background-color: #ffffff; border-radius: 12px; padding: 30px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                  <h2 style="color: #1e293b; font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">
-                    Message
-                  </h2>
-                  <div style="color: #334155; font-size: 15px; line-height: 1.7; white-space: pre-wrap;">${sanitize(message).replace(/\n/g, '<br>')}</div>
-                </div>
-                ` : ''}
-
-                <!-- Footer -->
+                ${message ? `<div style="background-color: #ffffff; border-radius: 12px; padding: 30px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"><h2 style="color: #1e293b; font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">Message</h2><div style="color: #334155; font-size: 15px; line-height: 1.7; white-space: pre-wrap;">${sanitize(message).replace(/\n/g, '<br>')}</div></div>` : ''}
                 <div style="margin-top: 30px; text-align: center; color: #94a3b8; font-size: 12px;">
-                  <p style="margin: 0;">
-                    This lead was captured from <a href="https://www.sewo.io" style="color: #3b82f6; text-decoration: none;">sewo.io</a>
-                  </p>
+                  <p style="margin: 0;">Lead captured from ${sanitize(config.siteName)}</p>
                 </div>
               </div>
             </body>
           </html>
         `
 
-        // Send email notification
-        const { data, error: emailError } = await resend.emails.send({
-          from: 'SEWO <stuartr@sewo.io>', // Update with your verified domain
-          to: ['stuartr@sewo.io'], // Notification recipient
+        const { error: emailError } = await resend.emails.send({
+          from: `${config.siteName} <${fromEmail}>`,
+          to: [notificationEmail],
           subject: `New Lead: ${sanitize(sourceDisplay)} - ${sanitize(companyName || name || email)}`,
           html: htmlContent,
         })
 
         if (emailError) {
           console.error('Resend email error:', emailError)
-          // Don't fail the request if email fails, just log it
-        } else {
-          console.log('Email notification sent successfully:', data?.id)
         }
       } catch (emailErr) {
         console.error('Error sending email notification:', emailErr)
-        // Don't fail the request if email fails, just log it
       }
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Lead capture API error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unexpected error'
-    const errorStack = error instanceof Error ? error.stack : String(error)
-    console.error('Error details:', { errorMessage, errorStack })
-    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
-    
-    // Always return error details in development, and in production if it's a known error type
-    const isDevelopment = process.env.NODE_ENV === 'development'
-    const errorDetails = isDevelopment ? errorMessage : undefined
-    
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'An error occurred while processing your submission. Please try again or contact us directly at stuartr@sewo.io.',
-        details: errorDetails,
-        // Include stack trace in development for debugging
-        stack: isDevelopment ? errorStack : undefined
-      },
+      { success: false, error: 'An error occurred. Please try again.' },
       { status: 500 }
     )
   }
 }
-
-

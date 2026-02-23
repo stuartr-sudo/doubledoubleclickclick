@@ -1,100 +1,21 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { createServiceClient } from '@/lib/supabase/service'
+import { getPostBySlug, getPublishedPosts, getPostDate } from '@/lib/posts'
+import { getTenantConfig } from '@/lib/tenant'
+import { getBrandData } from '@/lib/brand'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import Script from 'next/script'
 import BlogCarousel from '@/components/BlogCarousel'
 import BlogTracker from '@/components/BlogTracker'
-import BlogQuizCTA from '@/components/BlogQuizCTA'
 import ContactForm from '@/components/ContactForm'
 import ArticleReactions from '@/components/ArticleReactions'
 import ArticleComments from '@/components/ArticleComments'
 import RelatedPosts from '@/components/RelatedPosts'
 import SiteHeader from '@/components/SiteHeader'
 
-const demoPosts = [
-  {
-    slug: 'how-to-build-a-startup-from-scratch',
-    title: 'How to build a startup from scratch',
-    meta_title: 'How to build a startup from scratch',
-    meta_description: 'A practical walkthrough on validating ideas, building the first version, and reaching product‑market fit.',
-    featured_image: null,
-    published_date: null,
-    created_date: '2025-01-01',
-    updated_date: '2025-01-01',
-    author: 'SEWO',
-    tags: [],
-    content: '<p>Demo content for startup growth.</p>',
-    category: 'Business',
-    generated_llm_schema: null,
-  },
-  {
-    slug: 'mastering-the-art-of-pitching-your-business-idea',
-    title: 'Mastering the art of pitching your business idea',
-    meta_title: 'Mastering the art of pitching your business idea',
-    meta_description: 'Structure, narrative, and visuals that make investors and customers say yes.',
-    featured_image: null,
-    published_date: null,
-    created_date: '2025-01-01',
-    updated_date: '2025-01-01',
-    author: 'SEWO',
-    tags: [],
-    content: '<p>Demo content for pitching.</p>',
-    category: 'Business',
-    generated_llm_schema: null,
-  },
-  {
-    slug: 'turning-your-passion-into-a-full-time-career',
-    title: 'Turning your passion into a full‑time career',
-    meta_title: 'Turning your passion into a full‑time career',
-    meta_description: 'Playbooks for creators to monetize, build audience, and scale sustainably.',
-    featured_image: null,
-    published_date: null,
-    created_date: '2025-01-01',
-    updated_date: '2025-01-01',
-    author: 'SEWO',
-    tags: [],
-    content: '<p>Demo content for careers.</p>',
-    category: 'Lifestyle',
-    generated_llm_schema: null,
-  },
-  {
-    slug: 'the-latest-tech-trends-every-creator-should-know',
-    title: 'The latest tech trends every creator should know',
-    meta_title: 'The latest tech trends every creator should know',
-    meta_description: 'From AI tools to new platforms - what matters this year and how to adapt fast.',
-    featured_image: null,
-    published_date: null,
-    created_date: '2025-01-01',
-    updated_date: '2025-01-01',
-    author: 'SEWO',
-    tags: [],
-    content: '<p>Demo content for tech trends.</p>',
-    category: 'Tech',
-    generated_llm_schema: null,
-  },
-]
-
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  let post: any = null
-
-  try {
-    const supabase = createServiceClient()
-    const { data } = await supabase
-      .from('site_posts')
-      .select('title, meta_title, meta_description, featured_image, published_date, created_date, author, tags')
-      .eq('slug', params.slug)
-      .eq('status', 'published')
-      .single()
-    post = data
-  } catch (error) {
-    post = demoPosts.find(p => p.slug === params.slug)
-  }
-
-  if (!post) {
-    post = demoPosts.find(p => p.slug === params.slug)
-  }
+  const config = getTenantConfig()
+  const post = await getPostBySlug(params.slug)
 
   if (!post) {
     return {
@@ -103,96 +24,56 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     }
   }
 
-  // SEO: Use meta_title for <title> tag if available, otherwise fallback to regular title
-  const seoTitle = (post as any).meta_title || (post as any).title
-  const description = (post as any).meta_description || ''
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
-  const url = `${baseUrl}/blog/${params.slug}`
+  const seoTitle = post.meta_title || post.title
+  const description = post.meta_description || post.excerpt || ''
+  const url = `${config.siteUrl}/blog/${params.slug}`
 
   return {
     title: seoTitle,
     description,
-    alternates: {
-      canonical: url,
-    },
+    alternates: { canonical: url },
     openGraph: {
       title: seoTitle,
       description,
       type: 'article',
-      url: url,
-      images: (post as any).featured_image ? [
-        {
-          url: (post as any).featured_image,
-          width: 1200,
-          height: 630,
-          alt: seoTitle,
-        }
-      ] : [],
-      publishedTime: (post as any).published_date || (post as any).created_date,
-      authors: [(post as any).author || 'SEWO'],
-      tags: (post as any).tags || [],
+      url,
+      images: post.featured_image ? [{ url: post.featured_image, width: 1200, height: 630, alt: seoTitle }] : [],
+      publishedTime: getPostDate(post),
+      tags: post.tags || [],
     },
     twitter: {
       card: 'summary_large_image',
       title: seoTitle,
       description,
-      images: (post as any).featured_image ? [(post as any).featured_image] : [],
+      images: post.featured_image ? [post.featured_image] : [],
     },
   }
 }
 
 export default async function BlogPostPage({ params }: { params: { slug: string } }) {
-  let post: any = null
-  let homepageContent: any = null
+  const config = getTenantConfig()
+  const brand = await getBrandData()
+  const brandName = brand.guidelines?.name || config.siteName
+  const post = await getPostBySlug(params.slug)
 
-  try {
-    const supabase = createServiceClient()
-    const { data } = await supabase
-      .from('site_posts')
-      .select('*')
-      .eq('slug', params.slug)
-      .eq('status', 'published')
-      .single()
-    post = data
-
-    // Fetch homepage content for quiz styling
-    const { data: hpContent } = await supabase
-      .from('homepage_content')
-      .select('quiz_cta_bg_color, quiz_description, quiz_cta_text, hero_cta_bg_color, hero_cta_text_color, quiz_cta_border_color')
-      .single()
-    homepageContent = hpContent
-  } catch (error) {
-    console.error('Error fetching post:', error)
-  }
-
-  // Fallback to demo posts if database is empty
   if (!post) {
-    post = demoPosts.find(p => p.slug === params.slug)
-    
-    if (!post) {
-      notFound()
-    }
+    notFound()
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sewo.io'
-  
-  // JSON-LD structured data for the article
-  // Use generated_llm_schema if provided, otherwise create default schema
+  const baseUrl = config.siteUrl
+
+  // JSON-LD structured data
   let articleJsonLd
   if (post.generated_llm_schema) {
     try {
       const parsedSchema = JSON.parse(post.generated_llm_schema)
-      
-      // Handle FAQPage in blog posts: only keep if it has actual FAQ content
-      // FAQPage with real FAQs is valid, but empty/incorrect FAQPage should be removed
+
       const hasValidFAQContent = (faqSchema: any): boolean => {
-        // Check if FAQPage has mainEntity with actual questions
         if (faqSchema.mainEntity && Array.isArray(faqSchema.mainEntity) && faqSchema.mainEntity.length > 0) {
-          // Verify questions have both name and acceptedAnswer
-          return faqSchema.mainEntity.some((item: any) => 
-            item['@type'] === 'Question' && 
-            item.name && 
-            item.acceptedAnswer && 
+          return faqSchema.mainEntity.some((item: any) =>
+            item['@type'] === 'Question' &&
+            item.name &&
+            item.acceptedAnswer &&
             item.acceptedAnswer.text
           )
         }
@@ -200,39 +81,17 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       }
 
       if (parsedSchema['@graph'] && Array.isArray(parsedSchema['@graph'])) {
-        // If it's a graph array, check each FAQPage item
         const filteredGraph = parsedSchema['@graph'].filter((item: any) => {
-          // If it's FAQPage, only keep it if it has valid FAQ content
-          if (item['@type'] === 'FAQPage') {
-            return hasValidFAQContent(item)
-          }
-          // Keep all non-FAQPage items
+          if (item['@type'] === 'FAQPage') return hasValidFAQContent(item)
           return true
         })
-        
-        // Update the graph if we filtered anything
-        if (filteredGraph.length !== parsedSchema['@graph'].length) {
-          parsedSchema['@graph'] = filteredGraph
-        }
-        
-        // Only use the schema if there are still items in @graph
         if (filteredGraph.length > 0) {
+          parsedSchema['@graph'] = filteredGraph
           articleJsonLd = parsedSchema
-        } else {
-          // If @graph is now empty, don't use the schema
-          articleJsonLd = null
         }
       } else if (parsedSchema['@type'] === 'FAQPage') {
-        // If the entire schema is FAQPage, only keep it if it has valid FAQ content
-        if (hasValidFAQContent(parsedSchema)) {
-          // Keep FAQPage with real FAQs
-          articleJsonLd = parsedSchema
-        } else {
-          // Remove empty/invalid FAQPage
-          articleJsonLd = null
-        }
+        if (hasValidFAQContent(parsedSchema)) articleJsonLd = parsedSchema
       } else {
-        // Schema doesn't contain FAQPage, use it as-is (preserves Article, BlogPosting, etc.)
         articleJsonLd = parsedSchema
       }
     } catch (e) {
@@ -245,21 +104,21 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       '@context': 'https://schema.org',
       '@type': 'Article',
       headline: post.title,
-      description: post.meta_description || '',
+      description: post.meta_description || post.excerpt || '',
       image: post.featured_image || '',
-      datePublished: post.published_date || post.created_date,
-      dateModified: post.updated_date || post.published_date || post.created_date,
+      datePublished: getPostDate(post),
+      dateModified: post.updated_date || getPostDate(post),
       author: {
         '@type': 'Person',
-        name: post.author || 'SEWO Editorial Team',
+        name: post.author || brand.guidelines?.default_author || brandName,
         url: baseUrl,
       },
       publisher: {
         '@type': 'Organization',
-        name: 'SEWO',
+        name: brandName,
         logo: {
           '@type': 'ImageObject',
-          url: `${baseUrl}/favicon.svg`,
+          url: brand.specs?.logo_url || `${baseUrl}/favicon.svg`,
         },
       },
       mainEntityOfPage: {
@@ -269,136 +128,104 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     }
   }
 
-  // Breadcrumb Schema
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: baseUrl,
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Blog',
-        item: `${baseUrl}/blog`,
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: post.title,
-        item: `${baseUrl}/blog/${post.slug}`,
-      },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `${baseUrl}/blog/${post.slug}` },
     ],
   }
 
+  // Fetch posts for carousel
+  const carouselPosts = await getPublishedPosts(12)
+
+  // CTA colors from brand specs
+  const ctaBgColor = brand.specs?.primary_color || '#000000'
+  const ctaTextColor = brand.specs?.secondary_color || '#ffffff'
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader logoText={brandName} logoImage={brand.specs?.logo_url || undefined} />
       <main>
-        {/* Analytics Tracking */}
-      <BlogTracker slug={post.slug} title={post.title} category={post.category} />
-      
-      {/* JSON-LD for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
-      
-      {/* Blog Post */}
-      <article className="blog-post">
-        <div className="container">
-          <div className="blog-post-header">
-            <Link href="/blog" className="back-link">
-              ← Back to Blog
-            </Link>
-            {/* Main title - displays post.title (NOT meta_title) */}
-            <h1 className="blog-post-title">{post.title}</h1>
-            <div className="blog-post-meta">
-              <time dateTime={post.published_date || post.created_date}>
-                {new Date(post.published_date || post.created_date).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </time>
-              {post.tags && post.tags.length > 0 && (
-                <div className="blog-post-tags">
-                  {post.tags.map((tag: string, idx: number) => (
-                    <span key={idx} className="tag">{tag}</span>
-                  ))}
-                </div>
-              )}
+        <BlogTracker slug={post.slug} title={post.title} category={post.category || undefined} />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        />
+
+        <article className="blog-post">
+          <div className="container">
+            <div className="blog-post-header">
+              <Link href="/blog" className="back-link">
+                &larr; Back to Blog
+              </Link>
+              <h1 className="blog-post-title">{post.title}</h1>
+              <div className="blog-post-meta">
+                <time dateTime={getPostDate(post)}>
+                  {new Date(getPostDate(post)).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </time>
+                {post.tags && post.tags.length > 0 && (
+                  <div className="blog-post-tags">
+                    {post.tags.map((tag: string, idx: number) => (
+                      <span key={idx} className="tag">{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {post.featured_image && (
-            <div className="blog-post-image">
-              <Image 
-                src={post.featured_image} 
-                alt={post.title}
-                loading="eager"
-                width={1200}
-                height={600}
-                style={{ objectFit: 'cover', width: '100%', height: 'auto' }}
-              />
+            {post.featured_image && (
+              <div className="blog-post-image">
+                <Image
+                  src={post.featured_image}
+                  alt={post.title}
+                  loading="eager"
+                  width={1200}
+                  height={600}
+                  style={{ objectFit: 'cover', width: '100%', height: 'auto' }}
+                />
+              </div>
+            )}
+
+            <div
+              className="blog-post-content"
+              dangerouslySetInnerHTML={{ __html: post.content || '' }}
+            />
+
+            <div className="blog-post-cta">
+              <Link
+                href="/contact"
+                className="blog-post-cta-button"
+                style={{ backgroundColor: ctaBgColor, color: ctaTextColor }}
+              >
+                Contact Us
+              </Link>
             </div>
-          )}
 
-          <div 
-            className="blog-post-content"
-            dangerouslySetInnerHTML={{ __html: post.content || '' }}
-          />
-
-          {/* CTA Button */}
-          <div className="blog-post-cta">
-            <Link 
-              href="/#apply-form" 
-              className="blog-post-cta-button"
-              style={{
-                backgroundColor: homepageContent?.hero_cta_bg_color || '#53eae7',
-                color: homepageContent?.hero_cta_text_color || '#fdfff5',
-              }}
-            >
-              Apply to Work With Us
-            </Link>
+            <ArticleReactions />
+            <ArticleComments postSlug={post.slug} />
           </div>
+        </article>
 
-          {/* Article Reactions */}
-          <ArticleReactions />
+        <RelatedPosts currentPostId={post.id} category={post.category || 'General'} />
 
-          {/* Comments Section */}
-          <ArticleComments postSlug={post.slug} />
-        </div>
-      </article>
+        {carouselPosts.length > 0 && (
+          <BlogCarousel posts={carouselPosts} title="More Posts" />
+        )}
 
-      {/* Related Posts Section */}
-      <RelatedPosts currentPostId={post.id} category={post.category || 'General'} />
-
-      {/* Quiz CTA Section */}
-      <BlogQuizCTA
-        quizCtaBgColor={homepageContent?.quiz_cta_bg_color || '#f8f9fa'}
-        quizDescription={homepageContent?.quiz_description || 'Discover how visible your brand is to AI assistants like ChatGPT, Claude, and Gemini in just 3 minutes.'}
-        quizCTAText={homepageContent?.quiz_cta_text || 'Start Quiz →'}
-        heroCTABgColor={homepageContent?.hero_cta_bg_color || '#000000'}
-        heroCTATextColor={homepageContent?.hero_cta_text_color || '#ffffff'}
-        quizCTABorderColor={homepageContent?.quiz_cta_border_color || '#000000'}
-      />
-
-      {/* Blog Carousel */}
-      <BlogCarousel />
-
-      {/* Contact Form */}
-      <ContactForm />
-    </main>
+        <ContactForm />
+      </main>
     </>
   )
 }
-
