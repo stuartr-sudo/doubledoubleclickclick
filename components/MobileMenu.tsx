@@ -8,16 +8,12 @@ interface MobileMenuProps {
   isOpen: boolean
   onClose: () => void
   blogVisible?: boolean
-  ctaText?: string
-  ctaLink?: string
 }
 
 export default function MobileMenu({
   isOpen,
   onClose,
   blogVisible = true,
-  ctaText = 'Contact Us',
-  ctaLink = '/contact',
 }: MobileMenuProps) {
   const pathname = usePathname()
   const prevPathnameRef = useRef(pathname)
@@ -89,9 +85,6 @@ export default function MobileMenu({
             Blog
           </Link>
         )}
-        <Link href={ctaLink} className="mobile-menu-cta" onClick={handleLinkClick}>
-          {ctaText}
-        </Link>
       </nav>
     </div>
   )

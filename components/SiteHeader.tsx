@@ -9,16 +9,12 @@ type SiteHeaderProps = {
   blogVisible?: boolean
   logoText?: string
   logoImage?: string
-  ctaText?: string
-  ctaLink?: string
 }
 
 export default function SiteHeader({
   blogVisible = true,
   logoText = 'Site',
   logoImage,
-  ctaText = 'Contact Us',
-  ctaLink = '/contact',
 }: SiteHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -48,7 +44,6 @@ export default function SiteHeader({
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
             {blogVisible && <Link href="/blog">Blog</Link>}
-            <Link href={ctaLink} className="nav-cta-button">{ctaText}</Link>
           </div>
 
           <button
@@ -71,7 +66,7 @@ export default function SiteHeader({
         </nav>
       </div>
 
-      <MobileMenu isOpen={isMenuOpen} onClose={handleMenuClose} blogVisible={blogVisible} ctaText={ctaText} ctaLink={ctaLink} />
+      <MobileMenu isOpen={isMenuOpen} onClose={handleMenuClose} blogVisible={blogVisible} />
     </header>
   )
 }

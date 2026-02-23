@@ -715,28 +715,304 @@ img {
   }
 }
 
-/* Legacy Hero Section (for other pages) */
+/* Hero Section */
+.hero-section {
+  position: relative;
+  min-height: 85vh;
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-3xl) 0;
+  background:
+    linear-gradient(135deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 30, 60, 0.78) 50%, rgba(0, 60, 80, 0.72) 100%),
+    linear-gradient(180deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  background-size: cover;
+  overflow: hidden;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(255, 255, 255, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.hero-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-2xl);
+  align-items: center;
+}
+
+.hero-content {
+  text-align: left;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: var(--spacing-md);
+  color: #ffffff;
+}
+
+.hero-description {
+  font-size: var(--font-size-xl);
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: var(--spacing-xl);
+  max-width: 520px;
+  line-height: 1.7;
+}
+
+.hero-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.btn-hero-primary {
+  background: var(--color-accent, #0066ff);
+  color: #ffffff;
+}
+
+.btn-hero-primary:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.btn-hero-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.btn-hero-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.hero-form-col {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Lead Capture Form Card */
+.lead-form-card {
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 16px;
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.lead-form-badge {
+  display: inline-block;
+  background: var(--color-accent, #0066ff);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.lead-form-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.lead-form-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.5;
+}
+
+.lead-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.lead-form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  background: #ffffff;
+  color: var(--color-text);
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.lead-form-input:focus {
+  outline: none;
+  border-color: var(--color-accent, #0066ff);
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+}
+
+.lead-form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+.lead-form-select option[value=""] {
+  color: var(--color-text-light);
+}
+
+.lead-form-submit {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: var(--color-accent, #0066ff);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lead-form-submit:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.lead-form-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.lead-form-privacy {
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+  text-align: center;
+  margin-top: 0.75rem;
+}
+
+.lead-form-error {
+  color: #dc2626;
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.lead-form-success {
+  text-align: center;
+  padding: var(--spacing-lg) 0;
+  color: var(--color-accent, #0066ff);
+}
+
+.lead-form-success svg {
+  margin-bottom: var(--spacing-sm);
+}
+
+.lead-form-success h3 {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+}
+
+.lead-form-success p {
+  color: var(--color-text-light);
+  font-size: var(--font-size-base);
+}
+
+/* Hero responsive */
+@media (max-width: 768px) {
+  .hero-section {
+    min-height: 0;
+    padding: var(--spacing-2xl) 0;
+  }
+
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xl);
+  }
+
+  .hero-content {
+    text-align: center;
+  }
+
+  .hero-actions {
+    justify-content: center;
+  }
+
+  .hero-form-col {
+    justify-content: center;
+  }
+
+  .lead-form-card {
+    max-width: 100%;
+  }
+}
+
+/* About Intro Section */
+.about-intro-section {
+  padding: var(--spacing-2xl) 0;
+  background: var(--color-bg-light);
+  text-align: center;
+}
+
+.about-intro-section h2 {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  margin-bottom: var(--spacing-md);
+  color: var(--color-primary);
+}
+
+.about-intro-section p {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-light);
+  max-width: 640px;
+  margin: 0 auto var(--spacing-lg);
+  line-height: 1.7;
+}
+
+.about-link {
+  display: inline-block;
+  color: var(--color-accent);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: var(--font-size-base);
+  transition: color 0.2s;
+}
+
+.about-link:hover {
+  text-decoration: underline;
+}
+
+/* Legacy Hero (for other pages) */
 .hero {
   padding: var(--spacing-2xl) 0;
   text-align: center;
   background: linear-gradient(180deg, var(--color-bg-light) 0%, var(--color-bg) 100%);
 }
 
-.hero-title {
-  font-size: var(--font-size-4xl);
-  font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: var(--spacing-md);
+.hero .hero-title {
   color: var(--color-primary);
 }
 
-.hero-description {
-  font-size: var(--font-size-xl);
+.hero .hero-description {
   color: var(--color-text-light);
-  margin-bottom: var(--spacing-xl);
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .hero-cta {
