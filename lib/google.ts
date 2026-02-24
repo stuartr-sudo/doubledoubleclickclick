@@ -135,6 +135,29 @@ export async function createGA4Property(
    ───────────────────────────────────────────────── */
 
 /**
+ * List GTM accounts visible to the service account.
+ * Useful for diagnosing permissions — if account doesn't appear, SA lacks account-level access.
+ */
+export async function listGTMAccounts() {
+  return googleFetch(
+    'https://tagmanager.googleapis.com/tagmanager/v2/accounts'
+  )
+}
+
+/**
+ * List GTM containers on the configured account.
+ * Useful for verifying account-level access before creating containers.
+ */
+export async function listGTMContainers() {
+  const accountId = process.env.GOOGLE_TAG_MANAGER_ACCOUNT_ID
+  if (!accountId) throw new Error('GOOGLE_TAG_MANAGER_ACCOUNT_ID not configured')
+
+  return googleFetch(
+    `https://tagmanager.googleapis.com/tagmanager/v2/accounts/${accountId}/containers`
+  )
+}
+
+/**
  * Create a GTM web container.
  * Returns the Public ID (GTM-XXXXXXX) to embed in the site.
  */
@@ -170,30 +193,43 @@ export async function createGTMContainer(containerName: string) {
  * After DNS propagates, call verifySearchConsoleSite() to complete verification.
  */
 export async function addSearchConsoleSite(siteUrl: string) {
+  // Extract the domain from the URL for INET_DOMAIN verification
+  // DNS_TXT only works with INET_DOMAIN type, not SITE type
+  let domain: string
+  try {
+    const parsed = new URL(siteUrl)
+    domain = parsed.hostname.replace(/^www\./, '')
+  } catch {
+    domain = siteUrl.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')
+  }
+
   // Get a DNS TXT verification token
   const tokenData = await googleFetch(
     'https://www.googleapis.com/siteVerification/v1/token',
     {
       method: 'POST',
       body: JSON.stringify({
-        site: { type: 'SITE', identifier: siteUrl },
+        site: { type: 'INET_DOMAIN', identifier: domain },
         verificationMethod: 'DNS_TXT',
       }),
     }
   )
 
-  // Add the site to Search Console (may fail if not yet verified, that's ok)
+  // Add the site to Search Console as a domain property
+  // Uses sc-domain: prefix for domain properties
+  const scDomainUrl = `sc-domain:${domain}`
   try {
     await googleFetch(
-      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}`,
+      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(scDomainUrl)}`,
       { method: 'PUT' }
     )
   } catch {
-    // Will succeed after verification
+    // Will succeed after DNS verification
   }
 
   return {
-    siteUrl,
+    siteUrl: scDomainUrl,
+    domain,
     verificationToken: tokenData.token as string,
     verificationMethod: 'DNS_TXT',
   }
@@ -201,14 +237,24 @@ export async function addSearchConsoleSite(siteUrl: string) {
 
 /**
  * Verify a previously added Search Console site (call after DNS TXT record is live).
+ * Accepts either a domain (e.g., "example.com") or a sc-domain: URL.
  */
 export async function verifySearchConsoleSite(siteUrl: string) {
+  // Extract bare domain for INET_DOMAIN verification (matches addSearchConsoleSite)
+  let domain = siteUrl.replace(/^sc-domain:/, '')
+  try {
+    const parsed = new URL(domain.includes('://') ? domain : `https://${domain}`)
+    domain = parsed.hostname.replace(/^www\./, '')
+  } catch {
+    domain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')
+  }
+
   return googleFetch(
     'https://www.googleapis.com/siteVerification/v1/webResource?verificationMethod=DNS_TXT',
     {
       method: 'POST',
       body: JSON.stringify({
-        site: { type: 'SITE', identifier: siteUrl },
+        site: { type: 'INET_DOMAIN', identifier: domain },
       }),
     }
   )

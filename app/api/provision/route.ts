@@ -65,6 +65,8 @@ export async function POST(request: NextRequest) {
       author_bio,
       author_image_url,
       product_url,
+      approved_products,
+      seed_keywords,
       niche,
       fly_region = 'syd',
       skip_pipeline = false,
@@ -340,6 +342,29 @@ export async function POST(request: NextRequest) {
         if (website_url) onboardPayload.websiteUrl = website_url
         if (product_url) onboardPayload.productUrl = product_url
         if (niche) onboardPayload.niche = niche
+        if (seed_keywords?.length) onboardPayload.seed_keywords = seed_keywords
+
+        // Pass approved products so Doubleclicker can create promoted_products
+        // records and scrape each URL into the RAG knowledge base.
+        // Products in the same niche share one pipeline run (same clusters).
+        // Unrelated products should be sent via separate onboard calls.
+        if (Array.isArray(approved_products) && approved_products.length > 0) {
+          // First product becomes the primary (used for product page)
+          if (!product_url && approved_products[0]?.url) {
+            onboardPayload.productUrl = approved_products[0].url
+            onboardPayload.product_name = approved_products[0].name
+          }
+          // All product URLs get scraped into RAG + created as promoted_products
+          onboardPayload.approved_products = approved_products
+          // Additional URLs (beyond primary) for RAG scraping
+          const additionalUrls = approved_products
+            .slice(product_url ? 0 : 1)
+            .map((p: { url?: string }) => p.url)
+            .filter(Boolean)
+          if (additionalUrls.length > 0) {
+            onboardPayload.additional_urls = additionalUrls
+          }
+        }
 
         const onboardRes = await fetch(`${doubleclickerUrl}/api/strategy/auto-onboard`, {
           method: 'POST',

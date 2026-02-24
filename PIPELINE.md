@@ -14,19 +14,21 @@
 5. [Google Services Integration](#5-google-services-integration)
 6. [Domain Lifecycle](#6-domain-lifecycle)
 7. [Domain Verification](#7-domain-verification)
-8. [Multi-Tenancy — How One Codebase Serves Many Sites](#8-multi-tenancy--how-one-codebase-serves-many-sites)
-9. [Content Display — How Articles Appear](#9-content-display--how-articles-appear)
-10. [Lead Capture](#10-lead-capture)
-11. [Email System](#11-email-system)
-12. [SEO & Structured Data](#12-seo--structured-data)
-13. [Fly.io API Integration](#13-flyio-api-integration)
-14. [Frontend Pages & Routes](#14-frontend-pages--routes)
-15. [API Endpoint Reference](#15-api-endpoint-reference)
-16. [Database Tables Used](#16-database-tables-used)
-17. [Environment Variables](#17-environment-variables)
-18. [Deployment](#18-deployment)
-19. [Timing & Performance](#19-timing--performance)
-20. [FAQ / Likely Questions](#20-faq--likely-questions)
+8. [Site Networks — Constellation Model](#8-site-networks--constellation-model)
+9. [Cross-Site Linking — How It Works](#9-cross-site-linking--how-it-works)
+10. [Multi-Tenancy — How One Codebase Serves Many Sites](#10-multi-tenancy--how-one-codebase-serves-many-sites)
+11. [Content Display — How Articles Appear](#11-content-display--how-articles-appear)
+12. [Lead Capture](#12-lead-capture)
+13. [Email System](#13-email-system)
+14. [SEO & Structured Data](#14-seo--structured-data)
+15. [Fly.io API Integration](#15-flyio-api-integration)
+16. [Frontend Pages & Routes](#16-frontend-pages--routes)
+17. [API Endpoint Reference](#17-api-endpoint-reference)
+18. [Database Tables Used](#18-database-tables-used)
+19. [Environment Variables](#19-environment-variables)
+20. [Deployment](#20-deployment)
+21. [Timing & Performance](#21-timing--performance)
+22. [FAQ / Likely Questions](#22-faq--likely-questions)
 
 ---
 
@@ -57,19 +59,22 @@ Custom domain:    https://www.{domain} (auto-configured if purchased)
 ```
 
 **What this app does:**
-- Provisions new branded blog sites on Fly.io
+
+- Provisions new branded blog sites on Fly.io (single sites or full networks)
 - Seeds brand/author data into the shared Supabase database
 - Creates Google Analytics, Tag Manager, and Search Console for each site
 - Searches for and purchases domains via Google Cloud Domains
 - Auto-configures DNS records (A, AAAA, CNAME, TXT) when domain is purchased
-- Triggers Doubleclicker's content pipeline
+- Triggers Doubleclicker's content pipeline with network partner context
 - Handles custom domains, TLS certificates, and DNS verification
 - Serves the blog frontend (shared Next.js codebase, tenant-specific env vars)
+- Orchestrates site network creation (niche expansion, parallel provisioning, cross-site linking)
 
 **What this app does NOT do:**
 - Write content (Doubleclicker does that)
 - Generate videos (Stitch does that)
 - Manage keywords, topical maps, or content schedules (Doubleclicker does that)
+- Decide cross-site link placement (Doubleclicker's article writer does that)
 
 ---
 
@@ -137,6 +142,10 @@ One API call provisions an entire site — brand data, Google services, content 
   "domain_notices": [],
   "approved_products": [
     { "name": "Vitamin C Serum", "url": "https://amazon.com/...", "description": "..." }
+  ],
+  "network_partners": [
+    { "domain": "mindfulnutrition.com", "niche": "holistic nutrition" },
+    { "domain": "homefitnesshub.com", "niche": "home fitness" }
   ]
 }
 ```
@@ -178,19 +187,27 @@ Calls `POST {DOUBLECLICKER_API_URL}/api/strategy/auto-onboard`:
   "websiteUrl": "https://pureglow.com",
   "assignToEmail": "owner@example.com",
   "productUrl": "https://amazon.com/natural-skincare",
-  "niche": "natural skincare"
+  "niche": "natural skincare",
+  "approved_products": [
+    { "name": "Vitamin C Serum", "url": "https://amazon.com/...", "description": "..." }
+  ],
+  "network_partners": [
+    { "domain": "mindfulnutrition.com", "niche": "holistic nutrition" },
+    { "domain": "homefitnesshub.com", "niche": "home fitness" }
+  ]
 }
 ```
 
 Doubleclicker then orchestrates the full chain:
 1. Create workspace
-2. Auto-generate brand profile from URL (or research niche if no URL)
-3. Discover affiliate products
-4. Discover keywords (DataForSEO)
-5. Build topical map + content clusters
-6. Create content schedule
-7. Daily writer cron starts producing articles (5/day)
-8. If `stitch_enabled=true`, queue Stitch video jobs
+2. Store `network_partners` in `app_settings` table (for article writer)
+3. Auto-generate brand profile from URL (or research niche if no URL)
+4. Discover affiliate products (or use `approved_products` if provided)
+5. Discover keywords (DataForSEO)
+6. Build topical map + content clusters
+7. Create content schedule
+8. Daily writer cron starts producing articles (5/day) — with cross-site links if network partners exist
+9. If `stitch_enabled=true`, queue Stitch video jobs
 
 **This call returns immediately.** The content pipeline runs asynchronously in Doubleclicker.
 
@@ -469,7 +486,168 @@ After DNS records are configured (automatically or manually):
 
 ---
 
-## 8. Multi-Tenancy — How One Codebase Serves Many Sites
+## 8. Site Networks — Constellation Model
+
+A site network is a "constellation" of related-but-distinct niche sites that cross-reference each other to build collective authority. This is **not** a PBN — each site has genuine, deep content on its own niche. The interlinking is editorial and contextual.
+
+### Concept
+
+Given a single seed niche (e.g., "natural skincare"), AI expands it into 4-6 related niches that share an overlapping audience:
+
+```
+Seed: "natural skincare"
+        ↓ AI expansion
+┌──────────────────────────────────────────────────────────┐
+│  naturalskincare.com     — skincare (seed site)          │
+│  mindfulnutrition.com    — holistic nutrition             │
+│  homefitnesshub.com      — home fitness                   │
+│  sleepwelldaily.com      — sleep optimization             │
+│  calmandclear.com        — mindful living / stress        │
+└──────────────────────────────────────────────────────────┘
+```
+
+Each site covers a different niche, targets different keywords, promotes different affiliate products — but the audiences overlap. Cross-links between sites are editorially justified because the topics are genuinely related.
+
+### Architecture (parallel, not overloaded)
+
+The key design principle: **don't overload one Doubleclicker call with 5 niches**. Each site is fully independent and goes deep on its own niche. The only shared context is awareness of partner sites for cross-linking during article writing.
+
+```
+Blog Cloner Admin UI
+        │
+        │ 1. User enters seed niche
+        │ 2. AI expands to 4-6 related niches
+        │ 3. User reviews, toggles, picks domains
+        │ 4. "Launch Network" button
+        ▼
+┌─── Parallel Provisioning ───────────────────────────┐
+│                                                       │
+│  Site A ──▶ Full 9-phase provision ──▶ DC onboard    │
+│  Site B ──▶ Full 9-phase provision ──▶ DC onboard    │
+│  Site C ──▶ Full 9-phase provision ──▶ DC onboard    │
+│  Site D ──▶ Full 9-phase provision ──▶ DC onboard    │
+│                                                       │
+│  Each DC onboard receives network_partners payload    │
+│  so the article writer knows about sibling sites      │
+└───────────────────────────────────────────────────────┘
+```
+
+### Network Provisioning Flow
+
+| Step | Where | What happens |
+| --- | --- | --- |
+| 1. Niche Expansion | Blog Cloner | Light AI call expands seed niche to 4-6 related niches with names + descriptions |
+| 2. User Review | Blog Cloner Admin UI | User toggles sites on/off, edits brand names, selects domains per site |
+| 3. Parallel Provision | Blog Cloner | Calls existing `POST /api/provision` for each site in parallel |
+| 4. Parallel DC Onboard | Doubleclicker | Each site gets its own auto-onboard call with `network_partners` context |
+
+### The `network_partners` Payload
+
+Each Doubleclicker auto-onboard call includes a list of the other sites in the network:
+
+```json
+{
+  "username": "mindful-nutrition",
+  "niche": "holistic nutrition",
+  "network_partners": [
+    { "domain": "naturalskincare.com", "niche": "natural skincare" },
+    { "domain": "homefitnesshub.com", "niche": "home fitness" },
+    { "domain": "sleepwelldaily.com", "niche": "sleep optimization" },
+    { "domain": "calmandclear.com", "niche": "mindful living" }
+  ]
+}
+```
+
+This payload is stored in the `app_settings` table (as `network_partners:{username}`) and read by the article writer during content generation. The research phase (keywords, products, topical map) is completely independent — only the writing phase uses network context.
+
+### Database Tables
+
+| Table | Fields | Purpose |
+| --- | --- | --- |
+| `site_networks` | `id`, `name`, `seed_niche`, `created_date` | Network metadata (e.g., "Wellness Circle") |
+| `site_network_members` | `id`, `network_id`, `username`, `niche`, `domain`, `role` | Sites in the network (`role`: "seed" or "satellite") |
+| `app_settings` | `setting_name`, `setting_value` | Stores `network_partners:{username}` as JSON for DC article writer |
+
+### Admin UI Flow (planned)
+
+1. Tab: "Create Network" (alongside existing "Create Site")
+2. Enter seed niche → "Expand Network" button
+3. AI returns 4-6 suggested niches with reasoning
+4. User reviews: toggle on/off, edit brand names, select domains per site
+5. Google services toggles (apply to all sites)
+6. "Launch Network" button → provisions all sites in parallel
+7. Network dashboard: view all sites, combined status, pipeline progress
+
+### Not In Scope (future)
+
+- Network-level analytics dashboard (combined GA4 view)
+- Adding a site to an existing network after creation
+- Removing a site from a network
+- Cross-network linking (networks linking to other networks)
+
+---
+
+## 9. Cross-Site Linking — How It Works
+
+Cross-site linking is the mechanism by which articles on one network site naturally reference and link to partner sites. This happens at the **writing** stage, not the strategy stage.
+
+### How Doubleclicker Handles It
+
+```
+Article writing begins
+        ↓
+buildLinkingContext() fetches:
+  1. Internal links (same site — required)
+  2. Cross-hub links (same site, different hubs — required)
+  3. Network partner sites (from app_settings — optional)
+        ↓
+buildSectionLinkingContext() distributes links:
+  - Required links: internal + cross-hub (must be included)
+  - Optional links: partner sites (max 1 per section, only if natural)
+        ↓
+sectionWriter prompt includes:
+  - REQUIRED LINKS block (internal)
+  - PARTNER SITE LINKS — OPTIONAL block (cross-site)
+        ↓
+Writer includes partner links only when editorially relevant
+```
+
+### Key Design Decisions
+
+| Decision | Rationale |
+| --- | --- |
+| Partner links are **optional**, not required | Prevents forced/spammy links. The writer only uses them when the content naturally touches on the partner's topic |
+| Max **1 partner link per section** | Keeps link density natural. A 5-section article might have 1-2 partner links total |
+| Links are distributed across sections | `buildSectionLinkingContext()` spreads partner links evenly so they don't cluster |
+| Natural anchor text | The prompt instructs the writer to "use natural anchor text that describes the partner's expertise" — no keyword-stuffed anchors |
+| Cross-linking is a **writing** decision | The strategy phase (keywords, topical map, products) runs completely independently per site. Network awareness only matters when producing article content |
+
+### Where the Code Lives (Doubleclicker)
+
+| File | What it does |
+| --- | --- |
+| `api/strategy/auto-onboard.js` | Accepts `network_partners` param, stores in `app_settings` table |
+| `api/openclaw-write-article.js` | Fetches partner sites in `buildLinkingContext()`, distributes in `buildSectionLinkingContext()` |
+| `lib/prompts/sectionWriter.js` | Injects `PARTNER SITE LINKS — OPTIONAL` block into the writing prompt |
+
+### Example Prompt Block
+
+When writing an article on the "holistic nutrition" site, the section writer sees:
+
+```
+### PARTNER SITE LINKS — OPTIONAL
+If the content naturally touches on any of these related topics, include a contextual outbound link.
+- Only link when it adds genuine value for the reader — do NOT force these links.
+- Use natural anchor text that describes the partner's expertise.
+- Maximum 1 partner link per section. Skip if none fit naturally.
+
+  - <a href="https://www.naturalskincare.com">natural skincare</a> — Partner site covering natural skincare
+  - <a href="https://www.homefitnesshub.com">home fitness</a> — Partner site covering home fitness
+```
+
+---
+
+## 10. Multi-Tenancy — How One Codebase Serves Many Sites
 
 Every deployed site runs the **same Next.js codebase** (same Docker image). What makes each site unique is the environment variables set on its Fly.io machine:
 
@@ -500,7 +678,7 @@ This means deploying a code update to the base app automatically makes the new i
 
 ---
 
-## 9. Content Display — How Articles Appear
+## 11. Content Display — How Articles Appear
 
 This app doesn't create content — it just displays it. Articles are written by Doubleclicker and published to the shared `blog_posts` table.
 
@@ -528,7 +706,7 @@ All blog queries use `revalidate: 0` (force-dynamic) — every page load gets fr
 
 ---
 
-## 10. Lead Capture
+## 12. Lead Capture
 
 **Endpoint:** `POST /api/lead-capture`
 
@@ -557,7 +735,7 @@ Handles contact form submissions from the blog frontend.
 
 ---
 
-## 11. Email System
+## 13. Email System
 
 All emails sent via **Resend** (`RESEND_API_KEY`).
 
@@ -571,7 +749,7 @@ All emails use inline-styled HTML (no template engine).
 
 ---
 
-## 12. SEO & Structured Data
+## 14. SEO & Structured Data
 
 ### Meta tags (per page):
 
@@ -598,7 +776,7 @@ All emails use inline-styled HTML (no template engine).
 
 ---
 
-## 13. Fly.io API Integration
+## 15. Fly.io API Integration
 
 The `lib/fly.ts` module wraps two Fly APIs:
 
@@ -622,7 +800,7 @@ The `lib/fly.ts` module wraps two Fly APIs:
 
 ---
 
-## 14. Frontend Pages & Routes
+## 16. Frontend Pages & Routes
 
 | Route | Type | Purpose |
 | --- | --- | --- |
@@ -645,7 +823,7 @@ Events tracked: `blog_view`, `blog_read_progress`, `blog_time_spent`, `cta_click
 
 ---
 
-## 15. API Endpoint Reference
+## 17. API Endpoint Reference
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
@@ -661,7 +839,7 @@ Events tracked: `blog_view`, `blog_read_progress`, `blog_time_spent`, `cta_click
 
 ---
 
-## 16. Database Tables Used
+## 18. Database Tables Used
 
 This app reads and writes to the shared Supabase database.
 
@@ -699,9 +877,17 @@ This app reads and writes to the shared Supabase database.
 | --- | --- |
 | `leads` | Insert (name, email, company, message, source, brand_id, ip_address) |
 
+### Site networks
+
+| Table | Operation | Key fields |
+| --- | --- | --- |
+| `site_networks` | Insert on network creation | `id`, `name`, `seed_niche`, `created_date` |
+| `site_network_members` | Insert per site in network | `network_id`, `username`, `niche`, `domain`, `role` |
+| `app_settings` | Insert/update by DC auto-onboard | `setting_name` = `network_partners:{username}`, `setting_value` = JSON array |
+
 ---
 
-## 17. Environment Variables
+## 19. Environment Variables
 
 ### Required — provisioning
 
@@ -762,7 +948,7 @@ NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 
 ---
 
-## 18. Deployment
+## 20. Deployment
 
 ### Base app (this repo)
 
@@ -806,7 +992,7 @@ Currently, provisioned sites keep their Docker image at deploy time. To update:
 
 ---
 
-## 19. Timing & Performance
+## 21. Timing & Performance
 
 ### Provisioning (total ~60-90s)
 
@@ -837,7 +1023,7 @@ Currently, provisioned sites keep their Docker image at deploy time. To update:
 
 ---
 
-## 20. FAQ / Likely Questions
+## 22. FAQ / Likely Questions
 
 **Q: What happens if I call provision twice for the same username?**
 Database operations use select-first-then-insert/update pattern, so re-provisioning is safe for the database. The Fly.io app creation will fail on the second call (app already exists) — handle this gracefully in the caller.
@@ -880,3 +1066,18 @@ The base app (`doubledoubleclickclick`) is the canonical deployment of this repo
 
 **Q: How do custom domains work?**
 During provisioning, Fly.io ACME certificates are requested for both `www.{domain}` and `{domain}`. If the domain was purchased via Cloud Domains, DNS is auto-configured. Otherwise, the user adds DNS records at their registrar. Once DNS propagates, Fly auto-issues the TLS cert. The middleware redirects apex → www for canonical URLs.
+
+**Q: What is a site network?**
+A constellation of related-but-distinct niche sites that cross-reference each other. Given a seed niche like "natural skincare", AI expands it to 4-6 related niches (holistic nutrition, home fitness, sleep optimization, etc.). Each site is independently provisioned and runs its own deep content pipeline. The only shared context is awareness of partner sites for cross-linking during article writing.
+
+**Q: How does cross-site linking work?**
+When Doubleclicker writes an article, it checks `app_settings` for `network_partners:{username}`. If partner sites exist, they're included as **optional** links in the writing prompt — max 1 per section, only when the content naturally touches on the partner's topic. The writer is explicitly instructed not to force links. This keeps link patterns natural and editorially justified.
+
+**Q: Is this a PBN (Private Blog Network)?**
+No. Each site has genuine, deep content on its own niche with its own keyword research, product discovery, and topical map. The cross-linking is contextual and editorial — the same kind of linking any network of related publications would do. Sites don't exist solely to link to each other.
+
+**Q: Can I create a single site without a network?**
+Yes — the existing "Create Site" flow is unchanged. Networks are an additional option ("Create Network" tab) for when you want to launch multiple related sites together. A single site can also receive `network_partners` later if it joins a network.
+
+**Q: What if I pass `approved_products` during provisioning?**
+Doubleclicker will use the approved products list instead of running its own product discovery. This is useful when you've already vetted products in the admin UI's "Discover Products" step and want to ensure specific products are promoted.
