@@ -397,7 +397,7 @@ All Google management APIs use OAuth2 service account authentication. The servic
 | Service | Permission needed | How to grant |
 | --- | --- | --- |
 | GA4 | Editor on GA account | analytics.google.com → Admin → Account Access Management |
-| GTM | Edit Containers | tagmanager.google.com → Admin → User Management |
+| GTM | **Admin** at account level | tagmanager.google.com → Admin → Account → User Management (NOT container-level — container permissions can't create new containers) |
 | Search Console | (automatic) | SA becomes verified owner via API |
 | Cloud Domains | `roles/domains.admin` | GCP IAM console |
 | Cloud DNS | (included in Cloud Domains) | Managed zones auto-created on domain registration |
@@ -407,9 +407,11 @@ All Google management APIs use OAuth2 service account authentication. The servic
 | Function | API | Purpose |
 | --- | --- | --- |
 | `createGA4Property()` | Analytics Admin API | Create GA4 property + web data stream → returns Measurement ID |
+| `listGTMAccounts()` | Tag Manager API | List GTM accounts visible to SA (diagnostic) |
+| `listGTMContainers()` | Tag Manager API | List containers on configured account (diagnostic) |
 | `createGTMContainer()` | Tag Manager API | Create GTM web container → returns Public ID |
-| `addSearchConsoleSite()` | Site Verification + Webmasters API | Add site + get DNS TXT verification token |
-| `verifySearchConsoleSite()` | Site Verification API | Complete verification after DNS propagates |
+| `addSearchConsoleSite()` | Site Verification + Webmasters API | Add site as `INET_DOMAIN` with `sc-domain:` prefix + get DNS TXT verification token |
+| `verifySearchConsoleSite()` | Site Verification API | Complete verification after DNS propagates (uses `INET_DOMAIN` type) |
 | `getRegistrationParams()` | Cloud Domains API | Get domain price/availability |
 | `registerDomain()` | Cloud Domains API | Purchase a domain (charges GCP billing) |
 | `getDnsZone()` | Cloud DNS API | Find the managed zone for a domain |
@@ -832,6 +834,7 @@ Events tracked: `blog_view`, `blog_read_progress`, `blog_time_spent`, `cta_click
 | `POST` | `/api/admin/domain-suggestions` | None | Search available domains via Cloud Domains |
 | `POST` | `/api/admin/dc-proxy` | None | Proxy to Doubleclicker API (enhance-brand, etc.) |
 | `GET` | `/api/admin/pipeline-status` | None | Check Doubleclicker pipeline progress |
+| `GET` | `/api/admin/google-test` | Bearer token | Diagnostic: test Google API access (`?action=gtm-accounts\|gtm-containers\|gtm-create`) |
 | `GET` | `/api/admin/provision-secret` | None | Verify provision secret |
 | `GET` | `/api/blog` | None | Fetch published blog posts (query: limit, category) |
 | `GET` | `/api/blog/categories` | None | Get all blog categories |
