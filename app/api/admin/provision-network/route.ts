@@ -13,6 +13,12 @@ interface NetworkMember {
   purchase_domain?: boolean
   domain_yearly_price?: { currencyCode: string; units: string; nanos?: number }
   domain_notices?: string[]
+  brand_voice?: string
+  target_market?: string
+  blurb?: string
+  seed_keywords?: string[]
+  image_style?: Record<string, string>
+  research_context?: Record<string, any>
 }
 
 /**
@@ -128,7 +134,7 @@ export async function POST(req: NextRequest) {
           .eq('network_id', network.id)
           .eq('username', member.username)
 
-        const provisionPayload = {
+        const provisionPayload: Record<string, any> = {
           username: member.username,
           display_name: member.display_name,
           contact_email: member.contact_email,
@@ -143,6 +149,14 @@ export async function POST(req: NextRequest) {
           domain_notices: member.domain_notices,
           network_partners: buildPartnersFor(member.username),
         }
+
+        // Forward brand data if available (from brand research phase)
+        if (member.brand_voice) provisionPayload.brand_voice_tone = member.brand_voice
+        if (member.target_market) provisionPayload.target_market = member.target_market
+        if (member.blurb) provisionPayload.blurb = member.blurb
+        if (member.seed_keywords) provisionPayload.seed_keywords = member.seed_keywords
+        if (member.image_style) provisionPayload.image_style = member.image_style
+        if (member.research_context) provisionPayload.research_context = member.research_context
 
         const res = await fetch(`${baseUrl}/api/provision`, {
           method: 'POST',

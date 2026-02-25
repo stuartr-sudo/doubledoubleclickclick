@@ -176,6 +176,10 @@ export default function ProvisionForm() {
   const [discoveredProducts, setDiscoveredProducts] = useState<DiscoveredProduct[]>([])
   const [loadingDiscovery, setLoadingDiscovery] = useState(false)
 
+  /* ── deep niche research ── */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [researchContext, setResearchContext] = useState<any>(null)
+
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const seenStepsRef = useRef<Set<string>>(new Set())
@@ -273,14 +277,29 @@ export default function ProvisionForm() {
     if (!niche) return
     setGenerating((g) => ({ ...g, niche_all: true }))
     setError('')
+    setResearchContext(null)
     const brandCtx = `Brand in the "${niche}" niche${displayName ? `, called "${displayName}"` : ''}.`
     try {
+      // Phase 1: Deep niche research (gpt-4o, ~15-30s)
+      addLog('Phase 1: Researching niche market...')
+      const researchData = await dcPost('/api/strategy/deep-niche-research', {
+        niche,
+        brand_name: displayName || undefined,
+        website_url: websiteUrl || undefined,
+      })
+      if (!researchData.success) throw new Error(researchData.error || 'Research failed')
+      setResearchContext(researchData.research)
+      const rc = researchData.research
+      addLog(`Research complete: ${rc.content_pillars?.length || 0} pillars, ${rc.keyword_themes?.length || 0} keyword themes`)
+
+      // Phase 2: Generate brand fields using research context (parallel, gpt-4o)
+      addLog('Phase 2: Generating brand profile from research...')
       const [voice, market, blurb, keywords, style] = await Promise.allSettled([
-        dcPost('/api/strategy/enhance-brand', { section: 'brand_voice', current_content: `${brandCtx} Generate an authoritative, engaging brand voice for this niche.`, niche }),
-        dcPost('/api/strategy/enhance-brand', { section: 'target_market', current_content: `${brandCtx} Define the ideal target audience.`, niche }),
-        dcPost('/api/strategy/enhance-brand', { section: 'brand_blurb', current_content: `${brandCtx} Write a compelling 2-3 sentence brand description.`, niche }),
-        dcPost('/api/strategy/enhance-brand', { section: 'seed_keywords', current_content: `${brandCtx} Generate 10-15 seed keyword phrases for SEO.`, niche }),
-        dcPost('/api/strategy/enhance-brand', { section: 'image_style', current_content: { ...emptyImageStyle, style_name: `${niche} Style` }, niche }),
+        dcPost('/api/strategy/enhance-brand', { section: 'brand_voice', current_content: `${brandCtx} Generate brand voice.`, niche, research_context: rc }),
+        dcPost('/api/strategy/enhance-brand', { section: 'target_market', current_content: `${brandCtx} Define target audience.`, niche, research_context: rc }),
+        dcPost('/api/strategy/enhance-brand', { section: 'brand_blurb', current_content: `${brandCtx} Write brand description.`, niche, research_context: rc }),
+        dcPost('/api/strategy/enhance-brand', { section: 'seed_keywords', current_content: `${brandCtx} Generate seed keywords.`, niche, research_context: rc }),
+        dcPost('/api/strategy/enhance-brand', { section: 'image_style', current_content: { ...emptyImageStyle, style_name: `${niche} Style` }, niche, research_context: rc }),
       ])
 
       if (voice.status === 'fulfilled' && voice.value.brand_voice) setBrandVoice(voice.value.brand_voice)
@@ -293,6 +312,7 @@ export default function ProvisionForm() {
       const colors = suggestNicheColors(niche)
       setPrimaryColor(colors.primary)
       setAccentColor(colors.accent)
+      addLog('Brand profile generated successfully')
     } catch (err: any) {
       setError(err.message || 'Failed to generate from niche')
     } finally {
@@ -499,6 +519,8 @@ export default function ProvisionForm() {
           blurb: brandBlurb.trim() || undefined,
           target_market: targetMarket.trim() || undefined,
           brand_voice_tone: brandVoice.trim() || undefined,
+          seed_keywords: seedKeywords ? seedKeywords.split(',').map((s: string) => s.trim()).filter(Boolean) : undefined,
+          research_context: researchContext || undefined,
           primary_color: primaryColor || undefined,
           accent_color: accentColor || undefined,
           author_name: authorName.trim() || undefined,

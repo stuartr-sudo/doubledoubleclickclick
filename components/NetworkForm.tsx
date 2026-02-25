@@ -15,6 +15,7 @@ const REGIONS = [
 const SECTIONS = [
   { key: 'niche', label: 'Network Setup', icon: '🌐' },
   { key: 'review', label: 'Review Sites', icon: '✏️' },
+  { key: 'research', label: 'Brand Research', icon: '🔬' },
   { key: 'launch', label: 'Launch', icon: '🚀' },
 ]
 
@@ -37,6 +38,14 @@ interface DomainSuggestion {
   currency: string
   yearlyPrice?: { currencyCode: string; units: string; nanos?: number }
   domainNotices?: string[]
+}
+
+interface NicheBrand {
+  brand_voice: string
+  target_market: string
+  brand_blurb: string
+  seed_keywords: string
+  image_style: Record<string, string> | null
 }
 
 interface MemberStatus {
@@ -73,6 +82,12 @@ export default function NetworkForm() {
   const [setupGA, setSetupGA] = useState(true)
   const [setupGTM, setSetupGTM] = useState(true)
   const [setupGSC, setSetupGSC] = useState(true)
+
+  /* ── brand research state (per-niche, keyed by index) ── */
+  const [nicheResearch, setNicheResearch] = useState<Record<number, any>>({})
+  const [nicheBrands, setNicheBrands] = useState<Record<number, NicheBrand>>({})
+  const [researchingAll, setResearchingAll] = useState(false)
+  const [researchProgress, setResearchProgress] = useState('')
 
   /* ── UI state ── */
   const [activeSection, setActiveSection] = useState(0)
@@ -158,6 +173,106 @@ export default function NetworkForm() {
     )
   }
 
+  /* ── research all niches (batched 3 at a time) ── */
+  const researchAllNiches = async () => {
+    const enabled = niches.map((n, i) => ({ ...n, _idx: i })).filter((n) => n.enabled)
+    if (enabled.length === 0) return
+
+    setResearchingAll(true)
+    setError('')
+    setResearchProgress(`Researching 0/${enabled.length} niches...`)
+
+    let completed = 0
+
+    // Process in batches of 3
+    for (let batch = 0; batch < enabled.length; batch += 3) {
+      const chunk = enabled.slice(batch, batch + 3)
+      const results = await Promise.allSettled(
+        chunk.map(async (n) => {
+          // Phase 1: Deep niche research
+          const resData = await dcPost('/api/strategy/deep-niche-research', {
+            niche: n.niche,
+            brand_name: n.suggested_brand_name,
+          })
+          if (!resData.success) throw new Error(resData.error || 'Research failed')
+
+          setNicheResearch((prev) => ({ ...prev, [n._idx]: resData.research }))
+
+          // Phase 2: Generate brand fields using research (parallel)
+          const rc = resData.research
+          const [voice, market, blurb, keywords, style] = await Promise.allSettled([
+            dcPost('/api/strategy/enhance-brand', {
+              section: 'brand_voice',
+              current_content: 'Generate brand voice for this niche.',
+              niche: n.niche,
+              research_context: rc,
+            }),
+            dcPost('/api/strategy/enhance-brand', {
+              section: 'target_market',
+              current_content: 'Generate target market description for this niche.',
+              niche: n.niche,
+              research_context: rc,
+            }),
+            dcPost('/api/strategy/enhance-brand', {
+              section: 'brand_blurb',
+              current_content: 'Generate brand blurb for this niche.',
+              niche: n.niche,
+              research_context: rc,
+            }),
+            dcPost('/api/strategy/enhance-brand', {
+              section: 'seed_keywords',
+              current_content: 'Generate seed keywords for this niche.',
+              niche: n.niche,
+              research_context: rc,
+            }),
+            dcPost('/api/strategy/enhance-brand', {
+              section: 'image_style',
+              current_content: {
+                visual_style: '', color_palette: '', mood_and_atmosphere: '',
+                composition_style: '', lighting_preferences: '', image_type_preferences: '',
+                subject_guidelines: '', preferred_elements: '', prohibited_elements: '',
+                ai_prompt_instructions: '',
+              },
+              niche: n.niche,
+              research_context: rc,
+            }),
+          ])
+
+          const brand: NicheBrand = {
+            brand_voice: voice.status === 'fulfilled' ? voice.value.brand_voice || '' : '',
+            target_market: market.status === 'fulfilled' ? market.value.target_market || '' : '',
+            brand_blurb: blurb.status === 'fulfilled' ? blurb.value.brand_blurb || '' : '',
+            seed_keywords: keywords.status === 'fulfilled' ? keywords.value.seed_keywords || '' : '',
+            image_style: style.status === 'fulfilled' ? style.value.image_style || null : null,
+          }
+
+          setNicheBrands((prev) => ({ ...prev, [n._idx]: brand }))
+          completed++
+          setResearchProgress(`Researching ${completed}/${enabled.length} niches...`)
+          return { idx: n._idx, research: resData.research, brand }
+        })
+      )
+
+      // Log any failures
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          console.warn(`Research failed for niche ${chunk[i].niche}:`, r.reason)
+        }
+      })
+    }
+
+    setResearchProgress('')
+    setResearchingAll(false)
+  }
+
+  /* ── update a brand field for a specific niche ── */
+  const updateNicheBrand = (idx: number, field: keyof NicheBrand, value: string) => {
+    setNicheBrands((prev) => ({
+      ...prev,
+      [idx]: { ...prev[idx], [field]: value },
+    }))
+  }
+
   /* ── launch network ── */
   const launchNetwork = async () => {
     const enabled = niches.filter((n) => n.enabled)
@@ -176,14 +291,28 @@ export default function NetworkForm() {
     )
 
     try {
-      const members = enabled.map((n, i) => ({
-        username: n.suggested_username,
-        display_name: n.suggested_brand_name,
-        niche: n.niche,
-        domain: n.domain || undefined,
-        role: i === 0 ? ('seed' as const) : ('satellite' as const),
-        contact_email: contactEmail.trim(),
-      }))
+      const members = enabled.map((n) => {
+        // Find original index for brand data lookup
+        const origIdx = niches.indexOf(n)
+        const brand = nicheBrands[origIdx]
+        const research = nicheResearch[origIdx]
+        return {
+          username: n.suggested_username,
+          display_name: n.suggested_brand_name,
+          niche: n.niche,
+          domain: n.domain || undefined,
+          role: origIdx === 0 ? ('seed' as const) : ('satellite' as const),
+          contact_email: contactEmail.trim(),
+          brand_voice: brand?.brand_voice || undefined,
+          target_market: brand?.target_market || undefined,
+          blurb: brand?.brand_blurb || undefined,
+          seed_keywords: brand?.seed_keywords
+            ? brand.seed_keywords.split(',').map((s: string) => s.trim()).filter(Boolean)
+            : undefined,
+          image_style: brand?.image_style || undefined,
+          research_context: research || undefined,
+        }
+      })
 
       const res = await fetch('/api/admin/provision-network', {
         method: 'POST',
@@ -559,8 +688,142 @@ export default function NetworkForm() {
           </div>
         )}
 
-        {/* ─── SECTION 2: Launch ─── */}
+        {/* ─── SECTION 2: Brand Research ─── */}
         {activeSection === 2 && phase === 'planning' && (
+          <div className="dc-section-wrap">
+            {niches.length === 0 ? (
+              <div className="dc-card">
+                <div className="dc-card-body" style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+                  <p>No niches expanded yet. Go to Network Setup first.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="dc-ai-bar">
+                  <div className="dc-ai-bar-info">
+                    <h3>Brand Research</h3>
+                    <p>
+                      Deep market research + AI brand generation for each niche.
+                      This produces rich brand guidelines, target market, and seed keywords.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="dc-btn dc-btn-ai"
+                    onClick={researchAllNiches}
+                    disabled={researchingAll || enabledNiches.length === 0}
+                  >
+                    {researchingAll
+                      ? researchProgress || 'Researching...'
+                      : Object.keys(nicheBrands).length > 0
+                        ? 'Re-Research All Niches'
+                        : `Research ${enabledNiches.length} Niches`}
+                  </button>
+                </div>
+
+                {niches.map((n, idx) => {
+                  if (!n.enabled) return null
+                  const brand = nicheBrands[idx]
+                  const research = nicheResearch[idx]
+                  const hasData = !!brand
+
+                  return (
+                    <div key={idx} className="dc-card">
+                      <div className="dc-card-header">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{
+                            width: 24, height: 24, borderRadius: '50%', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
+                            background: hasData ? '#dcfce7' : '#f1f5f9',
+                            color: hasData ? '#16a34a' : '#94a3b8',
+                          }}>
+                            {hasData ? '✓' : '○'}
+                          </span>
+                          <div>
+                            <h3>{n.suggested_brand_name}</h3>
+                            <p>{n.niche}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {hasData && (
+                        <div className="dc-card-body">
+                          {/* Research summary */}
+                          {research && (
+                            <div style={{ marginBottom: 16, padding: 12, background: '#f8fafc', borderRadius: 8, fontSize: 13 }}>
+                              <div style={{ fontWeight: 600, marginBottom: 6, color: '#334155' }}>Research Summary</div>
+                              <p style={{ color: '#475569', marginBottom: 6 }}>{research.market_overview?.slice(0, 200)}...</p>
+                              {research.content_pillars && (
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                                  {research.content_pillars.slice(0, 5).map((p: any, pi: number) => (
+                                    <span key={pi} style={{
+                                      fontSize: 11, padding: '2px 8px', borderRadius: 4,
+                                      background: '#eef2ff', color: '#4f46e5',
+                                    }}>
+                                      {p.name || p}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Editable brand fields */}
+                          <div className="dc-field">
+                            <label>Brand Blurb</label>
+                            <textarea
+                              value={brand.brand_blurb}
+                              onChange={(e) => updateNicheBrand(idx, 'brand_blurb', e.target.value)}
+                              placeholder="Brand blurb"
+                              rows={3}
+                              style={{ width: '100%', resize: 'vertical' }}
+                            />
+                          </div>
+
+                          <div className="dc-field" style={{ marginTop: 12 }}>
+                            <label>Target Market</label>
+                            <textarea
+                              value={brand.target_market}
+                              onChange={(e) => updateNicheBrand(idx, 'target_market', e.target.value)}
+                              placeholder="Target market description"
+                              rows={3}
+                              style={{ width: '100%', resize: 'vertical' }}
+                            />
+                          </div>
+
+                          <div className="dc-field" style={{ marginTop: 12 }}>
+                            <label>Brand Voice</label>
+                            <textarea
+                              value={brand.brand_voice}
+                              onChange={(e) => updateNicheBrand(idx, 'brand_voice', e.target.value)}
+                              placeholder="Brand voice description"
+                              rows={3}
+                              style={{ width: '100%', resize: 'vertical' }}
+                            />
+                          </div>
+
+                          <div className="dc-field" style={{ marginTop: 12 }}>
+                            <label>Seed Keywords ({brand.seed_keywords ? brand.seed_keywords.split(',').length : 0} phrases)</label>
+                            <textarea
+                              value={brand.seed_keywords}
+                              onChange={(e) => updateNicheBrand(idx, 'seed_keywords', e.target.value)}
+                              placeholder="Comma-separated keyword phrases"
+                              rows={3}
+                              style={{ width: '100%', resize: 'vertical', fontSize: 12 }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ─── SECTION 3: Launch ─── */}
+        {activeSection === 3 && phase === 'planning' && (
           <div className="dc-section-wrap">
             <div className="dc-card">
               <div className="dc-card-header">
@@ -691,6 +954,8 @@ export default function NetworkForm() {
                     setNetworkName('')
                     setMemberStatuses([])
                     setNetworkId('')
+                    setNicheResearch({})
+                    setNicheBrands({})
                   }}
                 >
                   Create Another Network

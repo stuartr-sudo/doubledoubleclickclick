@@ -344,6 +344,10 @@ export async function POST(request: NextRequest) {
         if (product_url) onboardPayload.productUrl = product_url
         if (niche) onboardPayload.niche = niche
         if (seed_keywords?.length) onboardPayload.seed_keywords = seed_keywords
+        if (blurb) onboardPayload.brand_blurb = blurb
+        if (target_market) onboardPayload.target_market = target_market
+        if (brand_voice_tone) onboardPayload.brand_voice = brand_voice_tone
+        if (body.research_context) onboardPayload.research_context = body.research_context
         if (Array.isArray(network_partners) && network_partners.length > 0) {
           onboardPayload.network_partners = network_partners
         }
