@@ -280,7 +280,7 @@ export default function ProvisionForm() {
     setResearchContext(null)
     const brandCtx = `Brand in the "${niche}" niche${displayName ? `, called "${displayName}"` : ''}.`
     try {
-      // Phase 1: Deep niche research (gpt-4o, ~15-30s)
+      // Phase 1: Deep niche research (gpt-4.1, ~15-30s)
       addLog('Phase 1: Researching niche market...')
       const researchData = await dcPost('/api/strategy/deep-niche-research', {
         niche,
@@ -292,7 +292,7 @@ export default function ProvisionForm() {
       const rc = researchData.research
       addLog(`Research complete: ${rc.content_pillars?.length || 0} pillars, ${rc.keyword_themes?.length || 0} keyword themes`)
 
-      // Phase 2: Generate brand fields using research context (parallel, gpt-4o)
+      // Phase 2: Generate brand fields using research context (parallel, gpt-4.1)
       addLog('Phase 2: Generating brand profile from research...')
       const [voice, market, blurb, keywords, style] = await Promise.allSettled([
         dcPost('/api/strategy/enhance-brand', { section: 'brand_voice', current_content: `${brandCtx} Generate brand voice.`, niche, research_context: rc }),
