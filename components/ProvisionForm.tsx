@@ -177,7 +177,6 @@ export default function ProvisionForm() {
   const [loadingDiscovery, setLoadingDiscovery] = useState(false)
 
   /* ── deep niche research ── */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [researchContext, setResearchContext] = useState<any>(null)
 
   const pollRef = useRef<NodeJS.Timeout | null>(null)
