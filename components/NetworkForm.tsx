@@ -108,7 +108,7 @@ export default function NetworkForm() {
     try {
       const data = await dcPost('/api/strategy/expand-network', {
         seed_niche: seedNiche.trim(),
-        count: 5,
+        count: 6,
       })
       if (!data.success) throw new Error(data.error || 'Expansion failed')
       const expanded: NicheSuggestion[] = data.niches.map((n: any) => ({
