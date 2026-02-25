@@ -393,12 +393,21 @@ export default function ProvisionForm() {
 
   const enhanceField = async (section: string, currentContent: string | ImageStyle) => {
     setGenerating((g) => ({ ...g, [section]: true }))
+    setError('')
     try {
+      // Build context string from whatever is available
+      const contextParts: string[] = []
+      if (niche) contextParts.push(`Niche: ${niche}`)
+      if (displayName) contextParts.push(`Brand: ${displayName}`)
+      if (username) contextParts.push(`Brand username: ${username}`)
+      const additional_context = contextParts.length > 0 ? contextParts.join('. ') : undefined
+
       const data = await dcPost('/api/strategy/enhance-brand', {
         section,
         current_content: currentContent,
         website_url: websiteUrl || undefined,
         niche: niche || undefined,
+        additional_context,
       })
       if (!data.success) throw new Error(data.error || 'Enhancement failed')
 
@@ -408,6 +417,8 @@ export default function ProvisionForm() {
       if (section === 'seed_keywords' && data.seed_keywords) setSeedKeywords(data.seed_keywords)
       if (section === 'image_style' && data.image_style) {
         setImageStyle((prev) => ({ ...prev, ...data.image_style }))
+      } else if (section === 'image_style') {
+        setError('No image style returned from AI. Try adding a niche on Step 1 first.')
       }
     } catch (err: any) {
       setError(err.message)
@@ -676,6 +687,13 @@ export default function ProvisionForm() {
             </button>
           ))}
         </nav>
+
+        <div style={{ padding: '8px 8px 0', borderTop: '1px solid #e2e8f0', marginTop: 8 }}>
+          <a href="/admin/network" className="dc-nav-item" style={{ textDecoration: 'none' }}>
+            <span className="dc-nav-icon">🌐</span>
+            <span className="dc-nav-label">Create Network</span>
+          </a>
+        </div>
 
         {/* Pipeline progress */}
         {provisionResult && (

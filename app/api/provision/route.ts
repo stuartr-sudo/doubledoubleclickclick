@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       purchase_domain = false,
       domain_yearly_price,
       domain_notices,
+      network_partners,
     } = body
 
     // Validate required fields
@@ -343,6 +344,9 @@ export async function POST(request: NextRequest) {
         if (product_url) onboardPayload.productUrl = product_url
         if (niche) onboardPayload.niche = niche
         if (seed_keywords?.length) onboardPayload.seed_keywords = seed_keywords
+        if (Array.isArray(network_partners) && network_partners.length > 0) {
+          onboardPayload.network_partners = network_partners
+        }
 
         // Pass approved products so Doubleclicker can create promoted_products
         // records and scrape each URL into the RAG knowledge base.
