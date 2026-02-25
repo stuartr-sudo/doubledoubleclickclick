@@ -754,14 +754,23 @@ export default function NetworkForm() {
                               <div style={{ fontWeight: 600, marginBottom: 6, color: '#334155' }}>Research Summary</div>
                               <p style={{ color: '#475569', marginBottom: 6 }}>{research.market_overview?.slice(0, 200)}...</p>
                               {research.content_pillars && (
-                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                                  {research.content_pillars.slice(0, 5).map((p: any, pi: number) => (
-                                    <span key={pi} style={{
-                                      fontSize: 11, padding: '2px 8px', borderRadius: 4,
-                                      background: '#eef2ff', color: '#4f46e5',
-                                    }}>
-                                      {p.name || p}
-                                    </span>
+                                <div style={{ marginTop: 8 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 600, color: '#6366f1', marginBottom: 4 }}>Content Pillars</div>
+                                  {research.content_pillars.slice(0, 7).map((p: any, pi: number) => (
+                                    <div key={pi} style={{ marginBottom: 4, fontSize: 12, lineHeight: 1.4 }}>
+                                      <span style={{
+                                        display: 'inline-block', padding: '1px 6px', borderRadius: 3,
+                                        background: p.target_stage === 'TOFU' ? '#dcfce7' : p.target_stage === 'MOFU' ? '#fef3c7' : '#fee2e2',
+                                        color: p.target_stage === 'TOFU' ? '#166534' : p.target_stage === 'MOFU' ? '#92400e' : '#991b1b',
+                                        fontSize: 10, fontWeight: 600, marginRight: 6,
+                                      }}>
+                                        {p.target_stage}
+                                      </span>
+                                      <strong style={{ color: '#1e293b' }}>{p.name || p}</strong>
+                                      {p.description && (
+                                        <span style={{ color: '#64748b' }}> — {p.description}</span>
+                                      )}
+                                    </div>
                                   ))}
                                 </div>
                               )}
