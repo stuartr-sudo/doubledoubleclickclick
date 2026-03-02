@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { getPublishedPosts } from '@/lib/posts'
+import { getPublishedPosts, getCategoriesWithCounts, getPostDate, estimateReadTime } from '@/lib/posts'
 import { getTenantConfig } from '@/lib/tenant'
 import { getBrandData } from '@/lib/brand'
 import SiteHeader from '@/components/SiteHeader'
+import InlineNewsletterBar from '@/components/InlineNewsletterBar'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -24,10 +25,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function BlogPage({ searchParams }: { searchParams?: { category?: string } }) {
   const config = getTenantConfig()
-  const brand = await getBrandData()
+  const [brand, posts, categories] = await Promise.all([
+    getBrandData(),
+    getPublishedPosts(),
+    getCategoriesWithCounts(),
+  ])
   const brandName = brand.guidelines?.name || config.siteName
 
-  const posts = await getPublishedPosts()
   const selectedCategory = typeof searchParams?.category === 'string' ? searchParams.category : 'All'
 
   const filteredPosts = selectedCategory === 'All'
@@ -37,19 +41,45 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
   return (
     <>
       <SiteHeader logoText={brandName} logoImage={brand.specs?.logo_url || undefined} />
-      <main style={{ paddingTop: '100px' }}>
-        <section className="blog-page-header" style={{ padding: 'var(--spacing-sm) 0', marginBottom: '0', background: 'var(--color-bg)' }}>
+      <main className="blog-page-main">
+        <section className="blog-page-header">
           <div className="container">
-            <h1 className="blog-page-title" style={{ marginBottom: 'var(--spacing-sm)', textAlign: 'center' }}>Blog</h1>
+            <h1 className="blog-page-title">Blog</h1>
           </div>
         </section>
 
-        <section className="blog-posts" style={{ paddingTop: 'var(--spacing-md)' }}>
+        {/* Category Filter Bar */}
+        {categories.length > 0 && (
+          <section className="blog-filter-bar">
+            <div className="container">
+              <div className="category-pills">
+                <Link
+                  href="/blog"
+                  className={`category-pill ${selectedCategory === 'All' ? 'category-pill--active' : ''}`}
+                >
+                  All
+                </Link>
+                {categories.map((cat) => (
+                  <Link
+                    key={cat.name}
+                    href={`/blog?category=${encodeURIComponent(cat.name)}`}
+                    className={`category-pill ${selectedCategory === cat.name ? 'category-pill--active' : ''}`}
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="blog-posts">
           <div className="container">
             {filteredPosts.length > 0 ? (
               <>
-                {Array.from({ length: Math.ceil(filteredPosts.length / 3) }).map((_, chunkIndex) => {
-                  const chunk = filteredPosts.slice(chunkIndex * 3, chunkIndex * 3 + 3)
+                {Array.from({ length: Math.ceil(filteredPosts.length / 6) }).map((_, chunkIndex) => {
+                  const chunk = filteredPosts.slice(chunkIndex * 6, chunkIndex * 6 + 6)
+                  const isLastChunk = chunkIndex >= Math.ceil(filteredPosts.length / 6) - 1
                   return (
                     <div key={chunkIndex}>
                       <div className="blog-grid blog-grid-cards">
@@ -69,14 +99,17 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
                               <div className="blog-card-content">
                                 <div className="blog-card-top">
                                   {post.category && <span className="tag-pill">{post.category}</span>}
+                                  <span className="read-time read-time-sm">
+                                    {estimateReadTime(post)} min
+                                  </span>
                                 </div>
                                 <h2 className="blog-card-title">{post.title}</h2>
                                 {(post.meta_description || post.excerpt) && (
                                   <p className="blog-card-excerpt">{post.meta_description || post.excerpt}</p>
                                 )}
                                 <div className="blog-card-meta">
-                                  <time dateTime={post.published_date || post.created_date}>
-                                    {new Date(post.published_date || post.created_date || '').toLocaleDateString('en-US', {
+                                  <time dateTime={getPostDate(post)}>
+                                    {new Date(getPostDate(post)).toLocaleDateString('en-US', {
                                       month: 'long',
                                       day: 'numeric',
                                       year: 'numeric',
@@ -88,6 +121,17 @@ export default async function BlogPage({ searchParams }: { searchParams?: { cate
                           </Link>
                         ))}
                       </div>
+                      {/* Inline newsletter between post chunks */}
+                      {!isLastChunk && (
+                        <div className="blog-newsletter-break">
+                          <InlineNewsletterBar
+                            username={config.username}
+                            heading="Never miss an article"
+                            subtext="Get the latest posts delivered to your inbox."
+                            variant="light"
+                          />
+                        </div>
+                      )}
                     </div>
                   )
                 })}

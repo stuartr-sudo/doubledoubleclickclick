@@ -17,8 +17,20 @@ interface NetworkMember {
   target_market?: string
   blurb?: string
   seed_keywords?: string[]
-  image_style?: Record<string, string>
+  image_style?: Record<string, any>
   research_context?: Record<string, any>
+  // Visual identity
+  primary_color?: string
+  accent_color?: string
+  logo_url?: string
+  heading_font?: string
+  body_font?: string
+  // Author data
+  author_name?: string
+  author_bio?: string
+  author_image_url?: string
+  author_url?: string
+  author_social_urls?: Record<string, string>
 }
 
 /**
@@ -150,13 +162,27 @@ export async function POST(req: NextRequest) {
           network_partners: buildPartnersFor(member.username),
         }
 
-        // Forward brand data if available (from brand research phase)
+        // Forward ALL brand data so DC gets full context from research phase
         if (member.brand_voice) provisionPayload.brand_voice_tone = member.brand_voice
         if (member.target_market) provisionPayload.target_market = member.target_market
         if (member.blurb) provisionPayload.blurb = member.blurb
         if (member.seed_keywords) provisionPayload.seed_keywords = member.seed_keywords
         if (member.image_style) provisionPayload.image_style = member.image_style
         if (member.research_context) provisionPayload.research_context = member.research_context
+        // Visual identity — forward colors from image_style or explicit fields
+        if (member.primary_color) provisionPayload.primary_color = member.primary_color
+        else if (member.image_style?.primary_color) provisionPayload.primary_color = member.image_style.primary_color
+        if (member.accent_color) provisionPayload.accent_color = member.accent_color
+        else if (member.image_style?.accent_color) provisionPayload.accent_color = member.image_style.accent_color
+        if (member.logo_url) provisionPayload.logo_url = member.logo_url
+        if (member.heading_font) provisionPayload.heading_font = member.heading_font
+        if (member.body_font) provisionPayload.body_font = member.body_font
+        // Author data
+        if (member.author_name) provisionPayload.author_name = member.author_name
+        if (member.author_bio) provisionPayload.author_bio = member.author_bio
+        if (member.author_image_url) provisionPayload.author_image_url = member.author_image_url
+        if (member.author_url) provisionPayload.author_url = member.author_url
+        if (member.author_social_urls) provisionPayload.author_social_urls = member.author_social_urls
 
         const res = await fetch(`${baseUrl}/api/provision`, {
           method: 'POST',

@@ -456,6 +456,7 @@ export default function NetworkForm() {
           </div>
         </div>
 
+        <div className="dc-section-wrap">
         {error && (
           <div className="dc-alert dc-alert-error">
             <span className="dc-alert-icon">!</span>
@@ -469,7 +470,7 @@ export default function NetworkForm() {
 
         {/* ─── SECTION 0: Network Setup ─── */}
         {activeSection === 0 && phase === 'planning' && (
-          <div className="dc-section-wrap">
+          <>
             <div className="dc-card">
               <div className="dc-card-header">
                 <div>
@@ -554,12 +555,12 @@ export default function NetworkForm() {
                 </div>
               </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* ─── SECTION 1: Review Sites ─── */}
         {activeSection === 1 && phase === 'planning' && (
-          <div className="dc-section-wrap">
+          <>
             {niches.length === 0 ? (
               <div className="dc-card">
                 <div className="dc-card-body" style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
@@ -685,12 +686,12 @@ export default function NetworkForm() {
                 ))}
               </>
             )}
-          </div>
+          </>
         )}
 
         {/* ─── SECTION 2: Brand Research ─── */}
         {activeSection === 2 && phase === 'planning' && (
-          <div className="dc-section-wrap">
+          <>
             {niches.length === 0 ? (
               <div className="dc-card">
                 <div className="dc-card-body" style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
@@ -828,12 +829,12 @@ export default function NetworkForm() {
                 })}
               </>
             )}
-          </div>
+          </>
         )}
 
         {/* ─── SECTION 3: Launch ─── */}
         {activeSection === 3 && phase === 'planning' && (
-          <div className="dc-section-wrap">
+          <>
             <div className="dc-card">
               <div className="dc-card-header">
                 <h3>Launch Network</h3>
@@ -878,12 +879,12 @@ export default function NetworkForm() {
                 )}
               </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* ─── PROVISIONING / DONE ─── */}
         {(phase === 'provisioning' || phase === 'done') && (
-          <div className="dc-section-wrap">
+          <>
             {phase === 'done' && (
               <div className="dc-ai-bar" style={{ background: 'linear-gradient(135deg, #ecfdf5, #f0fdf4)', borderColor: '#86efac' }}>
                 <div className="dc-ai-bar-info">
@@ -971,12 +972,11 @@ export default function NetworkForm() {
                 </button>
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Step navigation */}
         {phase === 'planning' && (
-          <div className="dc-section-wrap">
             <div className="dc-step-nav">
               {activeSection > 0 && (
                 <button
@@ -997,8 +997,8 @@ export default function NetworkForm() {
                 </button>
               )}
             </div>
-          </div>
         )}
+        </div>
       </main>
     </div>
   )

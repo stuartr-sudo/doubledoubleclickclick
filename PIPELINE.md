@@ -18,17 +18,21 @@
 9. [Cross-Site Linking — How It Works](#9-cross-site-linking--how-it-works)
 10. [Multi-Tenancy — How One Codebase Serves Many Sites](#10-multi-tenancy--how-one-codebase-serves-many-sites)
 11. [Content Display — How Articles Appear](#11-content-display--how-articles-appear)
-12. [Lead Capture](#12-lead-capture)
-13. [Email System](#13-email-system)
-14. [SEO & Structured Data](#14-seo--structured-data)
-15. [Fly.io API Integration](#15-flyio-api-integration)
-16. [Frontend Pages & Routes](#16-frontend-pages--routes)
-17. [API Endpoint Reference](#17-api-endpoint-reference)
-18. [Database Tables Used](#18-database-tables-used)
-19. [Environment Variables](#19-environment-variables)
-20. [Deployment](#20-deployment)
-21. [Timing & Performance](#21-timing--performance)
-22. [FAQ / Likely Questions](#22-faq--likely-questions)
+12. [Homepage Layout (10 Sections)](#12-homepage-layout-10-sections)
+13. [Lead Capture](#13-lead-capture)
+14. [Email System](#14-email-system)
+15. [SEO & Structured Data](#15-seo--structured-data)
+16. [Fly.io API Integration](#16-flyio-api-integration)
+17. [Frontend Pages & Routes](#17-frontend-pages--routes)
+18. [API Endpoint Reference](#18-api-endpoint-reference)
+19. [Database Tables Used](#19-database-tables-used)
+20. [Environment Variables](#20-environment-variables)
+21. [Hero Image Generation](#21-hero-image-generation)
+22. [Quiz System](#22-quiz-system)
+23. [Developer Tooling](#23-developer-tooling)
+24. [Deployment](#24-deployment)
+25. [Timing & Performance](#25-timing--performance)
+26. [FAQ / Likely Questions](#26-faq--likely-questions)
 
 ---
 
@@ -44,6 +48,7 @@ Admin UI (/admin/provision)
 Blog Cloner (this app — Next.js 14)
         │
         ├─ Phase 1: Seed brand data into shared Supabase
+        ├─ Phase 1.5: Generate hero image via fal.ai (non-blocking)
         ├─ Phase 2: Create Google services (GA4 property, GTM container)
         ├─ Phase 3: Call Doubleclicker auto-onboard (content pipeline)
         ├─ Phase 4: Purchase domain via Google Cloud Domains
@@ -62,6 +67,7 @@ Custom domain:    https://www.{domain} (auto-configured if purchased)
 
 - Provisions new branded blog sites on Fly.io (single sites or full networks)
 - Seeds brand/author data into the shared Supabase database
+- Generates AI hero images for each site via fal.ai
 - Creates Google Analytics, Tag Manager, and Search Console for each site
 - Searches for and purchases domains via Google Cloud Domains
 - Auto-configures DNS records (A, AAAA, CNAME, TXT) when domain is purchased
@@ -131,6 +137,7 @@ One API call provisions an entire site — brand data, Google services, content 
   "product_url": "https://amazon.com/natural-skincare",
   "seed_keywords": ["natural skincare", "organic moisturizer"],
   "image_style": "Clean, bright product photography with natural elements",
+  "research_context": { "market_overview": "...", "content_pillars": [...], "keyword_themes": [...] },
   "fly_region": "syd",
   "skip_pipeline": false,
   "skip_deploy": false,
@@ -150,7 +157,7 @@ One API call provisions an entire site — brand data, Google services, content 
 }
 ```
 
-**Niche-first mode:** `website_url` is optional. If only `niche` is provided, Doubleclicker researches the niche, discovers products, and generates content autonomously.
+**Niche-first mode:** `website_url` is optional. If only `niche` is provided, Doubleclicker researches the niche, discovers products, and generates content autonomously. The `research_context` field is optional — when provided (from the admin UI's deep niche research), it gives DC a head start with market analysis, content pillars, and keyword themes.
 
 ### Phase 1: Seed the shared database (~2s)
 
@@ -162,6 +169,18 @@ Inserts (select-first pattern) into four tables with brand identity:
 | `brand_specifications` | Primary/accent colors, logo URL, heading/body fonts |
 | `company_information` | Website, email, blurb, target market |
 | `authors` | Default author with name, bio, slug, profile image |
+
+### Phase 1.5: Generate hero image (~3-5s)
+
+After the DB seed, generates an AI hero image for the site's homepage banner.
+
+1. Calls `buildHeroImagePrompt()` with `niche`, `brandName`, and optional `image_style`
+2. Calls `generateHeroImage()` which hits fal.ai's `fal-ai/flux/schnell` model
+3. If successful, updates `brand_specifications.hero_image_url` with the generated image URL
+
+**Non-blocking** — if `FAL_API_KEY` is not set or generation fails, the site works with a CSS gradient fallback on the hero banner. The response includes a `hero_image` notification with status `generated`, `skipped`, or `error`.
+
+New file: `lib/image-gen.ts`
 
 ### Phase 2: Create Google services (~3s)
 
@@ -188,6 +207,11 @@ Calls `POST {DOUBLECLICKER_API_URL}/api/strategy/auto-onboard`:
   "assignToEmail": "owner@example.com",
   "productUrl": "https://amazon.com/natural-skincare",
   "niche": "natural skincare",
+  "brand_blurb": "Clean beauty and natural skincare products",
+  "target_market": "Health-conscious consumers seeking clean beauty",
+  "brand_voice": "Warm, knowledgeable, trustworthy",
+  "seed_keywords": ["natural skincare", "organic moisturizer"],
+  "research_context": { "market_overview": "...", "content_pillars": [...], "keyword_themes": [...] },
   "approved_products": [
     { "name": "Vitamin C Serum", "url": "https://amazon.com/...", "description": "..." }
   ],
@@ -313,6 +337,7 @@ If the domain registration hasn't completed yet (takes 1-2 min), this phase is m
   "notifications": {
     "google_analytics": { "status": "created", "measurement_id": "G-XXXXXXX" },
     "google_tag_manager": { "status": "created", "public_id": "GTM-XXXXXXX" },
+    "hero_image": { "status": "generated" },
     "doubleclicker": { "status": "triggered" },
     "domain_purchase": { "status": "registration_pending", "domain": "purenaturalskincare.com" },
     "fly": { "status": "deployed", "app": "pure-glow-skincare-blog", "url": "https://pure-glow-skincare-blog.fly.dev" },
@@ -352,9 +377,12 @@ A step-by-step wizard for provisioning new blog sites. Supports two modes:
 ### Niche-First Mode (no website URL)
 
 1. Enter a niche (e.g., "natural skincare") → system researches and generates everything
-2. "Generate Brand Profile from Niche" button calls Doubleclicker's enhance-brand endpoint
+2. "Generate Brand Profile from Niche" button runs a 2-phase deep research process:
+   - **Phase 1:** Calls DC's `/api/strategy/deep-niche-research` — produces market overview, content pillars (with TOFU/MOFU/BOFU stages), keyword themes, competitor analysis. This `research_context` is stored and forwarded through the entire pipeline.
+   - **Phase 2:** Calls DC's `/api/strategy/enhance-brand` 5x in parallel (brand_voice, target_market, brand_blurb, seed_keywords, image_style), each receiving the `research_context` for grounded generation.
 3. "Discover Products" button previews products DC will find for the niche
 4. Domain suggestions pulled from Google Cloud Domains API
+5. Niche-derived color palette auto-applied based on niche keywords
 
 ### Website Mode (has existing URL)
 
@@ -362,18 +390,14 @@ A step-by-step wizard for provisioning new blog sites. Supports two modes:
 2. "Generate All with AI" button scrapes the site and auto-fills brand profile
 3. Manual product entry supported
 
-### Wizard Sections (step-by-step navigation)
+### Wizard Sections (sidebar navigation)
 
-| Step | Section | Description |
+| Section | Icon | Contents |
 | --- | --- | --- |
-| 1 | Brand Profile | Niche, username, display name, website URL, brand voice, target market, blurb, seed keywords |
-| 2 | Image Style | Default image generation style for article hero images |
-| 3 | Products & Discovery | Manual product entry or niche-based auto-discovery with approval checkboxes |
-| 4 | Appearance | Primary/accent colors, logo, heading/body fonts. "Suggest from Niche" for auto-palette |
-| 5 | Author | Default author name, bio, profile image |
-| 6 | Domain & Hosting | Domain field with suggestions from Cloud Domains, Fly.io region selector |
-| 7 | Google Services | GA4, GTM, Search Console toggles (default: all on). Domain purchase confirmation |
-| 8 | Launch | Contact email, skip_deploy/skip_pipeline toggles, Launch button |
+| Brand Profile | `🏷️` | Niche, username, display name, website URL, brand voice, target market, blurb, seed keywords, author (name, bio, image, socials) |
+| Image Style | `🎨` | Imagineer settings (visual style, color palette, mood, composition, lighting, image type, subject guidelines, preferred/prohibited elements, AI prompt instructions), Stitch video toggle |
+| Products & Discovery | `📦` | Niche-based auto-discovery with approval checkboxes, manual product entry (name, URL, affiliate link, additional URLs, signal URLs) |
+| Deploy & Launch | `🚀` | Appearance (primary/accent colors, logo, niche-based palette suggestion), domain with Cloud Domains suggestions, Fly.io region, Google services toggles (GA4, GTM, GSC), domain purchase, skip_deploy/skip_pipeline toggles, contact email, Launch button |
 
 ### Pipeline Phases Sidebar
 
@@ -540,8 +564,9 @@ Blog Cloner Admin UI
 | --- | --- | --- |
 | 1. Niche Expansion | Blog Cloner | Light AI call expands seed niche to 4-6 related niches with names + descriptions |
 | 2. User Review | Blog Cloner Admin UI | User toggles sites on/off, edits brand names, selects domains per site |
-| 3. Parallel Provision | Blog Cloner | Calls existing `POST /api/provision` for each site in parallel |
-| 4. Parallel DC Onboard | Doubleclicker | Each site gets its own auto-onboard call with `network_partners` context |
+| 3. Brand Research | Blog Cloner Admin UI | Deep niche research + brand generation for each enabled niche (batched 3 at a time) — produces brand_voice, target_market, blurb, seed_keywords, image_style per site |
+| 4. Parallel Provision | Blog Cloner | Calls existing `POST /api/provision` for each site in parallel, forwarding brand research data |
+| 5. Parallel DC Onboard | Doubleclicker | Each site gets its own auto-onboard call with `network_partners` context + `research_context` |
 
 ### The `network_partners` Payload
 
@@ -567,18 +592,35 @@ This payload is stored in the `app_settings` table (as `network_partners:{userna
 | Table | Fields | Purpose |
 | --- | --- | --- |
 | `site_networks` | `id`, `name`, `seed_niche`, `created_date` | Network metadata (e.g., "Wellness Circle") |
-| `site_network_members` | `id`, `network_id`, `username`, `niche`, `domain`, `role` | Sites in the network (`role`: "seed" or "satellite") |
+| `site_network_members` | `id`, `network_id`, `username`, `display_name`, `niche`, `domain`, `role`, `provision_status`, `provision_result` | Sites in the network (`role`: "seed" or "satellite", `provision_status`: pending/provisioning/done/failed) |
 | `app_settings` | `setting_name`, `setting_value` | Stores `network_partners:{username}` as JSON for DC article writer |
 
-### Admin UI Flow (planned)
+### Admin UI — Network Provisioning
 
-1. Tab: "Create Network" (alongside existing "Create Site")
-2. Enter seed niche → "Expand Network" button
-3. AI returns 4-6 suggested niches with reasoning
-4. User reviews: toggle on/off, edit brand names, select domains per site
-5. Google services toggles (apply to all sites)
-6. "Launch Network" button → provisions all sites in parallel
-7. Network dashboard: view all sites, combined status, pipeline progress
+**Route:** `/admin/network`
+
+A 4-section wizard for creating site networks:
+
+| Section | Icon | Description |
+| --- | --- | --- |
+| Network Setup | `🌐` | Enter seed niche, network name, contact email. "Expand Network" calls Doubleclicker's `expand-network` endpoint (returns 1 seed + 5 satellite niches). Toggle sites on/off, pick domains per site via Cloud Domains suggestions |
+| Review Sites | `✏️` | Review and edit each site's brand name, username, domain, niche description |
+| Brand Research | `🔬` | Per-niche deep research via Doubleclicker (batched 3 at a time): Phase 1 calls `deep-niche-research` for market analysis + content pillars, Phase 2 calls `enhance-brand` 5x in parallel for brand_voice, target_market, blurb, seed_keywords, image_style. Results are editable before launch and forwarded through provisioning to DC onboard |
+| Launch | `🚀` | Fly.io region, Google services toggles (apply to all sites), "Launch Network" button → calls `POST /api/admin/provision-network` |
+
+**Endpoint:** `POST /api/admin/provision-network`
+
+Orchestrates parallel provisioning:
+1. Creates `site_networks` record
+2. Creates `site_network_members` records (seed + satellites, with `display_name`)
+3. Builds `network_partners` list for each member (all other members' domains + niches + display names)
+4. Calls `POST /api/provision` for each member in parallel, forwarding `network_partners` + brand research data (`brand_voice`, `target_market`, `blurb`, `seed_keywords`, `image_style`, `research_context`)
+5. Updates `provision_status` (pending → provisioning → done/failed) and stores `provision_result` per member
+6. Returns per-member status (success/failure)
+
+**Endpoint:** `GET /api/admin/provision-network?network_id=...`
+
+Returns the status of all members in a network (polled by the UI every 5s during provisioning).
 
 ### Not In Scope (future)
 
@@ -701,6 +743,13 @@ User sees article at /blog/{slug}
 - **Blog listing** (`/blog`): `SELECT * FROM blog_posts WHERE user_name = ? AND status = 'published' ORDER BY published_date DESC`
 - **Single post** (`/blog/[slug]`): `SELECT * FROM blog_posts WHERE user_name = ? AND slug = ? AND status = 'published'`
 - **Categories** (`/api/blog/categories`): `SELECT DISTINCT category FROM blog_posts WHERE user_name = ?`
+- **Featured posts** (`getFeaturedPosts(limit = 4)`): Queries `blog_posts` where `is_pillar = true` and `status = 'published'`. Falls back to most recent posts if fewer than 2 pillar posts exist.
+- **Categories with counts** (`getCategoriesWithCounts()`): Queries all categories from published posts for the tenant, returns `{ name, count }[]` sorted by count descending.
+
+### Utility Functions:
+
+- **`estimateReadTime(post)`** — Calculates reading time at 200 words/minute: `Math.max(1, Math.ceil(wordCount / 200))`. Displayed on blog listing cards and post pages.
+- **`getPostDate(post)`** — Returns `published_date || created_date || new Date().toISOString()`. Used for consistent date display across components.
 
 ### Revalidation:
 
@@ -708,7 +757,26 @@ All blog queries use `revalidate: 0` (force-dynamic) — every page load gets fr
 
 ---
 
-## 12. Lead Capture
+## 12. Homepage Layout (10 Sections)
+
+The homepage is a full-featured landing page with 10 distinct sections. All section CSS uses CSS variables (`--color-primary`, `--color-accent`, etc.) so they adapt to any brand's color palette via `BrandStyles`. Responsive breakpoints at 768px and 640px.
+
+| # | Section | Component/Style | Data Source |
+| --- | --- | --- | --- |
+| 1 | Hero Banner | `.hero-banner-section` | `brand.specs?.hero_image_url`, falls back to CSS gradient |
+| 2 | Inline Newsletter | `InlineNewsletterBar` (accent) | Posts to `/api/leads` |
+| 3 | Featured Articles | `.featured-section` | `getFeaturedPosts(4)` — prioritizes `is_pillar=true` |
+| 4 | Explore Topics | `.topics-section` | `getCategoriesWithCounts()` — letter icons, post counts |
+| 5 | Latest Articles | `.latest-section` | `getPublishedPosts(9)` — 3x3 grid |
+| 6 | Mid-Page Capture | `.midpage-capture-section` | `InlineNewsletterBar` (dark) |
+| 7 | Meet the Author | `.author-section` | `getAuthorData()` — photo, bio, expertise badge from `target_market`, social links |
+| 8 | Popular Articles | `.popular-section` | Top 5 posts, numbered 01-05 with thumbnails |
+| 9 | Quiz CTA | `.quiz-cta-section` | `getFeaturedQuiz()` — conditional, only renders if quiz exists |
+| 10 | Footer Newsletter | `.newsletter-section` | `NewsletterForm` component |
+
+---
+
+## 13. Lead Capture
 
 **Endpoint:** `POST /api/lead-capture`
 
@@ -735,9 +803,18 @@ Handles contact form submissions from the blog frontend.
 }
 ```
 
+### Newsletter Subscriptions
+
+Newsletter subscriptions use `POST /api/leads` with `topic: 'newsletter'`. Two components handle this:
+
+- **`InlineNewsletterBar`** — Lightweight horizontal bar component with 3 variants: `light`, `dark`, and `accent`. Designed for inline placement between content sections.
+- **`NewsletterForm`** — Card-style form component with heading, description, and email input. Used for more prominent placement.
+
+Newsletter forms appear in 3 places on the homepage (inline bar after hero, mid-page dark capture section, footer) and between post chunks on the blog page.
+
 ---
 
-## 13. Email System
+## 14. Email System
 
 All emails sent via **Resend** (`RESEND_API_KEY`).
 
@@ -751,7 +828,7 @@ All emails use inline-styled HTML (no template engine).
 
 ---
 
-## 14. SEO & Structured Data
+## 15. SEO & Structured Data
 
 ### Meta tags (per page):
 
@@ -778,7 +855,7 @@ All emails use inline-styled HTML (no template engine).
 
 ---
 
-## 15. Fly.io API Integration
+## 16. Fly.io API Integration
 
 The `lib/fly.ts` module wraps two Fly APIs:
 
@@ -802,18 +879,20 @@ The `lib/fly.ts` module wraps two Fly APIs:
 
 ---
 
-## 16. Frontend Pages & Routes
+## 17. Frontend Pages & Routes
 
 | Route | Type | Purpose |
 | --- | --- | --- |
-| `/` | SSR | Homepage — hero, about section, latest posts carousel |
-| `/blog` | SSR | Blog listing with category filter and pagination |
+| `/` | SSR | Homepage with 10 sections: Hero Banner (AI-generated image with gradient fallback), Inline Newsletter Bar, Featured Articles (hero card + 3-card grid), Explore Topics (category cards with letter icons), Latest Articles (3x3 grid), Mid-Page Email Capture, Meet the Author (photo, bio, expertise badge, social links), Popular Articles (numbered 01-05), Quiz CTA (conditional), Footer Newsletter |
+| `/blog` | SSR | Blog listing with category filter pill bar at top, posts in 6-post chunks with InlineNewsletterBar between chunks, read time estimates on each card |
 | `/blog/[slug]` | SSR | Individual blog post with related posts, comments, JSON-LD |
+| `/quiz/[id]` | SSR | Interactive quiz player with countdown timer, scoring, optional email collection, retake support. Set to noindex, nofollow |
 | `/about` | Page | About page |
 | `/contact` | Page | Contact form (lead capture) |
 | `/privacy` | Page | Privacy policy |
 | `/terms` | Page | Terms of service |
-| `/admin/provision` | Page | Admin provisioning wizard (step-by-step) |
+| `/admin/provision` | Page | Admin provisioning wizard (single-site) |
+| `/admin/network` | Page | Admin network provisioning wizard (multi-site constellation) |
 
 ### Analytics:
 
@@ -825,7 +904,7 @@ Events tracked: `blog_view`, `blog_read_progress`, `blog_time_spent`, `cta_click
 
 ---
 
-## 17. API Endpoint Reference
+## 18. API Endpoint Reference
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
@@ -839,10 +918,14 @@ Events tracked: `blog_view`, `blog_read_progress`, `blog_time_spent`, `cta_click
 | `GET` | `/api/blog` | None | Fetch published blog posts (query: limit, category) |
 | `GET` | `/api/blog/categories` | None | Get all blog categories |
 | `POST` | `/api/lead-capture` | None | Contact form submission |
+| `POST` | `/api/leads` | None | Newsletter subscription. Accepts email, topic, name. Used by InlineNewsletterBar and NewsletterForm |
+| `POST` | `/api/quiz-submit` | None | Submit quiz answers, get scored results. Server-side scoring (correct answers never sent to client). Returns score, percentage, passed, message, optionally detailed results |
+| `POST` | `/api/admin/provision-network` | None | Parallel provisioning of a site network (creates DB records, provisions each member with brand research data) |
+| `GET` | `/api/admin/provision-network` | None | Poll network provisioning status (`?network_id=...`) |
 
 ---
 
-## 18. Database Tables Used
+## 19. Database Tables Used
 
 This app reads and writes to the shared Supabase database.
 
@@ -851,7 +934,7 @@ This app reads and writes to the shared Supabase database.
 | Table | Operation | Key fields |
 | --- | --- | --- |
 | `brand_guidelines` | Select-first insert/update | `user_name`, `name`, `website_url`, `brand_personality`, `default_author`, `author_bio`, `image_style`, `seed_keywords` |
-| `brand_specifications` | Select-first insert/update | `guideline_id`, `user_name`, `primary_color`, `accent_color`, `logo_url`, fonts |
+| `brand_specifications` | Select-first insert/update | `guideline_id`, `user_name`, `primary_color`, `accent_color`, `logo_url`, fonts, `hero_image_url` |
 | `company_information` | Select-first insert/update | `username`, `client_website`, `email`, `blurb`, `target_market` |
 | `authors` | Select-first insert/update | `user_name`, `name`, `bio`, `slug`, `profile_image_url` |
 | `analytics_events` | Insert | `event_name`, `properties` (JSON) |
@@ -876,21 +959,31 @@ This app reads and writes to the shared Supabase database.
 
 ### Written for leads:
 
-| Table | Operation |
-| --- | --- |
-| `leads` | Insert (name, email, company, message, source, brand_id, ip_address) |
+| Table | Operation | Source |
+| --- | --- | --- |
+| `leads` | Insert (name, email, company, message, source, brand_id, ip_address) | `POST /api/lead-capture` (contact form) |
+| `leads` | Insert (name, email, topic, username, source=`homepage_lead_magnet`) | `POST /api/leads` (hero lead magnet) |
 
 ### Site networks
 
 | Table | Operation | Key fields |
 | --- | --- | --- |
 | `site_networks` | Insert on network creation | `id`, `name`, `seed_niche`, `created_date` |
-| `site_network_members` | Insert per site in network | `network_id`, `username`, `niche`, `domain`, `role` |
+| `site_network_members` | Insert per site, update during provisioning | `network_id`, `username`, `display_name`, `niche`, `domain`, `role`, `provision_status`, `provision_result` |
 | `app_settings` | Insert/update by DC auto-onboard | `setting_name` = `network_partners:{username}`, `setting_value` = JSON array |
+
+### Quizzes
+
+| Table | Operation | Key fields |
+| --- | --- | --- |
+| `quizzes` | Read | `id`, `brand_id`, `title`, `description`, `time_limit_minutes`, `passing_score`, `show_results`, `show_correct_answers`, `require_email`, `allow_retakes`, `result_message_pass`, `result_message_fail` |
+| `quiz_questions` | Read | `quiz_id` (FK), `question_text`, `question_type` (multiple_choice / multiple_select), `order_index`, `points`, `explanation`, `image_url` |
+| `quiz_options` | Read | `question_id` (FK), `option_text`, `order_index`, `is_correct` |
+| `quiz_responses` | Insert on submission | `quiz_id`, `brand_id`, `name`, `email`, `answers` (JSON), `score`, `total_questions`, `percentage`, `time_taken_seconds`, `passed` |
 
 ---
 
-## 19. Environment Variables
+## 20. Environment Variables
 
 ### Required — provisioning
 
@@ -949,9 +1042,121 @@ NEXT_PUBLIC_POSTHOG_KEY=phc_...
 NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 ```
 
+### Optional — hero image generation
+
+```
+FAL_API_KEY=...     # fal.ai API key for hero image generation (Phase 1.5). If not set, hero images are silently skipped.
+```
+
 ---
 
-## 20. Deployment
+## 21. Hero Image Generation
+
+**Library:** `lib/image-gen.ts`
+**Provider:** fal.ai `fal-ai/flux/schnell` model
+
+### Prompt Builder
+
+`buildHeroImagePrompt({ niche, brandName, imageStyle })` creates prompts like:
+
+```
+Professional blog hero banner image. {imageStyle}. For a {niche} blog called '{brandName}'.
+Wide landscape format, clean composition, no text overlays, no watermarks.
+```
+
+The `imageStyle` parameter is optional — when provided (from brand research or admin UI), it guides the visual direction.
+
+### Integration
+
+Called during provisioning Phase 1.5. The generated image URL is stored in `brand_specifications.hero_image_url`. Used on the homepage hero banner section.
+
+### Fallback
+
+When no hero image exists (or `FAL_API_KEY` is not set), the hero banner renders with a CSS gradient background using the brand's primary and accent colors. The site is fully functional without a hero image — this is a progressive enhancement.
+
+### Env Var
+
+```
+FAL_API_KEY=...
+```
+
+---
+
+## 22. Quiz System
+
+Interactive quizzes that can be embedded on any blog site. Used for audience engagement and optional email collection.
+
+### Route
+
+`/quiz/[id]` — set to `noindex, nofollow` (not intended for organic search).
+
+### Data Model
+
+```
+quizzes
+  └── quiz_questions (ordered by order_index)
+        └── quiz_options (ordered by order_index, is_correct marks correct answers)
+
+quiz_responses (stores submissions with scores)
+```
+
+### Library
+
+`lib/quiz.ts` exports:
+
+- **`getFeaturedQuiz()`** — Returns the first quiz for the current tenant (used by homepage Quiz CTA section)
+- **`getQuizById(quizId)`** — Returns a quiz with all questions and options (used by the quiz player page)
+
+### Component
+
+`QuizPlayer.tsx` — A 4-phase UI:
+
+| Phase | Description |
+| --- | --- |
+| 1. Instructions | Quiz title, description, question count, time limit |
+| 2. Email Collection | Name + email form (only if `require_email` is set on the quiz) |
+| 3. Quiz | Questions with countdown timer, question navigation dots, answer selection |
+| 4. Results | Score, pass/fail message, answer review with explanations, retake button |
+
+### Scoring
+
+Server-side only via `POST /api/quiz-submit`. Correct answers are **never sent to the client** during the quiz — the client only sends selected answer IDs, and the server looks up correctness, calculates score, and returns results.
+
+### Features
+
+- Question navigation dots for jumping between questions
+- Answer review with explanations after submission
+- Retake support (if `allow_retakes` is set on the quiz)
+- Question image support (`image_url` on `quiz_questions`)
+- Countdown timer based on `time_limit_minutes`
+
+---
+
+## 23. Developer Tooling
+
+### `scripts/run-sql.sh`
+
+Runs SQL against the linked Supabase project via the Management API. Extracts access token from macOS keychain (`security find-generic-password -s "Supabase CLI" -w`), decodes base64, and POSTs to `https://api.supabase.com/v1/projects/{PROJECT_REF}/database/query`.
+
+**Usage:**
+
+```bash
+./scripts/run-sql.sh "SELECT * FROM table LIMIT 1;"
+```
+
+Project ref hardcoded: `uscmvlfleccbctuvhhcj`.
+
+### `supabase/`
+
+Supabase CLI local dev config. Contains migration files and project configuration for local development.
+
+### `public/llms.txt`
+
+AI/LLM discovery file served at `/llms.txt`. Provides structured information about the site for AI crawlers and language models.
+
+---
+
+## 24. Deployment
 
 ### Base app (this repo)
 
@@ -995,13 +1200,14 @@ Currently, provisioned sites keep their Docker image at deploy time. To update:
 
 ---
 
-## 21. Timing & Performance
+## 25. Timing & Performance
 
 ### Provisioning (total ~60-90s)
 
 | Phase | Duration | Notes |
 | --- | --- | --- |
 | Phase 1: Seed database | ~2s | 4 inserts/updates |
+| Phase 1.5: Hero image | ~3-5s | fal.ai generation (non-blocking on failure) |
 | Phase 2: Google services | ~3s | GA4 property + GTM container |
 | Phase 3: Trigger Doubleclicker | ~1s | Fire-and-forget HTTP call |
 | Phase 4: Domain purchase | ~5s | Cloud Domains registration (async completion) |
@@ -1026,7 +1232,7 @@ Currently, provisioned sites keep their Docker image at deploy time. To update:
 
 ---
 
-## 22. FAQ / Likely Questions
+## 26. FAQ / Likely Questions
 
 **Q: What happens if I call provision twice for the same username?**
 Database operations use select-first-then-insert/update pattern, so re-provisioning is safe for the database. The Fly.io app creation will fail on the second call (app already exists) — handle this gracefully in the caller.
@@ -1084,3 +1290,9 @@ Yes — the existing "Create Site" flow is unchanged. Networks are an additional
 
 **Q: What if I pass `approved_products` during provisioning?**
 Doubleclicker will use the approved products list instead of running its own product discovery. This is useful when you've already vetted products in the admin UI's "Discover Products" step and want to ensure specific products are promoted.
+
+**Q: What happens if FAL_API_KEY is not set?**
+Hero image generation (Phase 1.5) is silently skipped. The homepage hero banner falls back to a CSS gradient using the brand's primary and accent colors. The site is fully functional without it.
+
+**Q: How do quizzes work?**
+Quizzes are created in the database (`quizzes`, `quiz_questions`, `quiz_options` tables) and displayed via `/quiz/[id]`. Scoring is server-side only — correct answers are never sent to the client. If a quiz exists for the tenant, a CTA section appears on the homepage. Quiz pages are set to noindex/nofollow.

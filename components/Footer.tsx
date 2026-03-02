@@ -11,7 +11,15 @@ export default async function Footer() {
   try {
     const brand = await getBrandData()
     brandName = brand.guidelines?.name || config.siteName
-    description = brand.company?.blurb || brand.guidelines?.brand_personality || ''
+    const rawDesc = brand.company?.blurb || brand.guidelines?.brand_personality || ''
+    // Truncate footer tagline to ~160 chars at sentence boundary
+    if (rawDesc.length > 160) {
+      const truncated = rawDesc.slice(0, 160)
+      const lastPeriod = truncated.lastIndexOf('.')
+      description = lastPeriod > 60 ? truncated.slice(0, lastPeriod + 1) : truncated.trimEnd() + '...'
+    } else {
+      description = rawDesc
+    }
     email = brand.company?.email || config.contactEmail
   } catch {
     // Fall back to env config

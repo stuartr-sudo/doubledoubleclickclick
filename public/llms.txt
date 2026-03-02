@@ -1,0 +1,36 @@
+# SEWO
+
+> AI search visibility specialists — we help brands become the answer AI recommends.
+
+SEWO positions businesses for discovery by AI assistants like ChatGPT, Claude, and Perplexity. As search shifts from traditional links to AI-generated answers, brands need a new strategy to stay visible. SEWO's proprietary technology identifies the questions your customers ask AI and optimizes your content to be cited in those responses.
+
+## Services
+
+- [Apply to Work With Us](https://www.sewo.io): AI visibility audits and ongoing optimization
+- LLM Optimization: Structuring content so large language models can accurately represent your brand
+- AI Search Positioning: Increasing citation frequency across ChatGPT, Claude, Perplexity, and Google AI Overviews
+- Content Strategy for AI: Building topical authority that AI systems recognize and trust
+- Competitive Intelligence: Tracking how AI platforms recommend you vs competitors
+
+## Topics We Cover
+
+- [Blog](https://www.sewo.io/blog): Guides on SEO, AI visibility, content strategy, and conversion optimization
+- How AI search works differently from traditional Google search
+- Answer Engine Optimization (AEO): the emerging discipline beyond SEO
+- E-commerce SEO and content strategy for sustainable organic growth
+- Technical SEO audits and on-page optimization
+- Internal linking strategy and site architecture for AI discoverability
+- Content gap analysis and topical authority building
+- Conversion rate optimization alongside traffic growth
+
+## Why AI Visibility Matters
+
+- AI assistants are becoming the primary way consumers discover products and services
+- Traditional SEO alone no longer guarantees visibility in AI-generated answers
+- Brands that optimize for AI search now will have a significant first-mover advantage
+- SEWO specializes in this emerging space with tools built specifically for LLM positioning
+
+## Contact
+
+- [Website](https://www.sewo.io)
+- Email: stuartr@sewo.io

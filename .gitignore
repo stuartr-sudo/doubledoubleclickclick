@@ -29,6 +29,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# supabase local config (contains project ref)
+supabase/.temp/
+
 # vercel
 .vercel
 

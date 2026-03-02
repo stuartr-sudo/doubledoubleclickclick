@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import SiteHeader from '@/components/SiteHeader'
 import { getTenantConfig } from '@/lib/tenant'
 
+export const dynamic = 'force-dynamic'
+
 export async function generateMetadata(): Promise<Metadata> {
   const config = getTenantConfig()
   return {

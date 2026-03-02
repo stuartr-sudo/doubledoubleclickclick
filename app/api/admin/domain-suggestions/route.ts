@@ -151,41 +151,74 @@ interface DomainSuggestion {
 }
 
 /**
+ * Creative prefixes/suffixes to generate varied domain queries.
+ * Shuffled each call so re-runs produce different results.
+ */
+const PREFIXES = ['the', 'my', 'go', 'get', 'try', 'hey', 'all', 'one', 'pro', 'top', 'now', 'daily', 'pure', 'true', 'real']
+const SUFFIXES = ['hub', 'lab', 'hq', 'zone', 'spot', 'nest', 'base', 'club', 'life', 'way', 'ally', 'now', 'daily', 'guide', 'co']
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/**
  * Generate search queries for the Cloud Domains searchDomains API.
- * The API takes a natural-language query and returns domain suggestions.
+ * Uses creative combinations and randomness so re-runs give different results.
  */
 function generateQueries(niche?: string, brandName?: string): string[] {
-  const queries: string[] = []
+  const all: string[] = []
   const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
 
-  // Brand name is the strongest signal
+  const prefixes = shuffle(PREFIXES)
+  const suffixes = shuffle(SUFFIXES)
+
   if (brandName) {
-    queries.push(clean(brandName))
+    const b = clean(brandName)
+    all.push(b)
+    // Creative: prefix + brand, brand + suffix
+    all.push(`${prefixes[0]} ${b}`)
+    all.push(`${b} ${suffixes[0]}`)
   }
 
-  // Niche as a search query
   if (niche) {
-    queries.push(clean(niche))
+    const n = clean(niche)
+    const words = n.split(/\s+/).filter(w => w.length > 2)
 
-    // Try shorter combinations for more .com options
-    const words = clean(niche).split(/\s+/).filter(w => w.length > 2)
-    if (words.length >= 2) {
-      queries.push(words.slice(0, 2).join(' '))
+    // Niche as-is
+    all.push(n)
+
+    // Pick a key word from the niche and combine creatively
+    if (words.length > 0) {
+      const key = words[Math.floor(Math.random() * words.length)]
+      all.push(`${prefixes[1]} ${key}`)
+      all.push(`${key} ${suffixes[1]}`)
+      all.push(`${key} ${suffixes[2]}`)
     }
-    if (words.length >= 3) {
-      queries.push(`${words[0]} ${words[2]}`)
+
+    // Two-word combos from niche
+    if (words.length >= 2) {
+      const i = Math.floor(Math.random() * (words.length - 1))
+      all.push(`${words[i]} ${words[i + 1]}`)
     }
   }
 
-  // Combined brand + niche
+  // Cross-combine brand + niche words
   if (brandName && niche) {
     const bWords = clean(brandName).split(/\s+/)
     const nWords = clean(niche).split(/\s+/).filter(w => w.length > 2)
     if (bWords.length > 0 && nWords.length > 0) {
-      queries.push(`${bWords[0]} ${nWords[0]}`)
+      const b = bWords[Math.floor(Math.random() * bWords.length)]
+      const n = nWords[Math.floor(Math.random() * nWords.length)]
+      all.push(`${b} ${n}`)
+      all.push(`${n} ${suffixes[3]}`)
     }
   }
 
-  // Deduplicate and cap at 5 to avoid rate limits
-  return [...new Set(queries)].slice(0, 5)
+  // Deduplicate, shuffle, and cap at 5 to avoid rate limits
+  return shuffle([...new Set(all)]).slice(0, 5)
 }

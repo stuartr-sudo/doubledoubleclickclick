@@ -30,6 +30,11 @@ export async function createApp(appName: string, orgSlug: string) {
     body: JSON.stringify({ app_name: appName, org_slug: orgSlug }),
   })
   if (!res.ok) {
+    // 409 or 422 = app already exists, which is fine for re-provisioning
+    if (res.status === 409 || res.status === 422) {
+      console.log(`Fly app "${appName}" already exists, continuing`)
+      return { app_name: appName, already_exists: true }
+    }
     const body = await res.text()
     throw new Error(`Failed to create app "${appName}": ${res.status} ${body}`)
   }

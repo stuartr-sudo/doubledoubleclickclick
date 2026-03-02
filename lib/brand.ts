@@ -1,6 +1,12 @@
 /**
  * Brand data fetching - reads from Doubleclicker's multi-tenant tables.
  * Replaces the old single-tenant homepage_content table.
+ *
+ * DB Column Naming (important — not consistent across tables):
+ *   brand_guidelines    → uses `user_name`
+ *   brand_specifications → uses `user_name`
+ *   authors             → uses `user_name`
+ *   company_information → uses `username` (different column name, same value)
  */
 
 import { createServiceClient } from '@/lib/supabase/service'
@@ -24,6 +30,7 @@ export interface BrandSpecs {
   secondary_color: string | null
   accent_color: string | null
   logo_url: string | null
+  hero_image_url: string | null
   heading_font: string | null
   body_font: string | null
   font_sizes: Record<string, string> | null
@@ -44,6 +51,50 @@ export interface BrandData {
   company: CompanyInfo | null
 }
 
+export interface AuthorData {
+  name: string
+  bio: string
+  image: string
+  socialLinks: Record<string, string>
+}
+
+/**
+ * Get author data — tries `authors` table first, falls back to `brand_guidelines`.
+ */
+export async function getAuthorData(): Promise<AuthorData | null> {
+  const { username } = getTenantConfig()
+  const supabase = createServiceClient()
+
+  const { data: author } = await supabase
+    .from('authors')
+    .select('name, bio, profile_image_url, social_links')
+    .eq('user_name', username)
+    .limit(1)
+    .single()
+
+  if (author?.name) {
+    return {
+      name: author.name,
+      bio: author.bio || '',
+      image: author.profile_image_url || '',
+      socialLinks: author.social_links || {},
+    }
+  }
+
+  // Fallback to brand_guidelines
+  const brand = await getBrandData()
+  if (brand.guidelines?.default_author) {
+    return {
+      name: brand.guidelines.default_author,
+      bio: brand.guidelines.author_bio || '',
+      image: brand.guidelines.author_image_url || '',
+      socialLinks: brand.guidelines.author_social_urls || {},
+    }
+  }
+
+  return null
+}
+
 export async function getBrandData(): Promise<BrandData> {
   const { username } = getTenantConfig()
   const supabase = createServiceClient()
@@ -57,8 +108,8 @@ export async function getBrandData(): Promise<BrandData> {
          author_image_url, author_url, author_social_urls,
          brand_specifications (
            primary_color, secondary_color, accent_color,
-           logo_url, heading_font, body_font, font_sizes,
-           border_radius, custom_css
+           logo_url, hero_image_url, heading_font, body_font,
+           font_sizes, border_radius, custom_css
          )`
       )
       .eq('user_name', username)

@@ -21,13 +21,27 @@ const LIGHTINGS = ['Natural Daylight', 'Golden Hour', 'Studio Lighting', 'Soft D
 const IMAGE_TYPES = ['Photography', 'Illustration', 'Infographic', 'Abstract', 'Lifestyle', 'Product Shot', 'Conceptual']
 const SUBJECTS = ['People', 'Technology', 'Nature', 'Architecture', 'Abstract Shapes', 'Data Visualization', 'Workspace']
 
-/* ───────── sidebar nav ───────── */
-const SECTIONS = [
-  { key: 'brand', label: 'Brand Profile', icon: '🏷️' },
+/* ───────── sidebar nav (mode-dependent) ───────── */
+type ProvisionMode = 'brand' | 'niche' | null
+
+const BRAND_SECTIONS = [
+  { key: 'identity', label: 'Product & Brand', icon: '🏷️' },
+  { key: 'author', label: 'Author', icon: '✍️' },
+  { key: 'voice', label: 'Voice & Content', icon: '💬' },
   { key: 'image', label: 'Image Style', icon: '🎨' },
-  { key: 'product', label: 'Products & Discovery', icon: '📦' },
-  { key: 'deploy', label: 'Deploy & Launch', icon: '🚀' },
+  { key: 'product', label: 'Products', icon: '📦' },
+  { key: 'deploy', label: 'Deploy', icon: '🚀' },
 ]
+
+const NICHE_SECTIONS = [
+  { key: 'niche_identity', label: 'Niche & Identity', icon: '🔍' },
+  { key: 'niche_review', label: 'Review & Refine', icon: '✏️' },
+  { key: 'product', label: 'Products', icon: '📦' },
+  { key: 'deploy', label: 'Deploy', icon: '🚀' },
+]
+
+// Legacy 8-section fallback (not used when mode is set)
+const SECTIONS = BRAND_SECTIONS
 
 /* ───────── types ───────── */
 interface ImageStyle {
@@ -159,6 +173,7 @@ export default function ProvisionForm() {
   const [selectedDomainData, setSelectedDomainData] = useState<DomainSuggestion | null>(null)
 
   /* ── UI state ── */
+  const [mode, setMode] = useState<ProvisionMode>(null)
   const [activeSection, setActiveSection] = useState(0)
   const [phase, setPhase] = useState<Phase>('form')
   const [provisionResult, setProvisionResult] = useState<any>(null)
@@ -183,8 +198,9 @@ export default function ProvisionForm() {
   const logsEndRef = useRef<HTMLDivElement>(null)
   const seenStepsRef = useRef<Set<string>>(new Set())
 
-  /* ── derived mode ── */
+  /* ── derived ── */
   const hasWebsite = websiteUrl.trim().length > 0
+  const activeSections = mode === 'niche' ? NICHE_SECTIONS : mode === 'brand' ? BRAND_SECTIONS : BRAND_SECTIONS
 
   /* ── auto-fill from domain ── */
   useEffect(() => {
@@ -236,6 +252,18 @@ export default function ProvisionForm() {
     if (/gaming|game|esport|stream/.test(lower)) return { primary: '#1a0a2e', accent: '#7c3aed' }
     if (/music|audio|podcast|sound/.test(lower)) return { primary: '#1c1c1c', accent: '#ff4081' }
     return { primary: '#0f172a', accent: '#0066ff' }
+  }
+
+  /** Extract hex colors from AI-generated color_palette string and apply to color pickers */
+  const applyColorsFromPalette = (colorPalette: string) => {
+    if (!colorPalette) return
+    const hexMatches = colorPalette.match(/#[0-9a-fA-F]{6}/g)
+    if (hexMatches && hexMatches.length >= 2) {
+      setPrimaryColor(hexMatches[0])
+      setAccentColor(hexMatches[1])
+    } else if (hexMatches && hexMatches.length === 1) {
+      setPrimaryColor(hexMatches[0])
+    }
   }
 
   const suggestDomains = async () => {
@@ -305,12 +333,22 @@ export default function ProvisionForm() {
       if (market.status === 'fulfilled' && market.value.target_market) setTargetMarket(market.value.target_market)
       if (blurb.status === 'fulfilled' && blurb.value.brand_blurb) setBrandBlurb(blurb.value.brand_blurb)
       if (keywords.status === 'fulfilled' && keywords.value.seed_keywords) setSeedKeywords(keywords.value.seed_keywords)
-      if (style.status === 'fulfilled' && style.value.image_style) setImageStyle((prev) => ({ ...prev, ...style.value.image_style }))
-
-      // Apply niche-derived colors
-      const colors = suggestNicheColors(niche)
-      setPrimaryColor(colors.primary)
-      setAccentColor(colors.accent)
+      if (style.status === 'fulfilled' && style.value.image_style) {
+        setImageStyle((prev) => ({ ...prev, ...style.value.image_style }))
+        // Prefer AI-generated palette colors over niche pattern matching
+        if (style.value.image_style.color_palette) {
+          applyColorsFromPalette(style.value.image_style.color_palette)
+        } else {
+          const colors = suggestNicheColors(niche)
+          setPrimaryColor(colors.primary)
+          setAccentColor(colors.accent)
+        }
+      } else {
+        // Fall back to niche-derived colors
+        const colors = suggestNicheColors(niche)
+        setPrimaryColor(colors.primary)
+        setAccentColor(colors.accent)
+      }
       addLog('Brand profile generated successfully')
     } catch (err: any) {
       setError(err.message || 'Failed to generate from niche')
@@ -331,8 +369,10 @@ export default function ProvisionForm() {
         niche,
         context: brandCtx,
       })
-      if (data.image_style) setImageStyle((prev) => ({ ...prev, ...data.image_style }))
-      else setError('No image style returned — DC may need niche support in enhance-brand.')
+      if (data.image_style) {
+        setImageStyle((prev) => ({ ...prev, ...data.image_style }))
+        if (data.image_style.color_palette) applyColorsFromPalette(data.image_style.color_palette)
+      } else setError('No image style returned — DC may need niche support in enhance-brand.')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -402,6 +442,8 @@ export default function ProvisionForm() {
       if (data.product_name && !displayName) setDisplayName(data.product_name)
       if (data.image_style) {
         setImageStyle((prev) => ({ ...prev, ...data.image_style }))
+        // Apply colors from AI-generated color palette
+        if (data.image_style.color_palette) applyColorsFromPalette(data.image_style.color_palette)
       }
     } catch (err: any) {
       setError(err.message)
@@ -436,6 +478,7 @@ export default function ProvisionForm() {
       if (section === 'seed_keywords' && data.seed_keywords) setSeedKeywords(data.seed_keywords)
       if (section === 'image_style' && data.image_style) {
         setImageStyle((prev) => ({ ...prev, ...data.image_style }))
+        if (data.image_style.color_palette) applyColorsFromPalette(data.image_style.color_palette)
       } else if (section === 'image_style') {
         setError('No image style returned from AI. Try adding a niche on Step 1 first.')
       }
@@ -522,8 +565,25 @@ export default function ProvisionForm() {
           research_context: researchContext || undefined,
           primary_color: primaryColor || undefined,
           accent_color: accentColor || undefined,
+          logo_url: logoUrl.trim() || undefined,
           author_name: authorName.trim() || undefined,
           author_bio: authorBio.trim() || undefined,
+          author_image_url: authorImageUrl.trim() || undefined,
+          author_url: authorPageUrl.trim() || undefined,
+          author_social_urls: authorSocials.filter(Boolean).length > 0
+            ? authorSocials.filter(Boolean).reduce<Record<string, string>>((acc, url, i) => {
+                const platform = url.includes('twitter.com') || url.includes('x.com') ? 'twitter'
+                  : url.includes('linkedin.com') ? 'linkedin'
+                  : url.includes('instagram.com') ? 'instagram'
+                  : url.includes('youtube.com') ? 'youtube'
+                  : url.includes('facebook.com') ? 'facebook'
+                  : url.includes('tiktok.com') ? 'tiktok'
+                  : `social_${i}`
+                return { ...acc, [platform]: url }
+              }, {})
+            : undefined,
+          stitch_enabled: stitchEnabled,
+          image_style: imageStyle,
           fly_region: flyRegion,
           skip_pipeline: skipPipeline,
           skip_deploy: skipDeploy,
@@ -533,11 +593,20 @@ export default function ProvisionForm() {
           purchase_domain: purchaseDomain && !!selectedDomainData,
           domain_yearly_price: selectedDomainData?.yearlyPrice || undefined,
           domain_notices: selectedDomainData?.domainNotices || undefined,
-          approved_products: discoveredProducts.filter(p => p.selected).map(p => ({
-            name: p.name,
-            url: p.url,
-            description: p.description,
-          })),
+          product_url: productUrl.trim() || undefined,
+          product_name: productName.trim() || undefined,
+          approved_products: [
+            // Manual product first (becomes primary in brand-first mode)
+            ...(productName.trim() || productUrl.trim()
+              ? [{ name: productName.trim(), url: productUrl.trim(), description: '' }]
+              : []),
+            // Then any discovered/selected products
+            ...discoveredProducts.filter(p => p.selected).map(p => ({
+              name: p.name,
+              url: p.url,
+              description: p.description,
+            })),
+          ].filter(p => p.name || p.url),
         }),
       })
 
@@ -633,6 +702,7 @@ export default function ProvisionForm() {
   }, [addLog])
 
   const resetForm = () => {
+    setMode(null)
     setPhase('form')
     setProvisionResult(null)
     setPipelineStatus(null)
@@ -692,16 +762,37 @@ export default function ProvisionForm() {
       <aside className="dc-sidebar">
         <div className="dc-sidebar-header">
           <h1>Brand Provisioner</h1>
-          <p>New brand onboarding</p>
+          <p>{mode === 'brand' ? 'Product-First' : mode === 'niche' ? 'Niche-First' : 'New brand onboarding'}</p>
         </div>
+
+        {/* Mode selector */}
+        {mode && phase === 'form' && (
+          <div className="dc-mode-selector-sidebar">
+            <button
+              type="button"
+              className={`dc-mode-btn ${mode === 'brand' ? 'dc-mode-btn-active' : ''}`}
+              onClick={() => { setMode('brand'); setActiveSection(0) }}
+            >
+              Product
+            </button>
+            <button
+              type="button"
+              className={`dc-mode-btn ${mode === 'niche' ? 'dc-mode-btn-active' : ''}`}
+              onClick={() => { setMode('niche'); setActiveSection(0) }}
+            >
+              Niche
+            </button>
+          </div>
+        )}
+
         <nav className="dc-sidebar-nav">
-          {SECTIONS.map((s, i) => (
+          {activeSections.map((s, i) => (
             <button
               key={s.key}
               type="button"
               className={`dc-nav-item ${activeSection === i ? 'dc-nav-active' : ''}`}
-              onClick={() => phase === 'form' && setActiveSection(i)}
-              disabled={phase !== 'form'}
+              onClick={() => phase === 'form' && mode && setActiveSection(i)}
+              disabled={phase !== 'form' || !mode}
             >
               <span className="dc-nav-icon">{s.icon}</span>
               <span className="dc-nav-label">{s.label}</span>
@@ -739,8 +830,8 @@ export default function ProvisionForm() {
         {/* Top bar */}
         <div className="dc-topbar">
           <div>
-            <h2>{SECTIONS[activeSection]?.label || 'Provision'}</h2>
-            <p>{phase === 'form' ? `Step ${activeSection + 1} of ${SECTIONS.length}` : phase === 'done' ? 'Complete' : 'Running...'}</p>
+            <h2>{mode ? (activeSections[activeSection]?.label || 'Provision') : 'Choose Your Path'}</h2>
+            <p>{!mode ? 'How would you like to get started?' : phase === 'form' ? `Step ${activeSection + 1} of ${activeSections.length}` : phase === 'done' ? 'Complete' : 'Running...'}</p>
           </div>
           <div className="dc-topbar-actions">
             {phase === 'form' && (
@@ -768,378 +859,677 @@ export default function ProvisionForm() {
           </div>
         )}
 
+        {/* ══════════ MODE CHOOSER ══════════ */}
+        {phase === 'form' && !mode && (
+          <div className="dc-mode-chooser">
+            <p className="dc-mode-chooser-subtitle">What do you already have?</p>
+            <div className="dc-mode-chooser-grid">
+              <button type="button" className="dc-mode-card" onClick={() => setMode('brand')}>
+                <div className="dc-mode-card-icon">🏷️</div>
+                <h3>I have a product or website</h3>
+                <p>Paste your URL and AI will extract brand identity, voice, content strategy, and image style automatically.</p>
+                <ul className="dc-mode-card-list">
+                  <li>Provide your website URL</li>
+                  <li>AI scrapes and generates everything</li>
+                  <li>Review and refine before launch</li>
+                  <li>Best for: existing brands, SaaS, e-commerce</li>
+                </ul>
+                <span className="dc-mode-card-cta">Start with Product &rarr;</span>
+              </button>
+
+              <button type="button" className="dc-mode-card" onClick={() => setMode('niche')}>
+                <div className="dc-mode-card-icon">🔍</div>
+                <h3>I have a niche idea</h3>
+                <p>Enter a topic like &ldquo;home insurance&rdquo; and AI will research the market, find products, and build a brand from scratch.</p>
+                <ul className="dc-mode-card-list">
+                  <li>Describe your niche in a few words</li>
+                  <li>AI researches market and discovers products</li>
+                  <li>Brand name, voice, keywords auto-generated</li>
+                  <li>Best for: affiliate sites, new brands, content plays</li>
+                </ul>
+                <span className="dc-mode-card-cta">Start with Niche &rarr;</span>
+              </button>
+
+              <a href="/admin/network" className="dc-mode-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="dc-mode-card-icon">🌐</div>
+                <h3>I want a network of sites</h3>
+                <p>Enter a seed niche and AI will expand it into multiple related sites, each with its own brand, domain, and content strategy.</p>
+                <ul className="dc-mode-card-list">
+                  <li>Provide a seed niche</li>
+                  <li>AI generates 6 related niche sites</li>
+                  <li>Deep market research for each site</li>
+                  <li>Best for: content networks, niche portfolios</li>
+                </ul>
+                <span className="dc-mode-card-cta">Create Network &rarr;</span>
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* ══════════ FORM SECTIONS ══════════ */}
-        {phase === 'form' && (
-          <>
-            {/* ── Section 0: Brand Profile ── */}
-            {activeSection === 0 && (
-              <div className="dc-section-wrap">
-                {/* Mode-aware context banner */}
-                {hasWebsite ? (
-                  <div className="dc-ai-bar">
-                    <div className="dc-ai-bar-info">
-                      <h3>AI Brand Setup</h3>
-                      <p>Scrapes your website and generates Brand Voice, Target Market, Brand Blurb, Seed Keywords, and Image Style. Refine each section individually below, or enhance with AI until it&apos;s right.</p>
+        {phase === 'form' && mode && (
+          <div key={`${mode}-${activeSection}`} className="dc-drawer">
+
+            {/* ═══════════════════════════════════
+                BRAND-FIRST FLOW
+                ═══════════════════════════════════ */}
+            {mode === 'brand' && (<>
+
+              {/* ── Brand 0: Product & Brand ── */}
+              {activeSection === 0 && (
+                <div className="dc-section-wrap">
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Step 1: Your Website</h3></div>
+                    <div className="dc-card-body">
+                      <div className="dc-field">
+                        <label>Website URL <span className="dc-required">*</span></label>
+                        <input type="url" value={websiteUrl}
+                          onChange={(e) => setWebsiteUrl(e.target.value)}
+                          placeholder="https://yourwebsite.com"
+                          className="dc-input-hero"
+                          autoFocus />
+                        <span className="dc-hint">AI will scrape this to extract brand name, voice, target market, keywords, and image style.</span>
+                      </div>
+
+                      <div className="dc-ai-bar">
+                        <div className="dc-ai-bar-info">
+                          <h3>AI Brand Setup</h3>
+                          <p>One click generates everything from your URL. You can refine later.</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="dc-btn dc-btn-ai"
+                          onClick={generateAll}
+                          disabled={generating.all || !websiteUrl}
+                        >
+                          {generating.all ? (
+                            <><span className="dc-spinner" /> Generating...</>
+                          ) : (
+                            'Generate All with AI'
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      className="dc-btn dc-btn-ai"
-                      onClick={generateAll}
-                      disabled={generating.all || !websiteUrl}
-                    >
-                      {generating.all ? (
-                        <><span className="dc-spinner" /> Generating...</>
-                      ) : (
-                        'Generate All with AI'
-                      )}
-                    </button>
                   </div>
-                ) : niche ? (
-                  <div className="dc-mode-banner">
-                    <div className="dc-mode-banner-icon">&#x1f50d;</div>
-                    <div>
-                      <h3>Niche Discovery Mode</h3>
-                      <p>Doubleclicker will research the <strong>{niche}</strong> niche, discover relevant products across multiple sources (Exa, Google, Reddit, ProductHunt), score them for content potential, and launch content pipelines automatically.</p>
+
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Brand Identity</h3></div>
+                    <div className="dc-card-body">
+                      <div className="dc-field-row">
+                        <div className="dc-field">
+                          <label>Company / Brand Name <span className="dc-required">*</span></label>
+                          <input type="text" value={displayName}
+                            onChange={(e) => {
+                              setDisplayName(e.target.value)
+                              if (!username || username === deriveUsername(displayName)) {
+                                setUsername(deriveUsername(e.target.value))
+                              }
+                            }}
+                            placeholder="Acme Corp" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Username <span className="dc-required">*</span></label>
+                          <input type="text" value={username}
+                            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                            placeholder="acmecorp" />
+                          <span className="dc-hint">Used internally for DB and Fly.io app naming.</span>
+                        </div>
+                      </div>
+
+                      <div className="dc-field">
+                        <label>Niche</label>
+                        <input type="text" value={niche}
+                          onChange={(e) => setNiche(e.target.value)}
+                          placeholder="e.g., Longevity Supplements, AI Productivity Tools" />
+                        <span className="dc-hint">Optional — helps focus keyword research around a topic.</span>
+                      </div>
+
+                      <div className="dc-field-row">
+                        <div className="dc-field">
+                          <label>Contact Email <span className="dc-required">*</span></label>
+                          <input type="email" value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
+                            placeholder="hello@acmecorp.com" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Domain</label>
+                          <input type="text" value={domain}
+                            onChange={(e) => setDomain(e.target.value)}
+                            placeholder="acmecorp.com" />
+                        </div>
+                      </div>
+
+                      {(niche || displayName) && (
+                        <div className="dc-domain-suggest-row">
+                          <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm"
+                            onClick={suggestDomains} disabled={loadingDomains}>
+                            {loadingDomains ? <><span className="dc-spinner" /> Searching...</> : 'Find Available Domains'}
+                          </button>
+                          {domainSuggestions.length > 0 && (
+                            <div className="dc-domain-suggestions">
+                              {domainSuggestions.map((s) => (
+                                <button key={s.domain} type="button"
+                                  className={`dc-domain-chip ${domain === s.domain ? 'dc-domain-chip-selected' : ''}`}
+                                  onClick={() => selectDomain(s.domain, s)}>
+                                  <span className="dc-domain-chip-name">{s.domain}</span>
+                                  <span className="dc-domain-chip-price">${s.price}/{s.currency === 'USD' ? 'yr' : s.currency}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="dc-field-row">
+                        <div className="dc-field">
+                          <label>Logo URL</label>
+                          <SaveableInput value={logoUrl} onChange={setLogoUrl}
+                            placeholder="https://yoursite.com/logo.png" onSave={() => markSaved('logo')} saved={saved.logo} />
+                        </div>
+                        <div className="dc-field">
+                          <label>Blog API URL</label>
+                          <SaveableInput value={blogApiUrl} onChange={setBlogApiUrl}
+                            placeholder="https://yourblog.com/api" onSave={() => markSaved('blogApi')} saved={saved.blogApi} />
+                        </div>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      className="dc-btn dc-btn-ai"
-                      onClick={generateFromNiche}
-                      disabled={generating.niche_all}
-                    >
-                      {generating.niche_all ? (
-                        <><span className="dc-spinner" /> Generating...</>
-                      ) : (
-                        'Generate Brand Profile from Niche'
-                      )}
-                    </button>
                   </div>
-                ) : (
+
+                  <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                    onNavigate={setActiveSection} onLaunch={handleProvision}
+                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                </div>
+              )}
+
+              {/* ── Brand 1: Author ── */}
+              {activeSection === 1 && (
+                <div className="dc-section-wrap">
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Author</h3></div>
+                    <div className="dc-card-body">
+                      <div className="dc-field-row">
+                        <div className="dc-field">
+                          <label>Author Name</label>
+                          <input type="text" value={authorName}
+                            onChange={(e) => setAuthorName(e.target.value)}
+                            placeholder="Stuart Asta" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Author Image URL</label>
+                          <SaveableInput value={authorImageUrl} onChange={setAuthorImageUrl}
+                            placeholder="https://…/author.jpg" onSave={() => markSaved('authorImg')} saved={saved.authorImg} />
+                        </div>
+                      </div>
+                      <div className="dc-field">
+                        <label>Author Page URL</label>
+                        <input type="url" value={authorPageUrl}
+                          onChange={(e) => setAuthorPageUrl(e.target.value)}
+                          placeholder="https://yoursite.com/author/name" />
+                      </div>
+                      <div className="dc-field">
+                        <label>Author Bio</label>
+                        <textarea value={authorBio} onChange={(e) => setAuthorBio(e.target.value)}
+                          placeholder="1-3 sentences about the author — used in the author widget and Person schema" rows={2} />
+                      </div>
+                      <div className="dc-field">
+                        <label>Author Social Profile URLs</label>
+                        {authorSocials.map((url, i) => (
+                          <input key={i} type="url" value={url}
+                            onChange={(e) => updateListItem(setAuthorSocials, i, e.target.value)}
+                            placeholder="https://linkedin.com/in/yourname"
+                            className="dc-list-input" />
+                        ))}
+                        <button type="button" className="dc-btn-link" onClick={() => addListItem(setAuthorSocials)}>
+                          + Add another
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                    onNavigate={setActiveSection} onLaunch={handleProvision}
+                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                </div>
+              )}
+
+              {/* ── Brand 2: Voice & Content (merged voice + content + keywords) ── */}
+              {activeSection === 2 && (
+                <div className="dc-section-wrap">
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Brand Voice</h3>
+                      <EnhanceButton loading={generating.brand_voice} onClick={() => enhanceField('brand_voice', brandVoice)} />
+                    </div>
+                    <div className="dc-card-body">
+                      <div className="dc-field">
+                        <textarea value={brandVoice} onChange={(e) => setBrandVoice(e.target.value)}
+                          placeholder="First-person, conversational, technically sharp but accessible" rows={3} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Target Market</h3>
+                      <EnhanceButton loading={generating.target_market} onClick={() => enhanceField('target_market', targetMarket)} />
+                    </div>
+                    <div className="dc-card-body">
+                      <div className="dc-field">
+                        <textarea value={targetMarket} onChange={(e) => setTargetMarket(e.target.value)}
+                          placeholder={'Describe your ideal customer:\n• Who they are\n• Their core problem\n• Technical sophistication\n• Evaluation criteria'}
+                          rows={4} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Brand Blurb</h3>
+                      <EnhanceButton loading={generating.brand_blurb} onClick={() => enhanceField('brand_blurb', brandBlurb)} />
+                    </div>
+                    <div className="dc-card-body">
+                      <div className="dc-field">
+                        <textarea value={brandBlurb} onChange={(e) => setBrandBlurb(e.target.value)}
+                          placeholder="2-4 sentences describing the brand. Injected into every article prompt."
+                          rows={3} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Seed Keywords</h3>
+                      <EnhanceButton loading={generating.seed_keywords} onClick={() => enhanceField('seed_keywords', seedKeywords)} />
+                    </div>
+                    <div className="dc-card-body">
+                      <div className="dc-field">
+                        <textarea value={seedKeywords} onChange={(e) => setSeedKeywords(e.target.value)}
+                          placeholder="Comma-separated keyword phrases (2-4 words each)"
+                          rows={3} />
+                        <span className="dc-hint">AI expands these during keyword discovery — they set the topical direction.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                    onNavigate={setActiveSection} onLaunch={handleProvision}
+                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                </div>
+              )}
+
+              {/* ── Brand 3: Image Style (merged style + details) ── */}
+              {activeSection === 3 && (
+                <div className="dc-section-wrap">
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Image Style</h3>
+                      <EnhanceButton loading={generating.image_style} onClick={() => enhanceField('image_style', imageStyle)} />
+                    </div>
+                    <div className="dc-card-body">
+                      <div className="dc-field">
+                        <label>Style Name</label>
+                        <input type="text" value={imageStyle.style_name}
+                          onChange={(e) => setImageStyle((s) => ({ ...s, style_name: e.target.value }))}
+                          placeholder="Default Style" />
+                      </div>
+                      <ComboField label="Visual Style" value={imageStyle.visual_style}
+                        options={VISUAL_STYLES}
+                        onChange={(v) => setImageStyle((s) => ({ ...s, visual_style: v }))} />
+                      <div className="dc-field">
+                        <label>Color Palette</label>
+                        <input type="text" value={imageStyle.color_palette}
+                          onChange={(e) => setImageStyle((s) => ({ ...s, color_palette: e.target.value }))}
+                          placeholder="Deep navy, white, electric blue accents" />
+                      </div>
+                      <ComboField label="Mood / Atmosphere" value={imageStyle.mood_and_atmosphere}
+                        options={MOODS}
+                        onChange={(v) => setImageStyle((s) => ({ ...s, mood_and_atmosphere: v }))} />
+                      <ComboField label="Composition" value={imageStyle.composition_style}
+                        options={COMPOSITIONS}
+                        onChange={(v) => setImageStyle((s) => ({ ...s, composition_style: v }))} />
+                      <ComboField label="Lighting" value={imageStyle.lighting_preferences}
+                        options={LIGHTINGS}
+                        onChange={(v) => setImageStyle((s) => ({ ...s, lighting_preferences: v }))} />
+                      <ComboField label="Image Type" value={imageStyle.image_type_preferences}
+                        options={IMAGE_TYPES}
+                        onChange={(v) => setImageStyle((s) => ({ ...s, image_type_preferences: v }))} />
+                      <ComboField label="Subject Guidelines" value={imageStyle.subject_guidelines}
+                        options={SUBJECTS}
+                        onChange={(v) => setImageStyle((s) => ({ ...s, subject_guidelines: v }))} />
+                      <div className="dc-field">
+                        <label>AI Prompt Instructions</label>
+                        <textarea value={imageStyle.ai_prompt_instructions}
+                          onChange={(e) => setImageStyle((s) => ({ ...s, ai_prompt_instructions: e.target.value }))}
+                          placeholder={'Detailed instructions for AI image generation appended to every prompt.\nExample: "Shot on Sony A7 III, 85mm lens, f/1.8."'}
+                          rows={3} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Video Generation</h3></div>
+                    <div className="dc-card-body">
+                      <label className="dc-toggle">
+                        <input type="checkbox" checked={stitchEnabled}
+                          onChange={(e) => setStitchEnabled(e.target.checked)} />
+                        <span>Auto-generate videos via Stitch for published articles</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                    onNavigate={setActiveSection} onLaunch={handleProvision}
+                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                </div>
+              )}
+
+              {/* ── Brand 4: Products ── */}
+              {activeSection === 4 && (
+                <div className="dc-section-wrap">
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Product Details</h3></div>
+                    <div className="dc-card-body">
+                      <div className="dc-field-row">
+                        <div className="dc-field">
+                          <label>Product Name</label>
+                          <input type="text" value={productName}
+                            onChange={(e) => setProductName(e.target.value)}
+                            placeholder="e.g., Cursor" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Product URL</label>
+                          <input type="url" value={productUrl}
+                            onChange={(e) => setProductUrl(e.target.value)}
+                            placeholder="https://cursor.com" />
+                        </div>
+                      </div>
+
+                      <label className="dc-toggle">
+                        <input type="checkbox" checked={isAffiliate}
+                          onChange={(e) => setIsAffiliate(e.target.checked)} />
+                        <span>This is an affiliate product</span>
+                      </label>
+                      {isAffiliate && (
+                        <div className="dc-field">
+                          <label>Affiliate Link</label>
+                          <input type="url" value={affiliateLink}
+                            onChange={(e) => setAffiliateLink(e.target.value)}
+                            placeholder="https://cursor.com?ref=sewo" />
+                        </div>
+                      )}
+                      <label className="dc-toggle">
+                        <input type="checkbox" checked={createProductPage}
+                          onChange={(e) => setCreateProductPage(e.target.checked)} />
+                        <span>Create a dedicated product page</span>
+                      </label>
+
+                      <div className="dc-field">
+                        <label>Additional URLs (docs, pricing)</label>
+                        {additionalUrls.map((url, i) => (
+                          <input key={i} type="url" value={url}
+                            onChange={(e) => updateListItem(setAdditionalUrls, i, e.target.value)}
+                            placeholder="https://docs.cursor.com"
+                            className="dc-list-input" />
+                        ))}
+                        <button type="button" className="dc-btn-link" onClick={() => addListItem(setAdditionalUrls)}>+ Add another</button>
+                      </div>
+                      <div className="dc-field">
+                        <label>Signal URLs (videos or blog posts)</label>
+                        {signalUrls.map((url, i) => (
+                          <input key={i} type="url" value={url}
+                            onChange={(e) => updateListItem(setSignalUrls, i, e.target.value)}
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            className="dc-list-input" />
+                        ))}
+                        <button type="button" className="dc-btn-link" onClick={() => addListItem(setSignalUrls)}>+ Add another</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                    onNavigate={setActiveSection} onLaunch={handleProvision}
+                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                </div>
+              )}
+
+              {/* ── Brand 5: Deploy ── */}
+              {activeSection === 5 && (
+                <DeploySection
+                  primaryColor={primaryColor} setPrimaryColor={setPrimaryColor}
+                  accentColor={accentColor} setAccentColor={setAccentColor}
+                  flyRegion={flyRegion} setFlyRegion={setFlyRegion}
+                  skipPipeline={skipPipeline} setSkipPipeline={setSkipPipeline}
+                  skipDeploy={skipDeploy} setSkipDeploy={setSkipDeploy}
+                  setupGA={setupGA} setSetupGA={setSetupGA}
+                  setupGTM={setupGTM} setSetupGTM={setSetupGTM}
+                  setupGSC={setupGSC} setSetupGSC={setSetupGSC}
+                  purchaseDomain={purchaseDomain} setPurchaseDomain={setPurchaseDomain}
+                  selectedDomainData={selectedDomainData}
+                  niche={niche} generateColorsFromNiche={generateColorsFromNiche}
+                  activeSection={activeSection} totalSections={activeSections.length}
+                  onNavigate={setActiveSection} onLaunch={handleProvision}
+                  canLaunch={!!(username && displayName && contactEmail && websiteUrl)}
+                />
+              )}
+
+            </>)}
+
+            {/* ═══════════════════════════════════
+                NICHE-FIRST FLOW
+                ═══════════════════════════════════ */}
+            {mode === 'niche' && (<>
+
+              {/* ── Niche 0: Niche & Identity ── */}
+              {activeSection === 0 && (
+                <div className="dc-section-wrap">
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Step 1: Your Niche</h3></div>
+                    <div className="dc-card-body">
+                      <div className="dc-field">
+                        <label>What niche do you want to target? <span className="dc-required">*</span></label>
+                        <input type="text" value={niche}
+                          onChange={(e) => setNiche(e.target.value)}
+                          placeholder="e.g., Home Insurance, AI Productivity Tools, Longevity Supplements"
+                          className="dc-input-hero"
+                          autoFocus />
+                        <span className="dc-hint">Be specific — &ldquo;home insurance&rdquo; is better than &ldquo;insurance&rdquo;. AI will research this market and generate everything.</span>
+                      </div>
+
+                      {niche && (
+                        <div className="dc-ai-bar">
+                          <div className="dc-ai-bar-info">
+                            <h3>AI Niche Research</h3>
+                            <p>Deep-researches the market, then generates brand voice, target audience, keywords, and image style.</p>
+                          </div>
+                          <button
+                            type="button"
+                            className="dc-btn dc-btn-ai"
+                            onClick={generateFromNiche}
+                            disabled={generating.niche_all}
+                          >
+                            {generating.niche_all ? (
+                              <><span className="dc-spinner" /> Researching &amp; Generating...</>
+                            ) : (
+                              'Research Niche with AI'
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Brand Details</h3></div>
+                    <div className="dc-card-body">
+                      <span className="dc-hint dc-hint-spaced">Name your brand. This becomes the site title, footer, and internal identifier.</span>
+                      <div className="dc-field-row">
+                        <div className="dc-field">
+                          <label>Company / Brand Name <span className="dc-required">*</span></label>
+                          <input type="text" value={displayName}
+                            onChange={(e) => {
+                              setDisplayName(e.target.value)
+                              if (!username || username === deriveUsername(displayName)) {
+                                setUsername(deriveUsername(e.target.value))
+                              }
+                            }}
+                            placeholder="e.g., Assureful Insurance" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Username <span className="dc-required">*</span></label>
+                          <input type="text" value={username}
+                            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                            placeholder="auto-derived from name" />
+                          <span className="dc-hint">Internal ID (no spaces). Auto-derived from brand name.</span>
+                        </div>
+                      </div>
+
+                      <div className="dc-field-row">
+                        <div className="dc-field">
+                          <label>Contact Email <span className="dc-required">*</span></label>
+                          <input type="email" value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
+                            placeholder="hello@yourbrand.com" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Domain</label>
+                          <input type="text" value={domain}
+                            onChange={(e) => setDomain(e.target.value)}
+                            placeholder="yourbrand.com" />
+                        </div>
+                      </div>
+
+                      <div className="dc-field">
+                        <label>Website URL</label>
+                        <input type="url" value={websiteUrl}
+                          onChange={(e) => setWebsiteUrl(e.target.value)}
+                          placeholder="https://yourwebsite.com (optional)" />
+                        <span className="dc-hint">Optional — provide if you already have a website for this brand.</span>
+                      </div>
+
+                      {(niche || displayName) && (
+                        <div className="dc-domain-suggest-row">
+                          <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm"
+                            onClick={suggestDomains} disabled={loadingDomains}>
+                            {loadingDomains ? <><span className="dc-spinner" /> Searching...</> : 'Find Available Domains'}
+                          </button>
+                          {domainSuggestions.length > 0 && (
+                            <div className="dc-domain-suggestions">
+                              {domainSuggestions.map((s) => (
+                                <button key={s.domain} type="button"
+                                  className={`dc-domain-chip ${domain === s.domain ? 'dc-domain-chip-selected' : ''}`}
+                                  onClick={() => selectDomain(s.domain, s)}>
+                                  <span className="dc-domain-chip-name">{s.domain}</span>
+                                  <span className="dc-domain-chip-price">${s.price}/{s.currency === 'USD' ? 'yr' : s.currency}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                    onNavigate={setActiveSection} onLaunch={handleProvision}
+                    canLaunch={!!(username && displayName && contactEmail && niche)} />
+                </div>
+              )}
+
+              {/* ── Niche 1: Review & Refine ── */}
+              {activeSection === 1 && (
+                <div className="dc-section-wrap">
                   <div className="dc-mode-banner dc-mode-banner-neutral">
                     <div className="dc-mode-banner-icon">&#x2139;&#xfe0f;</div>
                     <div>
-                      <h3>Getting Started</h3>
-                      <p>Enter a <strong>niche</strong> for research-first discovery, or a <strong>website URL</strong> to scrape an existing brand. You can provide both.</p>
+                      <h3>Review AI-Generated Profile</h3>
+                      <p>These fields were auto-generated from niche research. Edit anything that needs refinement, or leave as-is to use the AI output.</p>
                     </div>
                   </div>
-                )}
 
-                {/* Basic fields */}
-                <div className="dc-card">
-                  <div className="dc-card-header"><h3>Brand Identity</h3></div>
-                  <div className="dc-card-body">
-                    <div className="dc-field">
-                      <label>Niche <span className="dc-required">*</span></label>
-                      <input type="text" value={niche}
-                        onChange={(e) => setNiche(e.target.value)}
-                        placeholder="e.g., Longevity Supplements, AI Productivity Tools, Sustainable Home Living" />
-                      <span className="dc-hint">The topical niche Doubleclicker will research and build content around.</span>
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Brand Voice</h3>
+                      <EnhanceButton loading={generating.brand_voice} onClick={() => enhanceField('brand_voice', brandVoice)} />
                     </div>
-
-                    <div className="dc-field-row">
+                    <div className="dc-card-body">
                       <div className="dc-field">
-                        <label>Company / Brand Name <span className="dc-required">*</span></label>
-                        <input type="text" value={displayName}
-                          onChange={(e) => {
-                            setDisplayName(e.target.value)
-                            if (!username || username === deriveUsername(displayName)) {
-                              setUsername(deriveUsername(e.target.value))
-                            }
-                          }}
-                          placeholder="Acme Corp" />
+                        <textarea value={brandVoice} onChange={(e) => setBrandVoice(e.target.value)}
+                          placeholder="Auto-generated after niche research" rows={3} />
+                        {!brandVoice && <span className="dc-field-optional-hint">Will be generated automatically during provisioning if left blank.</span>}
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Target Market</h3>
+                      <EnhanceButton loading={generating.target_market} onClick={() => enhanceField('target_market', targetMarket)} />
+                    </div>
+                    <div className="dc-card-body">
                       <div className="dc-field">
-                        <label>Username <span className="dc-required">*</span></label>
-                        <input type="text" value={username}
-                          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                          placeholder="acmecorp" />
+                        <textarea value={targetMarket} onChange={(e) => setTargetMarket(e.target.value)}
+                          placeholder="Auto-generated after niche research" rows={3} />
                       </div>
                     </div>
+                  </div>
 
-                    <div className="dc-field">
-                      <label>Website URL</label>
-                      <input type="url" value={websiteUrl}
-                        onChange={(e) => setWebsiteUrl(e.target.value)}
-                        placeholder="https://yourwebsite.com" />
-                      <span className="dc-hint">Optional — provide if the brand already has a website. Enables AI brand scraping.</span>
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Brand Blurb</h3>
+                      <EnhanceButton loading={generating.brand_blurb} onClick={() => enhanceField('brand_blurb', brandBlurb)} />
                     </div>
-
-                    <div className="dc-field-row">
+                    <div className="dc-card-body">
                       <div className="dc-field">
-                        <label>Domain</label>
-                        <input type="text" value={domain}
-                          onChange={(e) => setDomain(e.target.value)}
-                          placeholder="acmecorp.com" />
+                        <textarea value={brandBlurb} onChange={(e) => setBrandBlurb(e.target.value)}
+                          placeholder="Auto-generated after niche research" rows={3} />
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="dc-card">
+                    <div className="dc-card-header">
+                      <h3>Seed Keywords</h3>
+                      <EnhanceButton loading={generating.seed_keywords} onClick={() => enhanceField('seed_keywords', seedKeywords)} />
+                    </div>
+                    <div className="dc-card-body">
                       <div className="dc-field">
-                        <label>Contact Email <span className="dc-required">*</span></label>
-                        <input type="email" value={contactEmail}
-                          onChange={(e) => setContactEmail(e.target.value)}
-                          placeholder="hello@acmecorp.com" />
-                      </div>
-                    </div>
-
-                    {/* Domain Suggestions */}
-                    {(niche || displayName) && (
-                      <div className="dc-domain-suggest-row">
-                        <button
-                          type="button"
-                          className="dc-btn dc-btn-secondary dc-btn-sm"
-                          onClick={suggestDomains}
-                          disabled={loadingDomains}
-                        >
-                          {loadingDomains ? <><span className="dc-spinner" /> Searching...</> : 'Find Available Domains'}
-                        </button>
-                        {domainSuggestions.length > 0 && (
-                          <div className="dc-domain-suggestions">
-                            {domainSuggestions.map((s) => (
-                              <button
-                                key={s.domain}
-                                type="button"
-                                className={`dc-domain-chip ${domain === s.domain ? 'dc-domain-chip-selected' : ''}`}
-                                onClick={() => selectDomain(s.domain, s)}
-                              >
-                                <span className="dc-domain-chip-name">{s.domain}</span>
-                                <span className="dc-domain-chip-price">${s.price}/{s.currency === 'USD' ? 'yr' : s.currency}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="dc-field-row">
-                      <div className="dc-field">
-                        <label>Logo URL</label>
-                        <SaveableInput value={logoUrl} onChange={setLogoUrl}
-                          placeholder="https://yoursite.com/logo.png" onSave={() => markSaved('logo')} saved={saved.logo} />
-                      </div>
-                      <div className="dc-field">
-                        <label>Blog API URL</label>
-                        <SaveableInput value={blogApiUrl} onChange={setBlogApiUrl}
-                          placeholder="https://yourblog.com/api" onSave={() => markSaved('blogApi')} saved={saved.blogApi} />
+                        <textarea value={seedKeywords} onChange={(e) => setSeedKeywords(e.target.value)}
+                          placeholder="Auto-generated after niche research" rows={2} />
+                        <span className="dc-hint">Doubleclicker expands these to 250-350 keywords automatically.</span>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Author */}
-                <div className="dc-card">
-                  <div className="dc-card-header"><h3>Author</h3></div>
-                  <div className="dc-card-body">
-                    <div className="dc-field-row">
-                      <div className="dc-field">
-                        <label>Author Name</label>
-                        <input type="text" value={authorName}
-                          onChange={(e) => setAuthorName(e.target.value)}
-                          placeholder="Stuart Asta" />
+                  {/* Author (collapsed) */}
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Author</h3></div>
+                    <div className="dc-card-body">
+                      <div className="dc-field-row">
+                        <div className="dc-field">
+                          <label>Author Name</label>
+                          <input type="text" value={authorName}
+                            onChange={(e) => setAuthorName(e.target.value)}
+                            placeholder={displayName ? `${displayName} Editorial` : 'Author name'} />
+                        </div>
+                        <div className="dc-field">
+                          <label>Author Bio</label>
+                          <input type="text" value={authorBio}
+                            onChange={(e) => setAuthorBio(e.target.value)}
+                            placeholder={displayName ? `The ${displayName} editorial team.` : 'Short bio'} />
+                        </div>
                       </div>
-                      <div className="dc-field">
-                        <label>Author Image URL</label>
-                        <SaveableInput value={authorImageUrl} onChange={setAuthorImageUrl}
-                          placeholder="https://…/author.jpg" onSave={() => markSaved('authorImg')} saved={saved.authorImg} />
-                      </div>
-                    </div>
-                    <div className="dc-field">
-                      <label>Author Page URL</label>
-                      <input type="url" value={authorPageUrl}
-                        onChange={(e) => setAuthorPageUrl(e.target.value)}
-                        placeholder="https://yoursite.com/author/name" />
-                    </div>
-                    <div className="dc-field">
-                      <label>Author Bio</label>
-                      <textarea value={authorBio} onChange={(e) => setAuthorBio(e.target.value)}
-                        placeholder="1-3 sentences about the author — used in the author widget and Person schema" rows={2} />
-                    </div>
-                    <div className="dc-field">
-                      <label>Author Social Profile URLs</label>
-                      {authorSocials.map((url, i) => (
-                        <input key={i} type="url" value={url}
-                          onChange={(e) => updateListItem(setAuthorSocials, i, e.target.value)}
-                          placeholder="https://linkedin.com/in/yourname"
-                          className="dc-list-input" />
-                      ))}
-                      <button type="button" className="dc-btn-link" onClick={() => addListItem(setAuthorSocials)}>
-                        + Add another
-                      </button>
                     </div>
                   </div>
+
+                  <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                    onNavigate={setActiveSection} onLaunch={handleProvision}
+                    canLaunch={!!(username && displayName && contactEmail && niche)} />
                 </div>
+              )}
 
-                {/* Brand Voice */}
-                <div className="dc-card">
-                  <div className="dc-card-header">
-                    <h3>Brand Voice</h3>
-                    {hasWebsite && <EnhanceButton loading={generating.brand_voice} onClick={() => enhanceField('brand_voice', brandVoice)} />}
-                  </div>
-                  <div className="dc-card-body">
-                    <div className="dc-field">
-                      <textarea value={brandVoice} onChange={(e) => setBrandVoice(e.target.value)}
-                        placeholder="First-person, conversational, technically sharp but accessible" rows={3} />
-                      {!hasWebsite && <span className="dc-field-optional-hint">Optional — Doubleclicker will derive this from niche research if left blank.</span>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Target Market */}
-                <div className="dc-card">
-                  <div className="dc-card-header">
-                    <h3>Target Market</h3>
-                    {hasWebsite && <EnhanceButton loading={generating.target_market} onClick={() => enhanceField('target_market', targetMarket)} />}
-                  </div>
-                  <div className="dc-card-body">
-                    <div className="dc-field">
-                      <textarea value={targetMarket} onChange={(e) => setTargetMarket(e.target.value)}
-                        placeholder={'Describe your ideal customer in detail. Include:\n• Who they are (role, company size, industry)\n• Their core problem or goal\n• Their level of technical sophistication\n• What they care about when evaluating a solution'}
-                        rows={5} />
-                      {!hasWebsite && <span className="dc-field-optional-hint">Optional — Doubleclicker will derive this from niche research if left blank.</span>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Brand Blurb */}
-                <div className="dc-card">
-                  <div className="dc-card-header">
-                    <h3>Brand Blurb / Guidelines</h3>
-                    {hasWebsite && <EnhanceButton loading={generating.brand_blurb} onClick={() => enhanceField('brand_blurb', brandBlurb)} />}
-                  </div>
-                  <div className="dc-card-body">
-                    <div className="dc-field">
-                      <textarea value={brandBlurb} onChange={(e) => setBrandBlurb(e.target.value)}
-                        placeholder="2–4 sentences describing the brand for AI context. This is injected into every article prompt so AI understands the brand position."
-                        rows={4} />
-                      {!hasWebsite && <span className="dc-field-optional-hint">Optional — Doubleclicker will derive this from niche research if left blank.</span>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Seed Keywords */}
-                <div className="dc-card">
-                  <div className="dc-card-header">
-                    <h3>Seed Keywords</h3>
-                    {hasWebsite && <EnhanceButton loading={generating.seed_keywords} onClick={() => enhanceField('seed_keywords', seedKeywords)} />}
-                  </div>
-                  <div className="dc-card-body">
-                    <div className="dc-field">
-                      <textarea value={seedKeywords} onChange={(e) => setSeedKeywords(e.target.value)}
-                        placeholder="Enter comma-separated keyword phrases (2–4 words each) that represent your core topics. AI will expand these during discovery."
-                        rows={3} />
-                      {hasWebsite
-                        ? <span className="dc-hint">Comma-separated phrases (not single words). AI adds more seeds during keyword discovery — these set the topical direction.</span>
-                        : <span className="dc-field-optional-hint">Optional — Doubleclicker expands keywords automatically from niche research (250-350 keywords).</span>
-                      }
-                    </div>
-                  </div>
-                </div>
-
-                <StepNav activeSection={activeSection} totalSections={SECTIONS.length}
-                  onNavigate={setActiveSection} onLaunch={handleProvision}
-                  canLaunch={!!(username && displayName && contactEmail && (niche || websiteUrl))} />
-              </div>
-            )}
-
-            {/* ── Section 1: Image Style ── */}
-            {activeSection === 1 && (
-              <div className="dc-section-wrap">
-                <div className="dc-card">
-                  <div className="dc-card-header">
-                    <h3>Imagineer Image Style Guidelines</h3>
-                    <div className="dc-card-header-actions">
-                      {niche && !hasWebsite && (
-                        <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm"
-                          onClick={generateStyleFromNiche} disabled={generating.niche_style}>
-                          {generating.niche_style ? <><span className="dc-spinner" /> Generating...</> : 'Generate from Niche'}
-                        </button>
-                      )}
-                      <EnhanceButton loading={generating.image_style} onClick={() => enhanceField('image_style', imageStyle)} />
-                    </div>
-                  </div>
-                  <div className="dc-card-body">
-                    <div className="dc-field">
-                      <label>Style Name</label>
-                      <input type="text" value={imageStyle.style_name}
-                        onChange={(e) => setImageStyle((s) => ({ ...s, style_name: e.target.value }))}
-                        placeholder="Default Style" />
-                    </div>
-
-                    <ComboField label="Visual Style" value={imageStyle.visual_style}
-                      options={VISUAL_STYLES}
-                      onChange={(v) => setImageStyle((s) => ({ ...s, visual_style: v }))} />
-
-                    <div className="dc-field">
-                      <label>Color Palette</label>
-                      <input type="text" value={imageStyle.color_palette}
-                        onChange={(e) => setImageStyle((s) => ({ ...s, color_palette: e.target.value }))}
-                        placeholder="Deep navy, white, electric blue accents" />
-                    </div>
-
-                    <ComboField label="Mood / Atmosphere" value={imageStyle.mood_and_atmosphere}
-                      options={MOODS}
-                      onChange={(v) => setImageStyle((s) => ({ ...s, mood_and_atmosphere: v }))} />
-
-                    <ComboField label="Composition Style" value={imageStyle.composition_style}
-                      options={COMPOSITIONS}
-                      onChange={(v) => setImageStyle((s) => ({ ...s, composition_style: v }))} />
-
-                    <ComboField label="Lighting Preferences" value={imageStyle.lighting_preferences}
-                      options={LIGHTINGS}
-                      onChange={(v) => setImageStyle((s) => ({ ...s, lighting_preferences: v }))} />
-
-                    <ComboField label="Image Type Preferences" value={imageStyle.image_type_preferences}
-                      options={IMAGE_TYPES}
-                      onChange={(v) => setImageStyle((s) => ({ ...s, image_type_preferences: v }))} />
-
-                    <ComboField label="Subject Guidelines" value={imageStyle.subject_guidelines}
-                      options={SUBJECTS}
-                      onChange={(v) => setImageStyle((s) => ({ ...s, subject_guidelines: v }))} />
-
-                    <div className="dc-field">
-                      <label>Preferred Elements</label>
-                      <input type="text" value={imageStyle.preferred_elements}
-                        onChange={(e) => setImageStyle((s) => ({ ...s, preferred_elements: e.target.value }))}
-                        placeholder="Tech devices, focused professionals, clean workspaces" />
-                    </div>
-
-                    <div className="dc-field">
-                      <label>Prohibited Elements</label>
-                      <input type="text" value={imageStyle.prohibited_elements}
-                        onChange={(e) => setImageStyle((s) => ({ ...s, prohibited_elements: e.target.value }))}
-                        placeholder="Stock photo clichés, low quality, busy backgrounds" />
-                    </div>
-
-                    <div className="dc-field">
-                      <label>AI Prompt Instructions</label>
-                      <textarea value={imageStyle.ai_prompt_instructions}
-                        onChange={(e) => setImageStyle((s) => ({ ...s, ai_prompt_instructions: e.target.value }))}
-                        placeholder={'Write detailed instructions for AI image generation. These are appended to every image prompt for this brand.\n\nExample: "Shot on Sony A7 III, 85mm lens, f/1.8. Soft natural window light from the left."'}
-                        rows={4} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stitch toggle */}
-                <div className="dc-card">
-                  <div className="dc-card-header"><h3>Stitch Video Generation</h3></div>
-                  <div className="dc-card-body">
-                    <label className="dc-toggle">
-                      <input type="checkbox" checked={stitchEnabled}
-                        onChange={(e) => setStitchEnabled(e.target.checked)} />
-                      <span>When enabled, completed articles automatically queue video generation via Stitch. Only enable for affiliate brands or paying clients.</span>
-                    </label>
-                  </div>
-                </div>
-
-                <StepNav activeSection={activeSection} totalSections={SECTIONS.length}
-                  onNavigate={setActiveSection} onLaunch={handleProvision}
-                  canLaunch={!!(username && displayName && contactEmail && (niche || websiteUrl))} />
-              </div>
-            )}
-
-            {/* ── Section 2: Products & Discovery ── */}
-            {activeSection === 2 && (
-              <div className="dc-section-wrap">
-                {/* Niche discovery info */}
-                {!hasWebsite && niche && (
+              {/* ── Niche 2: Products ── */}
+              {activeSection === 2 && (
+                <div className="dc-section-wrap">
                   <div className="dc-card dc-card-info">
                     <div className="dc-card-header"><h3>Automatic Product Discovery</h3></div>
                     <div className="dc-card-body">
@@ -1151,280 +1541,128 @@ export default function ProvisionForm() {
                           <li>Search across Exa, Google, Reddit, and ProductHunt</li>
                           <li>Deduplicate and rank candidates</li>
                           <li>Scrape top product pages</li>
-                          <li>AI-score each product (affiliate viability, market demand, content potential)</li>
+                          <li>AI-score each product</li>
                           <li>Auto-ingest qualifying products</li>
                           <li>Launch content pipelines per product</li>
                         </ol>
-                        <p>You can optionally add a known product below, but it is not required.</p>
+                        <p>You can optionally preview or add a known product below.</p>
                       </div>
                     </div>
                   </div>
-                )}
 
-                {/* Product Discovery & Approval */}
-                {niche && (
-                  <div className="dc-card">
-                    <div className="dc-card-header">
-                      <h3>Discover &amp; Approve Products</h3>
-                      <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm"
-                        onClick={discoverProducts} disabled={loadingDiscovery || !niche}>
-                        {loadingDiscovery ? <><span className="dc-spinner" /> Discovering...</> : 'Preview Product Discovery'}
-                      </button>
-                    </div>
-                    <div className="dc-card-body">
-                      {discoveredProducts.length === 0 && !loadingDiscovery && (
-                        <div className="dc-info-box">
-                          <p>Click <strong>Preview Product Discovery</strong> to search for products in the <strong>{niche}</strong> niche. You can approve or reject each product before launching content pipelines.</p>
-                          <p className="dc-hint">Note: Full discovery runs 7 phases and may take a minute. Products not found here will still be discovered during provisioning.</p>
-                        </div>
-                      )}
-                      {loadingDiscovery && (
-                        <div className="dc-discovery-loading">
-                          <span className="dc-spinner" /> Searching across Exa, Google, Reddit, ProductHunt...
-                        </div>
-                      )}
-                      {discoveredProducts.length > 0 && (
-                        <div className="dc-product-list">
-                          <div className="dc-product-list-header">
-                            <span>{discoveredProducts.filter(p => p.selected).length} of {discoveredProducts.length} products selected</span>
-                            <button type="button" className="dc-btn-link"
-                              onClick={() => setDiscoveredProducts(prev => prev.map(p => ({ ...p, selected: true })))}>
-                              Select All
-                            </button>
-                            <button type="button" className="dc-btn-link"
-                              onClick={() => setDiscoveredProducts(prev => prev.map(p => ({ ...p, selected: false })))}>
-                              Deselect All
-                            </button>
+                  {niche && (
+                    <div className="dc-card">
+                      <div className="dc-card-header">
+                        <h3>Discover &amp; Approve Products</h3>
+                        <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm"
+                          onClick={discoverProducts} disabled={loadingDiscovery || !niche}>
+                          {loadingDiscovery ? <><span className="dc-spinner" /> Discovering...</> : 'Preview Product Discovery'}
+                        </button>
+                      </div>
+                      <div className="dc-card-body">
+                        {discoveredProducts.length === 0 && !loadingDiscovery && (
+                          <div className="dc-info-box">
+                            <p>Click <strong>Preview Product Discovery</strong> to search. Products not found here will still be discovered during provisioning.</p>
                           </div>
-                          {discoveredProducts.map((product, idx) => (
-                            <label key={idx} className={`dc-product-item ${product.selected ? 'dc-product-selected' : 'dc-product-deselected'}`}>
-                              <input type="checkbox" checked={product.selected}
-                                onChange={() => toggleProduct(idx)} />
-                              <div className="dc-product-info">
-                                <div className="dc-product-name">{product.name}</div>
-                                {product.url && <div className="dc-product-url">{product.url}</div>}
-                                {product.description && <div className="dc-product-desc">{product.description}</div>}
-                              </div>
-                              {product.score > 0 && (
-                                <div className="dc-product-score" title="Content potential score">
-                                  {Math.round(product.score * 100)}%
+                        )}
+                        {loadingDiscovery && (
+                          <div className="dc-discovery-loading">
+                            <span className="dc-spinner" /> Searching across Exa, Google, Reddit, ProductHunt...
+                          </div>
+                        )}
+                        {discoveredProducts.length > 0 && (
+                          <div className="dc-product-list">
+                            <div className="dc-product-list-header">
+                              <span>{discoveredProducts.filter(p => p.selected).length} of {discoveredProducts.length} selected</span>
+                              <button type="button" className="dc-btn-link"
+                                onClick={() => setDiscoveredProducts(prev => prev.map(p => ({ ...p, selected: true })))}>Select All</button>
+                              <button type="button" className="dc-btn-link"
+                                onClick={() => setDiscoveredProducts(prev => prev.map(p => ({ ...p, selected: false })))}>Deselect All</button>
+                            </div>
+                            {discoveredProducts.map((product, idx) => (
+                              <label key={idx} className={`dc-product-item ${product.selected ? 'dc-product-selected' : 'dc-product-deselected'}`}>
+                                <input type="checkbox" checked={product.selected}
+                                  onChange={() => toggleProduct(idx)} />
+                                <div className="dc-product-info">
+                                  <div className="dc-product-name">{product.name}</div>
+                                  {product.url && <div className="dc-product-url">{product.url}</div>}
+                                  {product.description && <div className="dc-product-desc">{product.description}</div>}
                                 </div>
-                              )}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="dc-card">
-                  <div className="dc-card-header">
-                    <h3>{!hasWebsite && niche ? 'Add a Product (Optional)' : 'Product Details'}</h3>
-                  </div>
-                  <div className="dc-card-body">
-                    <div className="dc-field-row">
-                      <div className="dc-field">
-                        <label>Product Name</label>
-                        <input type="text" value={productName}
-                          onChange={(e) => setProductName(e.target.value)}
-                          placeholder="e.g., Cursor" />
-                      </div>
-                      <div className="dc-field">
-                        <label>Product URL</label>
-                        <input type="url" value={productUrl}
-                          onChange={(e) => setProductUrl(e.target.value)}
-                          placeholder="https://cursor.com" />
+                                {product.score > 0 && (
+                                  <div className="dc-product-score" title="Content potential score">
+                                    {Math.round(product.score * 100)}%
+                                  </div>
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
+                  )}
 
-                    <label className="dc-toggle">
-                      <input type="checkbox" checked={isAffiliate}
-                        onChange={(e) => setIsAffiliate(e.target.checked)} />
-                      <span>This is an affiliate product</span>
-                    </label>
-
-                    {isAffiliate && (
-                      <div className="dc-field">
-                        <label>Affiliate Link</label>
-                        <input type="url" value={affiliateLink}
-                          onChange={(e) => setAffiliateLink(e.target.value)}
-                          placeholder="https://cursor.com?ref=sewo" />
-                      </div>
-                    )}
-
-                    <label className="dc-toggle">
-                      <input type="checkbox" checked={createProductPage}
-                        onChange={(e) => setCreateProductPage(e.target.checked)} />
-                      <span>Create a dedicated product page (auto for affiliates)</span>
-                    </label>
-
-                    <div className="dc-field">
-                      <label>Additional URLs (docs, pricing)</label>
-                      {additionalUrls.map((url, i) => (
-                        <input key={i} type="url" value={url}
-                          onChange={(e) => updateListItem(setAdditionalUrls, i, e.target.value)}
-                          placeholder="https://docs.cursor.com"
-                          className="dc-list-input" />
-                      ))}
-                      <button type="button" className="dc-btn-link" onClick={() => addListItem(setAdditionalUrls)}>
-                        + Add another
-                      </button>
-                    </div>
-
-                    <div className="dc-field">
-                      <label>Signal URLs (videos or blog posts)</label>
-                      {signalUrls.map((url, i) => (
-                        <input key={i} type="url" value={url}
-                          onChange={(e) => updateListItem(setSignalUrls, i, e.target.value)}
-                          placeholder="https://www.youtube.com/watch?v=..."
-                          className="dc-list-input" />
-                      ))}
-                      <button type="button" className="dc-btn-link" onClick={() => addListItem(setSignalUrls)}>
-                        + Add another
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Set & Forget info */}
-                <div className="dc-card dc-card-info">
-                  <div className="dc-card-header"><h3>Discovery &amp; Publishing</h3></div>
-                  <div className="dc-card-body">
-                    <div className="dc-info-box">
-                      <strong>Set &amp; Forget</strong>
-                      <p>The pipeline runs in the background. It discovers keywords, clusters them, builds RAG, generates a topical map, and schedules articles automatically. Check the Content Map and Schedule tabs in Doubleclicker to track progress.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <StepNav activeSection={activeSection} totalSections={SECTIONS.length}
-                  onNavigate={setActiveSection} onLaunch={handleProvision}
-                  canLaunch={!!(username && displayName && contactEmail && (niche || websiteUrl))} />
-              </div>
-            )}
-
-            {/* ── Section 3: Deploy & Launch ── */}
-            {activeSection === 3 && (
-              <div className="dc-section-wrap">
-                <div className="dc-card">
-                  <div className="dc-card-header">
-                    <h3>Appearance</h3>
-                    {niche && (
-                      <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm"
-                        onClick={generateColorsFromNiche}>
-                        Suggest from Niche
-                      </button>
-                    )}
-                  </div>
-                  <div className="dc-card-body">
-                    <div className="dc-field-row">
-                      <div className="dc-field">
-                        <label>Primary Color</label>
-                        <div className="dc-color-field">
-                          <input type="color" value={primaryColor} title="Primary color picker"
-                            onChange={(e) => setPrimaryColor(e.target.value)} />
-                          <input type="text" value={primaryColor} placeholder="#0F172A"
-                            onChange={(e) => setPrimaryColor(e.target.value)} />
-                        </div>
-                      </div>
-                      <div className="dc-field">
-                        <label>Accent Color</label>
-                        <div className="dc-color-field">
-                          <input type="color" value={accentColor} title="Accent color picker"
-                            onChange={(e) => setAccentColor(e.target.value)} />
-                          <input type="text" value={accentColor} placeholder="#0066ff"
-                            onChange={(e) => setAccentColor(e.target.value)} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="dc-card">
-                  <div className="dc-card-header"><h3>Deployment</h3></div>
-                  <div className="dc-card-body">
-                    <div className="dc-field">
-                      <label>Fly.io Region</label>
-                      <select value={flyRegion} title="Fly.io deployment region"
-                        onChange={(e) => setFlyRegion(e.target.value)}>
-                        {REGIONS.map((r) => (
-                          <option key={r.value} value={r.value}>{r.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="dc-toggles">
-                      <label className="dc-toggle">
-                        <input type="checkbox" checked={skipPipeline}
-                          onChange={(e) => setSkipPipeline(e.target.checked)} />
-                        <span>Skip content pipeline</span>
-                      </label>
-                      <label className="dc-toggle">
-                        <input type="checkbox" checked={skipDeploy}
-                          onChange={(e) => setSkipDeploy(e.target.checked)} />
-                        <span>Skip Fly.io deploy</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Google Services */}
-                <div className="dc-card">
-                  <div className="dc-card-header"><h3>Google Services</h3></div>
-                  <div className="dc-card-body">
-                    <p className="dc-hint dc-hint-spaced">
-                      Automatically create and configure Google services for this site. Requires a GCP service account.
-                    </p>
-                    <div className="dc-toggles">
-                      <label className="dc-toggle">
-                        <input type="checkbox" checked={setupGA}
-                          onChange={(e) => setSetupGA(e.target.checked)} />
-                        <span>Google Analytics (GA4) — creates a property + web data stream, installs tracking code</span>
-                      </label>
-                      <label className="dc-toggle">
-                        <input type="checkbox" checked={setupGTM}
-                          onChange={(e) => setSetupGTM(e.target.checked)} />
-                        <span>Google Tag Manager — creates a container, installs GTM snippet</span>
-                      </label>
-                      <label className="dc-toggle">
-                        <input type="checkbox" checked={setupGSC}
-                          onChange={(e) => setSetupGSC(e.target.checked)} />
-                        <span>Google Search Console — adds site, provides DNS verification token</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Domain Purchase */}
-                {selectedDomainData && (
                   <div className="dc-card">
-                    <div className="dc-card-header"><h3>Domain Purchase</h3></div>
+                    <div className="dc-card-header"><h3>Add a Product (Optional)</h3></div>
                     <div className="dc-card-body">
-                      <div className="dc-domain-purchase-info">
-                        <div className="dc-domain-purchase-name">{selectedDomainData.domain}</div>
-                        <div className="dc-domain-purchase-price">
-                          ${selectedDomainData.price}/{selectedDomainData.currency === 'USD' ? 'yr' : selectedDomainData.currency}
+                      <div className="dc-field-row">
+                        <div className="dc-field">
+                          <label>Product Name</label>
+                          <input type="text" value={productName}
+                            onChange={(e) => setProductName(e.target.value)}
+                            placeholder="e.g., Cursor" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Product URL</label>
+                          <input type="url" value={productUrl}
+                            onChange={(e) => setProductUrl(e.target.value)}
+                            placeholder="https://cursor.com" />
                         </div>
                       </div>
                       <label className="dc-toggle">
-                        <input type="checkbox" checked={purchaseDomain}
-                          onChange={(e) => setPurchaseDomain(e.target.checked)} />
-                        <span>Purchase this domain via Google Cloud Domains (charged to your GCP billing account)</span>
+                        <input type="checkbox" checked={isAffiliate}
+                          onChange={(e) => setIsAffiliate(e.target.checked)} />
+                        <span>This is an affiliate product</span>
                       </label>
-                      {!purchaseDomain && (
-                        <p className="dc-hint">If unchecked, you can purchase the domain separately and configure DNS manually.</p>
+                      {isAffiliate && (
+                        <div className="dc-field">
+                          <label>Affiliate Link</label>
+                          <input type="url" value={affiliateLink}
+                            onChange={(e) => setAffiliateLink(e.target.value)}
+                            placeholder="https://cursor.com?ref=sewo" />
+                        </div>
                       )}
                     </div>
                   </div>
-                )}
 
-                <StepNav activeSection={activeSection} totalSections={SECTIONS.length}
+                  <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                    onNavigate={setActiveSection} onLaunch={handleProvision}
+                    canLaunch={!!(username && displayName && contactEmail && niche)} />
+                </div>
+              )}
+
+              {/* ── Niche 3: Deploy ── */}
+              {activeSection === 3 && (
+                <DeploySection
+                  primaryColor={primaryColor} setPrimaryColor={setPrimaryColor}
+                  accentColor={accentColor} setAccentColor={setAccentColor}
+                  flyRegion={flyRegion} setFlyRegion={setFlyRegion}
+                  skipPipeline={skipPipeline} setSkipPipeline={setSkipPipeline}
+                  skipDeploy={skipDeploy} setSkipDeploy={setSkipDeploy}
+                  setupGA={setupGA} setSetupGA={setSetupGA}
+                  setupGTM={setupGTM} setSetupGTM={setSetupGTM}
+                  setupGSC={setupGSC} setSetupGSC={setSetupGSC}
+                  purchaseDomain={purchaseDomain} setPurchaseDomain={setPurchaseDomain}
+                  selectedDomainData={selectedDomainData}
+                  niche={niche} generateColorsFromNiche={generateColorsFromNiche}
+                  activeSection={activeSection} totalSections={activeSections.length}
                   onNavigate={setActiveSection} onLaunch={handleProvision}
-                  canLaunch={!!(username && displayName && contactEmail && (niche || websiteUrl))} />
-              </div>
-            )}
-          </>
+                  canLaunch={!!(username && displayName && contactEmail && niche)}
+                />
+              )}
+
+            </>)}
+
+          </div>
         )}
 
         {/* ══════════ RUNNING / DONE ══════════ */}
@@ -1521,6 +1759,131 @@ export default function ProvisionForm() {
 /* ═══════════════════════════════════════════════════════════
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════════ */
+
+function DeploySection({ primaryColor, setPrimaryColor, accentColor, setAccentColor, flyRegion, setFlyRegion,
+  skipPipeline, setSkipPipeline, skipDeploy, setSkipDeploy, setupGA, setSetupGA, setupGTM, setSetupGTM,
+  setupGSC, setSetupGSC, purchaseDomain, setPurchaseDomain, selectedDomainData, niche, generateColorsFromNiche,
+  activeSection, totalSections, onNavigate, onLaunch, canLaunch }: {
+  primaryColor: string; setPrimaryColor: (v: string) => void
+  accentColor: string; setAccentColor: (v: string) => void
+  flyRegion: string; setFlyRegion: (v: string) => void
+  skipPipeline: boolean; setSkipPipeline: (v: boolean) => void
+  skipDeploy: boolean; setSkipDeploy: (v: boolean) => void
+  setupGA: boolean; setSetupGA: (v: boolean) => void
+  setupGTM: boolean; setSetupGTM: (v: boolean) => void
+  setupGSC: boolean; setSetupGSC: (v: boolean) => void
+  purchaseDomain: boolean; setPurchaseDomain: (v: boolean) => void
+  selectedDomainData: DomainSuggestion | null
+  niche: string; generateColorsFromNiche: () => void
+  activeSection: number; totalSections: number; onNavigate: (i: number) => void; onLaunch: () => void; canLaunch: boolean
+}) {
+  return (
+    <div className="dc-section-wrap">
+      <div className="dc-card">
+        <div className="dc-card-header">
+          <h3>Appearance</h3>
+          {niche && (
+            <button type="button" className="dc-btn dc-btn-secondary dc-btn-sm" onClick={generateColorsFromNiche}>
+              Suggest from Niche
+            </button>
+          )}
+        </div>
+        <div className="dc-card-body">
+          <div className="dc-field-row">
+            <div className="dc-field">
+              <label>Primary Color</label>
+              <div className="dc-color-field">
+                <input type="color" value={primaryColor} title="Primary color picker"
+                  onChange={(e) => setPrimaryColor(e.target.value)} />
+                <input type="text" value={primaryColor} placeholder="#0F172A"
+                  onChange={(e) => setPrimaryColor(e.target.value)} />
+              </div>
+            </div>
+            <div className="dc-field">
+              <label>Accent Color</label>
+              <div className="dc-color-field">
+                <input type="color" value={accentColor} title="Accent color picker"
+                  onChange={(e) => setAccentColor(e.target.value)} />
+                <input type="text" value={accentColor} placeholder="#0066ff"
+                  onChange={(e) => setAccentColor(e.target.value)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="dc-card">
+        <div className="dc-card-header"><h3>Deployment</h3></div>
+        <div className="dc-card-body">
+          <div className="dc-field">
+            <label>Fly.io Region</label>
+            <select value={flyRegion} title="Fly.io deployment region"
+              onChange={(e) => setFlyRegion(e.target.value)}>
+              {REGIONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="dc-toggles">
+            <label className="dc-toggle">
+              <input type="checkbox" checked={skipPipeline}
+                onChange={(e) => setSkipPipeline(e.target.checked)} />
+              <span>Skip content pipeline</span>
+            </label>
+            <label className="dc-toggle">
+              <input type="checkbox" checked={skipDeploy}
+                onChange={(e) => setSkipDeploy(e.target.checked)} />
+              <span>Skip Fly.io deploy</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="dc-card">
+        <div className="dc-card-header"><h3>Google Services</h3></div>
+        <div className="dc-card-body">
+          <p className="dc-hint dc-hint-spaced">Automatically create and configure Google services for this site.</p>
+          <div className="dc-toggles">
+            <label className="dc-toggle">
+              <input type="checkbox" checked={setupGA} onChange={(e) => setSetupGA(e.target.checked)} />
+              <span>Google Analytics (GA4)</span>
+            </label>
+            <label className="dc-toggle">
+              <input type="checkbox" checked={setupGTM} onChange={(e) => setSetupGTM(e.target.checked)} />
+              <span>Google Tag Manager</span>
+            </label>
+            <label className="dc-toggle">
+              <input type="checkbox" checked={setupGSC} onChange={(e) => setSetupGSC(e.target.checked)} />
+              <span>Google Search Console</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {selectedDomainData && (
+        <div className="dc-card">
+          <div className="dc-card-header"><h3>Domain Purchase</h3></div>
+          <div className="dc-card-body">
+            <div className="dc-domain-purchase-info">
+              <div className="dc-domain-purchase-name">{selectedDomainData.domain}</div>
+              <div className="dc-domain-purchase-price">
+                ${selectedDomainData.price}/{selectedDomainData.currency === 'USD' ? 'yr' : selectedDomainData.currency}
+              </div>
+            </div>
+            <label className="dc-toggle">
+              <input type="checkbox" checked={purchaseDomain}
+                onChange={(e) => setPurchaseDomain(e.target.checked)} />
+              <span>Purchase this domain via Google Cloud Domains</span>
+            </label>
+          </div>
+        </div>
+      )}
+
+      <StepNav activeSection={activeSection} totalSections={totalSections}
+        onNavigate={onNavigate} onLaunch={onLaunch} canLaunch={canLaunch} />
+    </div>
+  )
+}
 
 function StepNav({ activeSection, totalSections, onNavigate, onLaunch, canLaunch }: {
   activeSection: number; totalSections: number; onNavigate: (i: number) => void; onLaunch: () => void; canLaunch: boolean
@@ -1647,8 +2010,9 @@ function PipelinePhases({ phase, pipelineStatus, provisionResult, skipDeploy, se
     },
     {
       label: 'Email DNS',
-      status: n?.dns_email?.status === 'skipped' ? 'skipped'
-        : provisionResult?.dnsRecords?.length > 0 ? 'completed' : 'pending',
+      status: n?.email?.status === 'sent' ? 'completed'
+        : n?.email?.status === 'failed' || n?.email?.status === 'error' ? 'failed'
+        : provisionResult?.dns_records?.length > 0 ? 'completed' : 'pending',
     },
   ]
 
