@@ -210,7 +210,7 @@ export default function ProvisionForm() {
   /* ── auto-fill from domain ── */
   useEffect(() => {
     if (domain && !websiteUrl) setWebsiteUrl(`https://www.${domain}`)
-    if (domain && !contactEmail) setContactEmail(`hello@${domain}`)
+    if (domain && !contactEmail) setContactEmail(`contact@${domain}`)
   }, [domain]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -299,7 +299,7 @@ export default function ProvisionForm() {
   const selectDomain = (domainName: string, suggestion?: DomainSuggestion) => {
     setDomain(domainName)
     setWebsiteUrl((prev) => prev || `https://www.${domainName}`)
-    setContactEmail((prev) => prev || `hello@${domainName}`)
+    setContactEmail((prev) => prev || `contact@${domainName}`)
     if (suggestion) {
       setSelectedDomainData(suggestion)
       setPurchaseDomain(true)
@@ -536,8 +536,8 @@ export default function ProvisionForm() {
      PROVISIONING (deploy)
      ═══════════════════════════════════════ */
   const handleProvision = async () => {
-    if (!username || !displayName || !contactEmail || (!niche && !websiteUrl)) {
-      setError('Username, display name, contact email, and at least a niche or website URL are required.')
+    if (!username || !displayName || (!niche && !websiteUrl)) {
+      setError('Username, display name, and at least a niche or website URL are required.')
       return
     }
 
@@ -561,7 +561,7 @@ export default function ProvisionForm() {
           username: username.trim().toLowerCase(),
           display_name: displayName.trim(),
           website_url: websiteUrl.trim() || undefined,
-          contact_email: contactEmail.trim(),
+          contact_email: contactEmail.trim() || (domain ? `contact@${domain.trim()}` : `contact@${username.trim().toLowerCase()}.com`),
           domain: domain.trim() || undefined,
           niche: niche.trim() || undefined,
           blurb: brandBlurb.trim() || undefined,
@@ -996,16 +996,17 @@ export default function ProvisionForm() {
 
                       <div className="dc-field-row">
                         <div className="dc-field">
-                          <label>Contact Email <span className="dc-required">*</span></label>
-                          <input type="email" value={contactEmail}
-                            onChange={(e) => setContactEmail(e.target.value)}
-                            placeholder="hello@acmecorp.com" />
-                        </div>
-                        <div className="dc-field">
                           <label>Domain</label>
                           <input type="text" value={domain}
                             onChange={(e) => setDomain(e.target.value)}
                             placeholder="acmecorp.com" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Contact Email</label>
+                          <input type="email" value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
+                            placeholder="contact@acmecorp.com" />
+                          <span className="dc-hint">Auto-filled from domain if left blank.</span>
                         </div>
                       </div>
 
@@ -1047,7 +1048,7 @@ export default function ProvisionForm() {
 
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
                     onNavigate={setActiveSection} onLaunch={handleProvision}
-                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                    canLaunch={!!(username && displayName && websiteUrl)} />
                 </div>
               )}
 
@@ -1098,7 +1099,7 @@ export default function ProvisionForm() {
 
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
                     onNavigate={setActiveSection} onLaunch={handleProvision}
-                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                    canLaunch={!!(username && displayName && websiteUrl)} />
                 </div>
               )}
 
@@ -1163,7 +1164,7 @@ export default function ProvisionForm() {
 
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
                     onNavigate={setActiveSection} onLaunch={handleProvision}
-                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                    canLaunch={!!(username && displayName && websiteUrl)} />
                 </div>
               )}
 
@@ -1246,7 +1247,7 @@ export default function ProvisionForm() {
 
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
                     onNavigate={setActiveSection} onLaunch={handleProvision}
-                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                    canLaunch={!!(username && displayName && websiteUrl)} />
                 </div>
               )}
 
@@ -1315,7 +1316,7 @@ export default function ProvisionForm() {
 
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
                     onNavigate={setActiveSection} onLaunch={handleProvision}
-                    canLaunch={!!(username && displayName && contactEmail && websiteUrl)} />
+                    canLaunch={!!(username && displayName && websiteUrl)} />
                 </div>
               )}
 
@@ -1335,7 +1336,7 @@ export default function ProvisionForm() {
                   niche={niche} generateColorsFromNiche={generateColorsFromNiche}
                   activeSection={activeSection} totalSections={activeSections.length}
                   onNavigate={setActiveSection} onLaunch={handleProvision}
-                  canLaunch={!!(username && displayName && contactEmail && websiteUrl)}
+                  canLaunch={!!(username && displayName && websiteUrl)}
                 />
               )}
 
@@ -1412,16 +1413,17 @@ export default function ProvisionForm() {
 
                       <div className="dc-field-row">
                         <div className="dc-field">
-                          <label>Contact Email <span className="dc-required">*</span></label>
-                          <input type="email" value={contactEmail}
-                            onChange={(e) => setContactEmail(e.target.value)}
-                            placeholder="hello@yourbrand.com" />
-                        </div>
-                        <div className="dc-field">
                           <label>Domain</label>
                           <input type="text" value={domain}
                             onChange={(e) => setDomain(e.target.value)}
                             placeholder="yourbrand.com" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Contact Email</label>
+                          <input type="email" value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
+                            placeholder="contact@yourbrand.com" />
+                          <span className="dc-hint">Auto-filled from domain if left blank.</span>
                         </div>
                       </div>
 
@@ -1458,7 +1460,7 @@ export default function ProvisionForm() {
 
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
                     onNavigate={setActiveSection} onLaunch={handleProvision}
-                    canLaunch={!!(username && displayName && contactEmail && niche)} />
+                    canLaunch={!!(username && displayName && niche)} />
                 </div>
               )}
 
@@ -1550,7 +1552,7 @@ export default function ProvisionForm() {
 
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
                     onNavigate={setActiveSection} onLaunch={handleProvision}
-                    canLaunch={!!(username && displayName && contactEmail && niche)} />
+                    canLaunch={!!(username && displayName && niche)} />
                 </div>
               )}
 
@@ -1663,7 +1665,7 @@ export default function ProvisionForm() {
 
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
                     onNavigate={setActiveSection} onLaunch={handleProvision}
-                    canLaunch={!!(username && displayName && contactEmail && niche)} />
+                    canLaunch={!!(username && displayName && niche)} />
                 </div>
               )}
 
@@ -1683,7 +1685,7 @@ export default function ProvisionForm() {
                   niche={niche} generateColorsFromNiche={generateColorsFromNiche}
                   activeSection={activeSection} totalSections={activeSections.length}
                   onNavigate={setActiveSection} onLaunch={handleProvision}
-                  canLaunch={!!(username && displayName && contactEmail && niche)}
+                  canLaunch={!!(username && displayName && niche)}
                 />
               )}
 

@@ -157,10 +157,13 @@ export async function POST(request: NextRequest) {
     publishing_provider,
   } = body
 
+  // Derive contact_email if not provided
+  const resolved_email = contact_email || (domain ? `contact@${domain}` : `contact@${username}.com`)
+
   // Validate required fields
-  if (!username || !display_name || !contact_email) {
+  if (!username || !display_name) {
     return NextResponse.json(
-      { success: false, error: 'Missing required fields: username, display_name, contact_email' },
+      { success: false, error: 'Missing required fields: username, display_name' },
       { status: 400 }
     )
   }
@@ -251,7 +254,7 @@ export async function POST(request: NextRequest) {
   const companyPayload = {
     username: username,
     client_website: website_url || null,
-    email: contact_email,
+    email: resolved_email,
     blurb: blurb || null,
     target_market: target_market || null,
   }
@@ -541,11 +544,11 @@ export async function POST(request: NextRequest) {
         BRAND_USERNAME: username,
         SITE_URL: siteUrl,
         SITE_NAME: display_name,
-        CONTACT_EMAIL: contact_email,
+        CONTACT_EMAIL: resolved_email,
         NEXT_PUBLIC_BRAND_USERNAME: username,
         NEXT_PUBLIC_SITE_URL: siteUrl,
         NEXT_PUBLIC_SITE_NAME: display_name,
-        NEXT_PUBLIC_CONTACT_EMAIL: contact_email,
+        NEXT_PUBLIC_CONTACT_EMAIL: resolved_email,
       }
       if (gaId) {
         machineEnv.GA_ID = gaId
@@ -582,9 +585,10 @@ export async function POST(request: NextRequest) {
 
   if (purchase_domain && domain && domain_yearly_price && google.isGoogleServiceConfigured()) {
     try {
+      // Always register domains under stuartr@sewo.io
       const regResult = await google.registerDomain(
         domain,
-        contact_email,
+        'stuartr@sewo.io',
         domain_yearly_price,
         domain_notices || []
       )
@@ -785,14 +789,14 @@ export async function POST(request: NextRequest) {
 
       const { error: emailError } = await resend.emails.send({
         from: `Doubleclicker <${fromEmail}>`,
-        to: [contact_email],
+        to: [resolved_email],
         subject: `Your new site is almost live — DNS setup for ${domain}`,
         html: htmlContent,
       })
 
       notifications.email = emailError
         ? { status: 'failed', error: emailError }
-        : { status: 'sent', to: contact_email }
+        : { status: 'sent', to: resolved_email }
     } catch (err) {
       console.error('Error sending DNS email:', err)
       notifications.email = { status: 'error', error: err instanceof Error ? err.message : String(err) }
