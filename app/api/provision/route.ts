@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
     domain_yearly_price,
     domain_notices,
     network_partners,
+    publishing_provider,
   } = body
 
   // Validate required fields
@@ -420,6 +421,10 @@ export async function POST(request: NextRequest) {
 
       // Pipeline control
       if (stitch_enabled !== undefined) onboardPayload.stitch_enabled = stitch_enabled
+
+      // Publishing provider — tells Doubleclicker which CMS/platform to publish to
+      // (e.g. 'supabase_blog' for sites that read directly from the shared Supabase DB)
+      if (publishing_provider) onboardPayload.publishing_provider = publishing_provider
 
       // Network partners for cross-linking
       if (Array.isArray(network_partners) && network_partners.length > 0) {

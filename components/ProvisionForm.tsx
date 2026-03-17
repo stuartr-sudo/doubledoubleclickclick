@@ -168,6 +168,7 @@ export default function ProvisionForm() {
   const [skipPipeline, setSkipPipeline] = useState(false)
   const [skipDeploy, setSkipDeploy] = useState(false)
   const [stitchEnabled, setStitchEnabled] = useState(false)
+  const [publishingProvider, setPublishingProvider] = useState('custom_api')
 
   /* ── Google services ── */
   const [setupGA, setSetupGA] = useState(true)
@@ -588,6 +589,7 @@ export default function ProvisionForm() {
               }, {})
             : undefined,
           stitch_enabled: stitchEnabled,
+          publishing_provider: publishingProvider,
           image_style: imageStyle,
           fly_region: flyRegion,
           skip_pipeline: skipPipeline,
@@ -1210,6 +1212,23 @@ export default function ProvisionForm() {
                           onChange={(e) => setImageStyle((s) => ({ ...s, ai_prompt_instructions: e.target.value }))}
                           placeholder={'Detailed instructions for AI image generation appended to every prompt.\nExample: "Shot on Sony A7 III, 85mm lens, f/1.8."'}
                           rows={3} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="dc-card">
+                    <div className="dc-card-header"><h3>Publishing Target</h3></div>
+                    <div className="dc-card-body">
+                      <div className="dc-field">
+                        <label>Where should articles be published?</label>
+                        <select className="dc-field input" value={publishingProvider}
+                          onChange={(e) => setPublishingProvider(e.target.value)}>
+                          <option value="custom_api">Custom API (Blog Cloner site)</option>
+                          <option value="supabase_blog">Supabase Blog (direct DB — e.g. Assureful)</option>
+                          <option value="wordpress">WordPress</option>
+                          <option value="shopify">Shopify</option>
+                          <option value="gohighlevel">GoHighLevel</option>
+                        </select>
                       </div>
                     </div>
                   </div>
