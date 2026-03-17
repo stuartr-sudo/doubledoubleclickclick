@@ -456,6 +456,7 @@ export default function NetworkForm() {
           </div>
         </div>
 
+        <div className="dc-scroll-area">
         <div className="dc-section-wrap">
         {error && (
           <div className="dc-alert dc-alert-error">
@@ -999,6 +1000,7 @@ export default function NetworkForm() {
             </div>
         )}
         </div>
+        </div>{/* end dc-scroll-area */}
       </main>
     </div>
   )

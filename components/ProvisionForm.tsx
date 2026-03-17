@@ -853,8 +853,11 @@ export default function ProvisionForm() {
           </div>
         </div>
 
+        {/* ── Scrollable content area ── */}
+        <div className="dc-scroll-area">
+
         {error && (
-          <div className="dc-alert dc-alert-error">
+          <div className="dc-alert dc-alert-error" style={{ margin: '0 0 8px' }}>
             <span className="dc-alert-icon">!</span>
             <div>
               <div className="dc-alert-title">Error</div>
@@ -1756,6 +1759,7 @@ export default function ProvisionForm() {
             )}
           </div>
         )}
+        </div>{/* end dc-scroll-area */}
       </main>
     </div>
   )
