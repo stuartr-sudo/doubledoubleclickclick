@@ -481,8 +481,9 @@ export default function NetworkForm() {
               </div>
               <div className="dc-card-body">
                 <div className="dc-field">
-                  <label>Seed Niche *</label>
+                  <label>Seed Niche <span className="dc-required">*</span></label>
                   <input
+                    type="text"
                     value={seedNiche}
                     onChange={(e) => setSeedNiche(e.target.value)}
                     placeholder="e.g. natural skincare, home fitness, personal finance"
@@ -492,6 +493,7 @@ export default function NetworkForm() {
                 <div className="dc-field" style={{ marginTop: 12 }}>
                   <label>Network Name</label>
                   <input
+                    type="text"
                     value={networkName}
                     onChange={(e) => setNetworkName(e.target.value)}
                     placeholder="e.g. Wellness Circle"
@@ -623,6 +625,7 @@ export default function NetworkForm() {
                           <div className="dc-field">
                             <label>Brand Name</label>
                             <input
+                              type="text"
                               value={n.suggested_brand_name}
                               onChange={(e) => updateNiche(idx, 'suggested_brand_name', e.target.value)}
                             />
@@ -630,6 +633,7 @@ export default function NetworkForm() {
                           <div className="dc-field">
                             <label>Username</label>
                             <input
+                              type="text"
                               value={n.suggested_username}
                               onChange={(e) => updateNiche(idx, 'suggested_username', e.target.value)}
                             />
@@ -639,6 +643,7 @@ export default function NetworkForm() {
                         <div className="dc-field" style={{ marginTop: 12 }}>
                           <label>Niche</label>
                           <input
+                            type="text"
                             value={n.niche}
                             onChange={(e) => updateNiche(idx, 'niche', e.target.value)}
                           />
@@ -649,6 +654,7 @@ export default function NetworkForm() {
                           <label>Domain</label>
                           <div style={{ display: 'flex', gap: 8 }}>
                             <input
+                              type="text"
                               value={n.domain}
                               onChange={(e) => updateNiche(idx, 'domain', e.target.value)}
                               placeholder="example.com (optional)"

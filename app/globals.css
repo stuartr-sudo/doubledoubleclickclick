@@ -7927,9 +7927,7 @@ body:has(.dc-layout) > header {
   color: #ef4444;
 }
 
-.dc-field input[type="text"],
-.dc-field input[type="url"],
-.dc-field input[type="email"],
+.dc-field input:not([type="checkbox"]):not([type="radio"]),
 .dc-field textarea,
 .dc-field select {
   width: 100%;
