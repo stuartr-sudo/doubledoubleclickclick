@@ -255,9 +255,10 @@ export default function ProvisionForm() {
   }
 
   /** Extract hex colors from AI-generated color_palette string and apply to color pickers */
-  const applyColorsFromPalette = (colorPalette: string) => {
+  const applyColorsFromPalette = (colorPalette: unknown) => {
     if (!colorPalette) return
-    const hexMatches = colorPalette.match(/#[0-9a-fA-F]{6}/g)
+    const paletteStr = typeof colorPalette === 'string' ? colorPalette : JSON.stringify(colorPalette)
+    const hexMatches = paletteStr.match(/#[0-9a-fA-F]{6}/g)
     if (hexMatches && hexMatches.length >= 2) {
       setPrimaryColor(hexMatches[0])
       setAccentColor(hexMatches[1])

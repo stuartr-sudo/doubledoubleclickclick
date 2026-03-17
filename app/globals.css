@@ -7284,6 +7284,7 @@ body:has(.dc-layout) > header {
   position: sticky;
   top: 0;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .dc-topbar h2 {
@@ -7311,6 +7312,7 @@ body:has(.dc-layout) > header {
   gap: 16px;
   max-width: 840px;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -8104,6 +8106,7 @@ body:has(.dc-layout) > header {
   border-radius: 8px;
   margin: 0 24px;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 .dc-alert-error {
