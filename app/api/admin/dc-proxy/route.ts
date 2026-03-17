@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 const DC_URL = process.env.DOUBLECLICKER_API_URL || 'https://doubleclicker.fly.dev'
 const SECRET = process.env.PROVISION_SECRET || ''
 
+// Allow up to 120s for AI-heavy endpoints (deep-niche-research, enhance-brand)
+export const maxDuration = 120
+
 export async function POST(req: NextRequest) {
   try {
     const { endpoint, ...body } = await req.json()
@@ -19,6 +22,7 @@ export async function POST(req: NextRequest) {
         'x-provision-secret': SECRET,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(110_000),
     })
 
     const data = await res.json()
@@ -45,6 +49,7 @@ export async function GET(req: NextRequest) {
     const url = `${DC_URL}${endpoint}${qs ? '?' + qs : ''}`
     const res = await fetch(url, {
       headers: { 'x-provision-secret': SECRET },
+      signal: AbortSignal.timeout(110_000),
     })
 
     const data = await res.json()

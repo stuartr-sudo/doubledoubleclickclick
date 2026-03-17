@@ -114,7 +114,11 @@ async function dcPost(endpoint: string, body: Record<string, any> = {}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ endpoint, ...body }),
   })
-  return res.json()
+  const data = await res.json()
+  if (!res.ok && !data.success) {
+    throw new Error(data.error || `Request failed (${res.status})`)
+  }
+  return data
 }
 
 
