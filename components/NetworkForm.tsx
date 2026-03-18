@@ -79,9 +79,25 @@ export default function NetworkForm() {
 
   /* ── global settings ── */
   const [flyRegion, setFlyRegion] = useState('syd')
-  const [setupGA, setSetupGA] = useState(true)
-  const [setupGTM, setSetupGTM] = useState(true)
-  const [setupGSC, setSetupGSC] = useState(true)
+
+  /* ── translation ── */
+  const [translationEnabled, setTranslationEnabled] = useState(false)
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
+
+  const LANGUAGE_OPTIONS = [
+    { code: 'es', label: 'Spanish', flag: '🇪🇸' },
+    { code: 'fr', label: 'French', flag: '🇫🇷' },
+    { code: 'de', label: 'German', flag: '🇩🇪' },
+    { code: 'pt', label: 'Portuguese', flag: '🇧🇷' },
+    { code: 'ja', label: 'Japanese', flag: '🇯🇵' },
+    { code: 'ko', label: 'Korean', flag: '🇰🇷' },
+    { code: 'zh', label: 'Chinese', flag: '🇨🇳' },
+    { code: 'it', label: 'Italian', flag: '🇮🇹' },
+    { code: 'nl', label: 'Dutch', flag: '🇳🇱' },
+    { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
+    { code: 'hi', label: 'Hindi', flag: '🇮🇳' },
+    { code: 'ru', label: 'Russian', flag: '🇷🇺' },
+  ]
 
   /* ── brand research state (per-niche, keyed by index) ── */
   const [nicheResearch, setNicheResearch] = useState<Record<number, any>>({})
@@ -322,9 +338,10 @@ export default function NetworkForm() {
           seed_niche: seedNiche.trim(),
           members,
           fly_region: flyRegion,
-          setup_google_analytics: setupGA,
-          setup_google_tag_manager: setupGTM,
-          setup_search_console: setupGSC,
+          setup_google_analytics: true,
+          setup_google_tag_manager: true,
+          setup_search_console: true,
+          languages: translationEnabled && selectedLanguages.length > 0 ? selectedLanguages : undefined,
         }),
       })
 
@@ -469,14 +486,14 @@ export default function NetworkForm() {
           </div>
         )}
 
-        {/* ─── SECTION 0: Network Setup ─── */}
+        {/* ─── SECTION 0: Seed Niche ONLY ─── */}
         {activeSection === 0 && phase === 'planning' && (
           <>
             <div className="dc-card">
               <div className="dc-card-header">
                 <div>
                   <h3>Seed Niche</h3>
-                  <p>Enter your primary niche — AI will suggest related niches</p>
+                  <p>Enter your primary niche — AI will suggest related niches for your network</p>
                 </div>
               </div>
               <div className="dc-card-body">
@@ -487,75 +504,27 @@ export default function NetworkForm() {
                     value={seedNiche}
                     onChange={(e) => setSeedNiche(e.target.value)}
                     placeholder="e.g. natural skincare, home fitness, personal finance"
+                    className="dc-input-hero"
+                    autoFocus
                   />
+                  <span className="dc-hint">AI will expand this into 6 related niche sites, each with its own brand and content strategy.</span>
                 </div>
 
-                <div className="dc-field" style={{ marginTop: 12 }}>
-                  <label>Network Name</label>
-                  <input
-                    type="text"
-                    value={networkName}
-                    onChange={(e) => setNetworkName(e.target.value)}
-                    placeholder="e.g. Wellness Circle"
-                  />
-                </div>
-
-                <div className="dc-field" style={{ marginTop: 12 }}>
-                  <label>Contact Email *</label>
-                  <input
-                    type="email"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder="admin@example.com"
-                  />
-                </div>
-
-                <div style={{ marginTop: 16 }}>
-                  <button
-                    className="dc-btn dc-btn-ai"
-                    onClick={expandNetwork}
-                    disabled={expanding || !seedNiche.trim()}
-                  >
-                    {expanding ? 'Expanding...' : 'Expand Network'}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Global settings */}
-            <div className="dc-card">
-              <div className="dc-card-header">
-                <h3>Global Settings</h3>
-              </div>
-              <div className="dc-card-body">
-                <div className="dc-field">
-                  <label>Fly Region</label>
-                  <select
-                    value={flyRegion}
-                    onChange={(e) => setFlyRegion(e.target.value)}
-                  >
-                    {REGIONS.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="dc-toggles">
-                  <label className="dc-toggle">
-                    <input type="checkbox" checked={setupGA} onChange={() => setSetupGA(!setupGA)} />
-                    <span>Google Analytics (GA4)</span>
-                  </label>
-                  <label className="dc-toggle">
-                    <input type="checkbox" checked={setupGTM} onChange={() => setSetupGTM(!setupGTM)} />
-                    <span>Google Tag Manager</span>
-                  </label>
-                  <label className="dc-toggle">
-                    <input type="checkbox" checked={setupGSC} onChange={() => setSetupGSC(!setupGSC)} />
-                    <span>Google Search Console</span>
-                  </label>
-                </div>
+                {seedNiche && (
+                  <div className="dc-ai-bar">
+                    <div className="dc-ai-bar-info">
+                      <h3>AI Network Expansion</h3>
+                      <p>Discovers related niches and generates brand names for each site.</p>
+                    </div>
+                    <button
+                      className="dc-btn dc-btn-ai"
+                      onClick={expandNetwork}
+                      disabled={expanding || !seedNiche.trim()}
+                    >
+                      {expanding ? <><span className="dc-spinner" /> Expanding...</> : 'Expand Network'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -842,10 +811,72 @@ export default function NetworkForm() {
         {/* ─── SECTION 3: Launch ─── */}
         {activeSection === 3 && phase === 'planning' && (
           <>
+            {/* Network Details (moved from step 0) */}
             <div className="dc-card">
-              <div className="dc-card-header">
-                <h3>Launch Network</h3>
+              <div className="dc-card-header"><h3>Network Details</h3></div>
+              <div className="dc-card-body">
+                <div className="dc-field">
+                  <label>Network Name <span className="dc-required">*</span></label>
+                  <input type="text" value={networkName}
+                    onChange={(e) => setNetworkName(e.target.value)}
+                    placeholder="e.g. Wellness Circle" />
+                </div>
+                <div className="dc-field" style={{ marginTop: 12 }}>
+                  <label>Contact Email <span className="dc-required">*</span></label>
+                  <input type="email" value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="admin@example.com" />
+                </div>
               </div>
+            </div>
+
+            {/* Deployment Settings */}
+            <div className="dc-card">
+              <div className="dc-card-header"><h3>Deployment Settings</h3></div>
+              <div className="dc-card-body">
+                <div className="dc-field">
+                  <label>Fly.io Region</label>
+                  <select value={flyRegion} onChange={(e) => setFlyRegion(e.target.value)}>
+                    {REGIONS.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Translation */}
+            <div className="dc-card">
+              <div className="dc-card-header"><h3>Translation</h3></div>
+              <div className="dc-card-body">
+                <label className="dc-toggle">
+                  <input type="checkbox" checked={translationEnabled}
+                    onChange={(e) => setTranslationEnabled(e.target.checked)} />
+                  <span>Enable multi-language translation for all sites</span>
+                </label>
+                {translationEnabled && (
+                  <div className="dc-language-grid">
+                    {LANGUAGE_OPTIONS.map((lang) => (
+                      <button key={lang.code} type="button"
+                        className={`dc-chip ${selectedLanguages.includes(lang.code) ? 'dc-chip-selected' : ''}`}
+                        onClick={() => {
+                          setSelectedLanguages((prev) =>
+                            prev.includes(lang.code)
+                              ? prev.filter((c) => c !== lang.code)
+                              : [...prev, lang.code]
+                          )
+                        }}>
+                        {lang.flag} {lang.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Launch Summary */}
+            <div className="dc-card">
+              <div className="dc-card-header"><h3>Launch Summary</h3></div>
               <div className="dc-card-body">
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 14, color: '#334155', marginBottom: 8 }}>
@@ -876,7 +907,7 @@ export default function NetworkForm() {
                 {!canLaunch && (
                   <p style={{ fontSize: 12, color: '#dc2626', marginTop: 8 }}>
                     {!contactEmail.trim()
-                      ? 'Contact email is required (set in Network Setup)'
+                      ? 'Contact email is required'
                       : !networkName.trim()
                         ? 'Network name is required'
                         : enabledNiches.length === 0

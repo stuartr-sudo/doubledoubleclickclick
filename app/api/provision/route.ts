@@ -155,7 +155,11 @@ export async function POST(request: NextRequest) {
     domain_notices,
     network_partners,
     publishing_provider,
+    languages,
   } = body
+
+  // Default publishing_provider to supabase_blog for new sites
+  const resolved_publishing_provider = publishing_provider || 'supabase_blog'
 
   // Derive contact_email if not provided
   const resolved_email = contact_email || (domain ? `contact@${domain}` : `contact@${username}.com`)
@@ -427,7 +431,8 @@ export async function POST(request: NextRequest) {
 
       // Publishing provider — tells Doubleclicker which CMS/platform to publish to
       // (e.g. 'supabase_blog' for sites that read directly from the shared Supabase DB)
-      if (publishing_provider) onboardPayload.publishing_provider = publishing_provider
+      onboardPayload.publishing_provider = resolved_publishing_provider
+      if (Array.isArray(languages) && languages.length > 0) onboardPayload.languages = languages
 
       // Network partners for cross-linking
       if (Array.isArray(network_partners) && network_partners.length > 0) {
@@ -557,6 +562,10 @@ export async function POST(request: NextRequest) {
       if (gtmId) {
         machineEnv.GTM_ID = gtmId
         machineEnv.NEXT_PUBLIC_GTM_ID = gtmId
+      }
+      if (Array.isArray(languages) && languages.length > 0) {
+        machineEnv.LANGUAGES = languages.join(',')
+        machineEnv.NEXT_PUBLIC_LANGUAGES = languages.join(',')
       }
       await fly.createMachine(flyAppName, imageRef, machineEnv, fly_region)
       console.log(`Machine created in ${flyAppName}`)

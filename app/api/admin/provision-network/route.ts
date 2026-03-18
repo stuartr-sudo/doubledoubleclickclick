@@ -48,9 +48,10 @@ export async function POST(req: NextRequest) {
       seed_niche,
       members,
       fly_region = 'syd',
-      setup_google_analytics = false,
-      setup_google_tag_manager = false,
-      setup_search_console = false,
+      setup_google_analytics = true,
+      setup_google_tag_manager = true,
+      setup_search_console = true,
+      languages,
     } = body as {
       network_name: string
       seed_niche: string
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
       setup_google_analytics?: boolean
       setup_google_tag_manager?: boolean
       setup_search_console?: boolean
+      languages?: string[]
     }
 
     if (!network_name?.trim()) {
@@ -160,6 +162,11 @@ export async function POST(req: NextRequest) {
           domain_yearly_price: member.domain_yearly_price,
           domain_notices: member.domain_notices,
           network_partners: buildPartnersFor(member.username),
+        }
+
+        // Forward languages if provided
+        if (Array.isArray(languages) && languages.length > 0) {
+          provisionPayload.languages = languages
         }
 
         // Forward ALL brand data so DC gets full context from research phase
