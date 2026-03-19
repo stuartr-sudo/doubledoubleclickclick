@@ -63,3 +63,39 @@ export function buildHeroImagePrompt(params: {
 
   return `Professional, clean hero banner image for a ${niche || 'lifestyle'} blog. Modern editorial style, warm and inviting, wide landscape format. No text, no logos, no watermarks. Suitable as a background image with text overlay.`
 }
+
+/**
+ * Logo image generation via fal.ai (square format).
+ */
+export async function generateLogoImage(prompt: string): Promise<string | null> {
+  const FAL_API_KEY = process.env.FAL_API_KEY
+  if (!FAL_API_KEY) {
+    console.warn('[IMAGE-GEN] FAL_API_KEY not set, skipping logo generation')
+    return null
+  }
+
+  const response = await fetch('https://queue.fal.run/fal-ai/flux/schnell', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt,
+      image_size: 'square',
+      num_images: 1,
+    }),
+  })
+
+  if (!response.ok) {
+    console.error('[IMAGE-GEN] fal.ai logo request failed:', response.status, await response.text().catch(() => ''))
+    return null
+  }
+
+  const data = await response.json()
+  return data.images?.[0]?.url || null
+}
+
+export function buildLogoPrompt(brandName: string, niche?: string): string {
+  return `Simple, clean, minimal logo icon for "${brandName}"${niche ? `, a ${niche} brand` : ''}. Flat design, single icon or monogram, white background, no text, no words, no letters, modern and professional, suitable as a favicon or brand mark.`
+}

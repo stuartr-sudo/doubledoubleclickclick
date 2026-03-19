@@ -156,6 +156,7 @@ export default function ProvisionForm() {
   const [websiteUrl, setWebsiteUrl] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
+  const [logoPrompt, setLogoPrompt] = useState('')
 
   /* ── brand voice / content ── */
   const [brandVoice, setBrandVoice] = useState('')
@@ -227,6 +228,7 @@ export default function ProvisionForm() {
   useEffect(() => {
     if (domain && !websiteUrl) setWebsiteUrl(`https://www.${domain}`)
     if (domain && !contactEmail) setContactEmail(`contact@${domain}`)
+    if (domain && !authorPageUrl) setAuthorPageUrl(`https://www.${domain}/about`)
     // Derive username from domain (strip TLD)
     if (domain) {
       const uname = domain.split('.')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -241,6 +243,14 @@ export default function ProvisionForm() {
     if (displayName && !authorBio) setAuthorBio(`The ${displayName} editorial team.`)
   }, [displayName]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── auto-fill author URL from website (Product-First) ── */
+  useEffect(() => {
+    if (websiteUrl && !authorPageUrl && !domain) {
+      const base = websiteUrl.replace(/\/+$/, '')
+      setAuthorPageUrl(`${base}/about`)
+    }
+  }, [websiteUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [logs])
@@ -248,6 +258,13 @@ export default function ProvisionForm() {
   useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
+
+  /* ── auto-fill logo prompt ── */
+  useEffect(() => {
+    if ((displayName || niche) && !logoPrompt) {
+      setLogoPrompt(`Simple, clean, minimal logo icon for "${displayName || 'Brand'}"${niche ? `, a ${niche} brand` : ''}. Flat design, single icon or monogram, white background, no text, no words, modern and professional.`)
+    }
+  }, [displayName, niche]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const addLog = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString()
@@ -404,6 +421,26 @@ export default function ProvisionForm() {
       setError(err.message)
     } finally {
       setGenerating((g) => ({ ...g, niche_style: false }))
+    }
+  }
+
+  const generateLogo = async () => {
+    const prompt = logoPrompt || `Simple, clean, minimal logo icon for "${displayName || 'Brand'}"${niche ? `, a ${niche} brand` : ''}. Flat design, single icon or monogram, white background, no text, no words, modern and professional.`
+    setGenerating((g) => ({ ...g, logo: true }))
+    setError('')
+    try {
+      const res = await fetch('/api/admin/generate-logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'Logo generation failed')
+      setLogoUrl(data.url)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setGenerating((g) => ({ ...g, logo: false }))
     }
   }
 
@@ -972,6 +1009,8 @@ export default function ProvisionForm() {
                     websiteUrl={websiteUrl}
                     niche={niche} setNiche={setNiche}
                     logoUrl={logoUrl} setLogoUrl={setLogoUrl}
+                    logoPrompt={logoPrompt} setLogoPrompt={setLogoPrompt}
+                    generateLogo={generateLogo} generatingLogo={!!generating.logo}
                     authorName={authorName} setAuthorName={setAuthorName}
                     authorBio={authorBio} setAuthorBio={setAuthorBio}
                     authorImageUrl={authorImageUrl} setAuthorImageUrl={setAuthorImageUrl}
@@ -1174,6 +1213,8 @@ export default function ProvisionForm() {
                     websiteUrl={websiteUrl}
                     niche={niche} setNiche={setNiche}
                     logoUrl={logoUrl} setLogoUrl={setLogoUrl}
+                    logoPrompt={logoPrompt} setLogoPrompt={setLogoPrompt}
+                    generateLogo={generateLogo} generatingLogo={!!generating.logo}
                     authorName={authorName} setAuthorName={setAuthorName}
                     authorBio={authorBio} setAuthorBio={setAuthorBio}
                     authorImageUrl={authorImageUrl} setAuthorImageUrl={setAuthorImageUrl}
@@ -1547,7 +1588,7 @@ function ProductSection({ productName, setProductName, productUrl, setProductUrl
 /* ── Launch Section (shared between brand/niche flows) ── */
 function LaunchSection({ displayName, setDisplayName, username, setUsername,
   domain, setDomain, contactEmail, websiteUrl, niche, setNiche,
-  logoUrl, setLogoUrl,
+  logoUrl, setLogoUrl, logoPrompt, setLogoPrompt, generateLogo, generatingLogo,
   authorName, setAuthorName, authorBio, setAuthorBio,
   authorImageUrl, setAuthorImageUrl, authorPageUrl, setAuthorPageUrl,
   authorSocials, setAuthorSocials, updateListItem, addListItem,
@@ -1567,6 +1608,8 @@ function LaunchSection({ displayName, setDisplayName, username, setUsername,
   contactEmail: string; websiteUrl: string
   niche: string; setNiche: (v: string) => void
   logoUrl: string; setLogoUrl: (v: string) => void
+  logoPrompt: string; setLogoPrompt: (v: string) => void
+  generateLogo: () => void; generatingLogo: boolean
   authorName: string; setAuthorName: (v: string) => void
   authorBio: string; setAuthorBio: (v: string) => void
   authorImageUrl: string; setAuthorImageUrl: (v: string) => void
@@ -1670,9 +1713,28 @@ function LaunchSection({ displayName, setDisplayName, username, setUsername,
           ) : null}
 
           <div className="dc-field">
-            <label>Logo URL</label>
-            <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="https://yoursite.com/logo.png" />
+            <label>Logo</label>
+            <input type="text" value={logoPrompt} onChange={(e) => setLogoPrompt(e.target.value)}
+              placeholder="Describe the logo you want AI to generate..." />
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+              <button type="button" className="dc-btn dc-btn-ai" onClick={generateLogo}
+                disabled={generatingLogo || !logoPrompt}>
+                {generatingLogo ? <><span className="dc-spinner" /> Generating...</> : 'Generate Logo'}
+              </button>
+              <span className="dc-hint">or paste a URL below</span>
+            </div>
+            {logoUrl && (
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoUrl} alt="Logo preview" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid #e2e8f0' }} />
+                <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)}
+                  placeholder="https://yoursite.com/logo.png" style={{ flex: 1 }} />
+              </div>
+            )}
+            {!logoUrl && (
+              <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)}
+                placeholder="https://yoursite.com/logo.png" style={{ marginTop: 8 }} />
+            )}
           </div>
         </div>
       </div>

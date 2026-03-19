@@ -291,6 +291,61 @@ export async function POST(request: NextRequest) {
   if (authorResult.warning) warnings.push(authorResult.warning)
 
   // ─────────────────────────────────────────────────────────────
+  // PHASE 1.1: Create publishing_settings in app_settings
+  // Required by doubleclicker's Flash step for Schema.org markup.
+  // ─────────────────────────────────────────────────────────────
+
+  try {
+    const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${username}-blog.fly.dev`
+    const resolvedAuthorUrl = author_url || `${siteUrl}/about`
+
+    const publishingSettings = {
+      SITE_URL: siteUrl,
+      SITE_NAME: display_name,
+      ORG_URL: siteUrl,
+      ORG_NAME: display_name,
+      LOGO_URL: logo_url || '',
+      LOGO_WIDTH: 600,
+      LOGO_HEIGHT: 60,
+      SECTION_URL: `${siteUrl}/blog`,
+      SECTION_NAME: 'Blog',
+      AUTHOR_NAME: author_name || display_name,
+      AUTHOR_URL: resolvedAuthorUrl,
+      AUTHOR_BIO: author_bio || `Author at ${display_name}`,
+      AUTHOR_IMAGE_URL: author_image_url || '',
+      AUTHOR_SOCIAL_URLS: author_social_urls || [],
+      ORG_SOCIAL_URLS: [],
+      LANGUAGE_CODE: 'en',
+      TIMEZONE_OFFSET: '+00:00',
+      DEFAULT_IMAGE_WIDTH: 1200,
+      DEFAULT_IMAGE_HEIGHT: 630,
+    }
+
+    const settingName = `publishing_settings:${username}`
+    const { data: existingSetting } = await supabase
+      .from('app_settings')
+      .select('id')
+      .eq('setting_name', settingName)
+      .limit(1)
+      .single()
+
+    if (existingSetting) {
+      await supabase.from('app_settings')
+        .update({ setting_value: publishingSettings })
+        .eq('id', existingSetting.id)
+    } else {
+      await supabase.from('app_settings')
+        .insert({ setting_name: settingName, setting_value: publishingSettings })
+    }
+
+    console.log(`Publishing settings created for ${username}`)
+    results.publishing_settings = { status: 'created', setting_name: settingName }
+  } catch (err) {
+    console.error('Error creating publishing settings:', err)
+    warnings.push(`publishing_settings: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // PHASE 1.5: Generate hero banner image via fal.ai
   // Non-blocking — site works fine with gradient fallback.
   // ─────────────────────────────────────────────────────────────
