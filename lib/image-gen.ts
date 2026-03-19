@@ -1,10 +1,60 @@
 /**
  * Image generation via fal.ai.
  * Used during site provisioning for hero banners and logos.
+ * Generated images are persisted to Supabase Storage for permanent URLs.
  */
+
+import { createClient } from '@supabase/supabase-js'
 
 const FAL_POLL_INTERVAL = 2000 // 2s between polls
 const FAL_TIMEOUT = 60_000      // 60s max wait
+const STORAGE_BUCKET = 'brand-assets'
+
+/**
+ * Download an image from a temporary URL and upload to Supabase Storage.
+ * Returns the permanent public URL, or the original URL if upload fails.
+ */
+async function persistImage(tempUrl: string, path: string): Promise<string> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn('[IMAGE-GEN] Supabase not configured, using temporary fal.ai URL')
+    return tempUrl
+  }
+
+  try {
+    // Download the image
+    const imgRes = await fetch(tempUrl)
+    if (!imgRes.ok) return tempUrl
+    const blob = await imgRes.arrayBuffer()
+    const contentType = imgRes.headers.get('content-type') || 'image/jpeg'
+
+    const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
+
+    // Ensure bucket exists (idempotent)
+    await supabase.storage.createBucket(STORAGE_BUCKET, { public: true }).catch(() => {})
+
+    // Upload
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, blob, { contentType, upsert: true })
+
+    if (error) {
+      console.error('[IMAGE-GEN] Supabase upload failed:', error.message)
+      return tempUrl
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(path)
+
+    console.log(`[IMAGE-GEN] Persisted image to ${publicUrlData.publicUrl}`)
+    return publicUrlData.publicUrl
+  } catch (err) {
+    console.error('[IMAGE-GEN] Failed to persist image:', err)
+    return tempUrl
+  }
+}
 
 /**
  * Submit a request to fal.ai queue and poll until complete.
@@ -80,12 +130,18 @@ async function falGenerate(prompt: string, imageSize: string): Promise<string | 
   return null
 }
 
-export async function generateHeroImage(prompt: string): Promise<string | null> {
-  return falGenerate(prompt, 'landscape_16_9')
+export async function generateHeroImage(prompt: string, username?: string): Promise<string | null> {
+  const tempUrl = await falGenerate(prompt, 'landscape_16_9')
+  if (!tempUrl) return null
+  const path = username ? `${username}/hero.jpg` : `misc/hero-${Date.now()}.jpg`
+  return persistImage(tempUrl, path)
 }
 
-export async function generateLogoImage(prompt: string): Promise<string | null> {
-  return falGenerate(prompt, 'square')
+export async function generateLogoImage(prompt: string, username?: string): Promise<string | null> {
+  const tempUrl = await falGenerate(prompt, 'square')
+  if (!tempUrl) return null
+  const path = username ? `${username}/logo.jpg` : `misc/logo-${Date.now()}.jpg`
+  return persistImage(tempUrl, path)
 }
 
 export function buildHeroImagePrompt(params: {
@@ -119,5 +175,5 @@ export function buildHeroImagePrompt(params: {
 }
 
 export function buildLogoPrompt(brandName: string, niche?: string): string {
-  return `Simple, clean, minimal logo icon for "${brandName}"${niche ? `, a ${niche} brand` : ''}. Flat design, single icon or monogram, white background, no text, no words, no letters, modern and professional, suitable as a favicon or brand mark.`
+  return `Abstract, minimal logo mark for a ${niche || 'modern'} brand. Simple geometric shape or icon, flat design, white background, absolutely no text, no letters, no words, no typography. Clean vector-style, single color accent, suitable as a favicon or app icon.`
 }

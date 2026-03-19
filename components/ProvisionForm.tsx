@@ -262,7 +262,7 @@ export default function ProvisionForm() {
   /* ── auto-fill logo prompt ── */
   useEffect(() => {
     if ((displayName || niche) && !logoPrompt) {
-      setLogoPrompt(`Simple, clean, minimal logo icon for "${displayName || 'Brand'}"${niche ? `, a ${niche} brand` : ''}. Flat design, single icon or monogram, white background, no text, no words, modern and professional.`)
+      setLogoPrompt(`Abstract, minimal logo mark for a ${niche || 'modern'} brand. Simple geometric shape or icon, flat design, white background, absolutely no text, no letters, no words, no typography. Clean vector-style, single color accent, suitable as a favicon or app icon.`)
     }
   }, [displayName, niche]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -426,7 +426,7 @@ export default function ProvisionForm() {
 
   const logoAbortRef = useRef<AbortController | null>(null)
   const generateLogo = async () => {
-    const prompt = logoPrompt || `Simple, clean, minimal logo icon for "${displayName || 'Brand'}"${niche ? `, a ${niche} brand` : ''}. Flat design, single icon or monogram, white background, no text, no words, modern and professional.`
+    const prompt = logoPrompt || `Abstract, minimal logo mark for a ${niche || 'modern'} brand. Simple geometric shape or icon, flat design, white background, absolutely no text, no letters, no words, no typography. Clean vector-style, single color accent, suitable as a favicon or app icon.`
     // Abort any in-flight request
     if (logoAbortRef.current) logoAbortRef.current.abort()
     const controller = new AbortController()
@@ -437,7 +437,7 @@ export default function ProvisionForm() {
       const res = await fetch('/api/admin/generate-logo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, username: username || undefined }),
         signal: controller.signal,
       })
       const data = await res.json()

@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt } = await request.json()
+    const { prompt, username } = await request.json()
 
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json(
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const url = await generateLogoImage(prompt)
+    const url = await generateLogoImage(prompt, username || undefined)
 
     if (!url) {
       return NextResponse.json(

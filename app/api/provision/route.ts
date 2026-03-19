@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
       brandName: display_name,
       imageStyle: body.image_style,
     })
-    const heroImageUrl = await generateHeroImage(heroPrompt)
+    const heroImageUrl = await generateHeroImage(heroPrompt, username)
 
     if (heroImageUrl) {
       await supabase
