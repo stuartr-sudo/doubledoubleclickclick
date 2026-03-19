@@ -158,6 +158,8 @@ export async function POST(request: NextRequest) {
     publishing_provider,
     languages,
     articles_per_day,
+    is_affiliate = false,
+    affiliate_link,
   } = body
 
   // Default publishing_provider to supabase_blog for new sites
@@ -289,6 +291,22 @@ export async function POST(request: NextRequest) {
   )
   results.author = authorResult.data
   if (authorResult.warning) warnings.push(authorResult.warning)
+
+  // 5. integration_credentials — tells doubleclicker where to publish
+  const credentialsPayload = {
+    user_name: username,
+    provider: resolved_publishing_provider,
+    author_name: author_name || display_name,
+    author_bio: author_bio || `Author at ${display_name}`,
+    author_image_url: author_image_url || null,
+  }
+
+  const credResult = await dbUpsert(
+    supabase, 'integration_credentials', 'user_name', username,
+    credentialsPayload, 'integration_credentials'
+  )
+  results.integration_credentials = credResult.data
+  if (credResult.warning) warnings.push(credResult.warning)
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 1.1: Create publishing_settings in app_settings
@@ -482,6 +500,10 @@ export async function POST(request: NextRequest) {
       if (accent_color) onboardPayload.accent_color = accent_color
       if (heading_font) onboardPayload.heading_font = heading_font
       if (body_font) onboardPayload.body_font = body_font
+
+      // Affiliate flag — controls content types (product pages, mimic signals, etc.)
+      onboardPayload.is_affiliate = is_affiliate
+      if (is_affiliate && affiliate_link) onboardPayload.affiliate_link = affiliate_link
 
       // Pipeline control
       if (stitch_enabled !== undefined) onboardPayload.stitch_enabled = stitch_enabled

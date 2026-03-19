@@ -638,6 +638,8 @@ export default function ProvisionForm() {
           manual_dns: manualDns,
           domain_yearly_price: selectedDomainData?.yearlyPrice || undefined,
           domain_notices: selectedDomainData?.domainNotices || undefined,
+          is_affiliate: isAffiliate,
+          affiliate_link: isAffiliate ? (affiliateLink.trim() || productUrl.trim() || undefined) : undefined,
           product_url: productUrl.trim() || undefined,
           product_name: productName.trim() || undefined,
           approved_products: [
