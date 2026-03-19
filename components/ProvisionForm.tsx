@@ -424,8 +424,13 @@ export default function ProvisionForm() {
     }
   }
 
+  const logoAbortRef = useRef<AbortController | null>(null)
   const generateLogo = async () => {
     const prompt = logoPrompt || `Simple, clean, minimal logo icon for "${displayName || 'Brand'}"${niche ? `, a ${niche} brand` : ''}. Flat design, single icon or monogram, white background, no text, no words, modern and professional.`
+    // Abort any in-flight request
+    if (logoAbortRef.current) logoAbortRef.current.abort()
+    const controller = new AbortController()
+    logoAbortRef.current = controller
     setGenerating((g) => ({ ...g, logo: true }))
     setError('')
     try {
@@ -433,14 +438,19 @@ export default function ProvisionForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
+        signal: controller.signal,
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'Logo generation failed')
       setLogoUrl(data.url)
     } catch (err: any) {
+      if (err.name === 'AbortError') return // superseded by a newer request
       setError(err.message)
     } finally {
-      setGenerating((g) => ({ ...g, logo: false }))
+      if (logoAbortRef.current === controller) {
+        setGenerating((g) => ({ ...g, logo: false }))
+        logoAbortRef.current = null
+      }
     }
   }
 

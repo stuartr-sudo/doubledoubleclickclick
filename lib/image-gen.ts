@@ -74,26 +74,40 @@ export async function generateLogoImage(prompt: string): Promise<string | null> 
     return null
   }
 
-  const response = await fetch('https://queue.fal.run/fal-ai/flux/schnell', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${FAL_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      prompt,
-      image_size: 'square',
-      num_images: 1,
-    }),
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 60_000) // 60s timeout
 
-  if (!response.ok) {
-    console.error('[IMAGE-GEN] fal.ai logo request failed:', response.status, await response.text().catch(() => ''))
-    return null
+  try {
+    const response = await fetch('https://queue.fal.run/fal-ai/flux/schnell', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${FAL_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        image_size: 'square',
+        num_images: 1,
+      }),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      console.error('[IMAGE-GEN] fal.ai logo request failed:', response.status, await response.text().catch(() => ''))
+      return null
+    }
+
+    const data = await response.json()
+    return data.images?.[0]?.url || null
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      console.error('[IMAGE-GEN] fal.ai logo request timed out after 60s')
+      return null
+    }
+    throw err
+  } finally {
+    clearTimeout(timeout)
   }
-
-  const data = await response.json()
-  return data.images?.[0]?.url || null
 }
 
 export function buildLogoPrompt(brandName: string, niche?: string): string {
