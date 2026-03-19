@@ -1,35 +1,91 @@
 /**
- * Hero banner image generation via fal.ai.
- * Used during site provisioning to create a unique hero image for each tenant.
+ * Image generation via fal.ai.
+ * Used during site provisioning for hero banners and logos.
  */
 
-export async function generateHeroImage(prompt: string): Promise<string | null> {
+const FAL_POLL_INTERVAL = 2000 // 2s between polls
+const FAL_TIMEOUT = 60_000      // 60s max wait
+
+/**
+ * Submit a request to fal.ai queue and poll until complete.
+ */
+async function falGenerate(prompt: string, imageSize: string): Promise<string | null> {
   const FAL_API_KEY = process.env.FAL_API_KEY
   if (!FAL_API_KEY) {
-    console.warn('[IMAGE-GEN] FAL_API_KEY not set, skipping hero image generation')
+    console.warn('[IMAGE-GEN] FAL_API_KEY not set, skipping image generation')
     return null
   }
 
-  const response = await fetch('https://queue.fal.run/fal-ai/flux/schnell', {
+  const headers = {
+    'Authorization': `Key ${FAL_API_KEY}`,
+    'Content-Type': 'application/json',
+  }
+
+  // 1. Submit to queue
+  const submitRes = await fetch('https://queue.fal.run/fal-ai/flux/schnell', {
     method: 'POST',
-    headers: {
-      'Authorization': `Key ${FAL_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      prompt,
-      image_size: 'landscape_16_9',
-      num_images: 1,
-    }),
+    headers,
+    body: JSON.stringify({ prompt, image_size: imageSize, num_images: 1 }),
   })
 
-  if (!response.ok) {
-    console.error('[IMAGE-GEN] fal.ai request failed:', response.status, await response.text().catch(() => ''))
+  if (!submitRes.ok) {
+    console.error('[IMAGE-GEN] fal.ai submit failed:', submitRes.status, await submitRes.text().catch(() => ''))
     return null
   }
 
-  const data = await response.json()
-  return data.images?.[0]?.url || null
+  const submitData = await submitRes.json()
+
+  // If the response already has images (fast path), return immediately
+  if (submitData.images?.[0]?.url) {
+    return submitData.images[0].url
+  }
+
+  // 2. Poll the response_url until complete
+  const responseUrl = submitData.response_url
+  if (!responseUrl) {
+    console.error('[IMAGE-GEN] No response_url in queue response:', JSON.stringify(submitData).substring(0, 200))
+    return null
+  }
+
+  const deadline = Date.now() + FAL_TIMEOUT
+  while (Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, FAL_POLL_INTERVAL))
+
+    const pollRes = await fetch(responseUrl, { headers })
+    if (!pollRes.ok) {
+      // 202 means still processing, anything else is an error
+      if (pollRes.status === 202) continue
+      console.error('[IMAGE-GEN] fal.ai poll failed:', pollRes.status)
+      return null
+    }
+
+    const pollData = await pollRes.json()
+
+    // Check if still in queue
+    if (pollData.status === 'IN_QUEUE' || pollData.status === 'IN_PROGRESS') {
+      continue
+    }
+
+    // Completed — extract image URL
+    if (pollData.images?.[0]?.url) {
+      return pollData.images[0].url
+    }
+
+    // Response arrived but no images
+    console.error('[IMAGE-GEN] fal.ai returned no images:', JSON.stringify(pollData).substring(0, 200))
+    return null
+  }
+
+  console.error('[IMAGE-GEN] fal.ai request timed out after 60s')
+  return null
+}
+
+export async function generateHeroImage(prompt: string): Promise<string | null> {
+  return falGenerate(prompt, 'landscape_16_9')
+}
+
+export async function generateLogoImage(prompt: string): Promise<string | null> {
+  return falGenerate(prompt, 'square')
 }
 
 export function buildHeroImagePrompt(params: {
@@ -40,12 +96,10 @@ export function buildHeroImagePrompt(params: {
   const { niche, brandName, imageStyle } = params
 
   if (imageStyle) {
-    // imageStyle can be a string or an object from the ProvisionForm
     let styleStr: string
     if (typeof imageStyle === 'string') {
       styleStr = imageStyle
     } else {
-      // Build a descriptive prompt from the image style object fields
       const parts: string[] = []
       if (imageStyle.visual_style) parts.push(imageStyle.visual_style)
       if (imageStyle.mood_and_atmosphere) parts.push(`${imageStyle.mood_and_atmosphere} mood`)
@@ -62,52 +116,6 @@ export function buildHeroImagePrompt(params: {
   }
 
   return `Professional, clean hero banner image for a ${niche || 'lifestyle'} blog. Modern editorial style, warm and inviting, wide landscape format. No text, no logos, no watermarks. Suitable as a background image with text overlay.`
-}
-
-/**
- * Logo image generation via fal.ai (square format).
- */
-export async function generateLogoImage(prompt: string): Promise<string | null> {
-  const FAL_API_KEY = process.env.FAL_API_KEY
-  if (!FAL_API_KEY) {
-    console.warn('[IMAGE-GEN] FAL_API_KEY not set, skipping logo generation')
-    return null
-  }
-
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 60_000) // 60s timeout
-
-  try {
-    const response = await fetch('https://queue.fal.run/fal-ai/flux/schnell', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Key ${FAL_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt,
-        image_size: 'square',
-        num_images: 1,
-      }),
-      signal: controller.signal,
-    })
-
-    if (!response.ok) {
-      console.error('[IMAGE-GEN] fal.ai logo request failed:', response.status, await response.text().catch(() => ''))
-      return null
-    }
-
-    const data = await response.json()
-    return data.images?.[0]?.url || null
-  } catch (err: any) {
-    if (err.name === 'AbortError') {
-      console.error('[IMAGE-GEN] fal.ai logo request timed out after 60s')
-      return null
-    }
-    throw err
-  } finally {
-    clearTimeout(timeout)
-  }
 }
 
 export function buildLogoPrompt(brandName: string, niche?: string): string {
