@@ -1059,7 +1059,7 @@ export default function ProvisionForm() {
                         <label className="dc-toggle" style={{ marginTop: 8 }}>
                           <input type="checkbox" checked={manualDns}
                             onChange={(e) => setManualDns(e.target.checked)} />
-                          <span>I'll register this domain and configure DNS myself</span>
+                          <span>I&apos;ll register this domain and configure DNS myself</span>
                         </label>
                       )}
 
@@ -1786,7 +1786,7 @@ function LaunchSection({ displayName, setDisplayName, username, setUsername,
               <label className="dc-toggle" style={{ marginTop: 8 }}>
                 <input type="checkbox" checked={manualDns}
                   onChange={(e) => setManualDns(e.target.checked)} />
-                <span>I'll register this domain and configure DNS myself</span>
+                <span>I&apos;ll register this domain and configure DNS myself</span>
               </label>
             </div>
           )}
