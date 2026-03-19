@@ -9,7 +9,7 @@
 
 1. [Architecture Overview](#1-architecture-overview)
 2. [The Three-App System](#2-the-three-app-system)
-3. [Provisioning — The 9-Phase Flow](#3-provisioning--the-9-phase-flow)
+3. [Provisioning — The 10-Phase Flow](#3-provisioning--the-10-phase-flow)
 4. [Admin Provisioning UI](#4-admin-provisioning-ui)
 5. [Google Services Integration](#5-google-services-integration)
 6. [Domain Lifecycle](#6-domain-lifecycle)
@@ -51,12 +51,13 @@ Blog Cloner (this app — Next.js 14)
         ├─ Phase 1.5: Generate hero image via fal.ai (non-blocking)
         ├─ Phase 2: Create Google services (GA4 property, GTM container)
         ├─ Phase 3: Call Doubleclicker auto-onboard (content pipeline)
-        ├─ Phase 4: Purchase domain via Google Cloud Domains
-        ├─ Phase 5: Deploy new Fly.io app (Docker)
+        ├─ Phase 4: Deploy new Fly.io app (Docker)
+        ├─ Phase 5: Purchase domain via Google Cloud Domains
         ├─ Phase 6: Add custom domain + TLS certificate
         ├─ Phase 7: Add to Google Search Console + DNS verification token
         ├─ Phase 8: Auto-configure DNS records via Cloud DNS
-        └─ Phase 9: Email DNS records + log event
+        ├─ Phase 9: Email DNS records
+        └─ Phase 10: Log provisioning event
         │
         ▼
 New site live at: https://{username}-blog.fly.dev
@@ -106,12 +107,12 @@ Blog Cloner ──HTTP──▶ Doubleclicker ──shared DB──▶ Stitch
 
 ---
 
-## 3. Provisioning — The 9-Phase Flow
+## 3. Provisioning — The 10-Phase Flow
 
 **Endpoint:** `POST /api/provision`
 **Auth:** `Bearer {PROVISION_SECRET}`
 
-One API call provisions an entire site — brand data, Google services, content pipeline, domain purchase, Fly.io deployment, DNS configuration, and notification email.
+One API call provisions an entire site — brand data, Google services, content pipeline, Fly.io deployment, domain purchase, DNS configuration, and notification email.
 
 ### Input:
 
@@ -119,7 +120,7 @@ One API call provisions an entire site — brand data, Google services, content 
 {
   "username": "pure-glow-skincare",
   "display_name": "Pure Glow Skincare",
-  "contact_email": "owner@example.com",
+  "contact_email": "contact@purenaturalskincare.com",
   "niche": "natural skincare",
   "website_url": "https://pureglow.com",
   "domain": "purenaturalskincare.com",
@@ -204,7 +205,7 @@ Calls `POST {DOUBLECLICKER_API_URL}/api/strategy/auto-onboard`:
   "username": "pure-glow-skincare",
   "displayName": "Pure Glow Skincare",
   "websiteUrl": "https://pureglow.com",
-  "assignToEmail": "owner@example.com",
+  "assignToEmail": "stuartr@sewo.io",
   "productUrl": "https://amazon.com/natural-skincare",
   "niche": "natural skincare",
   "brand_blurb": "Clean beauty and natural skincare products",
@@ -237,18 +238,7 @@ Doubleclicker then orchestrates the full chain:
 
 Skipped if `skip_pipeline=true` or `DOUBLECLICKER_API_URL` not set.
 
-### Phase 4: Purchase domain via Google Cloud Domains (~5s)
-
-If `purchase_domain=true` and the domain was selected from suggestions:
-
-1. Calls `registrations:register` on the Cloud Domains API
-2. Domain contacts use `contact_email` with WHOIS privacy redaction
-3. Returns a long-running operation — domain becomes ACTIVE within 1-2 minutes
-4. Charges the billing account linked to the GCP project
-
-Skipped if `purchase_domain=false`, service account not configured, or missing price data.
-
-### Phase 5: Deploy to Fly.io (~30-60s)
+### Phase 4: Deploy to Fly.io (~30-60s)
 
 Creates a new Fly.io app and deploys the blog:
 
@@ -266,16 +256,27 @@ Creates a new Fly.io app and deploys the blog:
 NEXT_PUBLIC_BRAND_USERNAME=pure-glow-skincare
 NEXT_PUBLIC_SITE_URL=https://www.purenaturalskincare.com
 NEXT_PUBLIC_SITE_NAME=Pure Glow Skincare
-NEXT_PUBLIC_CONTACT_EMAIL=owner@example.com
+NEXT_PUBLIC_CONTACT_EMAIL=contact@purenaturalskincare.com
 NEXT_PUBLIC_GA_ID=G-XXXXXXX
 NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX
 ```
 
 Skipped if `skip_deploy=true` or `FLY_API_TOKEN` not set.
 
+### Phase 5: Purchase domain via Google Cloud Domains (~5s)
+
+If `purchase_domain=true` and the domain was selected from suggestions:
+
+1. Calls `registrations:register` on the Cloud Domains API
+2. Domain contacts always use `stuartr@sewo.io` (hardcoded) with WHOIS privacy redaction
+3. Returns a long-running operation — domain becomes ACTIVE within 1-2 minutes
+4. Charges the billing account linked to the GCP project
+
+Skipped if `purchase_domain=false`, service account not configured, or missing price data.
+
 ### Phase 6: Custom domain + TLS certificate (~5s)
 
-If a `domain` was provided and Phase 5 succeeded:
+If a `domain` was provided and Phase 4 succeeded:
 
 1. Request ACME certificate for `www.{domain}`
 2. Request ACME certificate for `{domain}` (apex)
@@ -315,11 +316,14 @@ If the domain registration hasn't completed yet (takes 1-2 min), this phase is m
 
 **Skipped** if the domain was not purchased via Cloud Domains (user brought their own domain → they need to set DNS at their registrar).
 
-### Phase 9: Email DNS records + log event (~3s)
+### Phase 9: Email DNS records (~2s)
 
 - Sends an HTML email via Resend with DNS records table and "Verify Domain" button
 - If DNS was auto-configured (Phase 8), the email serves as confirmation
 - If DNS was not auto-configured, the email tells the user what to set at their registrar
+
+### Phase 10: Log provisioning event (~1s)
+
 - Logs the full provisioning event to `analytics_events` table
 
 ### Response:
@@ -392,16 +396,29 @@ A step-by-step wizard for provisioning new blog sites. Supports two modes:
 
 ### Wizard Sections (sidebar navigation)
 
-| Section | Icon | Contents |
-| --- | --- | --- |
-| Brand Profile | `🏷️` | Niche, username, display name, website URL, brand voice, target market, blurb, seed keywords, author (name, bio, image, socials) |
-| Image Style | `🎨` | Imagineer settings (visual style, color palette, mood, composition, lighting, image type, subject guidelines, preferred/prohibited elements, AI prompt instructions), Stitch video toggle |
-| Products & Discovery | `📦` | Niche-based auto-discovery with approval checkboxes, manual product entry (name, URL, affiliate link, additional URLs, signal URLs) |
-| Deploy & Launch | `🚀` | Appearance (primary/accent colors, logo, niche-based palette suggestion), domain with Cloud Domains suggestions, Fly.io region, Google services toggles (GA4, GTM, GSC), domain purchase, skip_deploy/skip_pipeline toggles, contact email, Launch button |
+**Product-First Mode (6 steps):**
+
+| Step | Section | Icon | Contents |
+| --- | --- | --- | --- |
+| 1 | Product & Brand | `🏷️` | Website URL, AI brand setup, company name, username, niche, domain, contact email (auto-fills `contact@{domain}`), logo URL, blog API URL |
+| 2 | Author | `✍️` | Author name, image URL, page URL, bio, social profiles |
+| 3 | Voice & Content | `💬` | Brand voice, target market, brand blurb, seed keywords |
+| 4 | Image Style | `🎨` | Style name, visual style, color palette, mood, composition, lighting, subject guidelines, publishing provider (Custom API / Supabase Blog), video generation toggle |
+| 5 | Products | `📦` | Product name/URL, affiliate link, additional URLs, signal URLs |
+| 6 | Deploy | `🚀` | Primary/accent colors, Fly.io region, Google services toggles (GA4, GTM, GSC), domain purchase, skip options, Launch button |
+
+**Niche-First Mode (4 steps):**
+
+| Step | Section | Icon | Contents |
+| --- | --- | --- | --- |
+| 1 | Niche & Identity | `🔍` | Niche input, "Research Niche with AI" button, brand name, username, domain, contact email (auto-fills `contact@{domain}`), website URL |
+| 2 | Review & Refine | `✏️` | Auto-generated brand voice, target market, brand blurb, seed keywords, author name/bio |
+| 3 | Products | `📦` | Product discovery preview, add/select products |
+| 4 | Deploy | `🚀` | Same as product-first deploy step |
 
 ### Pipeline Phases Sidebar
 
-The sidebar shows real-time progress through all 9 provisioning phases with status indicators (pending, running, completed, failed, skipped).
+The sidebar shows real-time progress through all 10 provisioning phases with status indicators (pending, running, completed, failed, skipped).
 
 ### Domain Suggestions
 
@@ -548,10 +565,10 @@ Blog Cloner Admin UI
         ▼
 ┌─── Parallel Provisioning ───────────────────────────┐
 │                                                       │
-│  Site A ──▶ Full 9-phase provision ──▶ DC onboard    │
-│  Site B ──▶ Full 9-phase provision ──▶ DC onboard    │
-│  Site C ──▶ Full 9-phase provision ──▶ DC onboard    │
-│  Site D ──▶ Full 9-phase provision ──▶ DC onboard    │
+│  Site A ──▶ Full 10-phase provision ──▶ DC onboard    │
+│  Site B ──▶ Full 10-phase provision ──▶ DC onboard    │
+│  Site C ──▶ Full 10-phase provision ──▶ DC onboard    │
+│  Site D ──▶ Full 10-phase provision ──▶ DC onboard    │
 │                                                       │
 │  Each DC onboard receives network_partners payload    │
 │  so the article writer knows about sibling sites      │
@@ -908,7 +925,7 @@ Events tracked: `blog_view`, `blog_read_progress`, `blog_time_spent`, `cta_click
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| `POST` | `/api/provision` | Bearer token | Main provisioning endpoint (9 phases) |
+| `POST` | `/api/provision` | Bearer token | Main provisioning endpoint (10 phases) |
 | `GET` | `/api/provision/verify-domain` | None | Domain verification + TLS check |
 | `POST` | `/api/admin/domain-suggestions` | None | Search available domains via Cloud Domains |
 | `POST` | `/api/admin/dc-proxy` | None | Proxy to Doubleclicker API (enhance-brand, etc.) |
@@ -1030,7 +1047,7 @@ GOOGLE_TAG_MANAGER_ACCOUNT_ID=6325445642
 NEXT_PUBLIC_BRAND_USERNAME=pure-glow-skincare
 NEXT_PUBLIC_SITE_URL=https://www.purenaturalskincare.com
 NEXT_PUBLIC_SITE_NAME=Pure Glow Skincare
-NEXT_PUBLIC_CONTACT_EMAIL=owner@example.com
+NEXT_PUBLIC_CONTACT_EMAIL=contact@purenaturalskincare.com
 NEXT_PUBLIC_GA_ID=G-XXXXXXX
 NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX
 ```
@@ -1210,12 +1227,13 @@ Currently, provisioned sites keep their Docker image at deploy time. To update:
 | Phase 1.5: Hero image | ~3-5s | fal.ai generation (non-blocking on failure) |
 | Phase 2: Google services | ~3s | GA4 property + GTM container |
 | Phase 3: Trigger Doubleclicker | ~1s | Fire-and-forget HTTP call |
-| Phase 4: Domain purchase | ~5s | Cloud Domains registration (async completion) |
-| Phase 5: Deploy to Fly.io | ~30-60s | App create + secrets + IPs + machine |
+| Phase 4: Deploy to Fly.io | ~30-60s | App create + secrets + IPs + machine |
+| Phase 5: Domain purchase | ~5s | Cloud Domains registration (async completion) |
 | Phase 6: Domain + TLS | ~5s | Certificate request (issuance is async) |
 | Phase 7: Search Console | ~3s | Site verification token |
 | Phase 8: Auto DNS | ~3s | Cloud DNS record configuration |
-| Phase 9: Email + log | ~3s | Resend API + DB insert |
+| Phase 9: Email | ~2s | Resend API |
+| Phase 10: Log event | ~1s | DB insert to analytics_events |
 
 ### Content appearance:
 

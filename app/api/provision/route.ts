@@ -151,11 +151,13 @@ export async function POST(request: NextRequest) {
     setup_google_tag_manager = false,
     setup_search_console = false,
     purchase_domain = false,
+    manual_dns = false,
     domain_yearly_price,
     domain_notices,
     network_partners,
     publishing_provider,
     languages,
+    articles_per_day,
   } = body
 
   // Default publishing_provider to supabase_blog for new sites
@@ -433,6 +435,7 @@ export async function POST(request: NextRequest) {
       // (e.g. 'supabase_blog' for sites that read directly from the shared Supabase DB)
       onboardPayload.publishing_provider = resolved_publishing_provider
       if (Array.isArray(languages) && languages.length > 0) onboardPayload.languages = languages
+      if (articles_per_day) onboardPayload.articles_per_day = articles_per_day
 
       // Network partners for cross-linking
       if (Array.isArray(network_partners) && network_partners.length > 0) {
@@ -748,14 +751,21 @@ export async function POST(request: NextRequest) {
         </tr>`
       ).join('')
 
+      const emailTitle = manual_dns
+        ? 'Your DNS records are ready'
+        : 'Your new site is almost live!'
+      const emailSubtitle = manual_dns
+        ? `Register <strong>${domain}</strong> at your preferred registrar, then add these records:`
+        : `Add these DNS records at your domain registrar:`
+
       const htmlContent = `
         <!DOCTYPE html>
         <html>
-          <head><meta charset="utf-8"><title>DNS Setup Required</title></head>
+          <head><meta charset="utf-8"><title>${manual_dns ? 'DNS Records' : 'DNS Setup Required'}</title></head>
           <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
             <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
               <div style="text-align:center;margin-bottom:30px;">
-                <h1 style="color:#1e293b;font-size:24px;margin:0 0 8px;">Your new site is almost live!</h1>
+                <h1 style="color:#1e293b;font-size:24px;margin:0 0 8px;">${emailTitle}</h1>
                 <p style="color:#64748b;font-size:16px;margin:0;">${display_name} — ${domain}</p>
               </div>
 
@@ -766,7 +776,7 @@ export async function POST(request: NextRequest) {
                 </p>
 
                 <h2 style="color:#1e293b;font-size:18px;margin:0 0 12px;">To use your custom domain (${domain}):</h2>
-                <p style="color:#475569;font-size:14px;margin:0 0 16px;">Add these DNS records at your domain registrar:</p>
+                <p style="color:#475569;font-size:14px;margin:0 0 16px;">${emailSubtitle}</p>
 
                 <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
                   <thead>
@@ -799,7 +809,9 @@ export async function POST(request: NextRequest) {
       const { error: emailError } = await resend.emails.send({
         from: `Doubleclicker <${fromEmail}>`,
         to: [resolved_email],
-        subject: `Your new site is almost live — DNS setup for ${domain}`,
+        subject: manual_dns
+          ? `DNS records for ${domain} — configure at your registrar`
+          : `Your new site is almost live — DNS setup for ${domain}`,
         html: htmlContent,
       })
 

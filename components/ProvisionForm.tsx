@@ -191,10 +191,12 @@ export default function ProvisionForm() {
   /* ── translation ── */
   const [translationEnabled, setTranslationEnabled] = useState(false)
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
+  const [articlesPerDay, setArticlesPerDay] = useState(5)
 
   /* ── domain purchase ── */
   const [purchaseDomain, setPurchaseDomain] = useState(false)
   const [selectedDomainData, setSelectedDomainData] = useState<DomainSuggestion | null>(null)
+  const [manualDns, setManualDns] = useState(false)
 
   /* ── UI state ── */
   const [mode, setMode] = useState<ProvisionMode>(null)
@@ -585,7 +587,8 @@ export default function ProvisionForm() {
           setup_google_analytics: true,
           setup_google_tag_manager: true,
           setup_search_console: true,
-          purchase_domain: !!selectedDomainData,
+          purchase_domain: !!selectedDomainData && !manualDns,
+          manual_dns: manualDns,
           domain_yearly_price: selectedDomainData?.yearlyPrice || undefined,
           domain_notices: selectedDomainData?.domainNotices || undefined,
           product_url: productUrl.trim() || undefined,
@@ -596,6 +599,7 @@ export default function ProvisionForm() {
               : []),
           ].filter(p => p.name || p.url),
           languages: translationEnabled && selectedLanguages.length > 0 ? selectedLanguages : undefined,
+          articles_per_day: articlesPerDay,
         }),
       })
 
@@ -977,6 +981,7 @@ export default function ProvisionForm() {
                     stitchEnabled={stitchEnabled} setStitchEnabled={setStitchEnabled}
                     translationEnabled={translationEnabled} setTranslationEnabled={setTranslationEnabled}
                     selectedLanguages={selectedLanguages} setSelectedLanguages={setSelectedLanguages}
+                    articlesPerDay={articlesPerDay} setArticlesPerDay={setArticlesPerDay}
                     primaryColor={primaryColor} setPrimaryColor={setPrimaryColor}
                     accentColor={accentColor} setAccentColor={setAccentColor}
                     flyRegion={flyRegion} setFlyRegion={setFlyRegion}
@@ -985,6 +990,7 @@ export default function ProvisionForm() {
                     domainSuggestions={domainSuggestions} selectDomain={selectDomain}
                     selectedDomainData={selectedDomainData}
                     deriveUsername={deriveUsername}
+                    manualDns={manualDns} setManualDns={setManualDns}
                     showDomainSearch={true} showNiche={true} showColors={true}
                   />
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
@@ -1048,6 +1054,13 @@ export default function ProvisionForm() {
                             <span className="dc-selected-domain-price">${selectedDomainData.price}/{selectedDomainData.currency === 'USD' ? 'yr' : selectedDomainData.currency}</span>
                           )}
                         </div>
+                      )}
+                      {selectedDomainData && (
+                        <label className="dc-toggle" style={{ marginTop: 8 }}>
+                          <input type="checkbox" checked={manualDns}
+                            onChange={(e) => setManualDns(e.target.checked)} />
+                          <span>I'll register this domain and configure DNS myself</span>
+                        </label>
                       )}
 
                       <div className="dc-domain-suggest-row">
@@ -1170,6 +1183,7 @@ export default function ProvisionForm() {
                     stitchEnabled={stitchEnabled} setStitchEnabled={setStitchEnabled}
                     translationEnabled={translationEnabled} setTranslationEnabled={setTranslationEnabled}
                     selectedLanguages={selectedLanguages} setSelectedLanguages={setSelectedLanguages}
+                    articlesPerDay={articlesPerDay} setArticlesPerDay={setArticlesPerDay}
                     primaryColor={primaryColor} setPrimaryColor={setPrimaryColor}
                     accentColor={accentColor} setAccentColor={setAccentColor}
                     flyRegion={flyRegion} setFlyRegion={setFlyRegion}
@@ -1178,6 +1192,7 @@ export default function ProvisionForm() {
                     domainSuggestions={domainSuggestions} selectDomain={selectDomain}
                     selectedDomainData={selectedDomainData}
                     deriveUsername={deriveUsername}
+                    manualDns={manualDns} setManualDns={setManualDns}
                     showDomainSearch={false} showNiche={false} showColors={true}
                   />
                   <StepNav activeSection={activeSection} totalSections={activeSections.length}
@@ -1539,10 +1554,12 @@ function LaunchSection({ displayName, setDisplayName, username, setUsername,
   stitchEnabled, setStitchEnabled,
   translationEnabled, setTranslationEnabled,
   selectedLanguages, setSelectedLanguages,
+  articlesPerDay, setArticlesPerDay,
   primaryColor, setPrimaryColor, accentColor, setAccentColor,
   flyRegion, setFlyRegion, generateColorsFromNiche,
   suggestDomains, loadingDomains, domainSuggestions, selectDomain,
   selectedDomainData, deriveUsername,
+  manualDns, setManualDns,
   showDomainSearch, showNiche, showColors }: {
   displayName: string; setDisplayName: (v: string) => void
   username: string; setUsername: (v: string) => void
@@ -1560,6 +1577,7 @@ function LaunchSection({ displayName, setDisplayName, username, setUsername,
   stitchEnabled: boolean; setStitchEnabled: (v: boolean) => void
   translationEnabled: boolean; setTranslationEnabled: (v: boolean) => void
   selectedLanguages: string[]; setSelectedLanguages: React.Dispatch<React.SetStateAction<string[]>>
+  articlesPerDay: number; setArticlesPerDay: (v: number) => void
   primaryColor: string; setPrimaryColor: (v: string) => void
   accentColor: string; setAccentColor: (v: string) => void
   flyRegion: string; setFlyRegion: (v: string) => void
@@ -1568,6 +1586,7 @@ function LaunchSection({ displayName, setDisplayName, username, setUsername,
   domainSuggestions: DomainSuggestion[]; selectDomain: (d: string, s?: DomainSuggestion) => void
   selectedDomainData: DomainSuggestion | null
   deriveUsername: (name: string) => string
+  manualDns: boolean; setManualDns: (v: boolean) => void
   showDomainSearch: boolean; showNiche: boolean; showColors: boolean
 }) {
   return (
@@ -1761,10 +1780,29 @@ function LaunchSection({ displayName, setDisplayName, username, setUsername,
             <div className="dc-domain-purchase-info" style={{ marginTop: 12 }}>
               <div className="dc-domain-purchase-name">{selectedDomainData.domain}</div>
               <div className="dc-domain-purchase-price">
-                ${selectedDomainData.price}/{selectedDomainData.currency === 'USD' ? 'yr' : selectedDomainData.currency} — will be purchased automatically
+                ${selectedDomainData.price}/{selectedDomainData.currency === 'USD' ? 'yr' : selectedDomainData.currency}
+                {manualDns ? ' — DNS records will be provided after provisioning' : ' — will be purchased automatically'}
               </div>
+              <label className="dc-toggle" style={{ marginTop: 8 }}>
+                <input type="checkbox" checked={manualDns}
+                  onChange={(e) => setManualDns(e.target.checked)} />
+                <span>I'll register this domain and configure DNS myself</span>
+              </label>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Content Cadence */}
+      <div className="dc-card">
+        <div className="dc-card-header"><h3>Content Cadence</h3></div>
+        <div className="dc-card-body">
+          <div className="dc-field">
+            <label>Articles per Day</label>
+            <input type="number" min={1} max={20} value={articlesPerDay}
+              onChange={(e) => setArticlesPerDay(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} />
+            <span className="dc-hint">How many articles to schedule per day (default: 5).</span>
+          </div>
         </div>
       </div>
 

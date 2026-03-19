@@ -83,6 +83,7 @@ export default function NetworkForm() {
   /* ── translation ── */
   const [translationEnabled, setTranslationEnabled] = useState(false)
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
+  const [articlesPerDay, setArticlesPerDay] = useState(5)
 
   const LANGUAGE_OPTIONS = [
     { code: 'es', label: 'Spanish', flag: '🇪🇸' },
@@ -342,6 +343,7 @@ export default function NetworkForm() {
           setup_google_tag_manager: true,
           setup_search_console: true,
           languages: translationEnabled && selectedLanguages.length > 0 ? selectedLanguages : undefined,
+          articles_per_day: articlesPerDay,
         }),
       })
 
@@ -841,6 +843,19 @@ export default function NetworkForm() {
                       <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Cadence */}
+            <div className="dc-card">
+              <div className="dc-card-header"><h3>Content Cadence</h3></div>
+              <div className="dc-card-body">
+                <div className="dc-field">
+                  <label>Articles per Day (per site)</label>
+                  <input type="number" min={1} max={20} value={articlesPerDay}
+                    onChange={(e) => setArticlesPerDay(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} />
+                  <span className="dc-hint">How many articles to schedule per day for each site (default: 5).</span>
                 </div>
               </div>
             </div>

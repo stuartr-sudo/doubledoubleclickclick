@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       setup_google_tag_manager = true,
       setup_search_console = true,
       languages,
+      articles_per_day,
     } = body as {
       network_name: string
       seed_niche: string
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
       setup_google_tag_manager?: boolean
       setup_search_console?: boolean
       languages?: string[]
+      articles_per_day?: number
     }
 
     if (!network_name?.trim()) {
@@ -168,6 +170,7 @@ export async function POST(req: NextRequest) {
         if (Array.isArray(languages) && languages.length > 0) {
           provisionPayload.languages = languages
         }
+        if (articles_per_day) provisionPayload.articles_per_day = articles_per_day
 
         // Forward ALL brand data so DC gets full context from research phase
         if (member.brand_voice) provisionPayload.brand_voice_tone = member.brand_voice
