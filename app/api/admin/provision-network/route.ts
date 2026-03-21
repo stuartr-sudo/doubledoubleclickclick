@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
       articles_per_day?: number
     }
 
+    const theme = body.theme || 'editorial'
+
     if (!network_name?.trim()) {
       return NextResponse.json({ success: false, error: 'network_name is required' }, { status: 400 })
     }
@@ -203,6 +205,8 @@ export async function POST(req: NextRequest) {
         if (member.style_guide) provisionPayload.style_guide = member.style_guide
         if (member.approved_products) provisionPayload.approved_products = member.approved_products
         if (member.is_affiliate) provisionPayload.is_affiliate = true
+        // Theme is a network-level setting, same for all sites
+        provisionPayload.theme = theme
 
         const res = await fetch(`${baseUrl}/api/provision`, {
           method: 'POST',
