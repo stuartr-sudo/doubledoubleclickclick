@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { THEMES, type ThemeName } from '@/lib/themes'
 
 /* ───────── constants ───────── */
 const REGIONS = [
@@ -194,6 +195,7 @@ export default function ProvisionForm() {
   /* ── deploy ── */
   const [primaryColor, setPrimaryColor] = useState('#0F172A')
   const [accentColor, setAccentColor] = useState('#0066ff')
+  const [theme, setTheme] = useState<ThemeName>('editorial')
   const [flyRegion, setFlyRegion] = useState('syd')
   const [stitchEnabled, setStitchEnabled] = useState(false)
 
@@ -708,6 +710,7 @@ export default function ProvisionForm() {
           research_context: researchContext || undefined,
           primary_color: primaryColor || undefined,
           accent_color: accentColor || undefined,
+          theme: theme || undefined,
           logo_url: logoUrl.trim() || undefined,
           author_name: authorName.trim() || undefined,
           author_bio: authorBio.trim() || undefined,
@@ -985,6 +988,37 @@ export default function ProvisionForm() {
         {/* ══════════ MODE CHOOSER ══════════ */}
         {phase === 'form' && !mode && (
           <div className="dc-mode-chooser">
+            {/* Theme Selection */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>
+                Choose a style
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                {Object.values(THEMES).map((t) => (
+                  <button
+                    key={t.name}
+                    type="button"
+                    onClick={() => {
+                      setTheme(t.name)
+                      setPrimaryColor(t.variables['--color-accent'] || '')
+                      setAccentColor(t.variables['--color-bg-warm'] || '')
+                    }}
+                    style={{
+                      padding: '16px',
+                      border: theme === t.name ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      background: theme === t.name ? '#f0f0ff' : '#fff',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <strong style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>{t.label}</strong>
+                    <span style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4, display: 'block' }}>{t.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
             <p className="dc-mode-chooser-subtitle">What do you already have?</p>
             <div className="dc-mode-chooser-grid">
               <button type="button" className="dc-mode-card" onClick={() => setMode('brand')}>
