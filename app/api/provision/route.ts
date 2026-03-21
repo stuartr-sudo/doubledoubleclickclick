@@ -539,98 +539,14 @@ export async function POST(request: NextRequest) {
   // ─────────────────────────────────────────────────────────────
   // PHASE 2: Notify Doubleclicker to start content pipeline
   //
-  // Doubleclicker orchestrates the full chain:
-  //   create_workspace → auto_brand → save_brand → discover_products
-  //   → launch_pipeline (keywords, topical maps, content schedule)
-  //   → queue Stitch jobs (when stitch_enabled=true)
-  //
-  // Stitch polls stitch_queue every 15s and picks up jobs
-  // autonomously — no direct HTTP call needed.
-  //
-  // ALL research data must be forwarded here so DC has full context.
+  // Everything auto-onboard needs is already in the database.
+  // We only send { username } — DC reads all config from DB.
   // ─────────────────────────────────────────────────────────────
 
   const doubleclickerUrl = process.env.DOUBLECLICKER_API_URL
   if (!skip_pipeline && doubleclickerUrl) {
     try {
-      const onboardPayload: Record<string, unknown> = {
-        username,
-        displayName: display_name,
-        // Always assign to stuartr@sewo.io regardless of contact_email
-        assignToEmail: 'stuartr@sewo.io',
-      }
-
-      // Core identity
-      if (website_url) onboardPayload.websiteUrl = website_url
-      if (product_url) onboardPayload.productUrl = product_url
-      if (niche) onboardPayload.niche = niche
-
-      // In brand-first mode (no niche, has product), derive seed keywords
-      // from product name so Doubleclicker has topical direction
-      const productName = body.product_name || (Array.isArray(approved_products) && approved_products[0]?.name)
-      if (seed_keywords?.length) {
-        onboardPayload.seed_keywords = seed_keywords
-      } else if (productName && !niche) {
-        const derived = [productName, `${productName} review`, `best ${productName}`, `${display_name} ${productName}`].filter(Boolean)
-        onboardPayload.seed_keywords = derived
-      }
-
-      // Brand voice & content
-      if (blurb) onboardPayload.brand_blurb = blurb
-      if (target_market) onboardPayload.target_market = target_market
-      if (brand_voice_tone) onboardPayload.brand_voice = brand_voice_tone
-      if (body.image_style) onboardPayload.image_style = body.image_style
-      if (body.product_name) onboardPayload.product_name = body.product_name
-      if (body.research_context) onboardPayload.research_context = body.research_context
-
-      // Author data — DC needs this for content attribution
-      if (author_name) onboardPayload.author_name = author_name
-      if (author_bio) onboardPayload.author_bio = author_bio
-      if (author_image_url) onboardPayload.author_image_url = author_image_url
-      if (author_url) onboardPayload.author_url = author_url
-      if (author_social_urls) onboardPayload.author_social_urls = author_social_urls
-
-      // Visual identity — DC needs this for image generation prompts
-      if (logo_url) onboardPayload.logo_url = logo_url
-      if (primary_color) onboardPayload.primary_color = primary_color
-      if (accent_color) onboardPayload.accent_color = accent_color
-      if (heading_font) onboardPayload.heading_font = heading_font
-      if (body_font) onboardPayload.body_font = body_font
-
-      // Affiliate flag — controls content types (product pages, mimic signals, etc.)
-      onboardPayload.is_affiliate = is_affiliate
-      if (is_affiliate && affiliate_link) onboardPayload.affiliate_link = affiliate_link
-
-      // Pipeline control
-      if (stitch_enabled !== undefined) onboardPayload.stitch_enabled = stitch_enabled
-
-      // Publishing provider — tells Doubleclicker which CMS/platform to publish to
-      // (e.g. 'supabase_blog' for sites that read directly from the shared Supabase DB)
-      onboardPayload.publishing_provider = resolved_publishing_provider
-      if (Array.isArray(languages) && languages.length > 0) onboardPayload.languages = languages
-      if (articles_per_day) onboardPayload.articles_per_day = articles_per_day
-
-      // Network partners for cross-linking
-      if (Array.isArray(network_partners) && network_partners.length > 0) {
-        onboardPayload.network_partners = network_partners
-      }
-
-      // Pass approved products so Doubleclicker can create promoted_products
-      // records and scrape each URL into the RAG knowledge base.
-      if (Array.isArray(approved_products) && approved_products.length > 0) {
-        if (!product_url && approved_products[0]?.url) {
-          onboardPayload.productUrl = approved_products[0].url
-          onboardPayload.product_name = approved_products[0].name
-        }
-        onboardPayload.approved_products = approved_products
-        const additionalUrls = approved_products
-          .slice(product_url ? 0 : 1)
-          .map((p: { url?: string }) => p.url)
-          .filter(Boolean)
-        if (additionalUrls.length > 0) {
-          onboardPayload.additional_urls = additionalUrls
-        }
-      }
+      const onboardPayload = { username }
 
       // Self-healing: retry once with 30s timeout
       const onboardRes = await fetchWithRetry(
