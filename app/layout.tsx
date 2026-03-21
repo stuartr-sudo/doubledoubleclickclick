@@ -72,7 +72,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
@@ -80,8 +80,15 @@ export default function RootLayout({
   const config = getTenantConfig()
   const gtmId = config.gtmId
 
+  // Read theme for data-theme attribute on <html>
+  let themeName = 'editorial'
+  try {
+    const brand = await getBrandData()
+    themeName = brand.specs?.theme || 'editorial'
+  } catch {}
+
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} data-theme={themeName}>
       <head>
         <BrandStyles />
         {gtmId && (
