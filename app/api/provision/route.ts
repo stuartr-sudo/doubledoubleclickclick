@@ -139,8 +139,6 @@ export async function POST(request: NextRequest) {
     author_image_url,
     author_url,
     author_social_urls,
-    product_url,
-    approved_products,
     seed_keywords,
     niche,
     stitch_enabled,
@@ -160,9 +158,7 @@ export async function POST(request: NextRequest) {
     endpoint_url,
     articles_per_day,
     discover_products,
-    is_affiliate = false,
     theme = 'editorial',
-    affiliate_link,
     ica_profile,       // optional — detailed ICA from brand guide upload
     style_guide,       // optional — visual style from brand guide upload
     research_context,  // optional — synthesized research from brand guide upload
