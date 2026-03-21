@@ -37,7 +37,11 @@ export default async function BrandStyles() {
   const varEntries = Object.entries(mergedVars)
     .map(([k, v]) => `${k}: ${v};`)
     .join(' ')
-  const css = `:root { ${varEntries} }\n${specs.custom_css || ''}`
+  // Use html[data-theme] selector for higher specificity than globals.css :root
+  const themeSel = specs.theme && specs.theme !== 'editorial'
+    ? `html[data-theme="${specs.theme}"]`
+    : ':root'
+  const css = `${themeSel} { ${varEntries} }\n${specs.custom_css || ''}`
 
   return (
     <>
