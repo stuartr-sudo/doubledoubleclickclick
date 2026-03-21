@@ -31,6 +31,11 @@ interface NetworkMember {
   author_image_url?: string
   author_url?: string
   author_social_urls?: Record<string, string>
+  // Brand guide upload fields
+  ica_profile?: Record<string, any>
+  style_guide?: Record<string, any>
+  approved_products?: Array<Record<string, any>>
+  is_affiliate?: boolean
 }
 
 /**
@@ -193,6 +198,11 @@ export async function POST(req: NextRequest) {
         if (member.author_image_url) provisionPayload.author_image_url = member.author_image_url
         if (member.author_url) provisionPayload.author_url = member.author_url
         if (member.author_social_urls) provisionPayload.author_social_urls = member.author_social_urls
+        // Brand guide upload fields — forward to /api/provision
+        if (member.ica_profile) provisionPayload.ica_profile = member.ica_profile
+        if (member.style_guide) provisionPayload.style_guide = member.style_guide
+        if (member.approved_products) provisionPayload.approved_products = member.approved_products
+        if (member.is_affiliate) provisionPayload.is_affiliate = true
 
         const res = await fetch(`${baseUrl}/api/provision`, {
           method: 'POST',
