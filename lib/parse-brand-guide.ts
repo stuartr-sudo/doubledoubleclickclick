@@ -18,7 +18,7 @@ export async function parsePdfToMarkdown(
 
   // Step 1: Upload file
   const formData = new FormData()
-  const blob = new Blob([fileBuffer], { type: 'application/pdf' })
+  const blob = new Blob([new Uint8Array(fileBuffer)], { type: 'application/pdf' })
   formData.append('upload_file', blob, filename)
 
   const uploadRes = await fetch(`${LLAMA_BASE}/files`, {
