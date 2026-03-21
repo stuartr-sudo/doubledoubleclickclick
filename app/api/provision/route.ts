@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
     languages,
     articles_per_day,
     is_affiliate = false,
+    theme = 'editorial',
     affiliate_link,
     ica_profile,       // optional — detailed ICA from brand guide upload
     style_guide,       // optional — visual style from brand guide upload
@@ -262,6 +263,7 @@ export async function POST(request: NextRequest) {
       logo_url: logo_url || null,
       heading_font: heading_font || null,
       body_font: body_font || null,
+      theme: theme,
     }
 
     const specsResult = await dbUpsert(
