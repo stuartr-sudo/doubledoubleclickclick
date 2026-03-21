@@ -164,6 +164,9 @@ export async function POST(request: NextRequest) {
     ica_profile,       // optional — detailed ICA from brand guide upload
     style_guide,       // optional — visual style from brand guide upload
     research_context,  // optional — synthesized research from brand guide upload
+    preferred_elements,
+    prohibited_elements,
+    ai_instructions_override,
   } = body
 
   // Default publishing_provider to supabase_blog for new sites
@@ -242,6 +245,12 @@ export async function POST(request: NextRequest) {
     author_image_url: author_image_url || null,
     author_url: author_url || null,
     author_social_urls: author_social_urls || null,
+    seed_keywords: seed_keywords || null,
+    niche: niche || null,
+    preferred_elements: preferred_elements || null,
+    prohibited_elements: prohibited_elements || null,
+    ai_instructions_override: ai_instructions_override || null,
+    logo_url: logo_url || null,
   }
 
   const guidelinesResult = await dbUpsert(
