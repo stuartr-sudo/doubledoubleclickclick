@@ -35,7 +35,7 @@ export default function CategoryPills({
           return (
             <Link
               key={cat}
-              href={`/blog/category/${encodeURIComponent(cat.toLowerCase())}`}
+              href={`/blog?category=${encodeURIComponent(cat)}`}
               style={{
                 display: 'inline-block',
                 padding: '4px 12px',
