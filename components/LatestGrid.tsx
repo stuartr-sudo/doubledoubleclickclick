@@ -134,6 +134,19 @@ export default function LatestGrid({ posts }: LatestGridProps) {
       </section>
 
       <style>{`
+        @media (max-width: 1024px) and (min-width: 769px) {
+          .latest-grid-cols {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .latest-grid-cols > a:nth-child(2) {
+            border-right: none !important;
+          }
+          .latest-grid-cols > a:nth-child(3) {
+            padding-left: 0 !important;
+            padding-top: 16px;
+            border-top: 1px solid var(--color-border-light);
+          }
+        }
         @media (max-width: 768px) {
           .latest-grid-cols {
             grid-template-columns: 1fr !important;

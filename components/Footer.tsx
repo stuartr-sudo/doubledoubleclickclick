@@ -55,6 +55,12 @@ export default async function Footer() {
           grid-template-columns: 1.5fr 1fr 1fr 1fr;
           gap: 40px;
         }
+        @media (max-width: 1024px) and (min-width: 768px) {
+          .footer-grid-editorial {
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+          }
+        }
         @media (max-width: 767px) {
           .footer-grid-editorial {
             grid-template-columns: 1fr;

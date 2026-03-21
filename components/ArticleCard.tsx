@@ -17,6 +17,7 @@ interface ArticleCardProps {
 
 export default function ArticleCard({ post }: ArticleCardProps) {
   return (
+    <>
     <Link
       href={`/blog/${post.slug}`}
       style={{
@@ -30,6 +31,7 @@ export default function ArticleCard({ post }: ArticleCardProps) {
     >
       {post.featured_image && (
         <div
+          className="article-card-thumb"
           style={{
             width: 140,
             height: 93,
@@ -143,5 +145,15 @@ export default function ArticleCard({ post }: ArticleCardProps) {
         </div>
       </div>
     </Link>
+
+    <style>{`
+      @media (max-width: 768px) {
+        .article-card-thumb {
+          width: 100px !important;
+          height: 67px !important;
+        }
+      }
+    `}</style>
+    </>
   )
 }

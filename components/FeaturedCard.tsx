@@ -18,8 +18,10 @@ interface FeaturedCardProps {
 
 export default function FeaturedCard({ post }: FeaturedCardProps) {
   return (
+    <>
     <Link
       href={`/blog/${post.slug}`}
+      className="featured-card-grid"
       style={{
         display: 'grid',
         gridTemplateColumns: '1.4fr 1fr',
@@ -126,5 +128,15 @@ export default function FeaturedCard({ post }: FeaturedCardProps) {
         />
       </div>
     </Link>
+
+    <style>{`
+      @media (max-width: 768px) {
+        .featured-card-grid {
+          grid-template-columns: 1fr !important;
+          gap: 12px !important;
+        }
+      }
+    `}</style>
+    </>
   )
 }

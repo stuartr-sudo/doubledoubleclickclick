@@ -120,6 +120,7 @@ export default function NewsletterBanner({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            className="newsletter-banner-input"
             style={{
               padding: '8px 12px',
               fontSize: '12px',
@@ -130,6 +131,7 @@ export default function NewsletterBanner({
               color: 'var(--color-text)',
               outline: 'none',
               width: '200px',
+              minWidth: 0,
             }}
           />
           <button
@@ -153,6 +155,15 @@ export default function NewsletterBanner({
           </button>
         </form>
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .newsletter-banner-input {
+            width: 100% !important;
+            flex: 1 1 auto !important;
+          }
+        }
+      `}</style>
 
       {status === 'error' && (
         <p
