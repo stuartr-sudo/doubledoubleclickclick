@@ -14,7 +14,7 @@ interface Product {
   is_affiliate?: boolean
 }
 
-async function getSpotlightProducts(): Promise<Product[]> {
+async function getSpotlightProducts(limit = 1, offset = 0): Promise<Product[]> {
   const config = getTenantConfig()
   if (!config.username) return []
 
@@ -25,13 +25,15 @@ async function getSpotlightProducts(): Promise<Product[]> {
     .eq('user_name', config.username)
     .eq('status', 'active')
     .order('discovery_score', { ascending: false })
-    .limit(2)
+    .range(offset, offset + limit - 1)
 
   return (data || []) as Product[]
 }
 
-export default async function ProductSpotlight() {
-  const products = await getSpotlightProducts()
+export { getSpotlightProducts }
+
+export default async function ProductSpotlight({ limit = 1, offset = 0 }: { limit?: number; offset?: number } = {}) {
+  const products = await getSpotlightProducts(limit, offset)
   if (products.length === 0) return null
 
   return (

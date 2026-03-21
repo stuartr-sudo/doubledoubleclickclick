@@ -5,6 +5,7 @@ import HomeHero from '@/components/HomeHero'
 import LatestGrid from '@/components/LatestGrid'
 import NewsletterBanner from '@/components/NewsletterBanner'
 import MoreStories from '@/components/MoreStories'
+import ProductSpotlight from '@/components/ProductSpotlight'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -49,6 +50,11 @@ export default async function HomePage() {
 
         {/* Latest: 3-column grid */}
         <LatestGrid posts={posts.slice(4, 7)} />
+
+        {/* Featured Product — full-width banner style */}
+        <div style={{ marginBottom: '24px' }}>
+          <ProductSpotlight limit={1} offset={1} />
+        </div>
 
         {/* Newsletter Banner */}
         <div style={{ marginBottom: '24px' }}>
