@@ -155,7 +155,6 @@ export async function POST(request: NextRequest) {
     network_partners,
     publishing_provider,
     languages,
-    endpoint_url,
     articles_per_day,
     discover_products,
     theme = 'editorial',
@@ -332,8 +331,6 @@ export async function POST(request: NextRequest) {
     author_url: author_url || `${siteUrlForCreds}/about`,
     author_social_urls: author_social_urls || null,
     site_domain: domain || null,
-    base_url: siteUrlForCreds,
-    endpoint_url: endpoint_url || null,
     config: {
       blog_username: username,
       translation_enabled: Array.isArray(languages) && languages.length > 1,
