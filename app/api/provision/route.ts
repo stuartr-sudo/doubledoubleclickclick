@@ -160,6 +160,8 @@ export async function POST(request: NextRequest) {
     articles_per_day,
     is_affiliate = false,
     affiliate_link,
+    ica_profile,       // optional — detailed ICA from brand guide upload
+    style_guide,       // optional — visual style from brand guide upload
   } = body
 
   // Default publishing_provider to supabase_blog for new sites
@@ -307,6 +309,73 @@ export async function POST(request: NextRequest) {
   )
   results.integration_credentials = credResult.data
   if (credResult.warning) warnings.push(credResult.warning)
+
+  // ── Phase 1: Seed target_market table (detailed ICA for outline writer) ──
+  if (ica_profile) {
+    const ica = ica_profile
+    const tmPayload: Record<string, any> = {
+      username: username,
+      target_market_name: ica.persona_name || target_market || display_name,
+      description: target_market || null,
+      age: ica.age_range || null,
+      income_level: ica.income || null,
+      occupation: ica.occupation || null,
+      location: ica.location || null,
+      lifestyle: ica.lifestyle || null,
+      hobbies_and_interests: ica.hobbies_and_interests || null,
+      values: ica.values || null,
+      challenges: ica.challenges || null,
+      pain_points: Array.isArray(ica.pain_points) ? ica.pain_points.join('; ') : ica.pain_points || null,
+      goals: Array.isArray(ica.goals) ? ica.goals.join('; ') : ica.goals || null,
+      motivations: Array.isArray(ica.motivations) ? ica.motivations.join('; ') : ica.motivations || null,
+      buying_behavior: ica.buying_behavior || null,
+      preferred_channels: Array.isArray(ica.preferred_channels) ? ica.preferred_channels.join('; ') : ica.preferred_channels || null,
+      tech_savviness: ica.tech_savviness || null,
+    }
+    // INSERT (not upsert) — target_market allows multiple rows per username
+    const { error: tmErr } = await supabase.from('target_market').insert(tmPayload)
+    if (tmErr) {
+      console.warn('[PROVISION] target_market insert failed:', tmErr.message)
+      warnings.push('target_market: ' + tmErr.message)
+    }
+  }
+
+  // ── Phase 1: Seed brand_image_styles (for Imagineer flash workflow) ──
+  if (style_guide) {
+    const sg = style_guide
+    const bisPayload = {
+      name: 'Default Style',
+      user_name: username,
+      visual_style: sg.visual_mood || sg.imagery_style || null,
+      color_palette: [sg.primary_color, sg.accent_color].filter(Boolean).join(', ') || null,
+      mood_and_atmosphere: sg.visual_mood || null,
+      composition_style: sg.composition_style || null,
+      lighting_preferences: sg.lighting_preferences || null,
+      image_type_preferences: sg.imagery_style || null,
+      subject_guidelines: sg.subject_guidelines || null,
+      prohibited_elements: sg.prohibited_elements || null,
+      preferred_elements: sg.preferred_elements || null,
+      ai_prompt_instructions: sg.ai_prompt_instructions || null,
+    }
+    // Unique constraint on (name, user_name) — use select-first pattern
+    const { data: existingBis } = await supabase
+      .from('brand_image_styles')
+      .select('id')
+      .eq('user_name', username)
+      .eq('name', 'Default Style')
+      .limit(1)
+      .maybeSingle()
+
+    if (existingBis) {
+      await supabase.from('brand_image_styles').update(bisPayload).eq('id', existingBis.id)
+    } else {
+      const { error: bisErr } = await supabase.from('brand_image_styles').insert(bisPayload)
+      if (bisErr) {
+        console.warn('[PROVISION] brand_image_styles insert failed:', bisErr.message)
+        warnings.push('brand_image_styles: ' + bisErr.message)
+      }
+    }
+  }
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 1.1: Create publishing_settings in app_settings
