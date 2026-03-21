@@ -348,3 +348,49 @@ The redesign uses neutral warm tones as the default palette. Per-tenant brand co
 - Brand logo replaces text masthead when available
 
 The broadsheet structure (ruled lines, grid layout, typography scale) remains constant — only colors and fonts flex per brand.
+
+---
+
+## Technical Integrations (Preserve)
+
+The following technical integrations are configured during the blog cloning/provision process and must be preserved through the redesign. These are not being redesigned — they must continue to work exactly as they do today.
+
+### Google Analytics 4 (GA4)
+- Measurement ID (`GA_ID` / `G-XXXXXXX`) injected as env var during Fly deployment
+- `Analytics.tsx` component in root layout — must remain in the redesigned layout
+- Tracks page views, scroll depth, and engagement metrics
+
+### Google Tag Manager (GTM)
+- Container ID (`GTM_ID` / `GTM-XXXXXXX`) injected as env var during Fly deployment
+- GTM script injected in root layout `<head>` and `<noscript>` body
+- Must remain in the redesigned layout — handles all third-party tag injection
+
+### Google Search Console (GSC)
+- DNS-TXT verified during provisioning — no frontend component needed
+- Structured data (Schema.org) is critical for GSC indexing — see below
+
+### Structured Data (Schema.org)
+- `StructuredData.tsx` component generates JSON-LD for articles, organization, breadcrumbs
+- Must be preserved and updated to match new breadcrumb structure
+- Article structured data: headline, author, datePublished, dateModified, image, publisher
+- BreadcrumbList structured data: must match the new breadcrumb navigation component
+
+### Cookie Consent
+- `CookieConsent.tsx` component — must remain in the redesigned layout
+- Required for GDPR/privacy compliance with GA4 and GTM
+
+### Blog Tracker
+- `BlogTracker.tsx` — tracks article reads and engagement
+- Must remain functional on the redesigned article page
+
+### SEO Meta Tags
+- `app_settings` table stores publishing settings (schema.org metadata) per tenant
+- Meta tags (title, description, og:image, canonical) generated per page
+- The redesign must maintain all existing meta tag generation
+
+### Environment Variables (No Changes)
+These env vars are set during provision and read at runtime. The redesign does not change how they are consumed:
+- `NEXT_PUBLIC_BRAND_USERNAME` / `BRAND_USERNAME`
+- `GA_ID`, `GTM_ID`
+- `SITE_URL`, `SITE_NAME`, `CONTACT_EMAIL`
+- `LANGUAGES` (multi-language support)
