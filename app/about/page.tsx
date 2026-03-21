@@ -1,139 +1,142 @@
-import Link from 'next/link'
-import Image from 'next/image'
-import SiteHeader from '@/components/SiteHeader'
+import type { Metadata } from 'next'
 import { getTenantConfig } from '@/lib/tenant'
 import { getBrandData } from '@/lib/brand'
-import { getPublishedPosts } from '@/lib/posts'
 import { createServiceClient } from '@/lib/supabase/service'
+import WriterCard from '@/components/WriterCard'
+import AboutNewsletter from './AboutNewsletter'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+export async function generateMetadata(): Promise<Metadata> {
+  const config = getTenantConfig()
+  return {
+    title: `About | ${config.siteName}`,
+    description: `Learn more about ${config.siteName} and our team.`,
+  }
+}
 
 export default async function AboutPage() {
   const config = getTenantConfig()
   const brand = await getBrandData()
   const brandName = brand.guidelines?.name || config.siteName
 
-  // Fetch author from Doubleclicker's multi-tenant authors table
+  // Fetch mission text from company_information
+  const missionText =
+    brand.company?.blurb ||
+    'We bring you evidence-based insights, practical guidance, and expert perspectives to help you make informed decisions.'
+
+  // Fetch all authors for this tenant
   const supabase = createServiceClient()
-  const { data: author } = await supabase
+  const { data: authors } = await supabase
     .from('authors')
-    .select('name, bio, profile_image_url, social_links')
+    .select('name, bio, profile_image_url, slug')
     .eq('user_name', config.username)
-    .limit(1)
-    .single()
-
-  // Fallback to brand_guidelines author data
-  const authorName = author?.name || brand.guidelines?.default_author || brandName
-  const authorBio = author?.bio || brand.guidelines?.author_bio || ''
-  const authorImage = author?.profile_image_url || brand.guidelines?.author_image_url || ''
-  const authorSocials = author?.social_links || brand.guidelines?.author_social_urls || {}
-  const linkedinUrl = authorSocials?.linkedin || authorSocials?.LinkedIn || ''
-
-  const posts = await getPublishedPosts(6)
 
   return (
-    <>
-      <SiteHeader logoText={brandName} logoImage={brand.specs?.logo_url || undefined} />
-      <main>
-        <section className="about-hero">
-          <div className="container">
-            <h1 className="about-title">About Us</h1>
-            {brand.company?.blurb && (
-              <p className="about-subtitle">{brand.company.blurb}</p>
-            )}
-          </div>
-        </section>
+    <main>
+      {/* Page Header */}
+      <header
+        style={{
+          padding: '32px 32px 24px',
+          borderBottom: '1px solid var(--color-border)',
+          maxWidth: '680px',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: '9px',
+            textTransform: 'uppercase',
+            letterSpacing: '1.5px',
+            color: 'var(--color-accent)',
+            marginBottom: '8px',
+          }}
+        >
+          About
+        </div>
+        <h1
+          style={{
+            fontFamily: 'var(--font-heading)',
+            fontSize: '24px',
+            fontWeight: 700,
+            color: 'var(--color-text)',
+            margin: 0,
+            lineHeight: 1.2,
+          }}
+        >
+          Our Mission
+        </h1>
+        <p
+          style={{
+            fontFamily: 'var(--font-heading)',
+            fontSize: '13px',
+            color: 'var(--color-text-secondary)',
+            lineHeight: 1.6,
+            margin: '12px 0 0',
+            maxWidth: '520px',
+          }}
+        >
+          {brandName} — built on evidence, driven by curiosity.
+        </p>
+      </header>
 
-        {(brand.guidelines?.brand_personality || brand.guidelines?.voice_and_tone) && (
-          <section className="about-content">
-            <div className="container">
-              <div className="about-text-grid">
-                <div className="about-text-main">
-                  <h2>Our Mission</h2>
-                  <p>{brand.guidelines?.brand_personality || brand.guidelines?.voice_and_tone}</p>
-                </div>
-              </div>
+      {/* Body Content */}
+      <div
+        style={{
+          maxWidth: '560px',
+          padding: '20px 32px 40px',
+        }}
+      >
+        {/* Mission Paragraphs */}
+        <div
+          style={{
+            fontFamily: 'var(--font-heading)',
+            fontSize: '13px',
+            color: '#333',
+            lineHeight: 1.75,
+          }}
+        >
+          <p style={{ margin: '0 0 16px' }}>{missionText}</p>
+          {brand.guidelines?.brand_personality && (
+            <p style={{ margin: '0 0 16px' }}>{brand.guidelines.brand_personality}</p>
+          )}
+        </div>
+
+        {/* Our Writers Section */}
+        {authors && authors.length > 0 && (
+          <section style={{ marginTop: '40px' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '9px',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                color: 'var(--color-text-muted)',
+                paddingBottom: '8px',
+                borderBottom: '1px solid var(--color-border)',
+                marginBottom: '4px',
+              }}
+            >
+              Our Writers
             </div>
+            {authors.map((author, i) => (
+              <WriterCard
+                key={author.slug || i}
+                name={author.name}
+                role="Writer"
+                bio={author.bio || undefined}
+                imageUrl={author.profile_image_url || undefined}
+              />
+            ))}
           </section>
         )}
 
-        {/* Founder Section */}
-        {authorName && (
-          <section className="founder-section">
-            <div className="container">
-              <h2 className="section-title">Meet the Founder</h2>
-
-              <div className="founder-hero">
-                <div className="founder-avatar">
-                  {authorImage ? (
-                    <Image
-                      src={authorImage}
-                      alt={authorName}
-                      width={150}
-                      height={150}
-                      style={{ objectFit: 'cover', borderRadius: '999px' }}
-                    />
-                  ) : (
-                    <div className="founder-avatar-fallback">{authorName.slice(0, 1).toUpperCase()}</div>
-                  )}
-                </div>
-                <div className="founder-info">
-                  <h3 className="founder-name">{authorName}</h3>
-                  <p className="founder-role">Founder</p>
-                  {authorBio && <p className="founder-bio">{authorBio}</p>}
-                  <div className="founder-links">
-                    {linkedinUrl && (
-                      <a className="btn btn-secondary" href={linkedinUrl} target="_blank" rel="noreferrer">
-                        LinkedIn
-                      </a>
-                    )}
-                    <Link className="btn btn-secondary" href="/blog">View all posts</Link>
-                  </div>
-                </div>
-              </div>
-
-              {posts.length > 0 && (
-                <div className="founder-posts">
-                  <h3 className="founder-posts-title">Recent Posts</h3>
-                  <div className="blog-grid">
-                    {posts.map((post) => (
-                      <Link key={post.id} href={`/blog/${post.slug || post.id}`} className="blog-card">
-                        {post.featured_image && (
-                          <div className="blog-card-image">
-                            <Image
-                              src={post.featured_image}
-                              alt={post.title}
-                              width={600}
-                              height={340}
-                              style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                            />
-                          </div>
-                        )}
-                        <div className="blog-card-content">
-                          <div className="blog-card-meta">
-                            <span className="blog-card-date">
-                              {new Date(post.published_date || post.created_date || '').toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })}
-                            </span>
-                          </div>
-                          <h4 className="blog-card-title">{post.title}</h4>
-                          {(post.meta_description || post.excerpt) && (
-                            <p className="blog-card-excerpt">{post.meta_description || post.excerpt}</p>
-                          )}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-      </main>
-    </>
+        {/* Newsletter CTA */}
+        <div style={{ marginTop: '40px' }}>
+          <AboutNewsletter username={config.username} />
+        </div>
+      </div>
+    </main>
   )
 }
