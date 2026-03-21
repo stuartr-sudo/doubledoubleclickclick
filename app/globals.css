@@ -8487,6 +8487,25 @@ body:has(.dc-layout) > header {
   }
 }
 
+/* --- Hero Banner (Blog Post CTA variant) --- */
+.hero-banner-blog-cta {
+  min-height: 35vh;
+  margin-top: var(--spacing-2xl);
+}
+.hero-banner-blog-cta .hero-banner-title {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+}
+.hero-banner-blog-cta .hero-banner-tagline {
+  font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+  max-width: 600px;
+}
+
+@media (max-width: 768px) {
+  .hero-banner-blog-cta {
+    min-height: 28vh;
+  }
+}
+
 /* --- Inline Newsletter Bar --- */
 .inline-newsletter-bar {
   padding: var(--spacing-lg) 0;

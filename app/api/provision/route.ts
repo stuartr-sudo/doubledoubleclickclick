@@ -162,6 +162,7 @@ export async function POST(request: NextRequest) {
     affiliate_link,
     ica_profile,       // optional — detailed ICA from brand guide upload
     style_guide,       // optional — visual style from brand guide upload
+    research_context,  // optional — synthesized research from brand guide upload
   } = body
 
   // Default publishing_provider to supabase_blog for new sites
@@ -215,13 +216,26 @@ export async function POST(request: NextRequest) {
   // ─────────────────────────────────────────────────────────────
 
   // 1. brand_guidelines (uses `user_name` column)
+  // Build content_style_rules from research_context if available
+  const contentStyleRules = research_context
+    ? [
+        research_context.content_pillars?.length ? `Content pillars: ${research_context.content_pillars.join(', ')}` : '',
+        research_context.keyword_themes?.length ? `Keyword themes: ${research_context.keyword_themes.map((t: any) => t.theme || t).join(', ')}` : '',
+        research_context.unique_angles?.length ? `Unique angles: ${research_context.unique_angles.join(', ')}` : '',
+        brand_voice_tone ? `Voice: ${brand_voice_tone}` : '',
+      ].filter(Boolean).join('. ')
+    : null
+
   const guidelinesPayload = {
     user_name: username,
     name: display_name,
+    company_name: display_name,
     website_url: website_url || null,
     voice_and_tone: brand_voice_tone || null,
     brand_personality: brand_voice_tone || null,
     target_market: target_market || null,
+    content_style_rules: contentStyleRules,
+    stitch_enabled: stitch_enabled ?? true,
     default_author: author_name || display_name,
     author_bio: author_bio || null,
     author_image_url: author_image_url || null,
@@ -263,10 +277,13 @@ export async function POST(request: NextRequest) {
   // 3. company_information (uses `username` column — NOT `user_name`)
   const companyPayload = {
     username: username,
+    brand_name: display_name,
     client_website: website_url || null,
     email: resolved_email,
     blurb: blurb || null,
     target_market: target_market || null,
+    brand_voice: brand_voice_tone || null,
+    brand_voice_tone: brand_voice_tone || null,
   }
 
   const companyResult = await dbUpsert(
@@ -295,12 +312,18 @@ export async function POST(request: NextRequest) {
   if (authorResult.warning) warnings.push(authorResult.warning)
 
   // 5. integration_credentials — tells doubleclicker where to publish
+  const siteUrlForCreds = domain ? `https://www.${domain}` : website_url || `https://${username}-blog.fly.dev`
   const credentialsPayload = {
     user_name: username,
+    name: display_name,
     provider: resolved_publishing_provider,
     author_name: author_name || display_name,
     author_bio: author_bio || `Author at ${display_name}`,
     author_image_url: author_image_url || null,
+    author_url: author_url || `${siteUrlForCreds}/about`,
+    author_social_urls: author_social_urls || null,
+    site_domain: domain || null,
+    base_url: siteUrlForCreds,
   }
 
   const credResult = await dbUpsert(
@@ -315,6 +338,7 @@ export async function POST(request: NextRequest) {
     const ica = ica_profile
     const tmPayload: Record<string, any> = {
       username: username,
+      name: ica.persona_name || target_market || display_name,
       target_market_name: ica.persona_name || target_market || display_name,
       description: target_market || null,
       age: ica.age_range || null,

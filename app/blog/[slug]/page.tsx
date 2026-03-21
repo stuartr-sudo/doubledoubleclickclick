@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import BlogCarousel from '@/components/BlogCarousel'
 import BlogTracker from '@/components/BlogTracker'
-import ContactForm from '@/components/ContactForm'
+// ContactForm removed — replaced by hero CTA banner
 import ArticleReactions from '@/components/ArticleReactions'
 import ArticleComments from '@/components/ArticleComments'
 import RelatedPosts from '@/components/RelatedPosts'
@@ -224,7 +224,27 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           <BlogCarousel posts={carouselPosts} title="More Posts" />
         )}
 
-        <ContactForm />
+        {/* Hero CTA Banner — mirrors homepage hero */}
+        <section className="hero-banner-section hero-banner-blog-cta">
+          {brand.specs?.hero_image_url && (
+            <Image
+              src={brand.specs.hero_image_url}
+              alt={brandName}
+              fill
+              sizes="100vw"
+              style={{ objectFit: 'cover' }}
+              className="hero-banner-bg"
+            />
+          )}
+          <div className="hero-banner-overlay" />
+          <div className="container hero-banner-content">
+            <h2 className="hero-banner-title">{brandName}</h2>
+            {brand.company?.blurb && <p className="hero-banner-tagline">{brand.company.blurb}</p>}
+            <Link href="/" className="btn btn-hero-cta">
+              Learn More
+            </Link>
+          </div>
+        </section>
       </main>
     </>
   )
