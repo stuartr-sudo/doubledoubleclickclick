@@ -27,16 +27,14 @@ export default function RelatedPosts({ currentPostId, category }: RelatedPostsPr
   useEffect(() => {
     async function fetchRelated() {
       try {
-        // Fetch posts from same category
         const res = await fetch(`/api/blog?status=published&limit=4&category=${encodeURIComponent(category)}`);
         const data = await res.json();
-        
+
         if (data.success && data.data) {
-          // Filter out the current post and limit to 3
           const filtered = data.data
             .filter((p: BlogPost) => p.id !== currentPostId)
             .slice(0, 3);
-          
+
           setPosts(filtered);
         }
       } catch (error) {
@@ -55,54 +53,175 @@ export default function RelatedPosts({ currentPostId, category }: RelatedPostsPr
 
   if (loading || posts.length === 0) return null;
 
+  function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
+
   return (
-    <section className="related-posts">
-      <div className="container">
-        <div className="related-posts-header">
-          <h2>Related Insights</h2>
-          <p>More expert thoughts on {category} and AI optimization.</p>
-        </div>
-        
-        <div className="blog-grid blog-grid-cards">
-          {posts.map((post) => (
-            <Link key={post.id} href={`/blog/${post.slug || post.id}`} className="blog-card">
-              <article>
-                <div className="blog-card-image">
-                  <Image 
-                    src={post.featured_image || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1600&auto=format&fit=crop'} 
-                    alt={post.title}
-                    loading="lazy"
-                    width={400}
-                    height={250}
-                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                  />
-                </div>
-                <div className="blog-card-content">
-                  <div className="blog-card-top">
-                    <span className="tag-pill">{post.category}</span>
+    <>
+      <section
+        style={{
+          borderTop: '1px solid var(--color-border)',
+          marginTop: '32px',
+          paddingTop: '24px',
+          paddingBottom: '24px',
+        }}
+      >
+        <div className="container">
+          <div
+            style={{
+              fontSize: '9px',
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '2.5px',
+              color: 'var(--color-text)',
+              paddingBottom: '8px',
+              borderBottom: '2px solid var(--color-text)',
+              marginBottom: '16px',
+            }}
+          >
+            Related Insights
+          </div>
+
+          <div
+            className="related-posts-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr',
+              gap: '0',
+            }}
+          >
+            {posts.map((post, i) => (
+              <Link
+                key={post.id}
+                href={`/blog/${post.slug || post.id}`}
+                style={{
+                  display: 'block',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  padding: '0 16px',
+                  borderRight: i < posts.length - 1 && i < 2 ? '1px solid var(--color-border)' : 'none',
+                  ...(i === 0 ? { paddingLeft: 0 } : {}),
+                  ...(i === posts.length - 1 || i === 2 ? { paddingRight: 0 } : {}),
+                }}
+              >
+                {post.featured_image && (
+                  <div
+                    style={{
+                      position: 'relative',
+                      aspectRatio: '3 / 2',
+                      overflow: 'hidden',
+                      marginBottom: '10px',
+                    }}
+                  >
+                    <Image
+                      src={post.featured_image}
+                      alt={post.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 300px"
+                      style={{ objectFit: 'cover' }}
+                      loading="lazy"
+                    />
                   </div>
-                  <h3 className="blog-card-title">
-                    {post.title}
-                  </h3>
-                  {post.meta_description && (
-                    <p className="blog-card-excerpt">{post.meta_description}</p>
-                  )}
-                  <div className="blog-card-meta">
-                    <time dateTime={post.published_date || post.created_date}>
-                      {new Date(post.published_date || post.created_date).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </time>
-                  </div>
-                </div>
-              </article>
-            </Link>
-          ))}
+                )}
+
+                {post.category && (
+                  <span
+                    style={{
+                      fontSize: '8px',
+                      fontFamily: 'var(--font-sans)',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px',
+                      color: 'var(--color-accent)',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    {post.category}
+                  </span>
+                )}
+
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    fontFamily: 'var(--font-heading)',
+                    fontWeight: 700,
+                    lineHeight: 1.3,
+                    margin: '0 0 6px',
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  {post.title}
+                </h3>
+
+                {post.meta_description && (
+                  <p
+                    style={{
+                      fontSize: '10px',
+                      lineHeight: 1.5,
+                      color: 'var(--color-text-secondary)',
+                      margin: '0 0 6px',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {post.meta_description}
+                  </p>
+                )}
+
+                <span
+                  style={{
+                    fontSize: '9px',
+                    fontFamily: 'var(--font-sans)',
+                    color: 'var(--color-text-muted)',
+                  }}
+                >
+                  {formatDate(post.published_date || post.created_date)}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <style>{`
+        @media (max-width: 1024px) and (min-width: 769px) {
+          .related-posts-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .related-posts-grid > a:nth-child(2) {
+            border-right: none !important;
+          }
+          .related-posts-grid > a:nth-child(3) {
+            padding-left: 0 !important;
+            padding-top: 16px;
+            border-top: 1px solid var(--color-border-light);
+          }
+        }
+        @media (max-width: 768px) {
+          .related-posts-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .related-posts-grid > a {
+            border-right: none !important;
+            padding: 0 !important;
+            padding-bottom: 16px !important;
+            border-bottom: 1px solid var(--color-border-light);
+          }
+          .related-posts-grid > a:last-child {
+            border-bottom: none;
+          }
+        }
+      `}</style>
+    </>
   );
 }
-

@@ -11,6 +11,7 @@ interface ContactFormProps {
 export default function ContactForm({ contactEmail, contactPhone }: ContactFormProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -28,7 +29,7 @@ export default function ContactForm({ contactEmail, contactPhone }: ContactFormP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || !email.trim() || !message.trim()) {
-      setError('Please fill in all fields.')
+      setError('Please fill in all required fields.')
       return
     }
 
@@ -42,7 +43,7 @@ export default function ContactForm({ contactEmail, contactPhone }: ContactFormP
         body: JSON.stringify({
           name,
           email,
-          message,
+          message: subject ? `[${subject}] ${message}` : message,
           source: 'contact-page',
         }),
       })
@@ -56,6 +57,7 @@ export default function ContactForm({ contactEmail, contactPhone }: ContactFormP
       setSubmitted(true)
       setName('')
       setEmail('')
+      setSubject('')
       setMessage('')
     } catch (err) {
       console.error('Contact form error:', err)
@@ -66,92 +68,309 @@ export default function ContactForm({ contactEmail, contactPhone }: ContactFormP
     }
   }
 
-  return (
-    <div className="contact-form-wrapper">
-      <div className="contact-form-left">
-        <h2>Contact</h2>
-        <p className="contact-intro">
-          Get in touch. We&apos;ll reply within 1&ndash;2 business days.
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontFamily: 'var(--font-sans)',
+    fontSize: '10px',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    color: 'var(--color-text-muted)',
+    marginBottom: '6px',
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px',
+    fontSize: '12px',
+    fontFamily: 'var(--font-sans)',
+    border: '1px solid var(--color-border)',
+    borderRadius: '2px',
+    backgroundColor: '#fff',
+    color: 'var(--color-text)',
+    outline: 'none',
+    boxSizing: 'border-box',
+  }
+
+  if (submitted) {
+    return (
+      <div
+        style={{
+          padding: '32px 0',
+          textAlign: 'center',
+        }}
+      >
+        <h3
+          style={{
+            fontFamily: 'var(--font-heading)',
+            fontSize: '16px',
+            fontWeight: 700,
+            margin: 0,
+            color: 'var(--color-text)',
+          }}
+        >
+          Message Received
+        </h3>
+        <p
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: '12px',
+            color: 'var(--color-text-secondary)',
+            margin: '8px 0 0',
+          }}
+        >
+          Thanks for reaching out. We&apos;ll get back to you shortly.
         </p>
-
-        <div className="contact-info">
-          <div className="contact-info-item">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-              <polyline points="22,6 12,13 2,6"></polyline>
-            </svg>
-            <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
-          </div>
-          {contactPhone && (
-            <div className="contact-info-item">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-              </svg>
-              <span>{contactPhone}</span>
-            </div>
-          )}
-        </div>
       </div>
+    )
+  }
 
-      <div className="contact-form-right">
-        {submitted ? (
-          <div className="form-message form-success">
-            <h3>Message Received!</h3>
-            <p>Thanks for reaching out. We&apos;ll get back to you shortly.</p>
-          </div>
-        ) : (
+  return (
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .contact-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .contact-form-col {
+            border-right: none !important;
+            padding-right: 0 !important;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 32px !important;
+          }
+          .contact-info-col {
+            padding-left: 0 !important;
+            padding-top: 24px !important;
+          }
+        }
+      `}</style>
+
+      <div
+        className="contact-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1.3fr 1fr',
+          gap: 0,
+        }}
+      >
+        {/* Left Column — Form */}
+        <div
+          className="contact-form-col"
+          style={{
+            borderRight: '1px solid var(--color-border)',
+            paddingRight: '32px',
+          }}
+        >
           <form onSubmit={handleSubmit}>
-            {error && <div className="form-message form-error">{error}</div>}
+            {error && (
+              <div
+                style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '11px',
+                  color: '#c00',
+                  marginBottom: '16px',
+                  padding: '8px 12px',
+                  backgroundColor: '#fff0f0',
+                  border: '1px solid #fcc',
+                  borderRadius: '2px',
+                }}
+              >
+                {error}
+              </div>
+            )}
 
-            <div className="form-group">
-              <label htmlFor="name">Name</label>
+            <div style={{ marginBottom: '20px' }}>
+              <label htmlFor="contact-name" style={labelStyle}>Name</label>
               <input
-                id="name"
+                id="contact-name"
                 type="text"
-                className="form-input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your Name"
+                placeholder="Your name"
                 required
+                style={inputStyle}
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
+            <div style={{ marginBottom: '20px' }}>
+              <label htmlFor="contact-email" style={labelStyle}>Email</label>
               <input
-                id="email"
+                id="contact-email"
                 type="email"
-                className="form-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 required
+                style={inputStyle}
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="message">How can we help?</label>
+            <div style={{ marginBottom: '20px' }}>
+              <label htmlFor="contact-subject" style={labelStyle}>Subject</label>
+              <input
+                id="contact-subject"
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="What is this about?"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label htmlFor="contact-message" style={labelStyle}>Message</label>
               <textarea
-                id="message"
-                className="form-input form-textarea"
+                id="contact-message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Your message..."
-                rows={5}
+                rows={6}
                 required
+                style={{
+                  ...inputStyle,
+                  resize: 'vertical',
+                }}
               />
             </div>
 
-            <button
-              type="submit"
-              className="form-submit-btn"
-              disabled={submitting}
-            >
-              {submitting ? 'Sending...' : 'Send Message'}
-            </button>
+            <div style={{ textAlign: 'center' }}>
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '11px',
+                  fontFamily: 'var(--font-sans)',
+                  fontWeight: 600,
+                  backgroundColor: '#1a1a1a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '2px',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  opacity: submitting ? 0.7 : 1,
+                  letterSpacing: '0.5px',
+                }}
+              >
+                {submitting ? 'Sending...' : 'Send Message'}
+              </button>
+            </div>
           </form>
-        )}
+        </div>
+
+        {/* Right Column — Contact Info */}
+        <div
+          className="contact-info-col"
+          style={{
+            paddingLeft: '32px',
+          }}
+        >
+          {/* Email */}
+          <div style={{ marginBottom: '24px' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '9px',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                color: 'var(--color-text-muted)',
+                marginBottom: '6px',
+              }}
+            >
+              Email
+            </div>
+            <a
+              href={`mailto:${contactEmail}`}
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '12px',
+                color: 'var(--color-text)',
+                textDecoration: 'none',
+              }}
+            >
+              {contactEmail}
+            </a>
+          </div>
+
+          {/* Press */}
+          <div style={{ marginBottom: '24px' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '9px',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                color: 'var(--color-text-muted)',
+                marginBottom: '6px',
+              }}
+            >
+              Press
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '12px',
+                color: 'var(--color-text)',
+              }}
+            >
+              {contactEmail}
+            </div>
+          </div>
+
+          {/* Partnerships */}
+          <div style={{ marginBottom: '32px' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '9px',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                color: 'var(--color-text-muted)',
+                marginBottom: '6px',
+              }}
+            >
+              Partnerships
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '12px',
+                color: 'var(--color-text)',
+              }}
+            >
+              {contactEmail}
+            </div>
+          </div>
+
+          {/* Response Time Box */}
+          <div
+            style={{
+              backgroundColor: 'var(--color-bg-warm)',
+              padding: '16px',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: 'var(--color-text)',
+                marginBottom: '4px',
+              }}
+            >
+              Response Time
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '10px',
+                color: 'var(--color-text-muted)',
+                lineHeight: 1.5,
+              }}
+            >
+              We typically respond within 1&ndash;2 business days.
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

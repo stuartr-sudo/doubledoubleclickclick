@@ -1,96 +1,187 @@
 import Link from 'next/link'
 import { getTenantConfig } from '@/lib/tenant'
 import { getBrandData } from '@/lib/brand'
+import { getCategories } from '@/components/CategoryNav'
 
 export default async function Footer() {
   const config = getTenantConfig()
   let brandName = config.siteName
   let description = ''
-  let email = config.contactEmail
 
   try {
     const brand = await getBrandData()
     brandName = brand.guidelines?.name || config.siteName
-    const rawDesc = brand.company?.blurb || brand.guidelines?.brand_personality || ''
-    // Truncate footer tagline to ~160 chars at sentence boundary
+    const rawDesc =
+      brand.company?.blurb || brand.guidelines?.brand_personality || ''
     if (rawDesc.length > 160) {
       const truncated = rawDesc.slice(0, 160)
       const lastPeriod = truncated.lastIndexOf('.')
-      description = lastPeriod > 60 ? truncated.slice(0, lastPeriod + 1) : truncated.trimEnd() + '...'
+      description =
+        lastPeriod > 60
+          ? truncated.slice(0, lastPeriod + 1)
+          : truncated.trimEnd() + '...'
     } else {
       description = rawDesc
     }
-    email = brand.company?.email || config.contactEmail
   } catch {
     // Fall back to env config
   }
 
+  const categories = await getCategories()
+
+  const columnHeaderStyle: React.CSSProperties = {
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-sans)',
+    textTransform: 'uppercase',
+    letterSpacing: '1.5px',
+    color: '#666',
+    marginBottom: '16px',
+    fontWeight: 400,
+  }
+
+  const linkStyle: React.CSSProperties = {
+    color: '#999',
+    textDecoration: 'none',
+    fontSize: 'var(--text-sm)',
+    lineHeight: 2,
+    display: 'block',
+  }
+
   return (
-    <footer className="footer">
-      <div className="container">
-        <div className="footer-grid">
-          <div className="footer-brand">
-            <Link href="/" className="footer-logo">{brandName}</Link>
-            {description && (
-              <p className="footer-tagline">{description}</p>
-            )}
-          </div>
-
-          <div className="footer-links">
-            <h4 className="footer-heading">Company</h4>
-            <ul className="footer-list">
-              <li><Link href="/">Home</Link></li>
-              <li><Link href="/about">About</Link></li>
-              <li><Link href="/contact">Contact</Link></li>
-              <li><Link href="/blog">Blog</Link></li>
-            </ul>
-          </div>
-
-          <div className="footer-links">
-            <h4 className="footer-heading">Legal</h4>
-            <ul className="footer-list">
-              <li><Link href="/privacy">Privacy Policy</Link></li>
-              <li><Link href="/terms">Terms of Service</Link></li>
-            </ul>
-          </div>
-
-          <div className="footer-contact">
-            <h4 className="footer-heading">Contact Us</h4>
-            <ul className="footer-list">
-              <li>
-                <a href={`mailto:${email}`} className="footer-contact-link">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                    <polyline points="22,6 12,13 2,6"></polyline>
-                  </svg>
-                  {email}
-                </a>
-              </li>
-              {config.contactPhone && (
-                <li>
-                  <a href={`tel:${config.contactPhone}`} className="footer-contact-link">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                    </svg>
-                    {config.contactPhone}
-                  </a>
-                </li>
+    <>
+      <style>{`
+        .footer-grid-editorial {
+          display: grid;
+          grid-template-columns: 1.5fr 1fr 1fr 1fr;
+          gap: 40px;
+        }
+        @media (max-width: 1024px) and (min-width: 768px) {
+          .footer-grid-editorial {
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+          }
+        }
+        @media (max-width: 767px) {
+          .footer-grid-editorial {
+            grid-template-columns: 1fr;
+            gap: 32px;
+          }
+        }
+      `}</style>
+      <footer
+        style={{
+          background: 'var(--color-footer-bg)',
+          padding: '48px 0 24px',
+          marginTop: '48px',
+        }}
+      >
+        <div className="container">
+          <div className="footer-grid-editorial">
+            {/* Brand column */}
+            <div>
+              <Link
+                href="/"
+                style={{
+                  color: '#e5e0d8',
+                  textDecoration: 'none',
+                  fontFamily: 'var(--font-serif)',
+                  fontSize: 'var(--text-2xl)',
+                  fontWeight: 700,
+                  letterSpacing: '-0.5px',
+                  display: 'block',
+                  marginBottom: '12px',
+                }}
+              >
+                {brandName}
+              </Link>
+              {description && (
+                <p
+                  style={{
+                    color: '#999',
+                    fontSize: 'var(--text-sm)',
+                    lineHeight: 2,
+                    margin: 0,
+                  }}
+                >
+                  {description}
+                </p>
               )}
-            </ul>
-          </div>
-        </div>
+            </div>
 
-        <div className="footer-bottom">
-          <p className="footer-copyright">
-            &copy; {new Date().getFullYear()} {brandName}. All rights reserved.
-          </p>
-          <div className="footer-legal">
-            <Link href="/privacy">Privacy Policy</Link>
-            <span style={{ margin: '0 0.5rem', color: 'var(--color-text-light)' }}>|</span>
-            <Link href="/terms">Terms of Service</Link>
+            {/* Topics column */}
+            <div>
+              <h4 style={columnHeaderStyle}>Topics</h4>
+              <nav>
+                {categories.map((cat) => (
+                  <Link
+                    key={cat}
+                    href={`/blog/category/${encodeURIComponent(cat.toLowerCase())}`}
+                    style={linkStyle}
+                  >
+                    {cat}
+                  </Link>
+                ))}
+                {categories.length === 0 && (
+                  <Link href="/blog" style={linkStyle}>
+                    All Articles
+                  </Link>
+                )}
+              </nav>
+            </div>
+
+            {/* Company column */}
+            <div>
+              <h4 style={columnHeaderStyle}>Company</h4>
+              <nav>
+                <Link href="/about" style={linkStyle}>
+                  About
+                </Link>
+                <Link href="/contact" style={linkStyle}>
+                  Contact
+                </Link>
+                <Link href="/privacy" style={linkStyle}>
+                  Privacy
+                </Link>
+                <Link href="/terms" style={linkStyle}>
+                  Terms
+                </Link>
+              </nav>
+            </div>
+
+            {/* Connect column */}
+            <div>
+              <h4 style={columnHeaderStyle}>Connect</h4>
+              <nav>
+                <Link href="/newsletter" style={linkStyle}>
+                  Newsletter
+                </Link>
+              </nav>
+            </div>
+          </div>
+
+          {/* Copyright */}
+          <div
+            style={{
+              borderTop: '1px solid #333',
+              marginTop: '40px',
+              paddingTop: '16px',
+              textAlign: 'center',
+            }}
+          >
+            <p
+              style={{
+                color: '#666',
+                fontSize: 'var(--text-xs)',
+                fontFamily: 'var(--font-sans)',
+                margin: 0,
+              }}
+            >
+              &copy; {new Date().getFullYear()} {brandName}. All rights
+              reserved.
+            </p>
           </div>
         </div>
-      </div>
-    </footer>
+      </footer>
+    </>
   )
 }
