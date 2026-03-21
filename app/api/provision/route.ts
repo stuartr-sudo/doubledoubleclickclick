@@ -457,84 +457,7 @@ export async function POST(request: NextRequest) {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // PHASE 1.5: Generate hero banner image via fal.ai
-  // Non-blocking — site works fine with gradient fallback.
-  // ─────────────────────────────────────────────────────────────
-
-  try {
-    const heroPrompt = buildHeroImagePrompt({
-      niche,
-      brandName: display_name,
-      imageStyle: body.image_style,
-    })
-    const heroImageUrl = await generateHeroImage(heroPrompt, username)
-
-    if (heroImageUrl) {
-      await supabase
-        .from('brand_specifications')
-        .update({ hero_image_url: heroImageUrl })
-        .eq('user_name', username)
-      console.log(`Hero image generated for ${username}: ${heroImageUrl}`)
-      notifications.hero_image = { status: 'generated', url: heroImageUrl }
-    } else {
-      notifications.hero_image = { status: 'skipped', reason: 'Generation returned null (FAL_API_KEY may not be set)' }
-    }
-  } catch (err) {
-    console.warn('[PROVISION] Hero image generation failed, continuing:', err)
-    notifications.hero_image = { status: 'error', error: err instanceof Error ? err.message : String(err) }
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // PHASE 2: Create Google services (GA4, GTM)
-  //
-  // Creates tracking properties that get injected as env vars
-  // into the Fly.io app. Requires GOOGLE_SERVICE_ACCOUNT_JSON.
-  // ─────────────────────────────────────────────────────────────
-
-  let gaId = ''
-  let gtmId = ''
-
-  if (google.isGoogleServiceConfigured()) {
-    const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${username}-blog.fly.dev`
-
-    if (setup_google_analytics) {
-      try {
-        const ga = await google.createGA4Property(display_name, siteUrl)
-        gaId = ga.measurementId || ''
-        console.log(`GA4 property created: ${ga.propertyName}, Measurement ID: ${gaId}`)
-        notifications.google_analytics = {
-          status: 'created',
-          measurement_id: gaId,
-          property_id: ga.propertyId,
-        }
-      } catch (err) {
-        console.error('Error creating GA4 property:', err)
-        notifications.google_analytics = { status: 'error', error: err instanceof Error ? err.message : String(err) }
-      }
-    }
-
-    if (setup_google_tag_manager) {
-      try {
-        const gtm = await google.createGTMContainer(display_name)
-        gtmId = gtm.publicId || ''
-        console.log(`GTM container created: ${gtm.path}, Public ID: ${gtmId}`)
-        notifications.google_tag_manager = {
-          status: 'created',
-          public_id: gtmId,
-          container_id: gtm.containerId,
-        }
-      } catch (err) {
-        console.error('Error creating GTM container:', err)
-        notifications.google_tag_manager = { status: 'error', error: err instanceof Error ? err.message : String(err) }
-      }
-    }
-  } else {
-    if (setup_google_analytics) notifications.google_analytics = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
-    if (setup_google_tag_manager) notifications.google_tag_manager = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // PHASE 3: Notify Doubleclicker to start content pipeline
+  // PHASE 2: Notify Doubleclicker to start content pipeline
   //
   // Doubleclicker orchestrates the full chain:
   //   create_workspace → auto_brand → save_brand → discover_products
@@ -658,6 +581,85 @@ export async function POST(request: NextRequest) {
     }
   } else {
     notifications.doubleclicker = { status: 'skipped', reason: !doubleclickerUrl ? 'DOUBLECLICKER_API_URL not set' : 'skip_pipeline=true' }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PHASE 2.5: Generate hero banner image via fal.ai
+  // Non-blocking — site works fine with gradient fallback.
+  // Runs after DC notification so content pipeline starts ASAP.
+  // ─────────────────────────────────────────────────────────────
+
+  try {
+    const heroPrompt = buildHeroImagePrompt({
+      niche,
+      brandName: display_name,
+      imageStyle: body.image_style,
+    })
+    const heroImageUrl = await generateHeroImage(heroPrompt, username)
+
+    if (heroImageUrl) {
+      await supabase
+        .from('brand_specifications')
+        .update({ hero_image_url: heroImageUrl })
+        .eq('user_name', username)
+      console.log(`Hero image generated for ${username}: ${heroImageUrl}`)
+      notifications.hero_image = { status: 'generated', url: heroImageUrl }
+    } else {
+      notifications.hero_image = { status: 'skipped', reason: 'Generation returned null (FAL_API_KEY may not be set)' }
+    }
+  } catch (err) {
+    console.warn('[PROVISION] Hero image generation failed, continuing:', err)
+    notifications.hero_image = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PHASE 3: Create Google services (GA4, GTM)
+  //
+  // Creates tracking properties that get injected as env vars
+  // into the Fly.io app. Must run before deploy so IDs are
+  // available as machine environment variables.
+  // ─────────────────────────────────────────────────────────────
+
+  let gaId = ''
+  let gtmId = ''
+
+  if (google.isGoogleServiceConfigured()) {
+    const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${username}-blog.fly.dev`
+
+    if (setup_google_analytics) {
+      try {
+        const ga = await google.createGA4Property(display_name, siteUrl)
+        gaId = ga.measurementId || ''
+        console.log(`GA4 property created: ${ga.propertyName}, Measurement ID: ${gaId}`)
+        notifications.google_analytics = {
+          status: 'created',
+          measurement_id: gaId,
+          property_id: ga.propertyId,
+        }
+      } catch (err) {
+        console.error('Error creating GA4 property:', err)
+        notifications.google_analytics = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+      }
+    }
+
+    if (setup_google_tag_manager) {
+      try {
+        const gtm = await google.createGTMContainer(display_name)
+        gtmId = gtm.publicId || ''
+        console.log(`GTM container created: ${gtm.path}, Public ID: ${gtmId}`)
+        notifications.google_tag_manager = {
+          status: 'created',
+          public_id: gtmId,
+          container_id: gtm.containerId,
+        }
+      } catch (err) {
+        console.error('Error creating GTM container:', err)
+        notifications.google_tag_manager = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+      }
+    }
+  } else {
+    if (setup_google_analytics) notifications.google_analytics = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
+    if (setup_google_tag_manager) notifications.google_tag_manager = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
   }
 
   // ─────────────────────────────────────────────────────────────
