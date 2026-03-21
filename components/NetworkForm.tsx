@@ -612,14 +612,24 @@ export default function NetworkForm() {
         {activeSections[activeSection]?.key === 'entry' && phase === 'planning' && (
           <div className="space-y-6">
             {entryMode === 'choose' ? (
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setEntryMode('upload')} className="p-6 border-2 border-dashed rounded-lg hover:border-blue-500 text-left">
-                  <h3 className="text-lg font-semibold">Upload Brand Guide</h3>
-                  <p className="text-sm text-gray-500 mt-1">Parse a PDF from your AI tool to extract sites, brand data, and products.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <button onClick={() => setEntryMode('upload')} className="dc-card text-left" style={{ cursor: 'pointer', transition: 'box-shadow 0.2s, border-color 0.2s', border: '2px solid transparent' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#6366f1'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(99,102,241,0.15)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}>
+                  <div className="dc-card-body" style={{ padding: '28px 24px' }}>
+                    <div style={{ fontSize: 28, marginBottom: 12 }}>📄</div>
+                    <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Upload Brand Guide</h3>
+                    <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>Parse a PDF from your AI tool to extract sites, brand data, and products automatically.</p>
+                  </div>
                 </button>
-                <button onClick={() => { setEntryMode('scratch'); setActiveSection(0) }} className="p-6 border-2 border-dashed rounded-lg hover:border-green-500 text-left">
-                  <h3 className="text-lg font-semibold">Build from Scratch</h3>
-                  <p className="text-sm text-gray-500 mt-1">Enter a seed niche and generate everything with AI.</p>
+                <button onClick={() => { setEntryMode('scratch'); setActiveSection(0) }} className="dc-card text-left" style={{ cursor: 'pointer', transition: 'box-shadow 0.2s, border-color 0.2s', border: '2px solid transparent' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#22c55e'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(34,197,94,0.15)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}>
+                  <div className="dc-card-body" style={{ padding: '28px 24px' }}>
+                    <div style={{ fontSize: 28, marginBottom: 12 }}>🧠</div>
+                    <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Build from Scratch</h3>
+                    <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>Enter a seed niche and generate everything with AI.</p>
+                  </div>
                 </button>
               </div>
             ) : (
@@ -635,18 +645,22 @@ export default function NetworkForm() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Brand Guide PDF</label>
-                  <div className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-blue-400"
+                  <div className="dc-card" style={{ border: '2px dashed #cbd5e1', cursor: 'pointer', transition: 'border-color 0.2s' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#6366f1'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#cbd5e1'}
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type === 'application/pdf') setUploadFile(f) }}
                     onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = '.pdf'; input.onchange = () => { if (input.files?.[0]) setUploadFile(input.files[0]) }; input.click() }}>
-                    {uploadFile ? (
-                      <p className="text-sm">{uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(1)} MB)</p>
-                    ) : (
-                      <p className="text-gray-400">Drag &amp; drop PDF or click to browse</p>
-                    )}
+                    <div style={{ padding: '32px 20px', textAlign: 'center' }}>
+                      {uploadFile ? (
+                        <p style={{ fontSize: 13 }}>📄 {uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(1)} MB)</p>
+                      ) : (
+                        <p style={{ color: '#94a3b8', fontSize: 13 }}>Drag & drop PDF or click to browse</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <button onClick={handleUploadParse} disabled={!uploadFile || !!parseStatus} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50">
+                <button onClick={handleUploadParse} disabled={!uploadFile || !!parseStatus} className="dc-btn dc-btn-ai" style={{ width: '100%', justifyContent: 'center' }}>
                   {parseStatus || 'Parse Brand Guide'}
                 </button>
               </div>
