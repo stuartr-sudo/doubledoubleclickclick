@@ -6,6 +6,7 @@ import CookieConsent from '@/components/CookieConsent'
 import StructuredData from '@/components/StructuredData'
 import BrandStyles from '@/components/BrandStyles'
 import Footer from '@/components/Footer'
+import SiteHeaderServer from '@/components/SiteHeaderServer'
 import Script from 'next/script'
 import { getTenantConfig } from '@/lib/tenant'
 import { getBrandData } from '@/lib/brand'
@@ -108,6 +109,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <Analytics />
         <CookieConsent />
         <StructuredData />
+        <SiteHeaderServer />
         {children}
         <Footer />
       </body>
