@@ -36,7 +36,7 @@ export default function ArticleCard({ post }: ArticleCardProps) {
             width: 140,
             height: 93,
             flexShrink: 0,
-            borderRadius: '2px',
+            borderRadius: 'var(--border-radius, 2px)',
             overflow: 'hidden',
             position: 'relative',
           }}

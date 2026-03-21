@@ -80,7 +80,7 @@ export default async function ProductSpotlight({ limit = 1, offset = 0 }: { limi
                   flexShrink: 0,
                   overflow: 'hidden',
                   position: 'relative',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--border-radius, 4px)',
                   background: '#fff',
                 }}
               >

@@ -37,7 +37,7 @@ export default function FeaturedCard({ post }: FeaturedCardProps) {
           style={{
             position: 'relative',
             aspectRatio: '3 / 2',
-            borderRadius: '2px',
+            borderRadius: 'var(--border-radius, 2px)',
             overflow: 'hidden',
           }}
         >
