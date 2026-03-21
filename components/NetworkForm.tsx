@@ -634,14 +634,11 @@ export default function NetworkForm() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Number of sites</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">1 Hub +</span>
-                    <select value={uploadSiteCount - 1} onChange={e => setUploadSiteCount(parseInt(e.target.value) + 1)} className="border rounded px-2 py-1">
-                      {[1,2,3,4,5,6,7].map(n => (<option key={n} value={n}>{n} sub-sites</option>))}
-                    </select>
-                  </div>
+                <div className="dc-field">
+                  <label>Number of sites</label>
+                  <select value={uploadSiteCount - 1} onChange={e => setUploadSiteCount(parseInt(e.target.value) + 1)}>
+                    {[1,2,3,4,5,6,7].map(n => (<option key={n} value={n}>1 Hub + {n} sub-site{n > 1 ? 's' : ''}</option>))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Brand Guide PDF</label>
