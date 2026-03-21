@@ -54,7 +54,7 @@ const LANGUAGE_OPTIONS = [
 ]
 
 /* ───────── sidebar nav (mode-dependent) ───────── */
-type ProvisionMode = 'brand' | 'niche' | null
+type ProvisionMode = 'brand' | 'niche' | 'upload' | null
 
 const BRAND_SECTIONS = [
   { key: 'brand_url', label: 'Website', icon: '🌐' },
@@ -71,6 +71,14 @@ const NICHE_SECTIONS = [
   { key: 'niche_image', label: 'Image Style', icon: '🎨' },
   { key: 'product', label: 'Products', icon: '📦' },
   { key: 'niche_launch', label: 'Launch', icon: '🚀' },
+]
+
+const UPLOAD_SECTIONS = [
+  { key: 'upload_entry', label: 'Upload', icon: '📄' },
+  { key: 'upload_domain', label: 'Domain', icon: '🌐' },
+  { key: 'upload_voice', label: 'Voice & Content', icon: '💬' },
+  { key: 'upload_image', label: 'Image Style', icon: '🎨' },
+  { key: 'upload_launch', label: 'Launch', icon: '🚀' },
 ]
 
 /* ───────── types ───────── */
@@ -217,12 +225,18 @@ export default function ProvisionForm() {
   /* ── deep niche research ── */
   const [researchContext, setResearchContext] = useState<any>(null)
 
+  // ── upload mode ──
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [parseJobId, setParseJobId] = useState<string | null>(null)
+  const [parseStatus, setParseStatus] = useState<string>('')
+  const [parsedSite, setParsedSite] = useState<any>(null)
+
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const seenStepsRef = useRef<Set<string>>(new Set())
 
   /* ── derived ── */
-  const activeSections = mode === 'niche' ? NICHE_SECTIONS : BRAND_SECTIONS
+  const activeSections = mode === 'upload' ? UPLOAD_SECTIONS : mode === 'niche' ? NICHE_SECTIONS : BRAND_SECTIONS
 
   /* ── auto-fill from domain ── */
   useEffect(() => {
@@ -344,6 +358,93 @@ export default function ProvisionForm() {
       setSelectedDomainData(suggestion)
       setPurchaseDomain(true)
     }
+  }
+
+  /* ── upload brand guide ── */
+  const handleUploadParse = async () => {
+    if (!uploadFile) return
+    setParseStatus('Uploading...')
+    setError('')
+    const formData = new FormData()
+    formData.append('file', uploadFile)
+    formData.append('siteCount', '1')
+    try {
+      const res = await fetch('/api/admin/parse-brand-guide', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      pollParseJob(data.jobId)
+    } catch (err: any) {
+      setError(err.message)
+      setParseStatus('')
+    }
+  }
+
+  const pollParseJob = async (jobId: string) => {
+    const maxPoll = 180_000
+    const start = Date.now()
+    let interval = 2000
+    while (Date.now() - start < maxPoll) {
+      await new Promise(r => setTimeout(r, interval))
+      interval = Math.min(interval * 1.3, 5000)
+      try {
+        const res = await fetch(`/api/admin/parse-brand-guide?jobId=${jobId}`)
+        const job = await res.json()
+        if (job.status === 'parsing') setParseStatus('Parsing document...')
+        else if (job.status === 'extracting') setParseStatus('Extracting brand data...')
+        else if (job.status === 'synthesizing') setParseStatus('Synthesizing research context...')
+        else if (job.status === 'done' && job.result) {
+          setParseStatus('')
+          populateFromParsedSite(job.result[0])
+          return
+        } else if (job.status === 'error') {
+          throw new Error(job.error || 'Parse failed')
+        }
+      } catch (err: any) {
+        setError(err.message)
+        setParseStatus('')
+        return
+      }
+    }
+    setError('Parse timed out after 3 minutes.')
+    setParseStatus('')
+  }
+
+  const populateFromParsedSite = (site: any) => {
+    setParsedSite(site)
+    // Populate brand fields
+    if (site.brand_voice) setBrandVoice(site.brand_voice)
+    if (site.ica_profile) {
+      const ica = site.ica_profile
+      setTargetMarket(ica.persona_name
+        ? `${ica.persona_name} (${ica.age_range || ''}, ${ica.income || ''})`
+        : '')
+    }
+    if (site.tagline) setBrandBlurb(site.tagline)
+    if (site.content_types) setSeedKeywords(site.content_types.join(', '))
+    if (site.niche) setNiche(site.niche)
+    if (site.placeholder_name) {
+      setDisplayName(site.placeholder_name)
+      setUsername(site.placeholder_name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
+    }
+    // Populate style guide
+    if (site.style_guide) {
+      const sg = site.style_guide
+      if (sg.primary_color) setPrimaryColor(sg.primary_color)
+      if (sg.accent_color) setAccentColor(sg.accent_color)
+      setImageStyle(prev => ({
+        ...prev,
+        visual_style: sg.visual_mood || sg.imagery_style || prev.visual_style,
+        color_palette: [sg.primary_color, sg.accent_color].filter(Boolean).join(', ') || prev.color_palette,
+        mood_and_atmosphere: sg.visual_mood || prev.mood_and_atmosphere,
+        image_type_preferences: sg.imagery_style || prev.image_type_preferences,
+      }))
+    }
+    // Populate research context
+    if (site.research_context) setResearchContext(site.research_context)
+    // Set affiliate mode
+    setIsAffiliate(true)
+    // Advance to domain step
+    setActiveSection(1)
   }
 
   const generateFromNiche = async () => {
@@ -649,6 +750,9 @@ export default function ProvisionForm() {
           ].filter(p => p.name || p.url),
           languages: translationEnabled && selectedLanguages.length > 0 ? selectedLanguages : undefined,
           articles_per_day: articlesPerDay,
+          // Brand guide upload data
+          ...(parsedSite?.ica_profile && { ica_profile: parsedSite.ica_profile }),
+          ...(parsedSite?.style_guide && { style_guide: parsedSite.style_guide }),
         }),
       })
 
@@ -790,7 +894,7 @@ export default function ProvisionForm() {
   }
 
   /* ── canLaunch check ── */
-  const canLaunch = mode === 'niche'
+  const canLaunch = mode === 'niche' || mode === 'upload'
     ? !!(displayName && niche)
     : !!(displayName && websiteUrl)
 
@@ -803,7 +907,7 @@ export default function ProvisionForm() {
       <aside className="dc-sidebar">
         <div className="dc-sidebar-header">
           <h1>Brand Provisioner</h1>
-          <p>{mode === 'brand' ? 'Product-First' : mode === 'niche' ? 'Niche-First' : 'New brand onboarding'}</p>
+          <p>{mode === 'brand' ? 'Product-First' : mode === 'niche' ? 'Niche-First' : mode === 'upload' ? 'Brand Guide Upload' : 'New brand onboarding'}</p>
         </div>
 
         {mode && phase === 'form' && (
@@ -812,6 +916,8 @@ export default function ProvisionForm() {
               onClick={() => { setMode('brand'); setActiveSection(0) }}>Product</button>
             <button type="button" className={`dc-mode-btn ${mode === 'niche' ? 'dc-mode-btn-active' : ''}`}
               onClick={() => { setMode('niche'); setActiveSection(0) }}>Niche</button>
+            <button type="button" className={`dc-mode-btn ${mode === 'upload' ? 'dc-mode-btn-active' : ''}`}
+              onClick={() => { setMode('upload'); setActiveSection(0) }}>Upload</button>
           </div>
         )}
 
@@ -907,6 +1013,19 @@ export default function ProvisionForm() {
                 <span className="dc-mode-card-cta">Start with Niche &rarr;</span>
               </button>
 
+              <button type="button" className="dc-mode-card" onClick={() => setMode('upload')}>
+                <div className="dc-mode-card-icon">📄</div>
+                <h3>I have a brand guide</h3>
+                <p>Upload a PDF brand guide from your AI tool and we&rsquo;ll extract brand identity, voice, products, and style automatically.</p>
+                <ul className="dc-mode-card-list">
+                  <li>Upload your brand guide PDF</li>
+                  <li>AI extracts all brand data</li>
+                  <li>Choose a domain, review and refine</li>
+                  <li>Best for: pre-planned brands, affiliate sites</li>
+                </ul>
+                <span className="dc-mode-card-cta">Start with Upload &rarr;</span>
+              </button>
+
               <a href="/admin/network" className="dc-mode-card" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="dc-mode-card-icon">🌐</div>
                 <h3>I want a network of sites</h3>
@@ -926,6 +1045,192 @@ export default function ProvisionForm() {
         {/* ══════════ FORM SECTIONS ══════════ */}
         {phase === 'form' && mode && (
           <div key={`${mode}-${activeSection}`} className="dc-drawer">
+
+            {/* ═══════════════════════════════════
+                UPLOAD FLOW (5 steps)
+                ═══════════════════════════════════ */}
+            {mode === 'upload' && (
+              <>
+                {/* Step 0: Upload */}
+                {activeSections[activeSection]?.key === 'upload_entry' && (
+                  <div className="dc-section-wrap">
+                    <div className="dc-section-header">
+                      <h2>Upload Brand Guide</h2>
+                      <p>Upload a PDF brand guide and we&rsquo;ll extract everything automatically.</p>
+                    </div>
+                    <div className="dc-card">
+                      <div className="dc-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div className="dc-field">
+                          <label>Brand Guide PDF</label>
+                          <div style={{ border: '2px dashed #cbd5e1', borderRadius: 8, cursor: 'pointer', transition: 'border-color 0.2s' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#6366f1'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#cbd5e1'}
+                            onDragOver={e => e.preventDefault()}
+                            onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type === 'application/pdf') setUploadFile(f) }}
+                            onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = '.pdf'; input.onchange = () => { if (input.files?.[0]) setUploadFile(input.files[0]) }; input.click() }}>
+                            <div style={{ padding: '32px 20px', textAlign: 'center' }}>
+                              {uploadFile ? (
+                                <p style={{ fontSize: 13 }}>📄 {uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(1)} MB)</p>
+                              ) : (
+                                <p style={{ color: '#94a3b8', fontSize: 13 }}>Drag &amp; drop PDF or click to browse</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <button onClick={handleUploadParse} disabled={!uploadFile || !!parseStatus} className="dc-btn dc-btn-ai" style={{ width: '100%', justifyContent: 'center' }}>
+                          {parseStatus || 'Parse Brand Guide'}
+                        </button>
+                      </div>
+                    </div>
+                    <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                      onNavigate={setActiveSection} onLaunch={handleProvision} canLaunch={canLaunch} />
+                  </div>
+                )}
+
+                {/* Step 1: Domain */}
+                {activeSections[activeSection]?.key === 'upload_domain' && (
+                  <div className="dc-section-wrap">
+                    <div className="dc-card">
+                      <div className="dc-card-header"><h3>Choose a Domain</h3></div>
+                      <div className="dc-card-body">
+                        {parsedSite?.placeholder_name && (
+                          <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>PDF placeholder: {parsedSite.placeholder_name}</p>
+                        )}
+                        {domain && (
+                          <div className="dc-selected-domain-banner">
+                            <span className="dc-selected-domain-label">Selected:</span>
+                            <span className="dc-selected-domain-name">{domain}</span>
+                            {selectedDomainData && (
+                              <span className="dc-selected-domain-price">${selectedDomainData.price}/{selectedDomainData.currency === 'USD' ? 'yr' : selectedDomainData.currency}</span>
+                            )}
+                          </div>
+                        )}
+                        {selectedDomainData && (
+                          <label className="dc-toggle" style={{ marginTop: 8 }}>
+                            <input type="checkbox" checked={manualDns}
+                              onChange={(e) => setManualDns(e.target.checked)} />
+                            <span>I&apos;ll register this domain and configure DNS myself</span>
+                          </label>
+                        )}
+                        <div className="dc-field" style={{ marginTop: 16 }}>
+                          <label>Display Name</label>
+                          <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Site display name" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Username</label>
+                          <input value={username} onChange={e => setUsername(e.target.value)} placeholder="site-username" />
+                        </div>
+                        <div className="dc-field">
+                          <label>Niche</label>
+                          <input value={niche} onChange={e => setNiche(e.target.value)} placeholder="e.g. AI & Automation Tools" />
+                        </div>
+                        <div className="dc-domain-suggest-row">
+                          <button type="button" className="dc-btn dc-btn-ai"
+                            onClick={suggestDomains} disabled={loadingDomains || (!niche && !displayName)}>
+                            {loadingDomains ? <><span className="dc-spinner" /> Searching...</> : 'Find Available Domains'}
+                          </button>
+                          <span className="dc-hint">Searches Google Cloud Domains for available domains under $15/year.</span>
+                        </div>
+                        {domainSuggestions.length > 0 && (
+                          <div className="dc-domain-suggestions">
+                            {domainSuggestions.map((s) => (
+                              <button key={s.domain} type="button"
+                                className={`dc-domain-chip ${domain === s.domain ? 'dc-domain-chip-selected' : ''}`}
+                                onClick={() => selectDomain(s.domain, s)}>
+                                <span className="dc-domain-chip-name">{s.domain}</span>
+                                <span className="dc-domain-chip-price">${s.price}/{s.currency === 'USD' ? 'yr' : s.currency}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {!domainSuggestions.length && !loadingDomains && (
+                          <div className="dc-field" style={{ marginTop: 16 }}>
+                            <label>Or enter a domain manually</label>
+                            <input type="text" value={domain}
+                              onChange={(e) => setDomain(e.target.value)}
+                              placeholder="yourbrand.com" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                      onNavigate={setActiveSection} onLaunch={handleProvision} canLaunch={canLaunch} />
+                  </div>
+                )}
+
+                {/* Step 2: Voice & Content */}
+                {activeSections[activeSection]?.key === 'upload_voice' && (
+                  <div className="dc-section-wrap">
+                    <div className="dc-mode-banner dc-mode-banner-neutral">
+                      <div className="dc-mode-banner-icon">&#x2139;&#xfe0f;</div>
+                      <div>
+                        <h3>Refine Extracted Brand Voice</h3>
+                        <p>Review and refine the brand voice extracted from your guide.</p>
+                      </div>
+                    </div>
+                    <VoiceContentSection
+                      brandVoice={brandVoice} setBrandVoice={setBrandVoice}
+                      targetMarket={targetMarket} setTargetMarket={setTargetMarket}
+                      brandBlurb={brandBlurb} setBrandBlurb={setBrandBlurb}
+                      seedKeywords={seedKeywords} setSeedKeywords={setSeedKeywords}
+                      generating={generating} enhanceField={enhanceField}
+                    />
+                    <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                      onNavigate={setActiveSection} onLaunch={handleProvision} canLaunch={canLaunch} />
+                  </div>
+                )}
+
+                {/* Step 3: Image Style */}
+                {activeSections[activeSection]?.key === 'upload_image' && (
+                  <div className="dc-section-wrap">
+                    <ImageStyleSection imageStyle={imageStyle} setImageStyle={setImageStyle}
+                      generating={generating} enhanceField={enhanceField}
+                      niche={niche} generateStyleFromNiche={generateStyleFromNiche} />
+                    <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                      onNavigate={setActiveSection} onLaunch={handleProvision} canLaunch={canLaunch} />
+                  </div>
+                )}
+
+                {/* Step 4: Launch */}
+                {activeSections[activeSection]?.key === 'upload_launch' && (
+                  <div className="dc-section-wrap">
+                    <LaunchSection
+                      displayName={displayName} setDisplayName={setDisplayName}
+                      username={username} setUsername={setUsername}
+                      domain={domain} setDomain={setDomain}
+                      contactEmail={contactEmail}
+                      websiteUrl={websiteUrl}
+                      niche={niche} setNiche={setNiche}
+                      logoUrl={logoUrl} setLogoUrl={setLogoUrl}
+                      logoPrompt={logoPrompt} setLogoPrompt={setLogoPrompt}
+                      generateLogo={generateLogo} generatingLogo={!!generating.logo}
+                      authorName={authorName} setAuthorName={setAuthorName}
+                      authorBio={authorBio} setAuthorBio={setAuthorBio}
+                      authorImageUrl={authorImageUrl} setAuthorImageUrl={setAuthorImageUrl}
+                      authorPageUrl={authorPageUrl} setAuthorPageUrl={setAuthorPageUrl}
+                      authorSocials={authorSocials} setAuthorSocials={setAuthorSocials}
+                      updateListItem={updateListItem} addListItem={addListItem}
+                      stitchEnabled={stitchEnabled} setStitchEnabled={setStitchEnabled}
+                      translationEnabled={translationEnabled} setTranslationEnabled={setTranslationEnabled}
+                      selectedLanguages={selectedLanguages} setSelectedLanguages={setSelectedLanguages}
+                      articlesPerDay={articlesPerDay} setArticlesPerDay={setArticlesPerDay}
+                      primaryColor={primaryColor} setPrimaryColor={setPrimaryColor}
+                      accentColor={accentColor} setAccentColor={setAccentColor}
+                      flyRegion={flyRegion} setFlyRegion={setFlyRegion}
+                      generateColorsFromNiche={generateColorsFromNiche}
+                      suggestDomains={suggestDomains} loadingDomains={loadingDomains}
+                      domainSuggestions={domainSuggestions} selectDomain={selectDomain}
+                      selectedDomainData={selectedDomainData}
+                      deriveUsername={deriveUsername}
+                      manualDns={manualDns} setManualDns={setManualDns}
+                      showDomainSearch={false} showNiche={false} showColors={true}
+                    />
+                    <StepNav activeSection={activeSection} totalSections={activeSections.length}
+                      onNavigate={setActiveSection} onLaunch={handleProvision} canLaunch={canLaunch} />
+                  </div>
+                )}
+              </>
+            )}
 
             {/* ═══════════════════════════════════
                 BRAND-FIRST FLOW (5 steps)

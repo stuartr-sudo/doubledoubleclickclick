@@ -119,9 +119,9 @@ export async function POST(request: NextRequest) {
 
   // Validate siteCount
   const siteCount = parseInt(String(siteCountRaw ?? ''), 10)
-  if (isNaN(siteCount) || siteCount < 2 || siteCount > 8) {
+  if (isNaN(siteCount) || siteCount < 1 || siteCount > 8) {
     return NextResponse.json(
-      { error: 'siteCount must be an integer between 2 and 8' },
+      { error: 'siteCount must be an integer between 1 and 8' },
       { status: 400 },
     )
   }
