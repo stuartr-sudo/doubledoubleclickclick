@@ -36,6 +36,7 @@ export interface BrandSpecs {
   font_sizes: Record<string, string> | null
   border_radius: string | null
   custom_css: string | null
+  theme: string | null
 }
 
 export interface CompanyInfo {
@@ -109,7 +110,7 @@ export async function getBrandData(): Promise<BrandData> {
          brand_specifications (
            primary_color, secondary_color, accent_color,
            logo_url, hero_image_url, heading_font, body_font,
-           font_sizes, border_radius, custom_css
+           font_sizes, border_radius, custom_css, theme
          )`
       )
       .eq('user_name', username)
