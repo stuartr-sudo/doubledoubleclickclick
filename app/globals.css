@@ -55,6 +55,11 @@
   /* Transitions */
   --transition-fast: all 0.2s ease;
   --transition-med: transform 0.3s ease;
+
+  /* Theme-controlled properties */
+  --border-radius: 0px;
+  --card-shadow: none;
+  --card-padding: 12px;
 }
 
 html {
@@ -145,5 +150,65 @@ img {
 @media (max-width: 640px) {
   .container {
     padding: 0 var(--space-sm);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Theme Overrides
+   Applied via data-theme attribute on <html>
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Theme: Boutique ─── */
+[data-theme="boutique"] .editorial-topbar {
+  display: none;
+}
+[data-theme="boutique"] .editorial-masthead {
+  padding: 20px 0 12px;
+}
+[data-theme="boutique"] .editorial-categorynav a {
+  background: var(--color-bg-warm);
+  border-radius: 20px;
+  padding: 4px 14px;
+  margin: 0 2px;
+  font-size: 9px;
+  transition: background 0.2s ease;
+}
+[data-theme="boutique"] .editorial-categorynav a:hover {
+  background: var(--color-border);
+}
+
+/* ─── Theme: Modern ─── */
+[data-theme="modern"] .editorial-topbar {
+  display: none;
+}
+[data-theme="modern"] .editorial-masthead {
+  text-align: left;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+[data-theme="modern"] .editorial-categorynav {
+  border-bottom: none;
+  padding: 8px 0;
+}
+[data-theme="modern"] .editorial-categorynav a {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ─── Theme: Mobile overrides ─── */
+@media (max-width: 768px) {
+  [data-theme="boutique"] .editorial-mobile-pills a {
+    background: var(--color-bg-warm);
+    border-radius: 16px;
+    padding: 4px 12px;
+  }
+  [data-theme="modern"] .editorial-mobile-pills a {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    font-size: 8px;
+    letter-spacing: 0.5px;
   }
 }
