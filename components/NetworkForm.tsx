@@ -12,7 +12,13 @@ const REGIONS = [
   { value: 'sin', label: 'Singapore (sin)' },
 ]
 
-const SECTIONS = [
+const UPLOAD_SECTIONS = [
+  { key: 'entry', label: 'Start', icon: '📄' },
+  { key: 'domains', label: 'Domains & Names', icon: '🌐' },
+  { key: 'launch', label: 'Launch', icon: '🚀' },
+]
+
+const SCRATCH_SECTIONS = [
   { key: 'niche', label: 'Network Setup', icon: '🌐' },
   { key: 'review', label: 'Review Sites', icon: '✏️' },
   { key: 'research', label: 'Brand Research', icon: '🔬' },
@@ -115,7 +121,108 @@ export default function NetworkForm() {
   const [memberStatuses, setMemberStatuses] = useState<MemberStatus[]>([])
   const [launching, setLaunching] = useState(false)
 
+  // Upload path state
+  const [entryMode, setEntryMode] = useState<'choose' | 'upload' | 'scratch'>('choose')
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadSiteCount, setUploadSiteCount] = useState(5)
+  const [parseJobId, setParseJobId] = useState<string | null>(null)
+  const [parseStatus, setParseStatus] = useState<string>('')
+  const [parsedSites, setParsedSites] = useState<any[]>([])
+
+  // Dynamic sections
+  const activeSections = entryMode === 'upload' ? UPLOAD_SECTIONS
+    : entryMode === 'scratch' ? SCRATCH_SECTIONS
+    : UPLOAD_SECTIONS
+
   const pollRef = useRef<NodeJS.Timeout | null>(null)
+
+  /* ── upload path: parse brand guide PDF ── */
+  const handleUploadParse = async () => {
+    if (!uploadFile) return
+    setParseStatus('Uploading...')
+    setError('')
+    const formData = new FormData()
+    formData.append('file', uploadFile)
+    formData.append('siteCount', String(uploadSiteCount))
+    try {
+      const res = await fetch('/api/admin/parse-brand-guide', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setParseJobId(data.jobId)
+      pollParseJob(data.jobId)
+    } catch (err: any) {
+      setError(err.message)
+      setParseStatus('')
+    }
+  }
+
+  const pollParseJob = async (jobId: string) => {
+    const maxPoll = 180_000
+    const start = Date.now()
+    let interval = 2000
+    while (Date.now() - start < maxPoll) {
+      await new Promise(r => setTimeout(r, interval))
+      interval = Math.min(interval * 1.3, 5000)
+      try {
+        const res = await fetch(`/api/admin/parse-brand-guide?jobId=${jobId}`)
+        const job = await res.json()
+        if (job.status === 'parsing') setParseStatus('Parsing document...')
+        else if (job.status === 'extracting') setParseStatus('Extracting brand data...')
+        else if (job.status === 'synthesizing') setParseStatus('Synthesizing research context...')
+        else if (job.status === 'done' && job.result) {
+          setParseStatus('')
+          populateFromParsed(job.result)
+          return
+        } else if (job.status === 'error') {
+          throw new Error(job.error || 'Parse failed')
+        }
+      } catch (err: any) {
+        setError(err.message)
+        setParseStatus('')
+        return
+      }
+    }
+    setError('Parse timed out after 3 minutes. Try again or use Build from Scratch.')
+    setParseStatus('')
+  }
+
+  const populateFromParsed = (sites: any[]) => {
+    setParsedSites(sites)
+    const mapped: NicheSuggestion[] = sites.map((s: any) => ({
+      niche: s.niche,
+      description: s.brand_personality || '',
+      suggested_brand_name: s.placeholder_name,
+      suggested_username: s.placeholder_name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      enabled: true,
+      domain: '',
+      domainSuggestions: [],
+      loadingDomains: false,
+    }))
+    setNiches(mapped)
+    const brands: Record<number, any> = {}
+    const research: Record<number, any> = {}
+    sites.forEach((s: any, i: number) => {
+      brands[i] = {
+        brand_voice: s.brand_voice,
+        target_market: s.ica_profile?.persona_name
+          ? `${s.ica_profile.persona_name} (${s.ica_profile.age_range}, ${s.ica_profile.income})`
+          : '',
+        brand_blurb: s.tagline || '',
+        seed_keywords: s.content_types?.join(', ') || '',
+        image_style: {
+          visual_style: s.style_guide?.visual_mood || '',
+          color_palette: s.style_guide?.primary_color || '',
+          mood: s.style_guide?.imagery_style || '',
+        },
+      }
+      if (s.research_context) research[i] = s.research_context
+    })
+    setNicheBrands(brands)
+    setNicheResearch(research)
+    if (sites[0]?.pod_name) setNetworkName(sites[0].pod_name)
+    if (sites[0]?.pod_theme) setSeedNiche(sites[0].pod_theme)
+    setActiveSection(1)
+  }
 
   /* ── expand network (AI niche expansion) ── */
   const expandNetwork = async () => {
@@ -328,6 +435,19 @@ export default function NetworkForm() {
             : undefined,
           image_style: brand?.image_style || undefined,
           research_context: research || undefined,
+          // Brand guide upload fields
+          ...(parsedSites[origIdx]?.ica_profile && { ica_profile: parsedSites[origIdx].ica_profile }),
+          ...(parsedSites[origIdx]?.style_guide && { style_guide: parsedSites[origIdx].style_guide }),
+          ...(parsedSites[origIdx]?.affiliate_products?.length && {
+            approved_products: parsedSites[origIdx].affiliate_products.map((p: any) => ({
+              name: p.name,
+              category: p.category,
+              product_type: p.product_type || 'saas',
+              has_affiliate_program: true,
+              metadata: { commission: p.commission, recurring: p.recurring, cookie_duration: p.cookie_duration },
+            }))
+          }),
+          ...(entryMode === 'upload' && { is_affiliate: true }),
         }
       })
 
@@ -424,7 +544,7 @@ export default function NetworkForm() {
           <p>Multi-site provisioning</p>
         </div>
         <nav className="dc-sidebar-nav">
-          {SECTIONS.map((s, i) => (
+          {activeSections.map((s, i) => (
             <button
               key={s.key}
               className={`dc-nav-item ${activeSection === i ? 'dc-nav-active' : ''}`}
@@ -464,7 +584,7 @@ export default function NetworkForm() {
       <main className="dc-main">
         <div className="dc-topbar">
           <div>
-            <h2>{SECTIONS[activeSection]?.label || 'Network'}</h2>
+            <h2>{activeSections[activeSection]?.label || 'Network'}</h2>
             <p>
               {phase === 'provisioning'
                 ? 'Provisioning sites...'
@@ -488,8 +608,54 @@ export default function NetworkForm() {
           </div>
         )}
 
+        {/* ─── SECTION: Entry (upload or choose) ─── */}
+        {activeSections[activeSection]?.key === 'entry' && phase === 'planning' && (
+          <div className="space-y-6">
+            {entryMode === 'choose' ? (
+              <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => setEntryMode('upload')} className="p-6 border-2 border-dashed rounded-lg hover:border-blue-500 text-left">
+                  <h3 className="text-lg font-semibold">Upload Brand Guide</h3>
+                  <p className="text-sm text-gray-500 mt-1">Parse a PDF from your AI tool to extract sites, brand data, and products.</p>
+                </button>
+                <button onClick={() => { setEntryMode('scratch'); setActiveSection(0) }} className="p-6 border-2 border-dashed rounded-lg hover:border-green-500 text-left">
+                  <h3 className="text-lg font-semibold">Build from Scratch</h3>
+                  <p className="text-sm text-gray-500 mt-1">Enter a seed niche and generate everything with AI.</p>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Number of sites</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">1 Hub +</span>
+                    <select value={uploadSiteCount - 1} onChange={e => setUploadSiteCount(parseInt(e.target.value) + 1)} className="border rounded px-2 py-1">
+                      {[1,2,3,4,5,6,7].map(n => (<option key={n} value={n}>{n} sub-sites</option>))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Brand Guide PDF</label>
+                  <div className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-blue-400"
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type === 'application/pdf') setUploadFile(f) }}
+                    onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = '.pdf'; input.onchange = () => { if (input.files?.[0]) setUploadFile(input.files[0]) }; input.click() }}>
+                    {uploadFile ? (
+                      <p className="text-sm">{uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(1)} MB)</p>
+                    ) : (
+                      <p className="text-gray-400">Drag &amp; drop PDF or click to browse</p>
+                    )}
+                  </div>
+                </div>
+                <button onClick={handleUploadParse} disabled={!uploadFile || !!parseStatus} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50">
+                  {parseStatus || 'Parse Brand Guide'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ─── SECTION 0: Seed Niche ONLY ─── */}
-        {activeSection === 0 && phase === 'planning' && (
+        {activeSections[activeSection]?.key === 'niche' && phase === 'planning' && (
           <>
             <div className="dc-card">
               <div className="dc-card-header">
@@ -532,8 +698,8 @@ export default function NetworkForm() {
           </>
         )}
 
-        {/* ─── SECTION 1: Review Sites ─── */}
-        {activeSection === 1 && phase === 'planning' && (
+        {/* ─── SECTION 1: Review Sites / Domains ─── */}
+        {(activeSections[activeSection]?.key === 'review' || activeSections[activeSection]?.key === 'domains') && phase === 'planning' && (
           <>
             {niches.length === 0 ? (
               <div className="dc-card">
@@ -559,6 +725,18 @@ export default function NetworkForm() {
                     className={`dc-card ${!n.enabled ? '' : ''}`}
                     style={{ opacity: n.enabled ? 1 : 0.5 }}
                   >
+                    {entryMode === 'upload' && (
+                      <div className="flex items-center gap-4 mb-2" style={{ padding: '8px 16px 0' }}>
+                        <label className="flex items-center gap-1 text-sm" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                          <input type="radio" name="hub-site" checked={idx === 0}
+                            onChange={() => { const reordered = [...niches]; const [sel] = reordered.splice(idx, 1); reordered.unshift(sel); setNiches(reordered) }} />
+                          Hub
+                        </label>
+                        {parsedSites[idx]?.placeholder_name && (
+                          <span className="text-xs text-gray-400" style={{ fontSize: 11, color: '#94a3b8' }}>(from PDF: {parsedSites[idx].placeholder_name})</span>
+                        )}
+                      </div>
+                    )}
                     <div className="dc-card-header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <input
@@ -668,7 +846,7 @@ export default function NetworkForm() {
         )}
 
         {/* ─── SECTION 2: Brand Research ─── */}
-        {activeSection === 2 && phase === 'planning' && (
+        {activeSections[activeSection]?.key === 'research' && phase === 'planning' && (
           <>
             {niches.length === 0 ? (
               <div className="dc-card">
@@ -811,7 +989,7 @@ export default function NetworkForm() {
         )}
 
         {/* ─── SECTION 3: Launch ─── */}
-        {activeSection === 3 && phase === 'planning' && (
+        {activeSections[activeSection]?.key === 'launch' && phase === 'planning' && (
           <>
             {/* Network Details (moved from step 0) */}
             <div className="dc-card">
@@ -1019,6 +1197,11 @@ export default function NetworkForm() {
                     setNetworkId('')
                     setNicheResearch({})
                     setNicheBrands({})
+                    setEntryMode('choose')
+                    setUploadFile(null)
+                    setParseJobId(null)
+                    setParseStatus('')
+                    setParsedSites([])
                   }}
                 >
                   Create Another Network
@@ -1040,11 +1223,14 @@ export default function NetworkForm() {
                 </button>
               )}
               <div className="dc-step-nav-spacer" />
-              {activeSection < SECTIONS.length - 1 && (
+              {activeSection < activeSections.length - 1 && (
                 <button
                   className="dc-btn dc-btn-primary"
                   onClick={() => setActiveSection(activeSection + 1)}
-                  disabled={activeSection === 0 && niches.length === 0}
+                  disabled={
+                    (activeSections[activeSection]?.key === 'niche' && niches.length === 0) ||
+                    (activeSections[activeSection]?.key === 'entry' && entryMode === 'choose')
+                  }
                 >
                   Next →
                 </button>
