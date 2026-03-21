@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { BlogPost } from '@/lib/posts'
 import { getPostDate, estimateReadTime } from '@/lib/posts'
+import ProductSpotlight from './ProductSpotlight'
 
 interface HomeHeroProps {
   posts: BlogPost[]
@@ -139,7 +140,7 @@ export default function HomeHero({ posts }: HomeHeroProps) {
             </Link>
           </div>
 
-          {/* Sidebar Stories */}
+          {/* Sidebar Stories + Product Spotlight */}
           <div style={{ paddingLeft: '24px' }}>
             {sidebar.map((post, i) => (
               <Link
@@ -225,6 +226,9 @@ export default function HomeHero({ posts }: HomeHeroProps) {
                 )}
               </Link>
             ))}
+
+            {/* Product Spotlight Cards */}
+            <ProductSpotlight />
           </div>
         </div>
       </section>
