@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { THEMES, type ThemeName } from '@/lib/themes'
 
 /* ───────── constants ───────── */
 const REGIONS = [
@@ -85,6 +86,7 @@ export default function NetworkForm() {
 
   /* ── global settings ── */
   const [flyRegion, setFlyRegion] = useState('syd')
+  const [theme, setTheme] = useState<ThemeName>('editorial')
 
   /* ── translation ── */
   const [translationEnabled, setTranslationEnabled] = useState(false)
@@ -459,6 +461,7 @@ export default function NetworkForm() {
           seed_niche: seedNiche.trim(),
           members,
           fly_region: flyRegion,
+          theme,
           setup_google_analytics: true,
           setup_google_tag_manager: true,
           setup_search_console: true,
@@ -611,6 +614,34 @@ export default function NetworkForm() {
         {/* ─── SECTION: Entry (upload or choose) ─── */}
         {activeSections[activeSection]?.key === 'entry' && phase === 'planning' && (
           <div className="space-y-6">
+            {/* Theme Selection */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>
+                Choose a style
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                {Object.values(THEMES).map((t) => (
+                  <button
+                    key={t.name}
+                    type="button"
+                    onClick={() => setTheme(t.name)}
+                    style={{
+                      padding: '16px',
+                      border: theme === t.name ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      background: theme === t.name ? '#f0f0ff' : '#fff',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <strong style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>{t.label}</strong>
+                    <span style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4, display: 'block' }}>{t.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {entryMode === 'choose' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <button onClick={() => setEntryMode('upload')} className="dc-card text-left" style={{ cursor: 'pointer', transition: 'box-shadow 0.2s, border-color 0.2s', border: '2px solid transparent' }}
