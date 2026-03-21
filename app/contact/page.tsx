@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { getTenantConfig } from '@/lib/tenant'
 import { getBrandData } from '@/lib/brand'
-import SiteHeader from '@/components/SiteHeader'
 import ContactForm from './ContactForm'
 
 export const dynamic = 'force-dynamic'
@@ -17,25 +16,72 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ContactPage() {
   const config = getTenantConfig()
   let brandName = config.siteName
-  let logoImage: string | undefined
 
   try {
     const brand = await getBrandData()
     brandName = brand.guidelines?.name || config.siteName
-    logoImage = brand.specs?.logo_url || undefined
   } catch {}
 
   const contactEmail = config.contactEmail || 'contact@example.com'
   const contactPhone = config.contactPhone || ''
 
   return (
-    <>
-      <SiteHeader logoText={brandName} logoImage={logoImage} />
-      <main className="contact-form-section">
-        <div className="container">
-          <ContactForm contactEmail={contactEmail} contactPhone={contactPhone} />
+    <main>
+      {/* Page Header */}
+      <header
+        style={{
+          padding: '32px 32px 24px',
+          borderBottom: '1px solid var(--color-border)',
+          maxWidth: '780px',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: '9px',
+            textTransform: 'uppercase',
+            letterSpacing: '1.5px',
+            color: 'var(--color-accent)',
+            marginBottom: '8px',
+          }}
+        >
+          Contact
         </div>
-      </main>
-    </>
+        <h1
+          style={{
+            fontFamily: 'var(--font-heading)',
+            fontSize: '24px',
+            fontWeight: 700,
+            color: 'var(--color-text)',
+            margin: 0,
+            lineHeight: 1.2,
+          }}
+        >
+          Get in Touch
+        </h1>
+        <p
+          style={{
+            fontFamily: 'var(--font-heading)',
+            fontSize: '13px',
+            color: 'var(--color-text-secondary)',
+            lineHeight: 1.6,
+            margin: '12px 0 0',
+            maxWidth: '520px',
+          }}
+        >
+          Have a question, story tip, or partnership inquiry? We&apos;d love to hear from you.
+        </p>
+      </header>
+
+      {/* Form + Info */}
+      <div
+        style={{
+          padding: '32px',
+          maxWidth: '780px',
+        }}
+      >
+        <ContactForm contactEmail={contactEmail} contactPhone={contactPhone} />
+      </div>
+    </main>
   )
 }
