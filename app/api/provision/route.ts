@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
     languages,
     endpoint_url,
     articles_per_day,
+    discover_products,
     is_affiliate = false,
     theme = 'editorial',
     affiliate_link,
@@ -472,6 +473,67 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error('Error creating publishing settings:', err)
     warnings.push(`publishing_settings: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  // ── Phase 1.1b: Create onboard_config in app_settings ──
+  try {
+    const onboardConfigName = `onboard_config:${username}`
+    const onboardConfigValue = {
+      articles_per_day: articles_per_day || 5,
+      discover_products: discover_products || false,
+      research_context: research_context || null,
+    }
+
+    const { data: existingOC } = await supabase
+      .from('app_settings')
+      .select('id')
+      .eq('setting_name', onboardConfigName)
+      .limit(1)
+      .maybeSingle()
+
+    if (existingOC) {
+      await supabase.from('app_settings')
+        .update({ setting_value: onboardConfigValue })
+        .eq('id', existingOC.id)
+    } else {
+      await supabase.from('app_settings')
+        .insert({ setting_name: onboardConfigName, setting_value: onboardConfigValue })
+    }
+
+    console.log(`Onboard config created for ${username}`)
+    results.onboard_config = { status: 'created', setting_name: onboardConfigName }
+  } catch (err) {
+    console.error('Error creating onboard config:', err)
+    warnings.push(`onboard_config: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  // ── Phase 1.1c: Create network_partners in app_settings (if provided) ──
+  if (Array.isArray(network_partners) && network_partners.length > 0) {
+    try {
+      const networkPartnersName = `network_partners:${username}`
+
+      const { data: existingNP } = await supabase
+        .from('app_settings')
+        .select('id')
+        .eq('setting_name', networkPartnersName)
+        .limit(1)
+        .maybeSingle()
+
+      if (existingNP) {
+        await supabase.from('app_settings')
+          .update({ setting_value: network_partners })
+          .eq('id', existingNP.id)
+      } else {
+        await supabase.from('app_settings')
+          .insert({ setting_name: networkPartnersName, setting_value: network_partners })
+      }
+
+      console.log(`Network partners created for ${username}`)
+      results.network_partners = { status: 'created', setting_name: networkPartnersName }
+    } catch (err) {
+      console.error('Error creating network partners:', err)
+      warnings.push(`network_partners: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
