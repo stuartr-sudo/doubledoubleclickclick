@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import Breadcrumb from '@/components/Breadcrumb'
 import AuthorBar from '@/components/AuthorBar'
-import TableOfContents from '@/components/TableOfContents'
 import NewsletterSidebar from '@/components/NewsletterSidebar'
 import EndOfArticleCTA from '@/components/EndOfArticleCTA'
 import ArticleReactions from '@/components/ArticleReactions'
@@ -158,11 +157,6 @@ export default function EditorialBlogPost({ brand, post, config }: BlogPostPageP
               </div>
             )}
 
-            {/* Mobile TOC (above article body) */}
-            <div className="toc-mobile-wrapper" style={{ marginBottom: '16px' }}>
-              <TableOfContents htmlContent={post.content || ''} />
-            </div>
-
             {/* Article Body */}
             <div
               className="article-body-content"
@@ -185,11 +179,6 @@ export default function EditorialBlogPost({ brand, post, config }: BlogPostPageP
               paddingLeft: '16px',
             }}
           >
-            {/* Desktop TOC */}
-            <div className="toc-sidebar-wrapper" style={{ marginBottom: '24px' }}>
-              <TableOfContents htmlContent={post.content || ''} />
-            </div>
-
             <div style={{ marginBottom: '24px' }}>
               <NewsletterSidebar username={config.username} />
             </div>
@@ -291,14 +280,6 @@ export default function EditorialBlogPost({ brand, post, config }: BlogPostPageP
             margin-top: 24px;
             border-top: 1px solid var(--color-border);
             padding-top: 24px;
-          }
-          .toc-sidebar-wrapper {
-            display: none !important;
-          }
-        }
-        @media (min-width: 769px) {
-          .toc-mobile-wrapper {
-            display: none !important;
           }
         }
       `}</style>

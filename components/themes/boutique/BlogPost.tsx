@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import type { BlogPostPageProps } from '../types'
 import { getPostDate, estimateReadTime } from '@/lib/posts'
-import TableOfContents from '@/components/TableOfContents'
 import EndOfArticleCTA from '@/components/EndOfArticleCTA'
 import ArticleReactions from '@/components/ArticleReactions'
 import ArticleComments from '@/components/ArticleComments'
@@ -143,18 +142,6 @@ export default function BoutiqueBlogPost({ brand, post, config }: BlogPostPagePr
             </p>
           </div>
         )}
-
-        {/* Table of Contents — collapsible inline */}
-        <div
-          style={{
-            background: 'var(--color-bg-warm)',
-            borderRadius: 'var(--border-radius)',
-            padding: '16px 20px',
-            marginBottom: '24px',
-          }}
-        >
-          <TableOfContents htmlContent={post.content || ''} />
-        </div>
 
         {/* Article Body */}
         <div

@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import type { BlogPostPageProps } from '../types'
 import { getPostDate, estimateReadTime } from '@/lib/posts'
-import TableOfContents from '@/components/TableOfContents'
 import NewsletterSidebar from '@/components/NewsletterSidebar'
 import EndOfArticleCTA from '@/components/EndOfArticleCTA'
 import ArticleReactions from '@/components/ArticleReactions'
@@ -125,11 +124,6 @@ export default function ModernBlogPost({ brand, post, config }: BlogPostPageProp
               </div>
             )}
 
-            {/* Mobile TOC */}
-            <div className="modern-toc-mobile" style={{ display: 'none', marginBottom: '16px' }}>
-              <TableOfContents htmlContent={post.content || ''} />
-            </div>
-
             {/* Article Content */}
             <div
               className="modern-article-body"
@@ -153,10 +147,6 @@ export default function ModernBlogPost({ brand, post, config }: BlogPostPageProp
               paddingLeft: '16px',
             }}
           >
-            <div className="modern-toc-sidebar" style={{ marginBottom: '24px' }}>
-              <TableOfContents htmlContent={post.content || ''} />
-            </div>
-
             <div style={{ marginBottom: '24px' }}>
               <NewsletterSidebar username={config.username} />
             </div>
@@ -229,11 +219,6 @@ export default function ModernBlogPost({ brand, post, config }: BlogPostPageProp
             padding-top: 24px;
             border-left: none !important;
           }
-          .modern-toc-sidebar { display: none !important; }
-          .modern-toc-mobile { display: block !important; }
-        }
-        @media (min-width: 769px) {
-          .modern-toc-mobile { display: none !important; }
         }
       `}</style>
     </main>

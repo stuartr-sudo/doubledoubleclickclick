@@ -51,54 +51,63 @@ export default function EndOfArticleCTA({
 
   if (status === 'success') {
     return (
-      <div
-        style={{
-          borderTop: '2px solid #1a1a1a',
-          backgroundColor: 'var(--color-bg-warm)',
-          padding: '24px',
-          textAlign: 'center',
+      <div style={{
+        background: 'var(--color-bg-warm)',
+        borderRadius: 'var(--border-radius, 8px)',
+        padding: '28px',
+        textAlign: 'center',
+      }}>
+        <span style={{ fontSize: '24px', display: 'block', marginBottom: '8px' }}>✓</span>
+        <p style={{
           fontFamily: 'var(--font-sans)',
           fontSize: '13px',
-          color: 'var(--color-text-body)',
-        }}
-      >
-        You&apos;re subscribed! Check your inbox soon.
+          color: 'var(--color-text-secondary)',
+          margin: 0,
+        }}>
+          You&apos;re subscribed! Check your inbox soon.
+        </p>
       </div>
     )
   }
 
   return (
-    <div
-      style={{
-        borderTop: '2px solid #1a1a1a',
-        backgroundColor: 'var(--color-bg-warm)',
-        padding: '24px',
-      }}
-    >
-      <h3
-        style={{
-          fontFamily: 'var(--font-heading)',
-          fontSize: '15px',
-          fontWeight: 700,
-          margin: 0,
-          color: 'var(--color-text)',
-        }}
-      >
+    <div style={{
+      background: 'var(--color-bg-warm)',
+      borderRadius: 'var(--border-radius, 8px)',
+      padding: '28px',
+      textAlign: 'center',
+    }}>
+      <h3 style={{
+        fontFamily: 'var(--font-heading)',
+        fontSize: '17px',
+        fontWeight: 700,
+        margin: '0 0 6px',
+        color: 'var(--color-text)',
+      }}>
         {title}
       </h3>
-      <p
-        style={{
-          fontFamily: 'var(--font-sans)',
-          fontSize: '11px',
-          color: 'var(--color-text-secondary)',
-          margin: '6px 0 16px',
-          lineHeight: 1.5,
-        }}
-      >
+      <p style={{
+        fontFamily: 'var(--font-body)',
+        fontSize: '13px',
+        color: 'var(--color-text-secondary)',
+        margin: '0 0 20px',
+        maxWidth: 360,
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        lineHeight: 1.5,
+      }}>
         {description}
       </p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'flex',
+          gap: '8px',
+          maxWidth: 400,
+          margin: '0 auto',
+        }}
+      >
         <input
           type="email"
           placeholder="Enter your email"
@@ -106,47 +115,46 @@ export default function EndOfArticleCTA({
           onChange={(e) => setEmail(e.target.value)}
           required
           style={{
-            padding: '10px 12px',
-            fontSize: '12px',
+            flex: 1,
+            padding: '10px 14px',
+            fontSize: '13px',
             fontFamily: 'var(--font-sans)',
             border: '1px solid var(--color-border)',
-            borderRadius: '2px',
+            borderRadius: 'var(--border-radius, 6px)',
             backgroundColor: '#fff',
             color: 'var(--color-text)',
             outline: 'none',
-            width: '100%',
           }}
         />
         <button
           type="submit"
           disabled={status === 'submitting'}
           style={{
-            padding: '10px 16px',
-            fontSize: '11px',
+            padding: '10px 20px',
+            fontSize: '13px',
             fontFamily: 'var(--font-sans)',
             fontWeight: 600,
-            backgroundColor: 'var(--color-footer-bg)',
+            backgroundColor: 'var(--color-accent)',
             color: '#fff',
             border: 'none',
-            borderRadius: '2px',
+            borderRadius: 'var(--border-radius, 6px)',
             cursor: status === 'submitting' ? 'not-allowed' : 'pointer',
             opacity: status === 'submitting' ? 0.7 : 1,
-            width: '100%',
+            whiteSpace: 'nowrap',
+            transition: 'filter 0.15s ease',
           }}
         >
-          {status === 'submitting' ? 'Subscribing...' : 'Subscribe'}
+          {status === 'submitting' ? '...' : 'Subscribe'}
         </button>
       </form>
 
       {status === 'error' && (
-        <p
-          style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: '10px',
-            color: '#c00',
-            margin: '8px 0 0',
-          }}
-        >
+        <p style={{
+          fontFamily: 'var(--font-sans)',
+          fontSize: '11px',
+          color: '#c00',
+          margin: '10px 0 0',
+        }}>
           {errorMsg}
         </p>
       )}
