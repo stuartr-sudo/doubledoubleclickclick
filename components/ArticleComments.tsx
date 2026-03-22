@@ -1,104 +1,132 @@
-'use client';
+'use client'
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react'
 
 export default function ArticleComments({ postSlug }: { postSlug: string }) {
-  const [comment, setComment] = useState('');
-  const [status, setStatus] = useState<'idle' | 'pending' | 'error' | 'success'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [comment, setComment] = useState('')
+  const [status, setStatus] = useState<'idle' | 'pending' | 'error' | 'success'>('idle')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Auto-resize textarea as user types
   useEffect(() => {
-    const textarea = textareaRef.current;
+    const textarea = textareaRef.current
     if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
+      textarea.style.height = 'auto'
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`
     }
-  }, [comment]);
-
-  const stripLinks = (text: string) => {
-    // Regex to find URLs
-    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-z0-9.-]+\.[a-z]{2,10}[^\s]*)/gi;
-    return text.replace(urlRegex, '[link removed]');
-  };
+  }, [comment])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!comment.trim()) return;
-
-    setStatus('pending');
-    
-    // Auto-remove links: detect URLs and replace with empty string or note
-    const cleanComment = comment.replace(/(https?:\/\/[^\s]+|www\.[^\s]+|[a-z0-9.-]+\.[a-z]{2,10}[^\s]*)/gi, '[link removed]');
-    
+    e.preventDefault()
+    if (!comment.trim()) return
+    setStatus('pending')
     // Simulate API call
     setTimeout(() => {
-      setStatus('success');
-      setComment('');
-    }, 1500);
-  };
+      setStatus('success')
+      setComment('')
+    }, 1500)
+  }
 
   return (
-    <section className="comments-section">
-      <div className="comments-container">
-        <div className="comments-header">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
-          <h3>Community Discussion</h3>
-        </div>
-        
-        <div className="comment-form-card">
-          <form onSubmit={handleSubmit}>
-            <div className="comment-input-group">
-              <textarea 
-                ref={textareaRef}
-                id="comment-text"
-                className="force-dark-text"
-                placeholder="What are your thoughts? (Links will be removed automatically)"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                disabled={status === 'pending' || status === 'success'}
-                rows={1}
-              ></textarea>
-              <div className="comment-footer">
-                <p className="comment-policy">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                  </svg>
-                  Comments are moderated
-                </p>
-                <button 
-                  type="submit" 
-                  className="comment-post-btn"
-                  disabled={status === 'pending' || status === 'success' || !comment.trim()}
-                >
-                  {status === 'pending' ? 'Posting...' : 'Post Comment'}
-                </button>
-              </div>
-            </div>
+    <section style={{ marginTop: '24px' }}>
+      <h3 style={{
+        fontFamily: 'var(--font-heading)',
+        fontSize: '15px',
+        fontWeight: 700,
+        color: 'var(--color-text)',
+        margin: '0 0 12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        Discussion
+      </h3>
 
-            {status === 'success' && (
-              <div className="comment-status-message success">
-                <div className="status-icon">✓</div>
-                <div className="status-text">
-                  <strong>Success!</strong> Your comment is in the queue for moderator review.
-                </div>
-              </div>
-            )}
-          </form>
+      {status === 'success' ? (
+        <div style={{
+          background: 'var(--color-bg-warm)',
+          borderRadius: 'var(--border-radius, 6px)',
+          padding: '16px',
+          textAlign: 'center',
+          fontFamily: 'var(--font-sans)',
+          fontSize: '12px',
+          color: 'var(--color-text-secondary)',
+        }}>
+          <span style={{ fontSize: '18px', display: 'block', marginBottom: '6px' }}>✓</span>
+          Your comment has been submitted for review.
         </div>
-
-        <div className="comment-list-placeholder">
-          <div className="placeholder-content">
-            <p>Be the first to share your thoughts on this article.</p>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <textarea
+            ref={textareaRef}
+            placeholder="Share your thoughts..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            disabled={status === 'pending'}
+            rows={2}
+            style={{
+              width: '100%',
+              padding: '12px 14px',
+              fontSize: '13px',
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-text)',
+              background: 'var(--color-bg)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--border-radius, 6px)',
+              outline: 'none',
+              resize: 'vertical',
+              minHeight: '60px',
+              maxHeight: '200px',
+              lineHeight: 1.6,
+              boxSizing: 'border-box',
+            }}
+          />
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: '8px',
+          }}>
+            <span style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '10px',
+              color: 'var(--color-text-faint)',
+            }}>
+              Comments are moderated. Links will be removed.
+            </span>
+            <button
+              type="submit"
+              disabled={status === 'pending' || !comment.trim()}
+              style={{
+                padding: '8px 18px',
+                fontSize: '11px',
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 600,
+                background: comment.trim() ? 'var(--color-accent)' : 'var(--color-border)',
+                color: comment.trim() ? '#fff' : 'var(--color-text-muted)',
+                border: 'none',
+                borderRadius: 'var(--border-radius, 4px)',
+                cursor: comment.trim() ? 'pointer' : 'default',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {status === 'pending' ? 'Posting...' : 'Post'}
+            </button>
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
+        </form>
+      )}
 
+      <p style={{
+        fontFamily: 'var(--font-sans)',
+        fontSize: '11px',
+        color: 'var(--color-text-faint)',
+        textAlign: 'center',
+        marginTop: '16px',
+      }}>
+        Be the first to share your thoughts.
+      </p>
+    </section>
+  )
+}

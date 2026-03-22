@@ -14,7 +14,7 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
       {/* Hero Section */}
       {hero && (
         <Link href={`/blog/${hero.slug}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-          <article style={{ paddingBottom: 32, marginBottom: 32, borderBottom: '1px solid var(--color-border, #e5e5e5)' }}>
+          <article style={{ paddingBottom: 32, marginBottom: 32, borderBottom: '1px solid var(--color-border, #e5e5e5)', textAlign: 'center' }}>
             {hero.featured_image && (
               <div style={{
                 position: 'relative',
