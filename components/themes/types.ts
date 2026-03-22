@@ -1,11 +1,8 @@
 import type { BlogPost } from '@/lib/posts'
 import type { BrandData } from '@/lib/brand'
+import type { TenantConfig } from '@/lib/tenant'
 
-export interface TenantConfig {
-  username: string
-  siteName: string
-  siteUrl: string
-}
+export type { TenantConfig }
 
 export interface HomePageProps {
   brand: BrandData
