@@ -19,10 +19,11 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
               <div style={{
                 position: 'relative',
                 aspectRatio: '5/2',
-                maxHeight: 400,
-                borderRadius: 'var(--border-radius, 12px)',
+                width: '100%',
+                maxWidth: 900,
+                margin: '0 auto 16px',
+                borderRadius: 'var(--border-radius, 16px)',
                 overflow: 'hidden',
-                marginBottom: 16,
               }}>
                 <Image
                   src={hero.featured_image}
