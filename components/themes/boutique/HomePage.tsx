@@ -135,6 +135,7 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
                     position: 'relative',
                     aspectRatio: '4/3',
                     overflow: 'hidden',
+                    borderRadius: 'var(--border-radius, 16px) var(--border-radius, 16px) 0 0',
                   }}>
                     <Image
                       src={post.featured_image}
