@@ -2,6 +2,7 @@ import type { HomePageProps, HeaderProps, BlogPostPageProps } from './types'
 
 import EditorialHeader from './editorial/Header'
 import BoutiqueHeader from './boutique/Header'
+import ModernHeader from './modern/Header'
 import EditorialHomePage from './editorial/HomePage'
 import BoutiqueHomePage from './boutique/HomePage'
 import EditorialBlogPost from './editorial/BlogPost'
@@ -10,6 +11,7 @@ import BoutiqueBlogPost from './boutique/BlogPost'
 const HEADERS: Record<string, React.ComponentType<HeaderProps>> = {
   editorial: EditorialHeader,
   boutique: BoutiqueHeader,
+  modern: ModernHeader,
 }
 
 const HOME_PAGES: Record<string, React.ComponentType<HomePageProps>> = {
