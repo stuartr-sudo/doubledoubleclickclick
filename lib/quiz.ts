@@ -14,38 +14,6 @@ export interface QuizSummary {
   question_count: number
 }
 
-/**
- * Get the most recent quiz for this tenant.
- * Returns null if no quizzes exist.
- */
-export async function getFeaturedQuiz(): Promise<QuizSummary | null> {
-  const { username } = getTenantConfig()
-  if (!username) return null
-  const supabase = createServiceClient()
-
-  const { data, error } = await supabase
-    .from('quizzes')
-    .select('id, title, description, time_limit_minutes, passing_score, quiz_questions(count)')
-    .eq('brand_id', username)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (error || !data) return null
-
-  const questionData = data.quiz_questions as any
-  const count = Array.isArray(questionData) ? (questionData[0]?.count ?? 0) : 0
-
-  return {
-    id: data.id,
-    title: data.title,
-    description: data.description,
-    time_limit_minutes: data.time_limit_minutes,
-    passing_score: data.passing_score,
-    question_count: count,
-  }
-}
-
 export interface QuizFull {
   id: string
   title: string

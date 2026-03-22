@@ -78,39 +78,6 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   return data as unknown as BlogPost
 }
 
-/**
- * Get featured/pillar posts. Falls back to most recent if fewer than 2 pillar posts.
- */
-export async function getFeaturedPosts(limit = 4): Promise<BlogPost[]> {
-  const { username } = getTenantConfig()
-  const supabase = createServiceClient()
-
-  const { data: pillarPosts } = await supabase
-    .from('blog_posts')
-    .select(POST_LIST_COLUMNS)
-    .eq('user_name', username)
-    .eq('status', 'published')
-    .eq('is_pillar', true)
-    .order('published_date', { ascending: false, nullsFirst: false })
-    .limit(limit)
-
-  if (pillarPosts && pillarPosts.length >= 2) {
-    return pillarPosts as unknown as BlogPost[]
-  }
-
-  // Fallback: most recent posts
-  const { data: recentPosts } = await supabase
-    .from('blog_posts')
-    .select(POST_LIST_COLUMNS)
-    .eq('user_name', username)
-    .eq('status', 'published')
-    .order('published_date', { ascending: false, nullsFirst: false })
-    .order('created_date', { ascending: false })
-    .limit(limit)
-
-  return (recentPosts || []) as unknown as BlogPost[]
-}
-
 export interface CategoryWithCount {
   name: string
   count: number

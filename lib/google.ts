@@ -235,48 +235,9 @@ export async function addSearchConsoleSite(siteUrl: string) {
   }
 }
 
-/**
- * Verify a previously added Search Console site (call after DNS TXT record is live).
- * Accepts either a domain (e.g., "example.com") or a sc-domain: URL.
- */
-export async function verifySearchConsoleSite(siteUrl: string) {
-  // Extract bare domain for INET_DOMAIN verification (matches addSearchConsoleSite)
-  let domain = siteUrl.replace(/^sc-domain:/, '')
-  try {
-    const parsed = new URL(domain.includes('://') ? domain : `https://${domain}`)
-    domain = parsed.hostname.replace(/^www\./, '')
-  } catch {
-    domain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')
-  }
-
-  return googleFetch(
-    'https://www.googleapis.com/siteVerification/v1/webResource?verificationMethod=DNS_TXT',
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        site: { type: 'INET_DOMAIN', identifier: domain },
-      }),
-    }
-  )
-}
-
 /* ─────────────────────────────────────────────────
    Google Cloud Domains — Domain Registration
    ───────────────────────────────────────────────── */
-
-/**
- * Retrieve registration parameters (price, availability, notices) for a domain.
- * Uses the service account auth (not API key) for consistency.
- */
-export async function getRegistrationParams(domainName: string) {
-  const project = process.env.GOOGLE_CLOUD_PROJECT
-  if (!project) throw new Error('GOOGLE_CLOUD_PROJECT not configured')
-
-  const location = `projects/${project}/locations/global`
-  return googleFetch(
-    `https://domains.googleapis.com/v1/${location}/registrations:retrieveRegisterParameters?domainName=${encodeURIComponent(domainName)}`
-  )
-}
 
 /**
  * Register (purchase) a domain via Google Cloud Domains.

@@ -52,50 +52,6 @@ export interface BrandData {
   company: CompanyInfo | null
 }
 
-export interface AuthorData {
-  name: string
-  bio: string
-  image: string
-  socialLinks: Record<string, string>
-}
-
-/**
- * Get author data — tries `authors` table first, falls back to `brand_guidelines`.
- */
-export async function getAuthorData(): Promise<AuthorData | null> {
-  const { username } = getTenantConfig()
-  const supabase = createServiceClient()
-
-  const { data: author } = await supabase
-    .from('authors')
-    .select('name, bio, profile_image_url, social_links')
-    .eq('user_name', username)
-    .limit(1)
-    .single()
-
-  if (author?.name) {
-    return {
-      name: author.name,
-      bio: author.bio || '',
-      image: author.profile_image_url || '',
-      socialLinks: author.social_links || {},
-    }
-  }
-
-  // Fallback to brand_guidelines
-  const brand = await getBrandData()
-  if (brand.guidelines?.default_author) {
-    return {
-      name: brand.guidelines.default_author,
-      bio: brand.guidelines.author_bio || '',
-      image: brand.guidelines.author_image_url || '',
-      socialLinks: brand.guidelines.author_social_urls || {},
-    }
-  }
-
-  return null
-}
-
 export async function getBrandData(): Promise<BrandData> {
   const { username } = getTenantConfig()
   const supabase = createServiceClient()

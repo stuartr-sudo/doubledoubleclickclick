@@ -174,6 +174,3 @@ export function buildHeroImagePrompt(params: {
   return `Professional, clean hero banner image for a ${niche || 'lifestyle'} blog. Modern editorial style, warm and inviting, wide landscape format. No text, no logos, no watermarks. Suitable as a background image with text overlay.`
 }
 
-export function buildLogoPrompt(brandName: string, niche?: string): string {
-  return `Abstract, minimal logo mark for a ${niche || 'modern'} brand. Simple geometric shape or icon, flat design, white background, absolutely no text, no letters, no words, no typography. Clean vector-style, single color accent, suitable as a favicon or app icon.`
-}

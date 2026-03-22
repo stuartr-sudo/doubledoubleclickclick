@@ -97,6 +97,3 @@ export function getTheme(name: string | null | undefined): ThemePreset {
   return THEMES[(name as ThemeName)] || THEMES.editorial
 }
 
-export function getThemeNames(): ThemeName[] {
-  return Object.keys(THEMES) as ThemeName[]
-}
