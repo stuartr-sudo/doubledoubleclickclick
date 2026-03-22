@@ -6,7 +6,8 @@ import CookieConsent from '@/components/CookieConsent'
 import StructuredData from '@/components/StructuredData'
 import BrandStyles from '@/components/BrandStyles'
 import Footer from '@/components/Footer'
-import SiteHeaderServer from '@/components/SiteHeaderServer'
+import { ThemeHeader } from '@/components/themes/ThemeRenderer'
+import { getCategories } from '@/components/CategoryNav'
 import Script from 'next/script'
 import { getTenantConfig } from '@/lib/tenant'
 import { getBrandData } from '@/lib/brand'
@@ -80,12 +81,24 @@ export default async function RootLayout({
   const config = getTenantConfig()
   const gtmId = config.gtmId
 
-  // Read theme for data-theme attribute on <html>
+  // Read theme + brand data for header
   let themeName = 'editorial'
+  let brandName = config.siteName
+  let logoUrl: string | undefined
+  let tagline = ''
+  let categories: string[] = []
   try {
     const brand = await getBrandData()
     themeName = brand.specs?.theme || 'editorial'
+    brandName = brand.guidelines?.name || config.siteName
+    logoUrl = brand.specs?.logo_url || undefined
+    tagline = brand.company?.blurb || ''
   } catch {}
+  try {
+    categories = await getCategories()
+  } catch {
+    categories = []
+  }
 
   return (
     <html lang="en" className={inter.variable} data-theme={themeName}>
@@ -116,7 +129,13 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <Analytics />
         <CookieConsent />
         <StructuredData />
-        <SiteHeaderServer />
+        <ThemeHeader
+          theme={themeName}
+          brandName={brandName}
+          logoUrl={logoUrl}
+          tagline={tagline}
+          categories={categories}
+        />
         {children}
         <Footer />
       </body>
