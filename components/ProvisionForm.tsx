@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { THEMES, type ThemeName } from '@/lib/themes'
+import ThemePreview from '@/components/ThemePreview'
 
 /* ───────── constants ───────── */
 const REGIONS = [
@@ -987,6 +988,7 @@ export default function ProvisionForm() {
 
         {/* ══════════ MODE CHOOSER ══════════ */}
         {phase === 'form' && !mode && (
+          <div className="dc-mode-chooser-with-preview">
           <div className="dc-mode-chooser">
             {/* Theme Selection */}
             <div style={{ marginBottom: '24px' }}>
@@ -1073,6 +1075,8 @@ export default function ProvisionForm() {
                 <span className="dc-mode-card-cta">Create Network &rarr;</span>
               </a>
             </div>
+          </div>
+          <ThemePreview key={theme} theme={theme} />
           </div>
         )}
 

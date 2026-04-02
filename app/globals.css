@@ -383,6 +383,14 @@ body:has(.dc-layout) > header {
   -webkit-overflow-scrolling: touch;
 }
 
+/* When the preview wrapper is present, scroll-area becomes a flex container
+   so the wrapper fills it and each pane scrolls independently */
+.dc-scroll-area:has(.dc-mode-chooser-with-preview) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Drawer animation wrapper */
 .dc-drawer {
   animation: dc-slide-in 0.25s ease-out;
@@ -718,6 +726,123 @@ body:has(.dc-layout) > header {
   gap: 24px;
   max-width: 960px;
   width: 100%;
+}
+
+/* ── Theme Preview Panel ── */
+.dc-mode-chooser-with-preview {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dc-mode-chooser-with-preview .dc-mode-chooser {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  justify-content: flex-start;
+}
+
+.dc-theme-preview {
+  width: 380px;
+  flex-shrink: 0;
+  border-left: 1px solid #e2e8f0;
+  background: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+  animation: dc-preview-fade 0.3s ease-out;
+}
+
+@keyframes dc-preview-fade {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.dc-theme-preview-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dc-theme-preview-label-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dc-theme-preview-frame {
+  flex: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.dc-theme-preview-chrome {
+  background: #e8ecf1;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #d1d5db;
+  flex-shrink: 0;
+}
+
+.dc-theme-preview-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.dc-theme-preview-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dc-theme-preview-url {
+  flex: 1;
+  background: #fff;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 9px;
+  color: #64748b;
+  text-align: center;
+}
+
+.dc-theme-preview-viewport {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 1100px) {
+  .dc-theme-preview {
+    width: 320px;
+  }
+}
+
+@media (max-width: 900px) {
+  .dc-mode-chooser-with-preview {
+    flex-direction: column;
+  }
+  .dc-theme-preview {
+    width: 100%;
+    max-height: 350px;
+    border-left: none;
+    border-top: 1px solid #e2e8f0;
+  }
 }
 
 .dc-mode-card {
