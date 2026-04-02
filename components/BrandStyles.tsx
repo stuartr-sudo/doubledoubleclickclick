@@ -23,14 +23,8 @@ export default async function BrandStyles() {
   //    primary_color  → heading/brand text colour (--color-text, --color-primary)
   //    secondary_color → body text colour (--color-text-body, --color-secondary)
   //    accent_color    → accent/CTA colour (--color-accent)
-  if (specs.primary_color) {
-    mergedVars['--color-primary'] = specs.primary_color
-    mergedVars['--color-text'] = specs.primary_color
-  }
-  if (specs.secondary_color) {
-    mergedVars['--color-secondary'] = specs.secondary_color
-    mergedVars['--color-text-body'] = specs.secondary_color
-  }
+  if (specs.primary_color) mergedVars['--color-primary'] = specs.primary_color
+  if (specs.secondary_color) mergedVars['--color-secondary'] = specs.secondary_color
   if (specs.accent_color) mergedVars['--color-accent'] = specs.accent_color
   if (specs.border_radius) mergedVars['--border-radius'] = specs.border_radius
   if (specs.heading_font) {
