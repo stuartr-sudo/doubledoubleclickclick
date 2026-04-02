@@ -21,6 +21,7 @@ interface NetworkMember {
   research_context?: Record<string, any>
   // Visual identity
   primary_color?: string
+  secondary_color?: string
   accent_color?: string
   logo_url?: string
   heading_font?: string
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       setup_search_console = true,
       languages,
       articles_per_day,
+      cross_link_mode = 'auto',
     } = body as {
       network_name: string
       seed_niche: string
@@ -68,6 +70,8 @@ export async function POST(req: NextRequest) {
       setup_search_console?: boolean
       languages?: string[]
       articles_per_day?: number
+      /** 'auto' (default) shares partner info for cross-linking; 'none' keeps sites fully isolated */
+      cross_link_mode?: 'auto' | 'none'
     }
 
     const theme = body.theme || 'editorial'
@@ -137,14 +141,18 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Build network_partners for each site (all OTHER members)
-    const buildPartnersFor = (currentUsername: string) =>
-      members
+    //    When cross_link_mode is 'none', sites are fully isolated — no partner
+    //    info is shared, so the article writer cannot generate cross-links.
+    const buildPartnersFor = (currentUsername: string) => {
+      if (cross_link_mode === 'none') return []
+      return members
         .filter((m) => m.username !== currentUsername)
         .map((m) => ({
           domain: m.domain || `${m.username}-blog.fly.dev`,
           niche: m.niche,
           display_name: m.display_name,
         }))
+    }
 
     // 4. Provision each site in parallel via internal HTTP call
     const baseUrl = req.nextUrl.origin
@@ -189,6 +197,8 @@ export async function POST(req: NextRequest) {
         // Visual identity — forward colors from image_style or explicit fields
         if (member.primary_color) provisionPayload.primary_color = member.primary_color
         else if (member.image_style?.primary_color) provisionPayload.primary_color = member.image_style.primary_color
+        if (member.secondary_color) provisionPayload.secondary_color = member.secondary_color
+        else if (member.image_style?.secondary_color) provisionPayload.secondary_color = member.image_style.secondary_color
         if (member.accent_color) provisionPayload.accent_color = member.accent_color
         else if (member.image_style?.accent_color) provisionPayload.accent_color = member.image_style.accent_color
         if (member.logo_url) provisionPayload.logo_url = member.logo_url
