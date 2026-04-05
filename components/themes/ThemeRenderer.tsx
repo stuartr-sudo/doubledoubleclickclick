@@ -29,16 +29,25 @@ const BLOG_POSTS: Record<string, React.ComponentType<BlogPostPageProps>> = {
 }
 
 export function ThemeHeader({ theme, ...props }: HeaderProps & { theme: string }) {
+  if (!HEADERS[theme]) {
+    console.warn(`[ThemeRenderer] Unknown theme "${theme}", falling back to editorial`)
+  }
   const Component = HEADERS[theme] || HEADERS.editorial
   return <Component {...props} />
 }
 
 export function ThemeHomePage({ theme, ...props }: HomePageProps & { theme: string }) {
+  if (!HOME_PAGES[theme]) {
+    console.warn(`[ThemeRenderer] Unknown theme "${theme}", falling back to editorial`)
+  }
   const Component = HOME_PAGES[theme] || HOME_PAGES.editorial
   return <Component {...props} />
 }
 
 export function ThemeBlogPost({ theme, ...props }: BlogPostPageProps & { theme: string }) {
+  if (!BLOG_POSTS[theme]) {
+    console.warn(`[ThemeRenderer] Unknown theme "${theme}", falling back to editorial`)
+  }
   const Component = BLOG_POSTS[theme] || BLOG_POSTS.editorial
   return <Component {...props} />
 }

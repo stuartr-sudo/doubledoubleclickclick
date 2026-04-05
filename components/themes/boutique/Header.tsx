@@ -160,7 +160,7 @@ export default function BoutiqueHeader({
                   </span>
                 )}
               </Link>
-              {false && tagline && (
+              {tagline && (
                 <p
                   style={{
                     fontFamily: 'var(--font-sans)',
