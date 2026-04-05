@@ -18,6 +18,7 @@ export interface BrandGuidelines {
   voice_and_tone: string | null
   target_market: string | null
   brand_personality: string | null
+  tagline?: string | null
   default_author: string | null
   author_bio: string | null
   author_image_url: string | null
@@ -33,7 +34,6 @@ export interface BrandSpecs {
   hero_image_url: string | null
   heading_font: string | null
   body_font: string | null
-  font_sizes: Record<string, string> | null
   border_radius: string | null
   custom_css: string | null
   theme: string | null
@@ -61,12 +61,12 @@ export async function getBrandData(): Promise<BrandData> {
       .from('brand_guidelines')
       .select(
         `name, website_url, voice_and_tone, target_market,
-         brand_personality, default_author, author_bio,
+         brand_personality, tagline, default_author, author_bio,
          author_image_url, author_url, author_social_urls,
          brand_specifications (
            primary_color, secondary_color, accent_color,
            logo_url, hero_image_url, heading_font, body_font,
-           font_sizes, border_radius, custom_css, theme
+           border_radius, custom_css, theme
          )`
       )
       .eq('user_name', username)
@@ -93,6 +93,7 @@ export async function getBrandData(): Promise<BrandData> {
           voice_and_tone: guidelinesData.voice_and_tone,
           target_market: guidelinesData.target_market,
           brand_personality: guidelinesData.brand_personality,
+          tagline: guidelinesData.tagline,
           default_author: guidelinesData.default_author,
           author_bio: guidelinesData.author_bio,
           author_image_url: guidelinesData.author_image_url,

@@ -1,4 +1,4 @@
-import ProvisionForm from '@/components/ProvisionForm'
+import ProvisionWizard from '@/components/provision/ProvisionWizard'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 }
 
 export default function AdminProvisionPage() {
-  return <ProvisionForm />
+  return <ProvisionWizard />
 }

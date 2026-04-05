@@ -11,6 +11,39 @@ export const dynamic = 'force-dynamic'
 // Self-healing helpers
 // ─────────────────────────────────────────────────────────────
 
+type PhaseResult = {
+  phase: string
+  status: 'success' | 'warning' | 'error' | 'skipped'
+  severity: 'critical' | 'important' | 'optional' | 'silent'
+  message?: string
+  data?: Record<string, unknown>
+  duration_ms: number
+}
+
+async function runPhase(
+  name: string,
+  severity: PhaseResult['severity'],
+  retries: number,
+  fn: () => Promise<Record<string, unknown>>
+): Promise<PhaseResult> {
+  const start = Date.now()
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const data = await fn()
+      return { phase: name, status: 'success', severity, data, duration_ms: Date.now() - start }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 2000))
+        continue
+      }
+      const status = severity === 'silent' ? 'success' : (severity === 'critical' ? 'error' : 'warning')
+      return { phase: name, status, severity, message, duration_ms: Date.now() - start }
+    }
+  }
+  throw new Error('unreachable')
+}
+
 /** Retry a DB upsert once on failure. Returns data + optional warning. */
 async function dbUpsert(
   supabase: SupabaseClient,
@@ -53,28 +86,17 @@ async function dbUpsert(
   return { data: null, warning: `${label}: unexpected exit` }
 }
 
-/** Fetch with timeout + one retry on transient failure. */
-async function fetchWithRetry(
+/** Fetch with timeout. */
+async function fetchWithTimeout(
   url: string,
   options: RequestInit,
   timeoutMs = 30000,
 ): Promise<Response> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), timeoutMs)
-      const res = await fetch(url, { ...options, signal: controller.signal })
-      clearTimeout(timer)
-      return res
-    } catch (err: any) {
-      if (attempt === 0) {
-        console.warn(`[PROVISION] fetch ${url} attempt 1 failed, retrying:`, err.message)
-        continue
-      }
-      throw err
-    }
-  }
-  throw new Error(`fetch ${url} failed after retry`)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const res = await fetch(url, { ...options, signal: controller.signal })
+  clearTimeout(timer)
+  return res
 }
 
 /**
@@ -129,6 +151,7 @@ export async function POST(request: NextRequest) {
     blurb,
     target_market,
     brand_voice_tone,
+    tagline,
     primary_color,
     secondary_color,
     accent_color,
@@ -165,6 +188,7 @@ export async function POST(request: NextRequest) {
     preferred_elements,
     prohibited_elements,
     ai_instructions_override,
+    force_reprovision = false,
   } = body
 
   // Default publishing_provider to supabase_blog for new sites
@@ -205,6 +229,7 @@ export async function POST(request: NextRequest) {
   const results: Record<string, unknown> = {}
   const notifications: Record<string, unknown> = {}
   const warnings: string[] = []
+  const phase_results: PhaseResult[] = []
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 1: Seed the shared database
@@ -217,209 +242,208 @@ export async function POST(request: NextRequest) {
   //   company_information → uses `username` (different column name, same value)
   // ─────────────────────────────────────────────────────────────
 
-  // 1. brand_guidelines (uses `user_name` column)
-  // Build content_style_rules from research_context if available
-  const contentStyleRules = research_context
-    ? [
-        research_context.content_pillars?.length ? `Content pillars: ${research_context.content_pillars.join(', ')}` : '',
-        research_context.keyword_themes?.length ? `Keyword themes: ${research_context.keyword_themes.map((t: any) => t.theme || t).join(', ')}` : '',
-        research_context.unique_angles?.length ? `Unique angles: ${research_context.unique_angles.join(', ')}` : '',
-        brand_voice_tone ? `Voice: ${brand_voice_tone}` : '',
-      ].filter(Boolean).join('. ')
-    : null
+  // Migration required: ALTER TABLE brand_guidelines ADD COLUMN IF NOT EXISTS tagline TEXT;
+  phase_results.push(await runPhase('db_seed', 'critical', 2, async () => {
+    // 1. brand_guidelines (uses `user_name` column)
+    // Build content_style_rules from research_context if available
+    const contentStyleRules = research_context
+      ? [
+          research_context.content_pillars?.length ? `Content pillars: ${research_context.content_pillars.join(', ')}` : '',
+          research_context.keyword_themes?.length ? `Keyword themes: ${research_context.keyword_themes.map((t: any) => t.theme || t).join(', ')}` : '',
+          research_context.unique_angles?.length ? `Unique angles: ${research_context.unique_angles.join(', ')}` : '',
+          brand_voice_tone ? `Voice: ${brand_voice_tone}` : '',
+        ].filter(Boolean).join('. ')
+      : null
 
-  const guidelinesPayload = {
-    user_name: username,
-    name: display_name,
-    company_name: display_name,
-    website_url: website_url || null,
-    voice_and_tone: brand_voice_tone || null,
-    brand_personality: brand_voice_tone || null,
-    target_market: target_market || null,
-    content_style_rules: contentStyleRules,
-    stitch_enabled: stitch_enabled ?? true,
-    default_author: author_name || display_name,
-    author_bio: author_bio || null,
-    author_image_url: author_image_url || null,
-    author_url: author_url || null,
-    author_social_urls: author_social_urls || null,
-    seed_keywords: seed_keywords || null,
-    niche: niche || null,
-    preferred_elements: preferred_elements || null,
-    prohibited_elements: prohibited_elements || null,
-    ai_instructions_override: ai_instructions_override || null,
-    logo_url: logo_url || null,
-  }
-
-  const guidelinesResult = await dbUpsert(
-    supabase, 'brand_guidelines', 'user_name', username,
-    guidelinesPayload, 'brand_guidelines'
-  )
-  results.brand_guidelines = guidelinesResult.data
-  if (guidelinesResult.warning) warnings.push(guidelinesResult.warning)
-
-  // 2. brand_specifications (uses `user_name` column, FK via `guideline_id`)
-  const guidelineId = guidelinesResult.data?.[0]?.id
-  if (guidelineId) {
-    const specsPayload = {
-      guideline_id: guidelineId,
+    const guidelinesPayload = {
       user_name: username,
-      primary_color: primary_color || '#000000',
-      secondary_color: secondary_color || null,
-      accent_color: accent_color || '#ffffff',
+      name: display_name,
+      company_name: display_name,
+      website_url: website_url || null,
+      voice_and_tone: brand_voice_tone || null,
+      brand_personality: brand_voice_tone || null,
+      tagline: tagline || null,
+      target_market: target_market || null,
+      content_style_rules: contentStyleRules,
+      stitch_enabled: stitch_enabled ?? true,
+      default_author: author_name || display_name,
+      author_bio: author_bio || null,
+      author_image_url: author_image_url || null,
+      author_url: author_url || null,
+      author_social_urls: author_social_urls || null,
+      seed_keywords: seed_keywords || null,
+      niche: niche || null,
+      preferred_elements: preferred_elements || null,
+      prohibited_elements: prohibited_elements || null,
+      ai_instructions_override: ai_instructions_override || null,
       logo_url: logo_url || null,
-      heading_font: heading_font || null,
-      body_font: body_font || null,
-      theme: theme,
     }
 
-    const specsResult = await dbUpsert(
-      supabase, 'brand_specifications', 'user_name', username,
-      specsPayload, 'brand_specifications'
+    const guidelinesResult = await dbUpsert(
+      supabase, 'brand_guidelines', 'user_name', username,
+      guidelinesPayload, 'brand_guidelines'
     )
-    results.brand_specifications = specsResult.data
-    if (specsResult.warning) warnings.push(specsResult.warning)
-  } else if (!guidelinesResult.warning) {
-    warnings.push('brand_specifications: skipped (no guideline ID available)')
-  }
+    results.brand_guidelines = guidelinesResult.data
+    if (guidelinesResult.warning) warnings.push(guidelinesResult.warning)
 
-  // 3. company_information (uses `username` column — NOT `user_name`)
-  const companyPayload = {
-    username: username,
-    brand_name: display_name,
-    client_website: website_url || null,
-    email: resolved_email,
-    blurb: blurb || null,
-    target_market: target_market || null,
-    brand_voice: brand_voice_tone || null,
-    brand_voice_tone: brand_voice_tone || null,
-  }
+    // 2. brand_specifications (uses `user_name` column, FK via `guideline_id`)
+    const guidelineId = guidelinesResult.data?.[0]?.id
+    if (guidelineId) {
+      const specsPayload = {
+        guideline_id: guidelineId,
+        user_name: username,
+        primary_color: primary_color || '#000000',
+        secondary_color: secondary_color || null,
+        accent_color: accent_color || '#ffffff',
+        logo_url: logo_url || null,
+        heading_font: heading_font || null,
+        body_font: body_font || null,
+        theme: theme,
+      }
 
-  const companyResult = await dbUpsert(
-    supabase, 'company_information', 'username', username,
-    companyPayload, 'company_information'
-  )
-  results.company_information = companyResult.data
-  if (companyResult.warning) warnings.push(companyResult.warning)
+      const specsResult = await dbUpsert(
+        supabase, 'brand_specifications', 'user_name', username,
+        specsPayload, 'brand_specifications'
+      )
+      results.brand_specifications = specsResult.data
+      if (specsResult.warning) warnings.push(specsResult.warning)
+    } else if (!guidelinesResult.warning) {
+      warnings.push('brand_specifications: skipped (no guideline ID available)')
+    }
 
-  // 4. Default author (uses `user_name` column + slug for uniqueness)
-  const authorSlug = (author_name || display_name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-  const authorPayload = {
-    user_name: username,
-    name: author_name || display_name,
-    bio: author_bio || `Author at ${display_name}`,
-    profile_image_url: author_image_url || null,
-    slug: authorSlug,
-  }
-
-  const authorResult = await dbUpsert(
-    supabase, 'authors', 'user_name', username,
-    authorPayload, 'authors',
-    { col: 'slug', val: authorSlug }
-  )
-  results.author = authorResult.data
-  if (authorResult.warning) warnings.push(authorResult.warning)
-
-  // 5. integration_credentials — tells doubleclicker where to publish
-  const siteUrlForCreds = domain ? `https://www.${domain}` : website_url || `https://${username}-blog.fly.dev`
-  const credentialsPayload = {
-    user_name: username,
-    name: display_name,
-    provider: resolved_publishing_provider,
-    author_name: author_name || display_name,
-    author_bio: author_bio || `Author at ${display_name}`,
-    author_image_url: author_image_url || null,
-    author_url: author_url || `${siteUrlForCreds}/about`,
-    author_social_urls: author_social_urls || null,
-    site_domain: domain || null,
-    config: {
-      blog_username: username,
-      translation_enabled: Array.isArray(languages) && languages.length > 1,
-      translation_languages: languages || [],
-    },
-  }
-
-  const credResult = await dbUpsert(
-    supabase, 'integration_credentials', 'user_name', username,
-    credentialsPayload, 'integration_credentials'
-  )
-  results.integration_credentials = credResult.data
-  if (credResult.warning) warnings.push(credResult.warning)
-
-  // ── Phase 1: Seed target_market table (detailed ICA for outline writer) ──
-  if (ica_profile) {
-    const ica = ica_profile
-    const tmPayload: Record<string, any> = {
+    // 3. company_information (uses `username` column — NOT `user_name`)
+    const companyPayload = {
       username: username,
-      name: ica.persona_name || target_market || display_name,
-      target_market_name: ica.persona_name || target_market || display_name,
-      description: target_market || null,
-      age: ica.age_range || null,
-      income_level: ica.income || null,
-      occupation: ica.occupation || null,
-      location: ica.location || null,
-      lifestyle: ica.lifestyle || null,
-      hobbies_and_interests: ica.hobbies_and_interests || null,
-      values: ica.values || null,
-      challenges: ica.challenges || null,
-      pain_points: Array.isArray(ica.pain_points) ? ica.pain_points.join('; ') : ica.pain_points || null,
-      goals: Array.isArray(ica.goals) ? ica.goals.join('; ') : ica.goals || null,
-      motivations: Array.isArray(ica.motivations) ? ica.motivations.join('; ') : ica.motivations || null,
-      buying_behavior: ica.buying_behavior || null,
-      preferred_channels: Array.isArray(ica.preferred_channels) ? ica.preferred_channels.join('; ') : ica.preferred_channels || null,
-      tech_savviness: ica.tech_savviness || null,
+      brand_name: display_name,
+      client_website: website_url || null,
+      email: resolved_email,
+      blurb: blurb || null,
+      target_market: target_market || null,
+      brand_voice: brand_voice_tone || null,
+      brand_voice_tone: brand_voice_tone || null,
     }
-    // INSERT (not upsert) — target_market allows multiple rows per username
-    const { error: tmErr } = await supabase.from('target_market').insert(tmPayload)
-    if (tmErr) {
-      console.warn('[PROVISION] target_market insert failed:', tmErr.message)
-      warnings.push('target_market: ' + tmErr.message)
-    }
-  }
 
-  // ── Phase 1: Seed brand_image_styles (for Imagineer flash workflow) ──
-  if (style_guide) {
-    const sg = style_guide
-    const bisPayload = {
-      name: 'Default Style',
+    const companyResult = await dbUpsert(
+      supabase, 'company_information', 'username', username,
+      companyPayload, 'company_information'
+    )
+    results.company_information = companyResult.data
+    if (companyResult.warning) warnings.push(companyResult.warning)
+
+    // 4. Default author (uses `user_name` column + slug for uniqueness)
+    const authorSlug = (author_name || display_name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    const authorPayload = {
       user_name: username,
-      visual_style: sg.visual_mood || sg.imagery_style || null,
-      color_palette: [sg.primary_color, sg.accent_color].filter(Boolean).join(', ') || null,
-      mood_and_atmosphere: sg.visual_mood || null,
-      composition_style: sg.composition_style || null,
-      lighting_preferences: sg.lighting_preferences || null,
-      image_type_preferences: sg.imagery_style || null,
-      subject_guidelines: sg.subject_guidelines || null,
-      prohibited_elements: sg.prohibited_elements || null,
-      preferred_elements: sg.preferred_elements || null,
-      ai_prompt_instructions: sg.ai_prompt_instructions || null,
+      name: author_name || display_name,
+      bio: author_bio || `Author at ${display_name}`,
+      profile_image_url: author_image_url || null,
+      slug: authorSlug,
     }
-    // Unique constraint on (name, user_name) — use select-first pattern
-    const { data: existingBis } = await supabase
-      .from('brand_image_styles')
-      .select('id')
-      .eq('user_name', username)
-      .eq('name', 'Default Style')
-      .limit(1)
-      .maybeSingle()
 
-    if (existingBis) {
-      await supabase.from('brand_image_styles').update(bisPayload).eq('id', existingBis.id)
-    } else {
-      const { error: bisErr } = await supabase.from('brand_image_styles').insert(bisPayload)
-      if (bisErr) {
-        console.warn('[PROVISION] brand_image_styles insert failed:', bisErr.message)
-        warnings.push('brand_image_styles: ' + bisErr.message)
+    const authorResult = await dbUpsert(
+      supabase, 'authors', 'user_name', username,
+      authorPayload, 'authors',
+      { col: 'slug', val: authorSlug }
+    )
+    results.author = authorResult.data
+    if (authorResult.warning) warnings.push(authorResult.warning)
+
+    // 5. integration_credentials — tells doubleclicker where to publish
+    const siteUrlForCreds = domain ? `https://www.${domain}` : website_url || `https://${username}-blog.fly.dev`
+    const credentialsPayload = {
+      user_name: username,
+      name: display_name,
+      provider: resolved_publishing_provider,
+      author_name: author_name || display_name,
+      author_bio: author_bio || `Author at ${display_name}`,
+      author_image_url: author_image_url || null,
+      author_url: author_url || `${siteUrlForCreds}/about`,
+      author_social_urls: author_social_urls || null,
+      site_domain: domain || null,
+      config: {
+        blog_username: username,
+        translation_enabled: Array.isArray(languages) && languages.length > 1,
+        translation_languages: languages || [],
+      },
+    }
+
+    const credResult = await dbUpsert(
+      supabase, 'integration_credentials', 'user_name', username,
+      credentialsPayload, 'integration_credentials'
+    )
+    results.integration_credentials = credResult.data
+    if (credResult.warning) warnings.push(credResult.warning)
+
+    // Seed target_market table (detailed ICA for outline writer)
+    if (ica_profile) {
+      const ica = ica_profile
+      const tmPayload: Record<string, any> = {
+        username: username,
+        name: ica.persona_name || target_market || display_name,
+        target_market_name: ica.persona_name || target_market || display_name,
+        description: target_market || null,
+        age: ica.age_range || null,
+        income_level: ica.income || null,
+        occupation: ica.occupation || null,
+        location: ica.location || null,
+        lifestyle: ica.lifestyle || null,
+        hobbies_and_interests: ica.hobbies_and_interests || null,
+        values: ica.values || null,
+        challenges: ica.challenges || null,
+        pain_points: Array.isArray(ica.pain_points) ? ica.pain_points.join('; ') : ica.pain_points || null,
+        goals: Array.isArray(ica.goals) ? ica.goals.join('; ') : ica.goals || null,
+        motivations: Array.isArray(ica.motivations) ? ica.motivations.join('; ') : ica.motivations || null,
+        buying_behavior: ica.buying_behavior || null,
+        preferred_channels: Array.isArray(ica.preferred_channels) ? ica.preferred_channels.join('; ') : ica.preferred_channels || null,
+        tech_savviness: ica.tech_savviness || null,
+      }
+      // INSERT (not upsert) — target_market allows multiple rows per username
+      const { error: tmErr } = await supabase.from('target_market').insert(tmPayload)
+      if (tmErr) {
+        console.warn('[PROVISION] target_market insert failed:', tmErr.message)
+        warnings.push('target_market: ' + tmErr.message)
       }
     }
-  }
 
-  // ─────────────────────────────────────────────────────────────
-  // PHASE 1.1: Create publishing_settings in app_settings
-  // Required by doubleclicker's Flash step for Schema.org markup.
-  // ─────────────────────────────────────────────────────────────
+    // Seed brand_image_styles (for Imagineer flash workflow)
+    if (style_guide) {
+      const sg = style_guide
+      const bisPayload = {
+        name: 'Default Style',
+        user_name: username,
+        visual_style: sg.visual_mood || sg.imagery_style || null,
+        color_palette: [sg.primary_color, sg.accent_color].filter(Boolean).join(', ') || null,
+        mood_and_atmosphere: sg.visual_mood || null,
+        composition_style: sg.composition_style || null,
+        lighting_preferences: sg.lighting_preferences || null,
+        image_type_preferences: sg.imagery_style || null,
+        subject_guidelines: sg.subject_guidelines || null,
+        prohibited_elements: sg.prohibited_elements || null,
+        preferred_elements: sg.preferred_elements || null,
+        ai_prompt_instructions: sg.ai_prompt_instructions || null,
+      }
+      // Unique constraint on (name, user_name) — use select-first pattern
+      const { data: existingBis } = await supabase
+        .from('brand_image_styles')
+        .select('id')
+        .eq('user_name', username)
+        .eq('name', 'Default Style')
+        .limit(1)
+        .maybeSingle()
 
-  try {
+      if (existingBis) {
+        await supabase.from('brand_image_styles').update(bisPayload).eq('id', existingBis.id)
+      } else {
+        const { error: bisErr } = await supabase.from('brand_image_styles').insert(bisPayload)
+        if (bisErr) {
+          console.warn('[PROVISION] brand_image_styles insert failed:', bisErr.message)
+          warnings.push('brand_image_styles: ' + bisErr.message)
+        }
+      }
+    }
+
+    // Create publishing_settings in app_settings
+    // Required by doubleclicker's Flash step for Schema.org markup.
     const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${username}-blog.fly.dev`
     const resolvedAuthorUrl = author_url || `${siteUrl}/about`
 
@@ -464,13 +488,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`Publishing settings created for ${username}`)
     results.publishing_settings = { status: 'created', setting_name: settingName }
-  } catch (err) {
-    console.error('Error creating publishing settings:', err)
-    warnings.push(`publishing_settings: ${err instanceof Error ? err.message : String(err)}`)
-  }
 
-  // ── Phase 1.1b: Create onboard_config in app_settings ──
-  try {
+    // Create onboard_config in app_settings
     const onboardConfigName = `onboard_config:${username}`
     const onboardConfigValue = {
       articles_per_day: articles_per_day || 5,
@@ -496,14 +515,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`Onboard config created for ${username}`)
     results.onboard_config = { status: 'created', setting_name: onboardConfigName }
-  } catch (err) {
-    console.error('Error creating onboard config:', err)
-    warnings.push(`onboard_config: ${err instanceof Error ? err.message : String(err)}`)
-  }
 
-  // ── Phase 1.1c: Create network_partners in app_settings (if provided) ──
-  if (Array.isArray(network_partners) && network_partners.length > 0) {
-    try {
+    // Create network_partners in app_settings (if provided)
+    if (Array.isArray(network_partners) && network_partners.length > 0) {
       const networkPartnersName = `network_partners:${username}`
 
       const { data: existingNP } = await supabase
@@ -524,11 +538,10 @@ export async function POST(request: NextRequest) {
 
       console.log(`Network partners created for ${username}`)
       results.network_partners = { status: 'created', setting_name: networkPartnersName }
-    } catch (err) {
-      console.error('Error creating network partners:', err)
-      warnings.push(`network_partners: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }
+
+    return { tables_seeded: true }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 2: Notify Doubleclicker to start content pipeline
@@ -538,40 +551,60 @@ export async function POST(request: NextRequest) {
   // ─────────────────────────────────────────────────────────────
 
   const doubleclickerUrl = process.env.DOUBLECLICKER_API_URL
-  if (!skip_pipeline && doubleclickerUrl) {
-    try {
-      const onboardPayload = { username }
-
-      // Self-healing: retry once with 30s timeout
-      const onboardRes = await fetchWithRetry(
-        `${doubleclickerUrl}/api/strategy/auto-onboard`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-provision-secret': provisionSecret,
-          },
-          body: JSON.stringify(onboardPayload),
-        },
-        30000
-      )
-
-      const onboardData = await onboardRes.json().catch(() => ({}))
-      // Check both HTTP status AND response body success flag
-      const dcSuccess = onboardRes.ok && onboardData.success !== false
-      notifications.doubleclicker = {
-        status: dcSuccess ? 'triggered' : 'failed',
-        statusCode: onboardRes.status,
-        data: onboardData,
-        ...(dcSuccess ? {} : { error: onboardData.error || `HTTP ${onboardRes.status}` }),
-      }
-    } catch (err) {
-      console.error('Error notifying Doubleclicker:', err)
-      notifications.doubleclicker = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+  phase_results.push(await runPhase('auto_onboard', 'important', 0, async () => {
+    if (skip_pipeline || !doubleclickerUrl) {
+      notifications.doubleclicker = { status: 'skipped', reason: !doubleclickerUrl ? 'DOUBLECLICKER_API_URL not set' : 'skip_pipeline=true' }
+      return { skipped: true }
     }
-  } else {
-    notifications.doubleclicker = { status: 'skipped', reason: !doubleclickerUrl ? 'DOUBLECLICKER_API_URL not set' : 'skip_pipeline=true' }
-  }
+
+    // Idempotency: skip auto-onboard if brand already provisioned
+    const { data: existingCreds } = await supabase
+      .from('integration_credentials')
+      .select('id')
+      .eq('user_name', username)
+      .limit(1)
+      .maybeSingle()
+
+    if (existingCreds && !force_reprovision) {
+      notifications.doubleclicker = {
+        status: 'skipped',
+        reason: 'Brand already provisioned. Use force_reprovision=true to override.'
+      }
+      return { skipped: true }
+    }
+
+    const onboardPayload = { username }
+
+    // Single attempt with 30s timeout — no retry (runPhase handles severity)
+    const onboardRes = await fetchWithTimeout(
+      `${doubleclickerUrl}/api/strategy/auto-onboard`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-provision-secret': provisionSecret,
+        },
+        body: JSON.stringify(onboardPayload),
+      },
+      30000
+    )
+
+    const onboardData = await onboardRes.json().catch(() => ({}))
+    // Check both HTTP status AND response body success flag
+    const dcSuccess = onboardRes.ok && onboardData.success !== false
+    notifications.doubleclicker = {
+      status: dcSuccess ? 'triggered' : 'failed',
+      statusCode: onboardRes.status,
+      data: onboardData,
+      ...(dcSuccess ? {} : { error: onboardData.error || `HTTP ${onboardRes.status}` }),
+    }
+
+    if (!dcSuccess) {
+      throw new Error(onboardData.error || `HTTP ${onboardRes.status}`)
+    }
+
+    return { triggered: true }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 2.5: Generate hero banner image via fal.ai
@@ -579,28 +612,33 @@ export async function POST(request: NextRequest) {
   // Runs after DC notification so content pipeline starts ASAP.
   // ─────────────────────────────────────────────────────────────
 
-  try {
-    const heroPrompt = buildHeroImagePrompt({
-      niche,
-      brandName: display_name,
-      imageStyle: body.image_style,
-    })
-    const heroImageUrl = await generateHeroImage(heroPrompt, username)
+  phase_results.push(await runPhase('hero_image', 'silent', 0, async () => {
+    try {
+      const heroPrompt = buildHeroImagePrompt({
+        niche,
+        brandName: display_name,
+        imageStyle: body.image_style,
+      })
+      const heroImageUrl = await generateHeroImage(heroPrompt, username)
 
-    if (heroImageUrl) {
-      await supabase
-        .from('brand_specifications')
-        .update({ hero_image_url: heroImageUrl })
-        .eq('user_name', username)
-      console.log(`Hero image generated for ${username}: ${heroImageUrl}`)
-      notifications.hero_image = { status: 'generated', url: heroImageUrl }
-    } else {
-      notifications.hero_image = { status: 'skipped', reason: 'Generation returned null (FAL_API_KEY may not be set)' }
+      if (heroImageUrl) {
+        await supabase
+          .from('brand_specifications')
+          .update({ hero_image_url: heroImageUrl })
+          .eq('user_name', username)
+        console.log(`Hero image generated for ${username}: ${heroImageUrl}`)
+        notifications.hero_image = { status: 'generated', url: heroImageUrl }
+      } else {
+        notifications.hero_image = { status: 'skipped', reason: 'Generation returned null (FAL_API_KEY may not be set)' }
+      }
+
+      return { hero_image_url: heroImageUrl || null }
+    } catch (err) {
+      console.warn('[PROVISION] Hero image generation failed, continuing:', err)
+      notifications.hero_image = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+      throw err
     }
-  } catch (err) {
-    console.warn('[PROVISION] Hero image generation failed, continuing:', err)
-    notifications.hero_image = { status: 'error', error: err instanceof Error ? err.message : String(err) }
-  }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 3: Create Google services (GA4, GTM)
@@ -613,7 +651,13 @@ export async function POST(request: NextRequest) {
   let gaId = ''
   let gtmId = ''
 
-  if (google.isGoogleServiceConfigured()) {
+  phase_results.push(await runPhase('google_services', 'important', 0, async () => {
+    if (!google.isGoogleServiceConfigured()) {
+      if (setup_google_analytics) notifications.google_analytics = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
+      if (setup_google_tag_manager) notifications.google_tag_manager = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
+      return { skipped: true }
+    }
+
     const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${username}-blog.fly.dev`
 
     if (setup_google_analytics) {
@@ -647,10 +691,9 @@ export async function POST(request: NextRequest) {
         notifications.google_tag_manager = { status: 'error', error: err instanceof Error ? err.message : String(err) }
       }
     }
-  } else {
-    if (setup_google_analytics) notifications.google_analytics = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
-    if (setup_google_tag_manager) notifications.google_tag_manager = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
-  }
+
+    return { ga_id: gaId, gtm_id: gtmId }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 4: Deploy to Fly.io
@@ -663,128 +706,132 @@ export async function POST(request: NextRequest) {
   let flyIpv4 = ''
   let flyIpv6 = ''
 
-  if (!skip_deploy && process.env.FLY_API_TOKEN) {
-    try {
-      // 1. Get the Docker image from the base app
-      let imageRef: string
-      try {
-        imageRef = await fly.getAppImage(flyBaseApp)
-        console.log(`Using image from ${flyBaseApp}: ${imageRef}`)
-      } catch (err: any) {
-        throw new Error(`Failed to get base image from "${flyBaseApp}": ${err.message}. Ensure the base app exists and has at least one machine.`)
-      }
-
-      // 2. Create the new app
-      await fly.createApp(flyAppName, flyOrgSlug)
-      console.log(`Created Fly app: ${flyAppName}`)
-
-      // 3. Set secrets (sensitive values that shouldn't be in machine env)
-      await fly.setSecrets(flyAppName, {
-        NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-        SUPABASE_SERVICE_ROLE_KEY: supabaseKey,
-        RESEND_API_KEY: process.env.RESEND_API_KEY || '',
-      })
-      console.log(`Set secrets on ${flyAppName}`)
-
-      // 4. Allocate IPs (required for custom domains) — retry each once
-      try {
-        flyIpv4 = await fly.allocateIpv4(flyAppName)
-      } catch {
-        // Retry once
-        try { flyIpv4 = await fly.allocateIpv4(flyAppName) } catch (e: any) {
-          warnings.push(`IPv4 allocation failed: ${e.message}`)
-        }
-      }
-      try {
-        flyIpv6 = await fly.allocateIpv6(flyAppName)
-      } catch {
-        // Retry once
-        try { flyIpv6 = await fly.allocateIpv6(flyAppName) } catch (e: any) {
-          warnings.push(`IPv6 allocation failed: ${e.message}`)
-        }
-      }
-      if (flyIpv4 || flyIpv6) {
-        console.log(`Allocated IPs: ${flyIpv4} / ${flyIpv6}`)
-      }
-
-      // 5. Create machine with site-specific env vars (including GA/GTM IDs if created)
-      const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${flyAppName}.fly.dev`
-      const machineEnv: Record<string, string> = {
-        BRAND_USERNAME: username,
-        SITE_URL: siteUrl,
-        SITE_NAME: display_name,
-        CONTACT_EMAIL: resolved_email,
-        NEXT_PUBLIC_BRAND_USERNAME: username,
-        NEXT_PUBLIC_SITE_URL: siteUrl,
-        NEXT_PUBLIC_SITE_NAME: display_name,
-        NEXT_PUBLIC_CONTACT_EMAIL: resolved_email,
-      }
-      if (gaId) {
-        machineEnv.GA_ID = gaId
-        machineEnv.NEXT_PUBLIC_GA_ID = gaId
-      }
-      if (gtmId) {
-        machineEnv.GTM_ID = gtmId
-        machineEnv.NEXT_PUBLIC_GTM_ID = gtmId
-      }
-      if (Array.isArray(languages) && languages.length > 0) {
-        machineEnv.LANGUAGES = languages.join(',')
-        machineEnv.NEXT_PUBLIC_LANGUAGES = languages.join(',')
-      }
-      await fly.createMachine(flyAppName, imageRef, machineEnv, fly_region)
-      console.log(`Machine created in ${flyAppName}`)
-
+  phase_results.push(await runPhase('fly_deploy', 'critical', 2, async () => {
+    if (skip_deploy || !process.env.FLY_API_TOKEN) {
       notifications.fly = {
-        status: 'deployed',
-        app: flyAppName,
-        url: `https://${flyAppName}.fly.dev`,
-        ipv4: flyIpv4,
-        ipv6: flyIpv6,
+        status: 'skipped',
+        reason: !process.env.FLY_API_TOKEN ? 'FLY_API_TOKEN not set' : 'skip_deploy=true',
       }
-    } catch (err) {
-      console.error('Error deploying to Fly.io:', err)
-      notifications.fly = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+      return { skipped: true }
     }
-  } else {
+
+    // 1. Get the Docker image from the base app
+    let imageRef: string
+    try {
+      imageRef = await fly.getAppImage(flyBaseApp)
+      console.log(`Using image from ${flyBaseApp}: ${imageRef}`)
+    } catch (err: any) {
+      throw new Error(`Failed to get base image from "${flyBaseApp}": ${err.message}. Ensure the base app exists and has at least one machine.`)
+    }
+
+    // 2. Create the new app
+    await fly.createApp(flyAppName, flyOrgSlug)
+    console.log(`Created Fly app: ${flyAppName}`)
+
+    // 3. Set secrets (sensitive values that shouldn't be in machine env)
+    await fly.setSecrets(flyAppName, {
+      NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      SUPABASE_SERVICE_ROLE_KEY: supabaseKey,
+      RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+    })
+    console.log(`Set secrets on ${flyAppName}`)
+
+    // 4. Allocate IPs (required for custom domains) — retry each once
+    try {
+      flyIpv4 = await fly.allocateIpv4(flyAppName)
+    } catch {
+      // Retry once
+      try { flyIpv4 = await fly.allocateIpv4(flyAppName) } catch (e: any) {
+        warnings.push(`IPv4 allocation failed: ${e.message}`)
+      }
+    }
+    try {
+      flyIpv6 = await fly.allocateIpv6(flyAppName)
+    } catch {
+      // Retry once
+      try { flyIpv6 = await fly.allocateIpv6(flyAppName) } catch (e: any) {
+        warnings.push(`IPv6 allocation failed: ${e.message}`)
+      }
+    }
+    if (flyIpv4 || flyIpv6) {
+      console.log(`Allocated IPs: ${flyIpv4} / ${flyIpv6}`)
+    }
+
+    // 5. Create machine with site-specific env vars (including GA/GTM IDs if created)
+    const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${flyAppName}.fly.dev`
+    const machineEnv: Record<string, string> = {
+      BRAND_USERNAME: username,
+      SITE_URL: siteUrl,
+      SITE_NAME: display_name,
+      CONTACT_EMAIL: resolved_email,
+      NEXT_PUBLIC_BRAND_USERNAME: username,
+      NEXT_PUBLIC_SITE_URL: siteUrl,
+      NEXT_PUBLIC_SITE_NAME: display_name,
+      NEXT_PUBLIC_CONTACT_EMAIL: resolved_email,
+    }
+    if (gaId) {
+      machineEnv.GA_ID = gaId
+      machineEnv.NEXT_PUBLIC_GA_ID = gaId
+    }
+    if (gtmId) {
+      machineEnv.GTM_ID = gtmId
+      machineEnv.NEXT_PUBLIC_GTM_ID = gtmId
+    }
+    if (Array.isArray(languages) && languages.length > 0) {
+      machineEnv.LANGUAGES = languages.join(',')
+      machineEnv.NEXT_PUBLIC_LANGUAGES = languages.join(',')
+    }
+    await fly.createMachine(flyAppName, imageRef, machineEnv, fly_region)
+    console.log(`Machine created in ${flyAppName}`)
+
     notifications.fly = {
-      status: 'skipped',
-      reason: !process.env.FLY_API_TOKEN ? 'FLY_API_TOKEN not set' : 'skip_deploy=true',
+      status: 'deployed',
+      app: flyAppName,
+      url: `https://${flyAppName}.fly.dev`,
+      ipv4: flyIpv4,
+      ipv6: flyIpv6,
     }
-  }
+
+    return { app: flyAppName, ipv4: flyIpv4, ipv6: flyIpv6 }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 5: Purchase domain via Google Cloud Domains (optional)
   // ─────────────────────────────────────────────────────────────
 
-  if (purchase_domain && domain && domain_yearly_price && google.isGoogleServiceConfigured()) {
-    try {
-      // Always register domains under stuartr@sewo.io
-      const regResult = await google.registerDomain(
-        domain,
-        'stuartr@sewo.io',
-        domain_yearly_price,
-        domain_notices || []
-      )
-      console.log(`Domain registration initiated: ${domain} (${regResult.operationName})`)
+  phase_results.push(await runPhase('domain_purchase', 'optional', 0, async () => {
+    if (!purchase_domain) {
+      return { skipped: true }
+    }
+
+    if (!domain || !domain_yearly_price || !google.isGoogleServiceConfigured()) {
       notifications.domain_purchase = {
-        status: 'registration_pending',
-        domain,
-        operation: regResult.operationName,
-        price: domain_yearly_price,
+        status: 'skipped',
+        reason: !google.isGoogleServiceConfigured()
+          ? 'GOOGLE_SERVICE_ACCOUNT_JSON not configured'
+          : !domain_yearly_price ? 'Missing yearly price data' : 'Missing domain',
       }
-    } catch (err) {
-      console.error('Error registering domain:', err)
-      notifications.domain_purchase = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+      return { skipped: true }
     }
-  } else if (purchase_domain) {
+
+    const domainAdminEmail = process.env.DOMAIN_ADMIN_EMAIL || 'stuartr@sewo.io'
+    const regResult = await google.registerDomain(
+      domain,
+      domainAdminEmail,
+      domain_yearly_price,
+      domain_notices || []
+    )
+    console.log(`Domain registration initiated: ${domain} (${regResult.operationName})`)
     notifications.domain_purchase = {
-      status: 'skipped',
-      reason: !google.isGoogleServiceConfigured()
-        ? 'GOOGLE_SERVICE_ACCOUNT_JSON not configured'
-        : !domain_yearly_price ? 'Missing yearly price data' : 'Missing domain',
+      status: 'registration_pending',
+      domain,
+      operation: regResult.operationName,
+      price: domain_yearly_price,
     }
-  }
+
+    return { domain, operation: regResult.operationName }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 6: Add custom domain + request TLS certificate
@@ -793,7 +840,16 @@ export async function POST(request: NextRequest) {
 
   const dnsRecords: Array<{ type: string; name: string; value: string }> = []
 
-  if (domain && (notifications.fly as Record<string, unknown>)?.status === 'deployed') {
+  phase_results.push(await runPhase('tls_certs', 'optional', 0, async () => {
+    if (!domain) {
+      return { skipped: true }
+    }
+
+    if ((notifications.fly as Record<string, unknown>)?.status !== 'deployed') {
+      notifications.domain = { status: 'skipped', reason: 'Fly deployment did not succeed' }
+      return { skipped: true }
+    }
+
     // Request certs for both www and apex — independently so one failure doesn't block the other
     const [wwwResult, apexResult] = await Promise.allSettled([
       fly.addCertificate(flyAppName, `www.${domain}`),
@@ -828,39 +884,43 @@ export async function POST(request: NextRequest) {
       apex_cert: apexCert,
       dns_records: dnsRecords,
     }
-  } else if (domain) {
-    notifications.domain = { status: 'skipped', reason: 'Fly deployment did not succeed' }
-  }
+
+    return { www_cert: !!wwwCert, apex_cert: !!apexCert }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 7: Add to Google Search Console + get verification token
   // ─────────────────────────────────────────────────────────────
 
-  if (setup_search_console && google.isGoogleServiceConfigured()) {
-    const siteUrl = domain ? `https://www.${domain}` : `https://${flyAppName}.fly.dev`
-    try {
-      const gsc = await google.addSearchConsoleSite(siteUrl)
-      console.log(`Search Console site added: ${siteUrl}`)
-      notifications.search_console = {
-        status: 'added',
-        site_url: gsc.siteUrl,
-        verification_token: gsc.verificationToken,
-        verification_method: gsc.verificationMethod,
-      }
-      if (domain && gsc.verificationToken) {
-        dnsRecords.push({
-          type: 'TXT',
-          name: '@',
-          value: gsc.verificationToken,
-        })
-      }
-    } catch (err) {
-      console.error('Error adding to Search Console:', err)
-      notifications.search_console = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+  phase_results.push(await runPhase('search_console', 'optional', 0, async () => {
+    if (!setup_search_console) {
+      return { skipped: true }
     }
-  } else if (setup_search_console) {
-    notifications.search_console = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
-  }
+
+    if (!google.isGoogleServiceConfigured()) {
+      notifications.search_console = { status: 'skipped', reason: 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' }
+      return { skipped: true }
+    }
+
+    const siteUrl = domain ? `https://www.${domain}` : `https://${flyAppName}.fly.dev`
+    const gsc = await google.addSearchConsoleSite(siteUrl)
+    console.log(`Search Console site added: ${siteUrl}`)
+    notifications.search_console = {
+      status: 'added',
+      site_url: gsc.siteUrl,
+      verification_token: gsc.verificationToken,
+      verification_method: gsc.verificationMethod,
+    }
+    if (domain && gsc.verificationToken) {
+      dnsRecords.push({
+        type: 'TXT',
+        name: '@',
+        value: gsc.verificationToken,
+      })
+    }
+
+    return { site_url: gsc.siteUrl }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 8: Auto-configure DNS (if domain purchased via Cloud Domains)
@@ -868,12 +928,16 @@ export async function POST(request: NextRequest) {
 
   const domainWasPurchased = (notifications.domain_purchase as any)?.status === 'registration_pending'
 
-  if (domainWasPurchased && domain && flyIpv4 && flyIpv6 && google.isGoogleServiceConfigured()) {
-    try {
-      const txtRecords = dnsRecords
-        .filter(r => r.type === 'TXT')
-        .map(r => r.value)
+  phase_results.push(await runPhase('dns_config', 'optional', 0, async () => {
+    if (!domainWasPurchased || !domain || !flyIpv4 || !flyIpv6 || !google.isGoogleServiceConfigured()) {
+      return { skipped: true }
+    }
 
+    const txtRecords = dnsRecords
+      .filter(r => r.type === 'TXT')
+      .map(r => r.value)
+
+    try {
       const dnsResult = await google.configureDnsRecords(domain, {
         ipv4: flyIpv4,
         ipv6: flyIpv6,
@@ -885,112 +949,117 @@ export async function POST(request: NextRequest) {
         status: 'configured',
         records: dnsResult.additions,
       }
+      return { status: dnsResult.status }
     } catch (err) {
-      console.error('Error auto-configuring DNS:', err)
+      // Set deferred notification before re-throwing for runPhase to catch
       notifications.dns_auto_config = {
         status: 'deferred',
         reason: err instanceof Error ? err.message : String(err),
         note: 'Domain registration may still be in progress. DNS records can be configured manually or will be set on domain verification.',
       }
+      throw err
     }
-  }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 9: Email user with DNS records via Resend
   // ─────────────────────────────────────────────────────────────
 
-  if (dnsRecords.length > 0 && process.env.RESEND_API_KEY) {
-    try {
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@doubleclicker.app'
-      const verifyUrl = `https://${flyAppName}.fly.dev/api/provision/verify-domain?username=${username}&domain=${domain}`
-
-      const dnsTable = dnsRecords.map(r =>
-        `<tr>
-          <td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-size:14px;">${r.type}</td>
-          <td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-size:14px;">${r.name}</td>
-          <td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-size:14px;">${r.value}</td>
-        </tr>`
-      ).join('')
-
-      const emailTitle = manual_dns
-        ? 'Your DNS records are ready'
-        : 'Your new site is almost live!'
-      const emailSubtitle = manual_dns
-        ? `Register <strong>${domain}</strong> at your preferred registrar, then add these records:`
-        : `Add these DNS records at your domain registrar:`
-
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-          <head><meta charset="utf-8"><title>${manual_dns ? 'DNS Records' : 'DNS Setup Required'}</title></head>
-          <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
-            <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
-              <div style="text-align:center;margin-bottom:30px;">
-                <h1 style="color:#1e293b;font-size:24px;margin:0 0 8px;">${emailTitle}</h1>
-                <p style="color:#64748b;font-size:16px;margin:0;">${display_name} — ${domain}</p>
-              </div>
-
-              <div style="background:#fff;border-radius:12px;padding:30px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:20px;">
-                <h2 style="color:#1e293b;font-size:18px;margin:0 0 12px;">Your site is live now at:</h2>
-                <p style="margin:0 0 20px;">
-                  <a href="https://${flyAppName}.fly.dev" style="color:#3b82f6;font-size:16px;">https://${flyAppName}.fly.dev</a>
-                </p>
-
-                <h2 style="color:#1e293b;font-size:18px;margin:0 0 12px;">To use your custom domain (${domain}):</h2>
-                <p style="color:#475569;font-size:14px;margin:0 0 16px;">${emailSubtitle}</p>
-
-                <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-                  <thead>
-                    <tr style="background:#f1f5f9;">
-                      <th style="padding:8px 12px;border:1px solid #e2e8f0;text-align:left;font-size:13px;color:#64748b;">Type</th>
-                      <th style="padding:8px 12px;border:1px solid #e2e8f0;text-align:left;font-size:13px;color:#64748b;">Name</th>
-                      <th style="padding:8px 12px;border:1px solid #e2e8f0;text-align:left;font-size:13px;color:#64748b;">Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>${dnsTable}</tbody>
-                </table>
-
-                <p style="color:#475569;font-size:14px;margin:0 0 8px;">DNS changes can take a few minutes to propagate.</p>
-              </div>
-
-              <div style="background:#fff;border-radius:12px;padding:30px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                <h2 style="color:#1e293b;font-size:18px;margin:0 0 12px;">Once you've added the DNS records:</h2>
-                <p style="color:#475569;font-size:14px;margin:0 0 16px;">Click the button below to verify your domain and activate HTTPS:</p>
-                <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Verify Domain</a>
-              </div>
-
-              <div style="margin-top:30px;text-align:center;color:#94a3b8;font-size:12px;">
-                <p style="margin:0;">Provisioned by Doubleclicker</p>
-              </div>
-            </div>
-          </body>
-        </html>
-      `
-
-      const { error: emailError } = await resend.emails.send({
-        from: `Doubleclicker <${fromEmail}>`,
-        to: [resolved_email],
-        subject: manual_dns
-          ? `DNS records for ${domain} — configure at your registrar`
-          : `Your new site is almost live — DNS setup for ${domain}`,
-        html: htmlContent,
-      })
-
-      notifications.email = emailError
-        ? { status: 'failed', error: emailError }
-        : { status: 'sent', to: resolved_email }
-    } catch (err) {
-      console.error('Error sending DNS email:', err)
-      notifications.email = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+  phase_results.push(await runPhase('email_notify', 'optional', 0, async () => {
+    if (dnsRecords.length === 0 || !process.env.RESEND_API_KEY) {
+      return { skipped: true }
     }
-  }
+
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@doubleclicker.app'
+    const verifyUrl = `https://${flyAppName}.fly.dev/api/provision/verify-domain?username=${username}&domain=${domain}`
+
+    const dnsTable = dnsRecords.map(r =>
+      `<tr>
+        <td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-size:14px;">${r.type}</td>
+        <td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-size:14px;">${r.name}</td>
+        <td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-size:14px;">${r.value}</td>
+      </tr>`
+    ).join('')
+
+    const emailTitle = manual_dns
+      ? 'Your DNS records are ready'
+      : 'Your new site is almost live!'
+    const emailSubtitle = manual_dns
+      ? `Register <strong>${domain}</strong> at your preferred registrar, then add these records:`
+      : `Add these DNS records at your domain registrar:`
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head><meta charset="utf-8"><title>${manual_dns ? 'DNS Records' : 'DNS Setup Required'}</title></head>
+        <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
+          <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+            <div style="text-align:center;margin-bottom:30px;">
+              <h1 style="color:#1e293b;font-size:24px;margin:0 0 8px;">${emailTitle}</h1>
+              <p style="color:#64748b;font-size:16px;margin:0;">${display_name} — ${domain}</p>
+            </div>
+
+            <div style="background:#fff;border-radius:12px;padding:30px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:20px;">
+              <h2 style="color:#1e293b;font-size:18px;margin:0 0 12px;">Your site is live now at:</h2>
+              <p style="margin:0 0 20px;">
+                <a href="https://${flyAppName}.fly.dev" style="color:#3b82f6;font-size:16px;">https://${flyAppName}.fly.dev</a>
+              </p>
+
+              <h2 style="color:#1e293b;font-size:18px;margin:0 0 12px;">To use your custom domain (${domain}):</h2>
+              <p style="color:#475569;font-size:14px;margin:0 0 16px;">${emailSubtitle}</p>
+
+              <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+                <thead>
+                  <tr style="background:#f1f5f9;">
+                    <th style="padding:8px 12px;border:1px solid #e2e8f0;text-align:left;font-size:13px;color:#64748b;">Type</th>
+                    <th style="padding:8px 12px;border:1px solid #e2e8f0;text-align:left;font-size:13px;color:#64748b;">Name</th>
+                    <th style="padding:8px 12px;border:1px solid #e2e8f0;text-align:left;font-size:13px;color:#64748b;">Value</th>
+                  </tr>
+                </thead>
+                <tbody>${dnsTable}</tbody>
+              </table>
+
+              <p style="color:#475569;font-size:14px;margin:0 0 8px;">DNS changes can take a few minutes to propagate.</p>
+            </div>
+
+            <div style="background:#fff;border-radius:12px;padding:30px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+              <h2 style="color:#1e293b;font-size:18px;margin:0 0 12px;">Once you've added the DNS records:</h2>
+              <p style="color:#475569;font-size:14px;margin:0 0 16px;">Click the button below to verify your domain and activate HTTPS:</p>
+              <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Verify Domain</a>
+            </div>
+
+            <div style="margin-top:30px;text-align:center;color:#94a3b8;font-size:12px;">
+              <p style="margin:0;">Provisioned by Doubleclicker</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const { error: emailError } = await resend.emails.send({
+      from: `Doubleclicker <${fromEmail}>`,
+      to: [resolved_email],
+      subject: manual_dns
+        ? `DNS records for ${domain} — configure at your registrar`
+        : `Your new site is almost live — DNS setup for ${domain}`,
+      html: htmlContent,
+    })
+
+    if (emailError) {
+      notifications.email = { status: 'failed', error: emailError }
+      throw new Error(typeof emailError === 'string' ? emailError : JSON.stringify(emailError))
+    }
+
+    notifications.email = { status: 'sent', to: resolved_email }
+    return { sent_to: resolved_email }
+  }))
 
   // ─────────────────────────────────────────────────────────────
   // PHASE 10: Log the provisioning event
   // ─────────────────────────────────────────────────────────────
 
-  try {
+  phase_results.push(await runPhase('analytics_log', 'silent', 0, async () => {
     await supabase.from('analytics_events').insert({
       event_name: 'site_provisioned',
       properties: {
@@ -1003,9 +1072,9 @@ export async function POST(request: NextRequest) {
         warnings,
       },
     })
-  } catch {
-    // best-effort
-  }
+
+    return { logged: true }
+  }))
 
   // Always return 200 with full status — never 500 for phase failures
   return NextResponse.json({
@@ -1013,7 +1082,8 @@ export async function POST(request: NextRequest) {
     message: `Site provisioned for ${username}`,
     data: results,
     notifications,
-    warnings: warnings.length > 0 ? warnings : undefined,
+    warnings: phase_results.filter(p => p.status === 'warning' || p.status === 'error').map(p => `${p.phase}: ${p.message}`),
+    phase_results,
     fly: {
       app: flyAppName,
       url: `https://${flyAppName}.fly.dev`,

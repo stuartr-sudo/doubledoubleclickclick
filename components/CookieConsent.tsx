@@ -156,9 +156,11 @@ export default function CookieConsent() {
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--color-bg)',
+          fontFamily: 'var(--font-body)',
           padding: '24px',
           boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)',
+          borderRadius: 'var(--border-radius)',
           zIndex: 9999,
           maxWidth: '100%',
         }}
@@ -177,7 +179,7 @@ export default function CookieConsent() {
               style={{
                 fontSize: '1.25rem',
                 fontWeight: 700,
-                color: '#0f172a',
+                color: 'var(--color-text)',
                 margin: 0,
               }}
             >
@@ -186,7 +188,7 @@ export default function CookieConsent() {
             <p
               style={{
                 fontSize: '0.95rem',
-                color: '#475569',
+                color: 'var(--color-text-muted, #475569)',
                 lineHeight: 1.6,
                 margin: 0,
               }}
@@ -195,7 +197,7 @@ export default function CookieConsent() {
               advertisements. By clicking &ldquo;Accept All&rdquo;, you consent to our use of cookies.{' '}
               <a
                 href="/privacy"
-                style={{ color: '#3b82f6', textDecoration: 'underline' }}
+                style={{ color: 'var(--color-accent)', textDecoration: 'underline' }}
                 target="_blank"
               >
                 Learn more in our Privacy Policy
@@ -214,17 +216,18 @@ export default function CookieConsent() {
               onClick={handleAccept}
               style={{
                 padding: '10px 24px',
-                backgroundColor: '#3b82f6',
+                backgroundColor: 'var(--color-accent)',
                 color: '#ffffff',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: 'var(--border-radius)',
+                fontFamily: 'var(--font-body)',
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 cursor: 'pointer',
-                transition: 'background-color 0.2s',
+                transition: 'filter 0.2s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3b82f6')}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(0.9)')}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
             >
               Accept All
             </button>
@@ -232,17 +235,18 @@ export default function CookieConsent() {
               onClick={handleDecline}
               style={{
                 padding: '10px 24px',
-                backgroundColor: '#f1f5f9',
-                color: '#475569',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
+                backgroundColor: 'var(--color-bg-muted, #f1f5f9)',
+                color: 'var(--color-text-muted, #475569)',
+                border: '1px solid var(--color-border, #cbd5e1)',
+                borderRadius: 'var(--border-radius)',
+                fontFamily: 'var(--font-body)',
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 cursor: 'pointer',
-                transition: 'background-color 0.2s',
+                transition: 'filter 0.2s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e2e8f0')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(0.95)')}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
             >
               Decline
             </button>
@@ -251,7 +255,7 @@ export default function CookieConsent() {
               style={{
                 padding: '10px 24px',
                 backgroundColor: 'transparent',
-                color: '#64748b',
+                color: 'var(--color-text-muted, #64748b)',
                 border: 'none',
                 fontSize: '0.95rem',
                 fontWeight: 600,

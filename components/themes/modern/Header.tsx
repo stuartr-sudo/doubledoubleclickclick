@@ -8,6 +8,7 @@ import type { HeaderProps } from '../types'
 export default function ModernHeader({
   brandName,
   logoUrl,
+  tagline,
   categories = [],
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -124,6 +125,16 @@ export default function ModernHeader({
               </span>
             )}
           </Link>
+          {tagline && (
+            <span style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-text-muted, #6b7280)',
+              marginLeft: '12px',
+              fontWeight: 400,
+            }}>
+              {tagline}
+            </span>
+          )}
 
           <nav
             style={{

@@ -127,7 +127,6 @@ export default function NetworkForm() {
   const [entryMode, setEntryMode] = useState<'choose' | 'upload' | 'scratch'>('choose')
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadSiteCount, setUploadSiteCount] = useState(5)
-  const [parseJobId, setParseJobId] = useState<string | null>(null)
   const [parseStatus, setParseStatus] = useState<string>('')
   const [parsedSites, setParsedSites] = useState<any[]>([])
 
@@ -138,53 +137,9 @@ export default function NetworkForm() {
 
   const pollRef = useRef<NodeJS.Timeout | null>(null)
 
-  /* ── upload path: parse brand guide PDF ── */
+  /* ── upload path: PDF parsing removed (endpoint deleted) ── */
   const handleUploadParse = async () => {
-    if (!uploadFile) return
-    setParseStatus('Uploading...')
-    setError('')
-    const formData = new FormData()
-    formData.append('file', uploadFile)
-    formData.append('siteCount', String(uploadSiteCount))
-    try {
-      const res = await fetch('/api/admin/parse-brand-guide', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      setParseJobId(data.jobId)
-      pollParseJob(data.jobId)
-    } catch (err: any) {
-      setError(err.message)
-      setParseStatus('')
-    }
-  }
-
-  const pollParseJob = async (jobId: string) => {
-    const maxPoll = 180_000
-    const start = Date.now()
-    let interval = 2000
-    while (Date.now() - start < maxPoll) {
-      await new Promise(r => setTimeout(r, interval))
-      interval = Math.min(interval * 1.3, 5000)
-      try {
-        const res = await fetch(`/api/admin/parse-brand-guide?jobId=${jobId}`)
-        const job = await res.json()
-        if (job.status === 'parsing') setParseStatus('Parsing document...')
-        else if (job.status === 'extracting') setParseStatus('Extracting brand data...')
-        else if (job.status === 'synthesizing') setParseStatus('Synthesizing research context...')
-        else if (job.status === 'done' && job.result) {
-          setParseStatus('')
-          populateFromParsed(job.result)
-          return
-        } else if (job.status === 'error') {
-          throw new Error(job.error || 'Parse failed')
-        }
-      } catch (err: any) {
-        setError(err.message)
-        setParseStatus('')
-        return
-      }
-    }
-    setError('Parse timed out after 3 minutes. Try again or use Build from Scratch.')
+    setError('PDF brand guide parsing is no longer available. Please use Build from Scratch.')
     setParseStatus('')
   }
 
@@ -1241,7 +1196,6 @@ export default function NetworkForm() {
                     setNicheBrands({})
                     setEntryMode('choose')
                     setUploadFile(null)
-                    setParseJobId(null)
                     setParseStatus('')
                     setParsedSites([])
                   }}
