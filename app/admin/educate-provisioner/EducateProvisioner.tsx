@@ -430,6 +430,11 @@ Content-Type: application/json`}</Code>
 
       <Heading>Authentication</Heading>
       <p>Bearer token matching the <code>PROVISION_SECRET</code> environment variable. Returns 401 if missing or incorrect.</p>
+      <Card variant="info" title="Why do I need to paste the secret?">
+        <p>The admin pages (<code>/admin/provision</code>, <code>/admin/drafts</code>, <code>/admin/api-keys</code>) each have a password field at the top where you paste the provision secret. This is the authorization token that proves you&apos;re allowed to create and manage sites.</p>
+        <p>The secret lives in the <code>PROVISION_SECRET</code> environment variable (check your <code>.env.local</code> file or Fly.io secrets). You paste it once per session — it&apos;s stored in browser memory only (not cookies or localStorage) and is never exposed via API.</p>
+        <p>Find your secret: <code>grep PROVISION_SECRET .env.local</code></p>
+      </Card>
 
       <Heading>Response Behavior</Heading>
       <Card variant="info" title="Self-Healing Design">
