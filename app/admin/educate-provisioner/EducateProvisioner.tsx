@@ -549,10 +549,27 @@ function PhasesSection() {
 
       <Card title="Phase 1 — Seed Shared Database">
         <p>Seeds 8 tables in the shared Supabase database. Each upsert retries once on failure.</p>
+        <SubHeading>Structured Voice Extraction (GPT-4.1)</SubHeading>
+        <p>Before building the brand_guidelines payload, the provisioner calls GPT-4.1 to extract structured voice characteristics from the brand data. This populates 6 dedicated columns:</p>
+        <Table
+          headers={['Column', 'Type', 'Example']}
+          rows={[
+            ['voice_formality', 'text', '"casual-professional"'],
+            ['voice_perspective', 'text', '"second_person" (brand) or "third_person" (affiliate)'],
+            ['voice_personality_traits', 'text[]', '["authoritative", "warm", "direct"]'],
+            ['voice_sentence_style', 'jsonb', '{ "avg_length": "medium", "fragments_ok": true, "rhetorical_questions": false }'],
+            ['voice_vocabulary_preferences', 'jsonb', '{ "prefer": ["straightforward"], "avoid": ["leverage", "synergy"] }'],
+            ['voice_example_sentences', 'text[]', '3-5 niche-specific example sentences'],
+          ]}
+        />
+        <Callout type="info">
+          Non-fatal: if <code>OPENAI_API_KEY</code> is not set or the call fails, these fields default to null/empty. The writer checks structured fields first, falls back to <code>voice_and_tone</code>.
+        </Callout>
+        <SubHeading>Tables Seeded</SubHeading>
         <Table
           headers={['Table', 'Filter Column', 'Key Data']}
           rows={[
-            ['brand_guidelines', 'user_name', 'Brand name, voice/tone, niche, keywords, author defaults, logo'],
+            ['brand_guidelines', 'user_name', 'Brand name, voice/tone, tagline, structured voice fields, niche, keywords, author defaults, logo'],
             ['brand_specifications', 'user_name', 'Colors, fonts, logo URL, theme, hero image'],
             ['company_information', 'username', 'Brand name, website, email, blurb'],
             ['authors', 'user_name + slug', 'Name, bio, avatar, social URLs'],
@@ -1043,7 +1060,7 @@ await supabase.from('brand_guidelines').upsert({ user_name: username, ...payload
       <Table
         headers={['Table', 'Key Columns']}
         rows={[
-          ['brand_guidelines', 'user_name, name, tagline, voice_and_tone, brand_personality, niche, seed_keywords, logo_url'],
+          ['brand_guidelines', 'user_name, name, tagline, voice_and_tone, voice_formality, voice_perspective, voice_personality_traits, voice_sentence_style, voice_vocabulary_preferences, voice_example_sentences, niche, seed_keywords, logo_url'],
           ['brand_specifications', 'user_name, guideline_id, primary_color, accent_color, heading_font, body_font, theme'],
           ['company_information', 'username, company_name, client_website, contact_email, blurb'],
           ['authors', 'user_name, name, slug, bio, avatar_url, website, social_urls'],
@@ -1307,7 +1324,8 @@ function ImagesSection() {
       </p>
 
       <Heading>Required Variable</Heading>
-      <Code>{`FAL_API_KEY=fal-...   # Optional — features skip silently without it`}</Code>
+      <Code>{`OPENAI_API_KEY=sk-...  # Optional — structured voice extraction via GPT-4.1
+FAL_API_KEY=fal-...   # Optional — features skip silently without it`}</Code>
 
       <Heading>Hero Banner Generation (Phase 2.5)</Heading>
       <ul style={{ paddingLeft: 20, lineHeight: 2 }}>
@@ -1381,6 +1399,7 @@ function EnvSection() {
       <Table
         headers={['Variable', 'Description']}
         rows={[
+          ['OPENAI_API_KEY', 'GPT-4.1 for structured voice extraction during provisioning'],
           ['FAL_API_KEY', 'fal.ai for hero images and logos'],
         ]}
       />
@@ -1531,6 +1550,11 @@ function TroubleshootSection() {
       <Card variant="warning" title="Domain verification link returns 'pending'">
         <p><strong>Cause:</strong> DNS hasn&apos;t propagated yet, or DNS records are incorrect.</p>
         <p><strong>Fix:</strong> Wait 15-30 minutes and retry. Check DNS records with <code>dig A www.yourdomain.com</code>. Ensure they point to the Fly.io IPs.</p>
+      </Card>
+
+      <Card variant="warning" title="Structured voice fields are empty">
+        <p><strong>Cause:</strong> <code>OPENAI_API_KEY</code> not set, GPT-4.1 API error, or timeout (30s).</p>
+        <p><strong>Fix:</strong> Set <code>OPENAI_API_KEY</code>. This is non-fatal — the writer falls back to <code>voice_and_tone</code>. Check server logs for <code>[PROVISION] Structured voice extraction failed</code>.</p>
       </Card>
 
       <Card variant="warning" title="Hero image not generated">
@@ -1702,6 +1726,7 @@ function ChecklistSection() {
         { key: 'env-resend-key', label: 'RESEND_API_KEY set' },
         { key: 'env-resend-from', label: 'RESEND_FROM_EMAIL set and domain verified in Resend' },
         { key: 'env-notif', label: 'NOTIFICATION_EMAIL set' },
+        { key: 'env-openai', label: 'OPENAI_API_KEY set (optional — structured voice extraction via GPT-4.1)' },
         { key: 'env-fal', label: 'FAL_API_KEY set (optional — images degrade gracefully)' },
         { key: 'env-domain-email', label: 'DOMAIN_ADMIN_EMAIL set (optional, defaults to stuartr@sewo.io)' },
       ],
