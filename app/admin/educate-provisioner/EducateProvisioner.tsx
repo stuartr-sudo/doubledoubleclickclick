@@ -653,11 +653,6 @@ function AdminApiSection() {
         All admin endpoints live under <code>/api/admin/</code>. Most require <code>PROVISION_SECRET</code> as bearer token.
       </p>
 
-      <Card title="GET /api/admin/provision-secret">
-        <p>Returns the <code>PROVISION_SECRET</code> value for the admin form.</p>
-        <Callout type="warning">Should be gated behind auth in production.</Callout>
-      </Card>
-
       <Card title="POST /api/admin/provision-network">
         <p>Orchestrates parallel provisioning of an entire site network. See the <strong>Network Provisioning</strong> section for full details.</p>
       </Card>
@@ -703,14 +698,6 @@ function AdminApiSection() {
             ['?action=gtm-create', 'Creates a test container (optional ?name=)'],
           ]}
         />
-      </Card>
-
-      <Card title="POST /api/admin/parse-brand-guide">
-        <p>Fire-and-forget PDF parsing for brand guide uploads.</p>
-        <p><strong>Input:</strong> FormData with <code>file</code> (PDF, max 10 MB) and <code>siteCount</code> (1-8)</p>
-        <p><strong>Output:</strong> <code>&#123; jobId &#125;</code> (202 Accepted)</p>
-        <p>Poll status: <code>GET /api/admin/parse-brand-guide?jobId=X</code></p>
-        <p>Statuses: <Tag>parsing</Tag> <Tag>extracting</Tag> <Tag>synthesizing</Tag> <Tag color="#22c55e">done</Tag> <Tag color="#ef4444">error</Tag></p>
       </Card>
 
       <Card title="POST /api/admin/domain-suggestions">
@@ -1530,14 +1517,12 @@ function ArchitectureSection() {
 │   │   │   └── verify-domain/
 │   │   │       └── route.ts          # Domain verification callback
 │   │   ├── admin/
-│   │   │   ├── provision-secret/     # Returns PROVISION_SECRET
 │   │   │   ├── provision-network/    # Network provisioning
 │   │   │   ├── api-keys/            # API key management
 │   │   │   ├── pipeline-status/     # DC proxy for pipeline status
 │   │   │   ├── drafts/             # Draft management
 │   │   │   ├── generate-logo/      # fal.ai logo generation
 │   │   │   ├── google-test/        # Google API diagnostics
-│   │   │   ├── parse-brand-guide/  # PDF brand guide parser
 │   │   │   ├── domain-suggestions/ # Cloud Domains search
 │   │   │   └── dc-proxy/          # General DC proxy
 │   │   ├── blog/                   # Blog CRUD + categories
@@ -1571,7 +1556,8 @@ function ArchitectureSection() {
 │   │   ├── ThemeRenderer.tsx      # Theme factory
 │   │   └── types.ts               # Shared theme types
 │   ├── BrandStyles.tsx            # Theme CSS injection (server)
-│   ├── ProvisionForm.tsx          # Provision admin form
+│   ├── provision/
+│   │   └── ProvisionWizard.tsx    # Provision admin wizard
 │   ├── NetworkForm.tsx            # Network admin form
 │   ├── Footer.tsx                 # Global footer
 │   ├── ArticleCard.tsx            # Blog post card
