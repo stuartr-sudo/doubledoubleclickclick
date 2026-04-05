@@ -18,25 +18,14 @@ The PDF upload mode has been superseded by an MCP-based client submission system
 
 **Problem:** Returns `PROVISION_SECRET` to any caller with no authentication. Any user who discovers this endpoint can obtain the secret used to authorize provisioning.
 
-**Fix:** Add `x-provision-secret` header validation, matching the pattern used by other admin endpoints (`/api/admin/drafts`, `/api/admin/api-keys`).
+**Fix:** Delete `app/api/admin/provision-secret/route.ts` entirely. Replace with a manual secret input in the admin UI.
 
-```typescript
-export async function GET(request: NextRequest) {
-  const secret = process.env.PROVISION_SECRET
-  if (!secret) return NextResponse.json({ error: 'Not configured' }, { status: 500 })
+**Changes required:**
 
-  const authHeader = request.headers.get('x-provision-secret')
-  if (authHeader !== secret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  return NextResponse.json({ secret })
-}
-```
-
-**Impact:** The ProvisionForm frontend already stores the provision secret in state (fetched on mount). The form must send the secret as a header when fetching it. This creates a chicken-and-egg problem — the form needs the secret to authenticate, but needs to authenticate to get the secret.
-
-**Resolution:** The provision-secret endpoint should be removed entirely. The ProvisionForm should accept the provision secret as manual input (a text field), or read it from a cookie/session set during admin login. The simplest fix: add a password field to the provision page where the admin enters the secret manually. This avoids exposing it via API at all.
+1. **Delete** `app/api/admin/provision-secret/route.ts`
+2. **ProvisionWizard** (new shell component): Add a password input field at the top of the wizard where the admin pastes the provision secret. Store in React state only (not persisted to localStorage or cookies). The secret is used as the `Authorization: Bearer {secret}` header when calling `POST /api/provision`.
+3. **Remove** the `fetchProvisionSecret()` call that currently runs on ProvisionForm mount.
+4. **DraftReview.tsx**: Already accepts the provision secret as a prop passed from the drafts page (fetched via `x-provision-secret` header pattern). No change needed here — DraftReview uses the secret from the admin page's own fetch, which is already auth-gated.
 
 ### 1b. Idempotency Guard
 
@@ -44,34 +33,33 @@ export async function GET(request: NextRequest) {
 
 **Problem:** Calling `POST /api/provision` twice with the same username triggers duplicate auto-onboard calls, creating parallel content pipelines.
 
-**Fix:** Before Phase 2, query `pipeline_runs` for the username with `status IN ('running', 'pending')`. If found, skip auto-onboard.
+**Fix:** Before Phase 2, check if this username already has brand data seeded (indicating a previous provision). The `pipeline_runs` table lives in the shared Supabase DB (created by Doubleclicker) and tracks auto-onboard pipeline state. However, since its schema may change independently, we use a simpler check: query `integration_credentials` for an existing row with this `user_name`. If found and `force_reprovision` is not set, skip auto-onboard.
 
 ```typescript
-// Before Phase 2
-const { data: runningPipeline } = await supabase
-  .from('pipeline_runs')
-  .select('id, status')
-  .eq('username', username)
-  .in('status', ['running', 'pending'])
+// Before Phase 2: idempotency check
+const { data: existingCreds } = await supabase
+  .from('integration_credentials')
+  .select('id')
+  .eq('user_name', username)
   .limit(1)
-  .single()
+  .maybeSingle()
 
-if (runningPipeline && !body.force_reprovision) {
+if (existingCreds && !body.force_reprovision) {
+  // Brand already provisioned — skip auto-onboard to prevent duplicate pipelines
   notifications.doubleclicker = {
     status: 'skipped',
-    reason: 'Pipeline already running',
-    existing_run_id: runningPipeline.id
+    reason: 'Brand already provisioned. Use force_reprovision=true to override.'
   }
 } else {
   // Call auto-onboard as normal
 }
 ```
 
-Add `force_reprovision: boolean` parameter to the provision payload for explicit re-provisioning.
+Add `force_reprovision: boolean` parameter to the provision payload for explicit re-provisioning. When true, auto-onboard is called regardless of existing data (useful for re-seeding brand config).
 
 ### 1c. Hardcoded Domain Email
 
-**File:** `app/api/provision/route.ts` (line 768)
+**File:** `app/api/provision/route.ts` (in the domain registration call)
 
 **Problem:** Domain registration uses hardcoded `'stuartr@sewo.io'`.
 
@@ -185,7 +173,13 @@ type ProvisionState = {
   styleGuide: StyleGuide | null
 
   // Products
-  products: ProductEntry[]
+  products: ProductEntry[]  // name, url, isAffiliate, affiliateLink, commission info
+
+  // Content config
+  skipPipeline: boolean
+  preferredElements: string
+  prohibitedElements: string
+  aiInstructionsOverride: string
 
   // Network
   networkPartners: NetworkPartner[]
@@ -219,12 +213,21 @@ Each component targets 150-300 lines. The context/reducer file may be ~200 lines
 
 ### Phase categorization
 
-| Category | Phases | Retry | On failure |
-|----------|--------|-------|------------|
-| **Critical** | 1 (DB seed), 4 (Fly deploy) | 2 attempts, 2s delay | Warning with `severity: 'critical'` |
-| **Important** | 2 (auto-onboard), 3 (Google services) | 1 attempt | Warning with `severity: 'important'` |
-| **Optional** | 5-9 (domain, certs, DNS, email) | None | Warning with `severity: 'optional'` |
-| **Best-effort** | 10 (analytics), 1.1 (hero image) | None | Silent (no warning) |
+Phases are identified by name (not number) to match the actual code structure:
+
+| Category | Phase ID | Description | Retry | On failure |
+|----------|----------|-------------|-------|------------|
+| **Critical** | `db_seed` | Seed 8 tables + app_settings | 2 attempts, 2s delay | `severity: 'critical'` |
+| **Critical** | `fly_deploy` | Create app, set secrets, allocate IPs, create machine | 2 attempts, 2s delay | `severity: 'critical'` |
+| **Important** | `auto_onboard` | Trigger Doubleclicker pipeline | 1 attempt | `severity: 'important'` |
+| **Important** | `google_services` | Create GA4 property + GTM container | 1 attempt | `severity: 'important'` |
+| **Optional** | `domain_purchase` | Register domain via Cloud Domains | None | `severity: 'optional'` |
+| **Optional** | `tls_certs` | Request TLS certs for www + apex | None | `severity: 'optional'` |
+| **Optional** | `search_console` | Add site to Google Search Console | None | `severity: 'optional'` |
+| **Optional** | `dns_config` | Auto-configure DNS records | None | `severity: 'optional'` |
+| **Optional** | `email_notify` | Email DNS records to admin | None | `severity: 'optional'` |
+| **Silent** | `hero_image` | Generate hero banner via fal.ai | None | No warning |
+| **Silent** | `analytics_log` | Log provisioning event | None | No warning |
 
 ### Consistent notification format
 
@@ -266,6 +269,7 @@ async function runPhase(
       return { phase: name, status, severity, message: err.message, duration_ms: Date.now() - start }
     }
   }
+  throw new Error('unreachable')  // satisfies TypeScript control flow
 }
 ```
 
@@ -277,8 +281,7 @@ async function runPhase(
 |------|----------|--------|
 | `font_sizes` handling | provision/route.ts | Stored in brand_specifications but never read by frontend |
 | `saveBrandProfile()` | ProvisionForm.tsx | Saves to localStorage, never read back |
-| `handleProvisionNetwork()` | ProvisionForm.tsx | Network provisioning lives at `/admin/network` |
-| PDF upload mode | ProvisionForm.tsx + parse-brand-guide endpoint | Replaced by MCP (Section 2) |
+| PDF upload mode | ProvisionForm.tsx + parse-brand-guide endpoint + lib/parse-brand-guide.ts (if exists) | Replaced by MCP (Section 2) |
 
 ### Fix: Tagline support across all themes
 
@@ -302,11 +305,10 @@ if (!HEADERS[theme]) {
 
 ### Fix: Footer and CookieConsent theming
 
-Update Footer and CookieConsent components to use CSS variables:
-- `var(--color-footer-bg)` instead of hardcoded `#1a1a1a`
-- `var(--color-footer-text)` instead of hardcoded `#ffffff`
-- `var(--font-body)` for text
-- `var(--border-radius)` for cookie consent button
+Update CookieConsent component to use CSS variables (Footer already uses `var(--color-footer-bg)` correctly):
+- CookieConsent: replace hardcoded `#ffffff` and other color values with `var(--color-bg)`, `var(--color-text)`, `var(--color-accent)`
+- CookieConsent buttons: use `var(--border-radius)` for rounded corners
+- CookieConsent text: use `var(--font-body)` for font family
 
 ## 6. Brand Data Quality Improvements
 
@@ -327,7 +329,33 @@ When niche is set in niche-first mode:
 
 ### 6c. Tagline in provision payload
 
-Add `tagline` to the provision payload. Store in `brand_guidelines.tagline` (column may need adding via migration). Pass through to the deployed site's brand data fetch.
+**DB migration required:**
+
+```sql
+ALTER TABLE brand_guidelines ADD COLUMN IF NOT EXISTS tagline TEXT;
+```
+
+**Provision endpoint change:** Add `tagline` to the `guidelinesPayload` in the `db_seed` phase:
+
+```typescript
+const guidelinesPayload = {
+  // ...existing fields
+  tagline: body.tagline || null,
+}
+```
+
+**Read-side data flow:** Update `lib/brand.ts` to include `tagline` in the brand_guidelines SELECT:
+
+```typescript
+// In getBrandData()
+const { data: guidelinesData } = await supabase
+  .from('brand_guidelines')
+  .select('*, tagline, brand_specifications(*)')  // add tagline
+  .eq('user_name', username)
+  .single()
+```
+
+**Theme rendering:** The editorial and boutique Headers already accept `tagline` via `HeaderProps`. The boutique Header has tagline rendering disabled with `{false &&` — re-enable it. The modern Header needs the `tagline` prop added to its component signature. All three themes render tagline conditionally (hidden when null/empty).
 
 ## Summary of Changes
 
@@ -335,11 +363,21 @@ Add `tagline` to the provision payload. Store in `brand_guidelines.tagline` (col
 |------|---------------|-------------|---------------|
 | Security | provision-secret/route.ts, provision/route.ts | — | provision-secret/route.ts (replaced with manual input) |
 | PDF removal | ProvisionForm.tsx | — | parse-brand-guide/route.ts |
-| UI decomposition | ProvisionForm.tsx → split | 11 new files in components/provision/ | ProvisionForm.tsx (replaced) |
+| UI decomposition | ProvisionForm.tsx → split | 12 new files in components/provision/ | ProvisionForm.tsx (replaced) |
 | Pipeline | provision/route.ts | — | — |
 | Dead code | provision/route.ts, ProvisionForm.tsx | — | — |
 | Themes | ThemeRenderer.tsx, all 3 theme Headers, Footer, CookieConsent, BrandStyles.tsx | — | — |
 | Brand quality | provision/route.ts, DeployConfigStep.tsx | — | — |
+
+## Cross-Repo Dependencies
+
+These changes are required in the **Doubleclicker** repo (`/Users/stuarta/doubleclicker`) but are documented here for tracking:
+
+| Change | File | Description |
+|--------|------|-------------|
+| Research context pass-through | `api/strategy/auto-onboard.js` | Pass `research_context` from `onboard_config` through to the `launch` payload's `discover_keywords` and `build_topical_map` steps |
+
+These should be implemented after the doubleclicker-1 changes are complete, since the data flow originates here.
 
 ## Out of Scope
 
