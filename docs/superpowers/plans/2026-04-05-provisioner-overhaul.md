@@ -71,9 +71,9 @@ Delete `app/api/admin/provision-secret/route.ts`. This endpoint returns `PROVISI
 
 1. `components/ProvisionForm.tsx` — fetches secret on mount. This will be handled when the component is replaced by ProvisionWizard (Task 6). For now, remove the fetch call and hardcode an empty string (the file is deleted in Task 6 anyway).
 
-2. `components/DraftReview.tsx` — calls `fetch('/api/admin/provision-secret')` on mount (around line 234). Add a password input to the DraftReview component where the admin enters the provision secret. Store in local state. Remove the `fetchProvisionSecret` fetch call.
+2. `app/admin/drafts/DraftReview.tsx` — calls `fetch('/api/admin/provision-secret')` on mount (around line 234). Add a password input to the DraftReview component where the admin enters the provision secret. Store in local state. Remove the `fetchProvisionSecret` fetch call. **Note:** The spec (section 1a item 4) says DraftReview needs no change, but code inspection shows it does call the endpoint directly — this fix is correct.
 
-3. `components/ApiKeyManager.tsx` — calls the same endpoint via a `getSecret()` helper (around line 19). Add a password input for the provision secret. Store in local state. Remove the `getSecret` fetch call.
+3. `app/admin/api-keys/ApiKeyManager.tsx` — calls the same endpoint via a `getSecret()` helper (around line 19). Add a password input for the provision secret. Store in local state. Remove the `getSecret` fetch call.
 
 - [ ] **Step 2: Add idempotency guard to provision route**
 
@@ -512,7 +512,7 @@ git commit -m "refactor: standardize provision pipeline error handling
 
 Add runPhase() helper with categorized retry logic:
 - Critical (db_seed, fly_deploy): 2 retries
-- Important (auto_onboard, google_services): 1 retry
+- Important (auto_onboard, google_services): no retry (1 attempt)
 - Optional (domain, certs, DNS, email): no retry
 - Silent (hero_image, analytics): no warning on failure
 
