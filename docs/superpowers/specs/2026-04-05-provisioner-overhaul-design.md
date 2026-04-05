@@ -77,8 +77,8 @@ Add to `.env.local.example` with description.
 
 ### Files to remove:
 - `app/api/admin/parse-brand-guide/route.ts` — PDF parsing endpoint with in-memory job store
+- `lib/parse-brand-guide.ts` — PDF parsing utility (dependency of the route above)
 - All `mode === 'upload'` branches in ProvisionForm
-- PDF parsing utilities and dependencies (if any exist as separate files)
 
 ### Files to modify:
 - `ProvisionForm.tsx` (becomes `ProvisionWizard.tsx` — see Section 3) — remove upload mode, simplify mode selector to 2 options:
@@ -279,7 +279,7 @@ async function runPhase(
 
 | Item | Location | Reason |
 |------|----------|--------|
-| `font_sizes` handling | provision/route.ts | Stored in brand_specifications but never read by frontend |
+| `font_sizes` handling | lib/brand.ts (read side) + brand_specifications table column | Fetched from DB but never used by any rendering component |
 | `saveBrandProfile()` | ProvisionForm.tsx | Saves to localStorage, never read back |
 | PDF upload mode | ProvisionForm.tsx + parse-brand-guide endpoint + lib/parse-brand-guide.ts (if exists) | Replaced by MCP (Section 2) |
 
