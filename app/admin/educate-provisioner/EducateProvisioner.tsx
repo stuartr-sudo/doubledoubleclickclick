@@ -282,6 +282,7 @@ function OverviewSection() {
           ['Blog Cloner', 'External service that initiates provisioning', 'POST /api/provision with bearer token'],
           ['Doubleclicker (this app)', 'Seeds DB, deploys Fly apps, serves blog frontend', 'HTTP APIs + Supabase'],
           ['Auto-Onboard', 'Content pipeline — keywords, outlines, drafts', 'Fire-and-forget POST from provision'],
+          ['MCP Client (doubleclicker-onboard)', 'External brand submission via AI consultation', 'POST /api/drafts with API key auth'],
           ['Stitch', 'Background worker, processes content queue', 'Polls stitch_queue table every 15s — no HTTP API'],
           ['Supabase', 'Shared Postgres database for all tenants', 'Service role client (bypasses RLS)'],
           ['Fly.io', 'Hosting — each tenant gets its own app', 'REST + GraphQL APIs'],
@@ -294,17 +295,17 @@ function OverviewSection() {
       <Heading>System Flow</Heading>
       <Code>{`Blog Cloner
   → POST /api/provision (this app)
-    → Phase 1:   Seed shared Supabase DB (8 tables)
-    → Phase 2:   Call Doubleclicker auto-onboard (fire-and-forget)
-    → Phase 2.5: Generate hero image via fal.ai
-    → Phase 3:   Create GA4 property + GTM container
-    → Phase 4:   Deploy new Fly.io app
-    → Phase 5:   Purchase domain via Cloud Domains (optional)
-    → Phase 6:   Request TLS certificates
-    → Phase 7:   Add to Google Search Console
-    → Phase 8:   Auto-configure DNS via Cloud DNS
-    → Phase 9:   Email user with DNS records
-    → Phase 10:  Log analytics event
+    → db_seed:          Seed shared Supabase DB (8 tables)
+    → auto_onboard:     Call Doubleclicker auto-onboard (fire-and-forget)
+    → hero_image:       Generate hero image via fal.ai
+    → google_services:  Create GA4 property + GTM container
+    → fly_deploy:       Deploy new Fly.io app
+    → domain_purchase:  Purchase domain via Cloud Domains (optional)
+    → certs:            Request TLS certificates
+    → search_console:   Add to Google Search Console
+    → dns_auto_config:  Auto-configure DNS via Cloud DNS
+    → email:            Email user with DNS records
+    → analytics:        Log analytics event
 
 After auto-onboard:
   Doubleclicker → queues work in stitch_queue
@@ -318,6 +319,8 @@ After auto-onboard:
           <li><strong>Parallel operations:</strong> Network provisioning runs all members concurrently.</li>
           <li><strong>Env-var driven:</strong> Same Docker image, different env vars = different site.</li>
           <li><strong>No unique constraints:</strong> DB uses select-then-insert/update, not upsert.</li>
+          <li><strong>Idempotency:</strong> Auto-onboard is skipped if brand already provisioned (<code>force_reprovision</code> overrides).</li>
+          <li><strong>Structured results:</strong> Every phase returns a PhaseResult with status, severity, duration.</li>
         </ul>
       </Card>
     </>
@@ -363,7 +366,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \\
       </Callout>
 
       <Heading>Step 3: Provision via Admin UI</Heading>
-      <p>Navigate to <code>/admin/provision</code> and fill in the form. The minimum fields are:</p>
+      <p>Navigate to <code>/admin/provision</code>. Enter your provision secret in the password field at the top. There are 2 modes: <strong>&quot;I have a website&quot;</strong> (product-first) and <strong>&quot;I have a niche idea&quot;</strong> (niche-first). The minimum fields are:</p>
       <Table
         headers={['Field', 'Example', 'Required']}
         rows={[
@@ -383,13 +386,15 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \\
     "username": "modernlongevity",
     "display_name": "Modern Longevity",
     "niche": "longevity and anti-aging science",
+    "tagline": "Science-backed insights for a longer life",
     "contact_email": "hello@modernlongevity.com",
     "theme": "editorial",
     "setup_google_analytics": true,
     "setup_google_tag_manager": true,
     "setup_search_console": true,
     "stitch_enabled": true,
-    "fly_region": "syd"
+    "fly_region": "syd",
+    "force_reprovision": false
   }'`}</Code>
 
       <Heading>Step 5: Verify Deployment</Heading>
@@ -432,9 +437,18 @@ Content-Type: application/json`}</Code>
           <li>Returns <strong>200</strong> even when individual phases fail</li>
           <li>Phase failures are accumulated as <code>warnings[]</code></li>
           <li>Only returns <strong>500</strong> for auth failures or missing configuration</li>
-          <li>Each DB upsert retries once on failure</li>
           <li>Phases are sequential but independent — one failure doesn&apos;t block the next</li>
+          <li>Each phase is executed via the <code>runPhase()</code> helper with categorized retries:</li>
         </ul>
+        <Table
+          headers={['Severity', 'Phases', 'Retries', 'On Failure']}
+          rows={[
+            ['Critical', 'db_seed, fly_deploy', '2 retries', 'Warning added'],
+            ['Important', 'auto_onboard, google_services', 'No retry (1 attempt)', 'Warning added'],
+            ['Optional', 'domain, certs, dns_auto_config, email', 'No retry', 'Warning added'],
+            ['Silent', 'hero_image, analytics', 'No retry', 'No warning on failure'],
+          ]}
+        />
       </Card>
 
       <Heading>Full Input Parameters</Heading>
@@ -443,6 +457,7 @@ Content-Type: application/json`}</Code>
         rows={[
           ['username', 'string', 'Yes', '—', 'Tenant identifier (used in DB + Fly app name)'],
           ['display_name', 'string', 'Yes', '—', 'Brand display name'],
+          ['tagline', 'string', 'No', '—', 'Brand tagline shown in header'],
           ['niche', 'string', 'Conditional', '—', 'Industry/topic (required if no website_url)'],
           ['website_url', 'string', 'No', '—', 'Existing website URL'],
           ['contact_email', 'string', 'No', 'derived from domain', 'Lead contact email'],
@@ -450,6 +465,7 @@ Content-Type: application/json`}</Code>
           ['brand_voice_tone', 'string', 'No', '—', 'Voice and tone description'],
           ['target_market', 'string', 'No', '—', 'Target audience description'],
           ['primary_color', 'string', 'No', '—', 'Hex color (e.g. #2563eb)'],
+          ['secondary_color', 'string', 'No', '—', 'Hex color'],
           ['accent_color', 'string', 'No', '—', 'Hex color'],
           ['logo_url', 'string', 'No', '—', 'URL to logo image'],
           ['heading_font', 'string', 'No', 'theme default', 'Google Font name'],
@@ -472,6 +488,7 @@ Content-Type: application/json`}</Code>
           ['domain_yearly_price', 'object', 'No', '—', '{ currencyCode, units, nanos }'],
           ['domain_notices', 'string[]', 'No', '—', 'Domain registration notices'],
           ['fly_region', 'string', 'No', 'syd', 'Fly.io deployment region'],
+          ['force_reprovision', 'boolean', 'No', 'false', 'Force re-provisioning even if brand exists'],
           ['skip_pipeline', 'boolean', 'No', 'false', 'Skip auto-onboard call'],
           ['skip_deploy', 'boolean', 'No', 'false', 'Skip Fly deployment'],
           ['stitch_enabled', 'boolean', 'No', 'true', 'Enable Stitch worker'],
@@ -496,6 +513,12 @@ Content-Type: application/json`}</Code>
     "author": [...],
     "integration_credentials": [...]
   },
+  "phase_results": [
+    { "phase": "db_seed", "status": "success", "severity": "critical", "duration_ms": 1234 },
+    { "phase": "auto_onboard", "status": "skipped", "severity": "important", "message": "..." },
+    { "phase": "hero_image", "status": "success", "severity": "silent", "duration_ms": 5678 },
+    ...
+  ],
   "notifications": {
     "doubleclicker":      { status, statusCode, data, error },
     "hero_image":         { status, url, reason },
@@ -549,8 +572,11 @@ function PhasesSection() {
         <ul style={{ paddingLeft: 20 }}>
           <li>Body: <code>&#123; &quot;username&quot;: &quot;...&quot; &#125;</code></li>
           <li>Header: <code>x-provision-secret: &#123;PROVISION_SECRET&#125;</code></li>
-          <li>Timeout: 30s, 1 retry</li>
+          <li>Timeout: 30s, no retry (1 attempt)</li>
         </ul>
+        <Callout type="info">
+          <strong>Idempotency guard:</strong> If <code>integration_credentials</code> already exists for this username and <code>force_reprovision</code> is not set, auto-onboard is skipped to prevent duplicate pipelines.
+        </Callout>
         <Callout type="warning">
           This is fire-and-forget. All brand data must be in the DB (Phase 1) before this call. Doubleclicker reads everything from the shared DB.
         </Callout>
@@ -710,6 +736,10 @@ function AdminApiSection() {
         <p>Proxies requests to Doubleclicker backend with 120-second timeout.</p>
         <p><strong>Auth:</strong> <code>PROVISION_SECRET</code> header.</p>
       </Card>
+
+      <Callout type="info">
+        External draft creation is handled by <code>POST /api/drafts</code> (see <strong>Public API Reference</strong> section). It uses API key auth, not PROVISION_SECRET.
+      </Callout>
     </>
   )
 }
@@ -1013,7 +1043,7 @@ await supabase.from('brand_guidelines').upsert({ user_name: username, ...payload
       <Table
         headers={['Table', 'Key Columns']}
         rows={[
-          ['brand_guidelines', 'user_name, name, voice_and_tone, brand_personality, niche, seed_keywords, logo_url'],
+          ['brand_guidelines', 'user_name, name, tagline, voice_and_tone, brand_personality, niche, seed_keywords, logo_url'],
           ['brand_specifications', 'user_name, guideline_id, primary_color, accent_color, heading_font, body_font, theme'],
           ['company_information', 'username, company_name, client_website, contact_email, blurb'],
           ['authors', 'user_name, name, slug, bio, avatar_url, website, social_urls'],
@@ -1092,6 +1122,26 @@ function ThemesSection() {
       <Callout type="tip">
         Brand-specific colors/fonts from <code>brand_specifications</code> override the theme defaults. So you can use the editorial layout but with completely custom colors.
       </Callout>
+
+      <Heading>Tagline Support</Heading>
+      <p>Each theme renders the brand tagline differently when present in <code>brand_guidelines.tagline</code>:</p>
+      <Table
+        headers={['Theme', 'Tagline Rendering']}
+        rows={[
+          ['Editorial', 'Below brand name, italicized'],
+          ['Boutique', 'Below brand name, smaller text, accent color'],
+          ['Modern', 'Next to brand name in nav, muted text'],
+        ]}
+      />
+      <Callout type="info">
+        All themes gracefully hide the tagline when it is null or empty -- no conditional rendering needed by consumers.
+      </Callout>
+
+      <Heading>Runtime Behavior</Heading>
+      <ul style={{ paddingLeft: 20, lineHeight: 2 }}>
+        <li><code>ThemeRenderer</code> now logs <code>console.warn</code> for unknown theme names and falls back to <code>editorial</code>.</li>
+        <li><code>CookieConsent</code> now respects theme CSS variables for consistent styling across themes.</li>
+      </ul>
     </>
   )
 }
@@ -1292,6 +1342,7 @@ function EnvSection() {
           ['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'Supabase anonymous key'],
           ['SUPABASE_SERVICE_ROLE_KEY', 'Supabase service role key (bypasses RLS)'],
           ['DOUBLECLICKER_API_URL', 'Doubleclicker backend URL (e.g. https://doubleclicker.fly.dev)'],
+          ['DOMAIN_ADMIN_EMAIL', 'Admin email for domain registrations (defaults to stuartr@sewo.io)'],
         ]}
       />
 
@@ -1331,8 +1382,6 @@ function EnvSection() {
         headers={['Variable', 'Description']}
         rows={[
           ['FAL_API_KEY', 'fal.ai for hero images and logos'],
-          ['OPENAI_API_KEY', 'OpenAI for brand guide parsing'],
-          ['LLAMA_CLOUD_API_KEY', 'LlamaCloud for PDF parsing'],
         ]}
       />
 
@@ -1495,7 +1544,12 @@ function TroubleshootSection() {
       </Card>
 
       <Card variant="info" title="How to re-provision a site">
-        <p>Call <code>POST /api/provision</code> again with the same username. The DB upsert pattern will update existing rows. The Fly app creation will return 409 (already exists) which is non-fatal. Use <code>skip_deploy: true</code> if you only want to update DB data.</p>
+        <p>Call <code>POST /api/provision</code> again with the same username. The DB upsert pattern will update existing rows. The Fly app creation will return 409 (already exists) which is non-fatal. Use <code>skip_deploy: true</code> if you only want to update DB data. Include <code>force_reprovision: true</code> to override the idempotency guard and trigger auto-onboard even if integration_credentials already exists.</p>
+      </Card>
+
+      <Card variant="warning" title="Auto-onboard skipped unexpectedly">
+        <p><strong>Cause:</strong> Brand was already provisioned — <code>integration_credentials</code> exists for this username and <code>force_reprovision</code> was not set.</p>
+        <p><strong>Fix:</strong> Use <code>force_reprovision: true</code> in the provision request body to override the idempotency guard and force a new auto-onboard call.</p>
       </Card>
     </>
   )
@@ -1513,7 +1567,7 @@ function ArchitectureSection() {
 ├── app/
 │   ├── api/
 │   │   ├── provision/
-│   │   │   ├── route.ts              # Main 10-phase pipeline
+│   │   │   ├── route.ts              # Main provisioning pipeline (named phases)
 │   │   │   └── verify-domain/
 │   │   │       └── route.ts          # Domain verification callback
 │   │   ├── admin/
@@ -1557,7 +1611,20 @@ function ArchitectureSection() {
 │   │   └── types.ts               # Shared theme types
 │   ├── BrandStyles.tsx            # Theme CSS injection (server)
 │   ├── provision/
-│   │   └── ProvisionWizard.tsx    # Provision admin wizard
+│   │   ├── ProvisionWizard.tsx    # Wizard shell (mode selector, step nav, context provider)
+│   │   ├── ProvisionContext.tsx   # Shared state via React context + reducer
+│   │   ├── PipelineTracker.tsx    # Phase status display
+│   │   ├── hooks/
+│   │   │   └── useProvision.ts   # Provision API + polling hook
+│   │   └── steps/
+│   │       ├── NicheStep.tsx      # Niche input + AI research
+│   │       ├── BrandUrlStep.tsx   # Website URL + brand extraction
+│   │       ├── DomainStep.tsx     # Domain search + selection
+│   │       ├── VoiceContentStep.tsx # Brand voice, target market
+│   │       ├── ImageStyleStep.tsx # Visual style + logo gen
+│   │       ├── AuthorStep.tsx     # Author details
+│   │       ├── DeployConfigStep.tsx # Theme, colors, deploy config
+│   │       └── LaunchStep.tsx     # Summary + provision trigger
 │   ├── NetworkForm.tsx            # Network admin form
 │   ├── Footer.tsx                 # Global footer
 │   ├── ArticleCard.tsx            # Blog post card
@@ -1595,19 +1662,19 @@ function ArchitectureSection() {
 
       <Heading>Data Flow: Provisioning a New Site</Heading>
       <Code>{`Blog Cloner → POST /api/provision (bearer token)
-  → Phase 1: Supabase inserts/updates across 8 tables
-  → Phase 2: POST to Doubleclicker auto-onboard
+  → db_seed: Supabase inserts/updates across 8 tables
+  → auto_onboard: POST to Doubleclicker auto-onboard
     → DC reads config from shared DB
     → DC queues work in stitch_queue
     → Stitch polls every 15s, processes content
-  → Phase 2.5: fal.ai generates hero image
-  → Phase 3: Google APIs create GA4 + GTM
-  → Phase 4: Fly API creates app + machine
+  → hero_image: fal.ai generates hero image
+  → google_services: Google APIs create GA4 + GTM
+  → fly_deploy: Fly API creates app + machine
     → Sets env vars (BRAND_USERNAME, GA_ID, etc.)
-  → Phase 5-8: Domain, TLS, DNS (if applicable)
-  → Phase 9: Resend sends DNS email
-  → Phase 10: analytics_events insert
-  → Returns 200 with full status breakdown`}</Code>
+  → domain_purchase, certs, dns_auto_config (if applicable)
+  → email: Resend sends DNS email
+  → analytics: analytics_events insert
+  → Returns 200 with phase_results + full status breakdown`}</Code>
     </>
   )
 }
@@ -1636,6 +1703,7 @@ function ChecklistSection() {
         { key: 'env-resend-from', label: 'RESEND_FROM_EMAIL set and domain verified in Resend' },
         { key: 'env-notif', label: 'NOTIFICATION_EMAIL set' },
         { key: 'env-fal', label: 'FAL_API_KEY set (optional — images degrade gracefully)' },
+        { key: 'env-domain-email', label: 'DOMAIN_ADMIN_EMAIL set (optional, defaults to stuartr@sewo.io)' },
       ],
     },
     {
@@ -1694,6 +1762,8 @@ function ChecklistSection() {
         { key: 'admin-network', label: '/admin/network accessible for network provisioning' },
         { key: 'admin-google', label: 'GET /api/admin/google-test?action=gtm-accounts returns expected accounts' },
         { key: 'admin-domains', label: 'POST /api/admin/domain-suggestions returns available domains' },
+        { key: 'admin-drafts', label: '/admin/drafts accessible for draft review' },
+        { key: 'admin-api-keys', label: '/admin/api-keys accessible for API key management' },
       ],
     },
     {
