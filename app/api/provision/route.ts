@@ -44,6 +44,90 @@ async function runPhase(
   throw new Error('unreachable')
 }
 
+/**
+ * Extract structured voice characteristics from brand data using GPT-4.1.
+ * Returns null on any failure (non-fatal).
+ */
+async function extractStructuredVoice(
+  brandVoiceTone: string | null,
+  displayName: string,
+  niche: string | null,
+  targetMarket: string | null,
+  blurb: string | null
+): Promise<{
+  formality: string
+  perspective: string
+  personality_traits: string[]
+  sentence_style: Record<string, unknown>
+  vocabulary_preferences: Record<string, unknown>
+  example_sentences: string[]
+} | null> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) return null
+
+  const systemPrompt = `You are a brand voice analyst. Extract structured voice characteristics from brand data. Output valid JSON with these exact fields:
+{
+  "formality": "casual" | "casual-professional" | "formal",
+  "perspective": "second_person" | "third_person" | "first_person",
+  "personality_traits": ["trait1", "trait2", "trait3"],
+  "sentence_style": { "avg_length": "short" | "medium" | "long", "fragments_ok": boolean, "rhetorical_questions": boolean },
+  "vocabulary_preferences": { "prefer": ["word1", "word2"], "avoid": ["word1", "word2"] },
+  "example_sentences": ["sentence1", "sentence2", "sentence3"]
+}`
+
+  const userPrompt = `Analyze this brand and extract structured voice characteristics:
+Brand: ${displayName}
+Niche: ${niche || 'not specified'}
+Target Market: ${targetMarket || 'not specified'}
+Brand Voice/Tone: ${brandVoiceTone || 'not specified'}
+Description: ${blurb || 'not specified'}
+
+Rules:
+- personality_traits: exactly 3-5 distinct traits
+- example_sentences: exactly 3-5 sentences that sound like this brand writing about their niche. Make them specific to the niche, not generic.
+- vocabulary_preferences.avoid: always include "leverage", "utilize", "synergy", "paradigm", "gamechanger", "seamless" plus any brand-inappropriate terms
+- perspective: use "second_person" for brand-owned sites, "third_person" for affiliate/review sites
+- Be specific. "Professional and conversational" is NOT a personality trait. "Authoritative but approachable" IS.`
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30000)
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1',
+        temperature: 0.6,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`OpenAI API error (${res.status}): ${text.slice(0, 200)}`)
+    }
+
+    const json = await res.json()
+    const content = json.choices?.[0]?.message?.content
+    if (!content) throw new Error('OpenAI returned empty content')
+
+    return JSON.parse(content)
+  } catch (err) {
+    clearTimeout(timer)
+    throw err
+  }
+}
+
 /** Retry a DB upsert once on failure. Returns data + optional warning. */
 async function dbUpsert(
   supabase: SupabaseClient,
@@ -255,6 +339,17 @@ export async function POST(request: NextRequest) {
         ].filter(Boolean).join('. ')
       : null
 
+    // Extract structured voice characteristics (non-fatal)
+    let structuredVoice: Awaited<ReturnType<typeof extractStructuredVoice>> = null
+    try {
+      structuredVoice = await extractStructuredVoice(
+        brand_voice_tone, display_name, niche, target_market, blurb
+      )
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.warn('[PROVISION] Structured voice extraction failed (non-fatal):', msg)
+    }
+
     const guidelinesPayload = {
       user_name: username,
       name: display_name,
@@ -263,6 +358,12 @@ export async function POST(request: NextRequest) {
       voice_and_tone: brand_voice_tone || null,
       brand_personality: brand_voice_tone || null,
       tagline: tagline || null,
+      voice_formality: structuredVoice?.formality || null,
+      voice_perspective: structuredVoice?.perspective || 'second_person',
+      voice_personality_traits: structuredVoice?.personality_traits || [],
+      voice_sentence_style: structuredVoice?.sentence_style || {},
+      voice_vocabulary_preferences: structuredVoice?.vocabulary_preferences || {},
+      voice_example_sentences: structuredVoice?.example_sentences || [],
       target_market: target_market || null,
       content_style_rules: contentStyleRules,
       stitch_enabled: stitch_enabled ?? true,
