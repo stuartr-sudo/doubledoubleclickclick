@@ -687,9 +687,7 @@ export default function ProvisionForm() {
     addLog('Starting provisioning...')
 
     try {
-      const secretRes = await fetch('/api/admin/provision-secret')
-      const secretData = await secretRes.json()
-      const secret = secretData.secret
+      const secret = ''
 
       const res = await fetch('/api/provision', {
         method: 'POST',

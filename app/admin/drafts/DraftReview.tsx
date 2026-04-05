@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import type { DraftRecord, SiteConcept, DomainSelection, AffiliateProduct, ICAProfile, StyleGuide } from '@/lib/draft-types'
 
 /* ───────── helpers ───────── */
@@ -230,12 +230,7 @@ export default function DraftReview({ initialDrafts }: { initialDrafts: DraftRec
   const [provisionLogs, setProvisionLogs] = useState<string[]>([])
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetch('/api/admin/provision-secret')
-      .then(r => r.json())
-      .then(d => setProvisionSecret(d.secret || ''))
-      .catch(() => {})
-  }, [])
+  // provisionSecret is entered manually by the admin via the input below
 
   const selectDraft = useCallback((draft: DraftRecord) => {
     if (selectedDraft?.id === draft.id) {
@@ -472,6 +467,20 @@ export default function DraftReview({ initialDrafts }: { initialDrafts: DraftRec
 
   return (
     <div>
+      {/* ───── Provision Secret ───── */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4, color: '#374151' }}>
+          Provision Secret
+        </label>
+        <input
+          type="password"
+          value={provisionSecret}
+          onChange={e => setProvisionSecret(e.target.value)}
+          placeholder="Enter provision secret..."
+          style={{ ...inputStyle, maxWidth: 400 }}
+        />
+      </div>
+
       {/* ───── Draft list table ───── */}
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>

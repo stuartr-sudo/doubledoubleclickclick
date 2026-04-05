@@ -14,12 +14,7 @@ export default function ApiKeyManager({ initialKeys }: Props) {
   const [formData, setFormData] = useState({ clientName: '', contactEmail: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  async function getSecret(): Promise<string> {
-    const res = await fetch('/api/admin/provision-secret')
-    const data = await res.json()
-    return data.secret || ''
-  }
+  const [provisionSecret, setProvisionSecret] = useState('')
 
   async function handleGenerate() {
     if (!formData.clientName.trim() || !formData.contactEmail.trim()) {
@@ -30,12 +25,11 @@ export default function ApiKeyManager({ initialKeys }: Props) {
     setError('')
 
     try {
-      const secret = await getSecret()
       const res = await fetch('/api/admin/api-keys', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-provision-secret': secret,
+          'x-provision-secret': provisionSecret,
         },
         body: JSON.stringify({
           client_name: formData.clientName.trim(),
@@ -73,12 +67,11 @@ export default function ApiKeyManager({ initialKeys }: Props) {
     if (!confirm('Are you sure you want to revoke this API key? This cannot be undone.')) return
 
     try {
-      const secret = await getSecret()
       const res = await fetch('/api/admin/api-keys', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'x-provision-secret': secret,
+          'x-provision-secret': provisionSecret,
         },
         body: JSON.stringify({ key_id: keyId }),
       })
@@ -103,6 +96,28 @@ export default function ApiKeyManager({ initialKeys }: Props) {
       padding: '40px 24px',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     }}>
+      {/* Provision Secret */}
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4, color: '#374151' }}>
+          Provision Secret
+        </label>
+        <input
+          type="password"
+          value={provisionSecret}
+          onChange={e => setProvisionSecret(e.target.value)}
+          placeholder="Enter provision secret..."
+          style={{
+            width: '100%',
+            maxWidth: 400,
+            padding: '8px 12px',
+            border: '1px solid #d1d5db',
+            borderRadius: 6,
+            fontSize: 14,
+            boxSizing: 'border-box' as const,
+          }}
+        />
+      </div>
+
       {/* Header */}
       <div style={{
         display: 'flex',

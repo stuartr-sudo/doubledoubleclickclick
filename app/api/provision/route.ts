@@ -165,6 +165,7 @@ export async function POST(request: NextRequest) {
     preferred_elements,
     prohibited_elements,
     ai_instructions_override,
+    force_reprovision = false,
   } = body
 
   // Default publishing_provider to supabase_blog for new sites
@@ -539,35 +540,50 @@ export async function POST(request: NextRequest) {
 
   const doubleclickerUrl = process.env.DOUBLECLICKER_API_URL
   if (!skip_pipeline && doubleclickerUrl) {
-    try {
-      const onboardPayload = { username }
+    // Idempotency: skip auto-onboard if brand already provisioned
+    const { data: existingCreds } = await supabase
+      .from('integration_credentials')
+      .select('id')
+      .eq('user_name', username)
+      .limit(1)
+      .maybeSingle()
 
-      // Self-healing: retry once with 30s timeout
-      const onboardRes = await fetchWithRetry(
-        `${doubleclickerUrl}/api/strategy/auto-onboard`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-provision-secret': provisionSecret,
-          },
-          body: JSON.stringify(onboardPayload),
-        },
-        30000
-      )
-
-      const onboardData = await onboardRes.json().catch(() => ({}))
-      // Check both HTTP status AND response body success flag
-      const dcSuccess = onboardRes.ok && onboardData.success !== false
+    if (existingCreds && !force_reprovision) {
       notifications.doubleclicker = {
-        status: dcSuccess ? 'triggered' : 'failed',
-        statusCode: onboardRes.status,
-        data: onboardData,
-        ...(dcSuccess ? {} : { error: onboardData.error || `HTTP ${onboardRes.status}` }),
+        status: 'skipped',
+        reason: 'Brand already provisioned. Use force_reprovision=true to override.'
       }
-    } catch (err) {
-      console.error('Error notifying Doubleclicker:', err)
-      notifications.doubleclicker = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+    } else {
+      try {
+        const onboardPayload = { username }
+
+        // Self-healing: retry once with 30s timeout
+        const onboardRes = await fetchWithRetry(
+          `${doubleclickerUrl}/api/strategy/auto-onboard`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-provision-secret': provisionSecret,
+            },
+            body: JSON.stringify(onboardPayload),
+          },
+          30000
+        )
+
+        const onboardData = await onboardRes.json().catch(() => ({}))
+        // Check both HTTP status AND response body success flag
+        const dcSuccess = onboardRes.ok && onboardData.success !== false
+        notifications.doubleclicker = {
+          status: dcSuccess ? 'triggered' : 'failed',
+          statusCode: onboardRes.status,
+          data: onboardData,
+          ...(dcSuccess ? {} : { error: onboardData.error || `HTTP ${onboardRes.status}` }),
+        }
+      } catch (err) {
+        console.error('Error notifying Doubleclicker:', err)
+        notifications.doubleclicker = { status: 'error', error: err instanceof Error ? err.message : String(err) }
+      }
     }
   } else {
     notifications.doubleclicker = { status: 'skipped', reason: !doubleclickerUrl ? 'DOUBLECLICKER_API_URL not set' : 'skip_pipeline=true' }
@@ -759,10 +775,10 @@ export async function POST(request: NextRequest) {
 
   if (purchase_domain && domain && domain_yearly_price && google.isGoogleServiceConfigured()) {
     try {
-      // Always register domains under stuartr@sewo.io
+      const domainAdminEmail = process.env.DOMAIN_ADMIN_EMAIL || 'stuartr@sewo.io'
       const regResult = await google.registerDomain(
         domain,
-        'stuartr@sewo.io',
+        domainAdminEmail,
         domain_yearly_price,
         domain_notices || []
       )
