@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
     blurb,
     target_market,
     brand_voice_tone,
+    tagline,
     primary_color,
     secondary_color,
     accent_color,
@@ -241,6 +242,7 @@ export async function POST(request: NextRequest) {
   //   company_information → uses `username` (different column name, same value)
   // ─────────────────────────────────────────────────────────────
 
+  // Migration required: ALTER TABLE brand_guidelines ADD COLUMN IF NOT EXISTS tagline TEXT;
   phase_results.push(await runPhase('db_seed', 'critical', 2, async () => {
     // 1. brand_guidelines (uses `user_name` column)
     // Build content_style_rules from research_context if available
@@ -260,6 +262,7 @@ export async function POST(request: NextRequest) {
       website_url: website_url || null,
       voice_and_tone: brand_voice_tone || null,
       brand_personality: brand_voice_tone || null,
+      tagline: tagline || null,
       target_market: target_market || null,
       content_style_rules: contentStyleRules,
       stitch_enabled: stitch_enabled ?? true,

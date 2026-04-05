@@ -92,7 +92,7 @@ export default async function RootLayout({
     themeName = brand.specs?.theme || 'editorial'
     brandName = brand.guidelines?.name || config.siteName
     logoUrl = brand.specs?.logo_url || undefined
-    tagline = brand.company?.blurb || ''
+    tagline = brand.guidelines?.tagline || brand.company?.blurb || ''
   } catch {}
   try {
     categories = await getCategories()
