@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.vscode
+.claude
+.superpowers
+docs
+*.md
+.env*
+.DS_Store
