@@ -436,6 +436,39 @@ Content-Type: application/json`}</Code>
         <p>Find your secret: <code>grep PROVISION_SECRET .env.local</code></p>
       </Card>
 
+      <Card title="Generating &amp; Rotating the Provision Secret">
+        <SubHeading>Generate a new secret</SubHeading>
+        <Code>{`# Run this in your terminal to generate a new random secret
+openssl rand -hex 24 | sed 's/^/provision-/'
+# Example output: provision-a1b2c3d4e5f6...`}</Code>
+
+        <SubHeading>Update locally (.env.local)</SubHeading>
+        <Code>{`# Open .env.local and replace the old value
+PROVISION_SECRET=provision-your-new-secret-here`}</Code>
+
+        <SubHeading>Update on Fly.io (base app)</SubHeading>
+        <Code>{`# Set the secret on the base provisioner app
+fly secrets set PROVISION_SECRET=provision-your-new-secret-here -a doubledoubleclickclick`}</Code>
+
+        <SubHeading>Update on Doubleclicker</SubHeading>
+        <Code>{`# The Doubleclicker app validates x-provision-secret header — it must match
+fly secrets set PROVISION_SECRET=provision-your-new-secret-here -a doubleclicker`}</Code>
+
+        <Callout type="danger">
+          The secret must be identical in 3 places: your <code>.env.local</code>, the Fly.io base app (<code>doubledoubleclickclick</code>), and the Doubleclicker app (<code>doubleclicker</code>). If they don&apos;t match, provisioning will fail with 401 Unauthorized.
+        </Callout>
+
+        <SubHeading>Verify it works</SubHeading>
+        <Code>{`# Test from your terminal
+curl -s -o /dev/null -w "%{http_code}" \\
+  -X POST https://doubledoubleclickclick.fly.dev/api/provision \\
+  -H "Authorization: Bearer provision-your-new-secret-here" \\
+  -H "Content-Type: application/json" \\
+  -d '{"username":"test","display_name":"Test"}'
+# Expected: 400 (missing niche/website_url) — NOT 401
+# If you get 401, the secret doesn't match`}</Code>
+      </Card>
+
       <Heading>Response Behavior</Heading>
       <Card variant="info" title="Self-Healing Design">
         <ul style={{ margin: 0, paddingLeft: 20 }}>
