@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { HeaderProps } from '../types'
 
 export default function EditorialHeader({
@@ -12,6 +12,7 @@ export default function EditorialHeader({
   categories = [],
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   const handleMenuToggle = useCallback(() => {
     setIsMenuOpen((prev) => !prev)
@@ -20,6 +21,12 @@ export default function EditorialHeader({
   const handleMenuClose = useCallback(() => {
     setIsMenuOpen(false)
   }, [])
+
+  useEffect(() => {
+    if (isMenuOpen) {
+      closeButtonRef.current?.focus()
+    }
+  }, [isMenuOpen])
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -214,6 +221,7 @@ export default function EditorialHeader({
         {/* Desktop: CategoryNav */}
         <nav
           className="editorial-categorynav"
+          aria-label="Primary navigation"
           style={{
             borderBottom: '1px solid var(--color-border)',
             padding: '10px 0',
@@ -362,6 +370,7 @@ export default function EditorialHeader({
       {isMenuOpen && (
         <div className="editorial-mobile-menu" role="dialog" aria-modal="true" aria-label="Navigation menu">
           <button
+            ref={closeButtonRef}
             type="button"
             className="editorial-mobile-menu-close"
             onClick={handleMenuClose}

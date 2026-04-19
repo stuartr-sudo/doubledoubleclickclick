@@ -137,6 +137,7 @@ export default function ModernHeader({
           )}
 
           <nav
+            aria-label="Primary navigation"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -277,7 +278,7 @@ export default function ModernHeader({
             borderBottom: '1px solid var(--color-border)',
           }}
         >
-          <nav>
+          <nav aria-label="Mobile navigation">
             <Link href="/" className="modern-panel-link" onClick={handleMenuClose}>
               Home
             </Link>

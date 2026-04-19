@@ -15,7 +15,7 @@ const sections: Section[] = [
   { id: 'overview',       icon: '🏠', label: 'System Overview',         content: OverviewSection },
   { id: 'quickstart',     icon: '🚀', label: 'Quick-Start Guide',       content: QuickStartSection },
   { id: 'provision',      icon: '⚙️', label: 'Provisioning Pipeline',   content: ProvisionSection },
-  { id: 'phases',         icon: '📋', label: 'All 10 Phases',           content: PhasesSection },
+  { id: 'phases',         icon: '📋', label: 'Pipeline Phases',          content: PhasesSection },
   { id: 'admin-api',      icon: '🔌', label: 'Admin API Reference',     content: AdminApiSection },
   { id: 'public-api',     icon: '🌐', label: 'Public API Reference',    content: PublicApiSection },
   { id: 'google',         icon: '🔍', label: 'Google Services',         content: GoogleSection },
@@ -483,8 +483,8 @@ curl -s -o /dev/null -w "%{http_code}" \\
           rows={[
             ['Critical', 'db_seed, fly_deploy', '2 retries', 'Warning added'],
             ['Important', 'auto_onboard, google_services', 'No retry (1 attempt)', 'Warning added'],
-            ['Optional', 'domain, certs, dns_auto_config, email', 'No retry', 'Warning added'],
-            ['Silent', 'hero_image, analytics', 'No retry', 'No warning on failure'],
+            ['Optional', 'domain_purchase, tls_certs, dns_config, email_notify', 'No retry', 'Warning added'],
+            ['Silent', 'hero_image, analytics_log', 'No retry', 'No warning on failure'],
           ]}
         />
       </Card>
@@ -516,10 +516,10 @@ curl -s -o /dev/null -w "%{http_code}" \\
           ['author_social_urls', 'object', 'No', '—', 'Social media links'],
           ['seed_keywords', 'string[]', 'No', '—', 'Initial keyword seeds'],
           ['languages', 'string[]', 'No', '["en"]', 'Publishing languages'],
-          ['articles_per_day', 'number', 'No', '1', 'Publishing frequency'],
-          ['setup_google_analytics', 'boolean', 'No', 'true', 'Create GA4 property'],
-          ['setup_google_tag_manager', 'boolean', 'No', 'true', 'Create GTM container'],
-          ['setup_search_console', 'boolean', 'No', 'true', 'Add to Search Console'],
+          ['articles_per_day', 'number', 'No', '5', 'Publishing frequency'],
+          ['setup_google_analytics', 'boolean', 'No', 'false', 'Create GA4 property'],
+          ['setup_google_tag_manager', 'boolean', 'No', 'false', 'Create GTM container'],
+          ['setup_search_console', 'boolean', 'No', 'false', 'Add to Search Console'],
           ['domain', 'string', 'No', '—', 'Custom domain to register'],
           ['purchase_domain', 'boolean', 'No', 'false', 'Register via Cloud Domains'],
           ['manual_dns', 'boolean', 'No', 'false', 'Manual DNS setup mode'],
@@ -537,6 +537,8 @@ curl -s -o /dev/null -w "%{http_code}" \\
           ['preferred_elements', 'string[]', 'No', '—', 'Content elements to include'],
           ['prohibited_elements', 'string[]', 'No', '—', 'Content elements to avoid'],
           ['ai_instructions_override', 'string', 'No', '—', 'Custom AI instructions'],
+          ['publishing_provider', 'string', 'No', "'supabase_blog'", 'Publishing destination'],
+          ['discover_products', 'boolean', 'No', 'false', 'Enable product discovery'],
         ]}
       />
 
@@ -607,14 +609,14 @@ function PhasesSection() {
         <Table
           headers={['Table', 'Filter Column', 'Key Data']}
           rows={[
-            ['brand_guidelines', 'user_name', 'Brand name, voice/tone, tagline, structured voice fields, niche, keywords, author defaults, logo'],
+            ['brand_guidelines', 'user_name', 'Brand name, voice/tone, tagline, structured voice fields, niche, keywords, author defaults, logo, company_name, content_style_rules, stitch_enabled, preferred_elements, prohibited_elements, ai_instructions_override'],
             ['brand_specifications', 'user_name', 'Colors, fonts, logo URL, theme, hero image'],
             ['company_information', 'username', 'Brand name, website, email, blurb'],
             ['authors', 'user_name + slug', 'Name, bio, avatar, social URLs'],
             ['integration_credentials', 'user_name', 'Provider config, translation, blog username'],
             ['target_market', 'username', 'ICA profile (INSERT only — allows multiple)'],
             ['brand_image_styles', 'user_name + name', 'Visual mood/composition for image generation'],
-            ['app_settings', 'user_name', 'Publishing settings, onboard config, network partners'],
+            ['app_settings', 'setting_name', 'Publishing settings, onboard config, network partners (username embedded in setting_name, e.g. publishing_settings:{username})'],
           ]}
         />
         <Callout type="danger">
@@ -917,8 +919,8 @@ GOOGLE_TAG_MANAGER_ACCOUNT_ID=987654321`}</Code>
         </Callout>
       </Card>
 
-      <Card title="searchDomains(query)">
-        <p>Searches available domains via Cloud Domains API.</p>
+      <Card title="Domain Search">
+        <p>Domain search is handled at the API route level (<code>POST /api/admin/domain-suggestions</code>), not as a standalone lib function.</p>
       </Card>
 
       <Card title="registerDomain(domainName, contactEmail, yearlyPrice, domainNotices)">
@@ -1055,10 +1057,13 @@ function DatabaseSection() {
       <Table
         headers={['Column', 'Tables']}
         rows={[
-          ['user_name', 'blog_posts, brand_guidelines, brand_specifications, authors, integration_credentials, brand_image_styles, app_settings'],
+          ['user_name', 'blog_posts, brand_guidelines, brand_specifications, authors, integration_credentials, brand_image_styles'],
           ['username', 'company_information, target_market, cluster_articles, content_schedule'],
         ]}
       />
+      <Callout type="info">
+        <code>app_settings</code> uses <code>setting_name</code> (not <code>user_name</code> or <code>username</code>) with the username embedded in the key, e.g. <code>publishing_settings:&#123;username&#125;</code>.
+      </Callout>
 
       <Heading>Date Column Names (blog_posts)</Heading>
       <Callout type="warning">
@@ -1100,12 +1105,12 @@ await supabase.from('brand_guidelines').upsert({ user_name: username, ...payload
         rows={[
           ['brand_guidelines', 'user_name, name, tagline, voice_and_tone, voice_formality, voice_perspective, voice_personality_traits, voice_sentence_style, voice_vocabulary_preferences, voice_example_sentences, niche, seed_keywords, logo_url'],
           ['brand_specifications', 'user_name, guideline_id, primary_color, accent_color, heading_font, body_font, theme'],
-          ['company_information', 'username, company_name, client_website, contact_email, blurb'],
-          ['authors', 'user_name, name, slug, bio, avatar_url, website, social_urls'],
+          ['company_information', 'username, brand_name, client_website, email, blurb'],
+          ['authors', 'user_name, name, slug, bio, profile_image_url'],
           ['integration_credentials', 'user_name, provider, blog_username, translation_enabled, languages'],
           ['target_market', 'username, ica_profile'],
           ['brand_image_styles', 'user_name, name, mood, composition, color_palette'],
-          ['app_settings', 'user_name, articles_per_day, stitch_enabled, network_partners'],
+          ['app_settings', 'setting_name (with embedded username), articles_per_day, stitch_enabled, network_partners'],
         ]}
       />
 
@@ -1171,7 +1176,7 @@ function ThemesSection() {
       <Code>{`--font-heading, --font-body
 --color-bg, --color-text, --color-accent, --color-muted
 --border-radius
---shadow (or none)
+--card-shadow (or none)
 /* Plus many more for fine-grained control */`}</Code>
 
       <Callout type="tip">
@@ -1461,7 +1466,7 @@ function EnvSection() {
           ['NEXT_PUBLIC_GA_ID / GA_ID', 'GA4 Measurement ID'],
           ['NEXT_PUBLIC_GTM_ID / GTM_ID', 'GTM Public ID'],
           ['CONTACT_EMAIL', 'Tenant contact email'],
-          ['CONTACT_PHONE', 'Tenant contact phone'],
+          ['CONTACT_PHONE', 'Tenant contact phone (NOT currently set on deployed machines)'],
         ]}
       />
 
@@ -1528,11 +1533,11 @@ function MiddlewareSection() {
       </Card>
 
       <Heading>Applies To</Heading>
-      <p>All routes <strong>except</strong>:</p>
+      <p>All routes <strong>except</strong> (per the matcher config):</p>
       <ul style={{ paddingLeft: 20, lineHeight: 2 }}>
-        <li><code>/_next/</code> (Next.js internals)</li>
-        <li><code>/favicon.ico</code>, <code>/robots.txt</code>, <code>/sitemap.xml</code></li>
-        <li>Static assets in <code>/public/</code></li>
+        <li><code>/_next/static</code> (static assets)</li>
+        <li><code>/_next/image</code> (image optimization)</li>
+        <li><code>/favicon.ico</code></li>
       </ul>
     </>
   )
@@ -1765,7 +1770,7 @@ function ChecklistSection() {
         { key: 'env-resend-from', label: 'RESEND_FROM_EMAIL set and domain verified in Resend' },
         { key: 'env-notif', label: 'NOTIFICATION_EMAIL set' },
         { key: 'env-openai', label: 'OPENAI_API_KEY set (optional — structured voice extraction via GPT-4.1)' },
-        { key: 'env-fal', label: 'FAL_API_KEY set (optional — images degrade gracefully)' },
+        { key: 'env-fal', label: 'FAL_API_KEY set (optional — hero image falls back to CSS gradient without it)' },
         { key: 'env-domain-email', label: 'DOMAIN_ADMIN_EMAIL set (optional, defaults to stuartr@sewo.io)' },
       ],
     },

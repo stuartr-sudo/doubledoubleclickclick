@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { HeaderProps } from '../types'
 
 export default function BoutiqueHeader({
@@ -12,6 +12,7 @@ export default function BoutiqueHeader({
   categories = [],
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   const handleMenuToggle = useCallback(() => {
     setIsMenuOpen((prev) => !prev)
@@ -20,6 +21,12 @@ export default function BoutiqueHeader({
   const handleMenuClose = useCallback(() => {
     setIsMenuOpen(false)
   }, [])
+
+  useEffect(() => {
+    if (isMenuOpen) {
+      closeButtonRef.current?.focus()
+    }
+  }, [isMenuOpen])
 
   return (
     <>
@@ -179,6 +186,7 @@ export default function BoutiqueHeader({
 
           {/* Desktop: Category pill navigation */}
           <nav
+            aria-label="Primary navigation"
             style={{
               borderTop: '1px solid var(--color-border)',
               borderBottom: '1px solid var(--color-border)',
@@ -315,6 +323,7 @@ export default function BoutiqueHeader({
       {isMenuOpen && (
         <div className="boutique-mobile-menu" role="dialog" aria-modal="true" aria-label="Navigation menu">
           <button
+            ref={closeButtonRef}
             type="button"
             className="boutique-mobile-menu-close"
             onClick={handleMenuClose}

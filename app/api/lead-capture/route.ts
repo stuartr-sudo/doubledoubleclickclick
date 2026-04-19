@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { getClientIP, isRateLimited, updateRateLimitCache } from '@/lib/spam-protection'
 import { getTenantConfig } from '@/lib/tenant'
+import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,21 +52,7 @@ export async function POST(request: NextRequest) {
       console.error('Error checking rate limit:', error)
     }
 
-    // Get Supabase credentials
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Supabase env vars missing for lead capture')
-      return NextResponse.json(
-        { success: false, error: 'Database not configured' },
-        { status: 500 }
-      )
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession: false }
-    })
+    const supabase = createServiceClient()
 
     // Insert into the shared Doubleclicker `leads` table
     const insertPayload: Record<string, unknown> = {
