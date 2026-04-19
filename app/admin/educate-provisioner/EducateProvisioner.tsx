@@ -394,7 +394,18 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \\
     "setup_search_console": true,
     "stitch_enabled": true,
     "fly_region": "syd",
-    "force_reprovision": false
+    "force_reprovision": false,
+    "static_pages": {
+      "founder_section_header": "The story behind it",
+      "founder_story": "I built this because I needed it...",
+      "philosophy_section_header": "What makes this different",
+      "philosophy": "Most products start with the customer\\u2019s problem. We start with...",
+      "immutable_rules": [
+        { "title": "Honesty First", "body": "If a claim cannot be sourced, it is not made." },
+        { "title": "Reader Time Is Sacred", "body": "Every paragraph earns its place." }
+      ],
+      "mission_long": "An optional longer mission paragraph that replaces the default blurb on /about."
+    }
   }'`}</Code>
 
       <Heading>Step 5: Verify Deployment</Heading>
@@ -539,6 +550,7 @@ curl -s -o /dev/null -w "%{http_code}" \\
           ['ai_instructions_override', 'string', 'No', '—', 'Custom AI instructions'],
           ['publishing_provider', 'string', 'No', "'supabase_blog'", 'Publishing destination'],
           ['discover_products', 'boolean', 'No', 'false', 'Enable product discovery'],
+          ['static_pages', 'object', 'No', '—', 'Rich page content (founder_story, philosophy, immutable_rules, mission_long) seeded into app_settings:static_pages:{username} and rendered by /about'],
         ]}
       />
 
@@ -655,12 +667,19 @@ function PhasesSection() {
         <p>After onboard, the content pipeline runs: keyword research → product discovery → outline generation → draft writing → Stitch queue.</p>
       </Card>
 
-      <Card title="Phase 2.5 — Generate Hero Banner Image">
-        <p>Generates a hero banner via fal.ai. Non-blocking — continues silently if <code>FAL_API_KEY</code> is not set.</p>
+      <Card title="Phase 2.5 — Generate Hero Banner + Favicon">
+        <p>Generates a hero banner via fal.ai using <code>fal-ai/nano-banana-2</code> (Google&apos;s photo-realistic model). Non-blocking — continues silently if <code>FAL_API_KEY</code> is not set.</p>
         <ul style={{ paddingLeft: 20 }}>
           <li>Builds prompt from niche, brand name, and image style</li>
           <li>Updates <code>brand_specifications.hero_image_url</code> on success</li>
+          <li>Then derives a favicon from the logo (or hero as fallback) and uploads it to <code>brand-assets/&#123;username&#125;/favicon.png</code></li>
         </ul>
+        <Callout type="info">
+          Hero uses <code>fal-ai/nano-banana-2</code> instead of <code>flux/schnell</code> — slower (~60s) and ~2× cost, but dramatically higher quality for lifestyle/brand imagery. Logos still use <code>flux/schnell</code> since line-art doesn&apos;t need photo realism.
+        </Callout>
+        <Callout type="info">
+          The site layout reads <code>brand_specifications.logo_url</code> as the favicon when present, so the dedicated favicon is currently a sharper-rendering copy. A future change can downsize to 64×64 PNG via a server-side image processor.
+        </Callout>
       </Card>
 
       <Card title="Phase 3 — Create Google Services">
@@ -676,7 +695,7 @@ function PhasesSection() {
           <li>Creates web container on <code>GOOGLE_TAG_MANAGER_ACCOUNT_ID</code></li>
           <li>Returns <code>publicId</code> (GTM-XXXXXXX format)</li>
         </ul>
-        <p>GA/GTM IDs are stored as env vars on the Fly machine in Phase 4.</p>
+        <p>GA/GTM IDs are stored as Fly secrets on the tenant app in Phase 4 (so they survive redeploys).</p>
       </Card>
 
       <Card title="Phase 4 — Deploy to Fly.io">
@@ -684,10 +703,21 @@ function PhasesSection() {
         <ol style={{ paddingLeft: 20 }}>
           <li>Get Docker image from base app (<code>FLY_BASE_APP</code>)</li>
           <li>Create app <code>&#123;username&#125;-blog</code> in org <code>FLY_ORG_SLUG</code></li>
-          <li>Set secrets (Supabase URL, keys, Resend key)</li>
+          <li>
+            Set Fly <strong>secrets</strong> (persistent across redeploys):
+            <ul style={{ paddingLeft: 20, marginTop: 6 }}>
+              <li>Sensitive: <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>RESEND_API_KEY</code></li>
+              <li>Brand identity: <code>BRAND_USERNAME</code>, <code>SITE_URL</code>, <code>SITE_NAME</code>, <code>CONTACT_EMAIL</code> (and <code>NEXT_PUBLIC_*</code> mirrors)</li>
+              <li>Tracking: <code>GA_ID</code>, <code>GTM_ID</code> (when configured)</li>
+              <li>i18n: <code>LANGUAGES</code> (when configured)</li>
+            </ul>
+          </li>
           <li>Allocate IPv4 and IPv6 (independently, retry once each)</li>
-          <li>Create machine with tenant-specific env vars</li>
+          <li>Create machine with empty per-tenant env (the platform still injects <code>NODE_ENV</code>, <code>PORT</code>, <code>HOSTNAME</code>)</li>
         </ol>
+        <Callout type="danger">
+          Brand-identity values live as Fly <strong>secrets</strong>, NOT machine env. Machine env gets clobbered by <code>fly deploy</code>; secrets do not. This was a real bug — a redeploy briefly served a tenant&apos;s app as the wrong brand because the machine env was wiped.
+        </Callout>
         <p><strong>Machine spec:</strong> shared CPU, 1 core, 512 MB RAM, port 3000, autostop/autostart, min 0 machines.</p>
       </Card>
 

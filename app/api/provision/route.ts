@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import * as fly from '@/lib/fly'
 import * as google from '@/lib/google'
-import { generateHeroImage, buildHeroImagePrompt } from '@/lib/image-gen'
+import { generateHeroImage, buildHeroImagePrompt, generateFavicon } from '@/lib/image-gen'
 
 export const dynamic = 'force-dynamic'
 
@@ -272,6 +272,7 @@ export async function POST(request: NextRequest) {
     preferred_elements,
     prohibited_elements,
     ai_instructions_override,
+    static_pages,      // optional — { founder_story, philosophy, immutable_rules, mission_long, ...}
     force_reprovision = false,
   } = body
 
@@ -668,6 +669,30 @@ export async function POST(request: NextRequest) {
     console.log(`V3 pipeline flags seeded for ${username}:`, v3Results)
     results.pipeline_version = { status: 'created', flags: v3Results }
 
+    // Static page content (founder_story, philosophy, immutable_rules, mission_long).
+    // Read by app/about/page.tsx to render rich content. Without this the
+    // About page falls back to brand_personality + blurb only.
+    if (static_pages && typeof static_pages === 'object' && Object.keys(static_pages).length > 0) {
+      const staticPagesName = `static_pages:${username}`
+      const { data: existingSP } = await supabase
+        .from('app_settings')
+        .select('id')
+        .eq('setting_name', staticPagesName)
+        .limit(1)
+        .maybeSingle()
+
+      if (existingSP) {
+        await supabase.from('app_settings')
+          .update({ setting_value: static_pages })
+          .eq('id', existingSP.id)
+      } else {
+        await supabase.from('app_settings')
+          .insert({ setting_name: staticPagesName, setting_value: static_pages })
+      }
+      console.log(`Static pages seeded for ${username}: ${Object.keys(static_pages).join(', ')}`)
+      results.static_pages = { status: 'created', setting_name: staticPagesName, keys: Object.keys(static_pages) }
+    }
+
     return { tables_seeded: true }
   }))
 
@@ -758,6 +783,26 @@ export async function POST(request: NextRequest) {
         notifications.hero_image = { status: 'generated', url: heroImageUrl }
       } else {
         notifications.hero_image = { status: 'skipped', reason: 'Generation returned null (FAL_API_KEY may not be set)' }
+      }
+
+      // Favicon: derive from logo when present; otherwise from hero as fallback.
+      // Layout uses brand_specifications.logo_url; this puts a copy at a known
+      // favicon path for sharper rendering and future favicon-specific use.
+      try {
+        const sourceUrl = logo_url || heroImageUrl
+        if (sourceUrl) {
+          const faviconUrl = await generateFavicon(sourceUrl, username)
+          if (faviconUrl) {
+            notifications.favicon = { status: 'generated', url: faviconUrl }
+          } else {
+            notifications.favicon = { status: 'skipped', reason: 'Favicon generation returned null' }
+          }
+        } else {
+          notifications.favicon = { status: 'skipped', reason: 'No logo_url or hero to derive favicon from' }
+        }
+      } catch (faviconErr) {
+        console.warn('[PROVISION] Favicon generation failed (non-fatal):', faviconErr)
+        notifications.favicon = { status: 'error', error: faviconErr instanceof Error ? faviconErr.message : String(faviconErr) }
       }
 
       return { hero_image_url: heroImageUrl || null }
@@ -856,14 +901,42 @@ export async function POST(request: NextRequest) {
     await fly.createApp(flyAppName, flyOrgSlug)
     console.log(`Created Fly app: ${flyAppName}`)
 
-    // 3. Set secrets (sensitive values that shouldn't be in machine env)
-    await fly.setSecrets(flyAppName, {
+    // 3. Set secrets — Fly secrets PERSIST across deploys, machine env does NOT.
+    //    Brand-specific values live here too (not just credentials) so that a
+    //    later `fly deploy` to this app doesn't wipe the tenant identity. (We
+    //    learned this the hard way — a redeploy reset NEXT_PUBLIC_BRAND_USERNAME
+    //    and the site briefly served as the wrong tenant.)
+    const siteUrlEarly = domain ? `https://www.${domain}` : website_url || `https://${flyAppName}.fly.dev`
+    const brandSecrets: Record<string, string> = {
+      // Sensitive
       NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
       SUPABASE_SERVICE_ROLE_KEY: supabaseKey,
       RESEND_API_KEY: process.env.RESEND_API_KEY || '',
-    })
-    console.log(`Set secrets on ${flyAppName}`)
+      // Brand identity (persistent across redeploys)
+      BRAND_USERNAME: username,
+      SITE_URL: siteUrlEarly,
+      SITE_NAME: display_name,
+      CONTACT_EMAIL: resolved_email,
+      NEXT_PUBLIC_BRAND_USERNAME: username,
+      NEXT_PUBLIC_SITE_URL: siteUrlEarly,
+      NEXT_PUBLIC_SITE_NAME: display_name,
+      NEXT_PUBLIC_CONTACT_EMAIL: resolved_email,
+    }
+    if (gaId) {
+      brandSecrets.GA_ID = gaId
+      brandSecrets.NEXT_PUBLIC_GA_ID = gaId
+    }
+    if (gtmId) {
+      brandSecrets.GTM_ID = gtmId
+      brandSecrets.NEXT_PUBLIC_GTM_ID = gtmId
+    }
+    if (Array.isArray(languages) && languages.length > 0) {
+      brandSecrets.LANGUAGES = languages.join(',')
+      brandSecrets.NEXT_PUBLIC_LANGUAGES = languages.join(',')
+    }
+    await fly.setSecrets(flyAppName, brandSecrets)
+    console.log(`Set ${Object.keys(brandSecrets).length} secrets on ${flyAppName} (sensitive + brand identity)`)
 
     // 4. Allocate IPs (required for custom domains) — retry each once
     try {
@@ -886,31 +959,10 @@ export async function POST(request: NextRequest) {
       console.log(`Allocated IPs: ${flyIpv4} / ${flyIpv6}`)
     }
 
-    // 5. Create machine with site-specific env vars (including GA/GTM IDs if created)
-    const siteUrl = domain ? `https://www.${domain}` : website_url || `https://${flyAppName}.fly.dev`
-    const machineEnv: Record<string, string> = {
-      BRAND_USERNAME: username,
-      SITE_URL: siteUrl,
-      SITE_NAME: display_name,
-      CONTACT_EMAIL: resolved_email,
-      NEXT_PUBLIC_BRAND_USERNAME: username,
-      NEXT_PUBLIC_SITE_URL: siteUrl,
-      NEXT_PUBLIC_SITE_NAME: display_name,
-      NEXT_PUBLIC_CONTACT_EMAIL: resolved_email,
-    }
-    if (gaId) {
-      machineEnv.GA_ID = gaId
-      machineEnv.NEXT_PUBLIC_GA_ID = gaId
-    }
-    if (gtmId) {
-      machineEnv.GTM_ID = gtmId
-      machineEnv.NEXT_PUBLIC_GTM_ID = gtmId
-    }
-    if (Array.isArray(languages) && languages.length > 0) {
-      machineEnv.LANGUAGES = languages.join(',')
-      machineEnv.NEXT_PUBLIC_LANGUAGES = languages.join(',')
-    }
-    await fly.createMachine(flyAppName, imageRef, machineEnv, fly_region)
+    // 5. Create machine — brand identity already set as Fly SECRETS above
+    //    (so they survive redeploys). Pass only an empty env here; createMachine
+    //    will still inject NODE_ENV, PORT, HOSTNAME at the platform level.
+    await fly.createMachine(flyAppName, imageRef, {}, fly_region)
     console.log(`Machine created in ${flyAppName}`)
 
     notifications.fly = {
