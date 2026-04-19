@@ -641,6 +641,33 @@ export async function POST(request: NextRequest) {
       results.network_partners = { status: 'created', setting_name: networkPartnersName }
     }
 
+    // V3 pipeline flags — DeBono × Schwartz hat research, fichtean writer.
+    // Doubleclicker's auto-onboard reads these per-tenant; without them it
+    // falls back to v2 (no hat research, generic outline + writer).
+    const v3Flags = ['topical_map_version', 'outline_version', 'writer_version'] as const
+    const v3Results: Record<string, string> = {}
+    for (const flag of v3Flags) {
+      const name = `${flag}:${username}`
+      const { data: existing } = await supabase
+        .from('app_settings')
+        .select('id')
+        .eq('setting_name', name)
+        .limit(1)
+        .maybeSingle()
+
+      if (existing) {
+        await supabase.from('app_settings')
+          .update({ setting_value: 'v3' })
+          .eq('id', existing.id)
+      } else {
+        await supabase.from('app_settings')
+          .insert({ setting_name: name, setting_value: 'v3' })
+      }
+      v3Results[flag] = 'v3'
+    }
+    console.log(`V3 pipeline flags seeded for ${username}:`, v3Results)
+    results.pipeline_version = { status: 'created', flags: v3Results }
+
     return { tables_seeded: true }
   }))
 

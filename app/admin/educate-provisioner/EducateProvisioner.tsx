@@ -616,11 +616,26 @@ function PhasesSection() {
             ['integration_credentials', 'user_name', 'Provider config, translation, blog username'],
             ['target_market', 'username', 'ICA profile (INSERT only — allows multiple)'],
             ['brand_image_styles', 'user_name + name', 'Visual mood/composition for image generation'],
-            ['app_settings', 'setting_name', 'Publishing settings, onboard config, network partners (username embedded in setting_name, e.g. publishing_settings:{username})'],
+            ['app_settings', 'setting_name', 'Publishing settings, onboard config, network partners, V3 pipeline flags (username embedded in setting_name, e.g. publishing_settings:{username})'],
           ]}
         />
         <Callout type="danger">
           Note <code>company_information</code> and <code>target_market</code> use <code>username</code> (no underscore), while most other tables use <code>user_name</code>.
+        </Callout>
+        <Heading>V3 Pipeline Flags (always seeded)</Heading>
+        <p>
+          Three <code>app_settings</code> rows are always written so doubleclicker&apos;s auto-onboard runs the v3 pipeline (DeBono × Schwartz hat research + fichtean writer). Without these, auto-onboard falls back to v2 (no hat research, generic outline + writer).
+        </p>
+        <Table
+          headers={['setting_name', 'setting_value', 'Effect']}
+          rows={[
+            ['topical_map_version:{username}', '"v3"', 'Theme extraction triggers per-theme hat research (60 Exa queries × 6 hats per theme)'],
+            ['outline_version:{username}', '"v3"', 'Outline writer uses fichtean beats (hook/context/rising/climax/kicker)'],
+            ['writer_version:{username}', '"v3"', 'Writer uses per-beat model tiering (Opus on hook/climax/kicker, Sonnet on context/rising)'],
+          ]}
+        />
+        <Callout type="info">
+          v3 is the only supported pipeline. There is no <code>pipeline_version</code> param to override — every new tenant gets v3.
         </Callout>
       </Card>
 
