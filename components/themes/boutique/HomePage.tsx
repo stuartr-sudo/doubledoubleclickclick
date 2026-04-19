@@ -8,9 +8,93 @@ import ProductSpotlight from '@/components/ProductSpotlight'
 export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps) {
   const hero = posts[0]
   const gridPosts = posts.slice(1)
+  const heroImageUrl = brand.specs?.hero_image_url
+  const tagline = brand.guidelines?.tagline
+  const blurb = brand.company?.blurb
+  const brandName = brand.guidelines?.name || config.siteName
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 16px' }}>
+      {/* Brand Welcome — always shown when a hero_image_url is configured.
+          Establishes brand identity above the fold, especially important
+          for new sites with little or no content yet. */}
+      {heroImageUrl && (
+        <section style={{ marginBottom: 48 }}>
+          <div style={{
+            position: 'relative',
+            aspectRatio: '21/9',
+            width: '100%',
+            borderRadius: 'var(--border-radius, 16px)',
+            overflow: 'hidden',
+            marginBottom: 24,
+          }}>
+            <Image
+              src={heroImageUrl}
+              alt={brandName}
+              fill
+              sizes="(max-width: 1200px) 100vw, 1200px"
+              style={{ objectFit: 'cover' }}
+              priority
+            />
+          </div>
+          {(tagline || blurb) && (
+            <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto', padding: '0 16px' }}>
+              {tagline && (
+                <h1 style={{
+                  fontFamily: 'var(--font-heading, Georgia, serif)',
+                  fontSize: 32,
+                  fontWeight: 400,
+                  fontStyle: 'italic',
+                  margin: '0 0 16px',
+                  lineHeight: 1.25,
+                  color: 'var(--color-text, #1a1a1a)',
+                }}>
+                  {tagline}
+                </h1>
+              )}
+              {blurb && (
+                <p style={{
+                  fontSize: 16,
+                  color: 'var(--color-text-secondary, #666)',
+                  margin: 0,
+                  lineHeight: 1.7,
+                }}>
+                  {blurb}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Empty state copy when no posts exist yet */}
+      {posts.length === 0 && (
+        <section style={{
+          textAlign: 'center',
+          padding: '32px 16px 48px',
+          borderTop: '1px solid var(--color-border, #e5e5e5)',
+          marginTop: heroImageUrl ? 0 : 32,
+        }}>
+          <p style={{
+            fontFamily: 'var(--font-heading, Georgia, serif)',
+            fontStyle: 'italic',
+            fontSize: 18,
+            color: 'var(--color-text-secondary, #666)',
+            margin: 0,
+            lineHeight: 1.6,
+          }}>
+            Stories from inside the rhythm are on their way.
+          </p>
+          <p style={{
+            fontSize: 14,
+            color: 'var(--color-text-muted, #999)',
+            margin: '8px 0 0',
+          }}>
+            Subscribe below — the first letter lands soon.
+          </p>
+        </section>
+      )}
+
       {/* Hero Section */}
       {hero && (
         <Link href={`/blog/${hero.slug}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
@@ -216,12 +300,13 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
       }}>
         <h2 style={{
           fontFamily: 'var(--font-heading, Georgia, serif)',
-          fontSize: 22,
-          fontWeight: 700,
+          fontSize: 24,
+          fontWeight: 400,
+          fontStyle: 'italic',
           margin: '0 0 8px',
           color: 'var(--color-text, #1a1a1a)',
         }}>
-          Stay in the loop
+          {tagline ? 'Join the village' : 'Stay in the loop'}
         </h2>
         <p style={{
           fontSize: 14,
@@ -232,7 +317,9 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
           marginRight: 'auto',
           lineHeight: 1.6,
         }}>
-          Get the latest stories, tips, and inspiration delivered straight to your inbox.
+          {tagline
+            ? `One letter, most weeks, from ${brandName}.`
+            : 'Get the latest stories, tips, and inspiration delivered straight to your inbox.'}
         </p>
         <NewsletterBanner username={config.username} />
       </div>

@@ -33,6 +33,25 @@ export default async function AboutPage() {
     .select('name, bio, profile_image_url, slug')
     .eq('user_name', config.username)
 
+  // Optional rich page content seeded by the provisioner
+  // (founder_story, philosophy, immutable_rules, mission_long).
+  // Lives in app_settings under setting_name='static_pages:{username}'.
+  const { data: staticPagesRow } = await supabase
+    .from('app_settings')
+    .select('setting_value')
+    .eq('setting_name', `static_pages:${config.username}`)
+    .maybeSingle()
+  const staticPages = (staticPagesRow?.setting_value as Record<string, unknown> | null) || null
+  const founderStory = typeof staticPages?.founder_story === 'string' ? staticPages.founder_story : null
+  const philosophy = typeof staticPages?.philosophy === 'string' ? staticPages.philosophy : null
+  const immutableRules = Array.isArray(staticPages?.immutable_rules) ? (staticPages.immutable_rules as Array<{ title: string; body: string }>) : null
+  const missionLong = typeof staticPages?.mission_long === 'string' ? staticPages.mission_long : null
+  const founderSectionHeader = typeof staticPages?.founder_section_header === 'string' ? staticPages.founder_section_header : 'The story behind it'
+  const philosophySectionHeader = typeof staticPages?.philosophy_section_header === 'string' ? staticPages.philosophy_section_header : 'What makes this different'
+
+  // Helper: split a long markdown-ish string into paragraphs by blank lines.
+  const splitParas = (s: string) => s.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+
   return (
     <main>
       {/* Page Header */}
@@ -97,11 +116,80 @@ export default async function AboutPage() {
             lineHeight: 1.75,
           }}
         >
-          <p style={{ margin: '0 0 16px' }}>{missionText}</p>
-          {brand.guidelines?.brand_personality && (
-            <p style={{ margin: '0 0 16px' }}>{brand.guidelines.brand_personality}</p>
+          {missionLong ? (
+            splitParas(missionLong).map((p, i) => (
+              <p key={`m-${i}`} style={{ margin: '0 0 16px' }}>{p}</p>
+            ))
+          ) : (
+            <>
+              <p style={{ margin: '0 0 16px' }}>{missionText}</p>
+              {brand.guidelines?.brand_personality && (
+                <p style={{ margin: '0 0 16px' }}>{brand.guidelines.brand_personality}</p>
+              )}
+            </>
           )}
         </div>
+
+        {/* Founder Story (provisioner-seeded) */}
+        {founderStory && (
+          <section style={{ marginTop: '40px' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '9px',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                color: 'var(--color-text-muted)',
+                paddingBottom: '8px',
+                borderBottom: '1px solid var(--color-border)',
+                marginBottom: '20px',
+              }}
+            >
+              {founderSectionHeader}
+            </div>
+            <div style={{ fontFamily: 'var(--font-heading)', fontSize: '14px', color: '#333', lineHeight: 1.8 }}>
+              {splitParas(founderStory).map((p, i) => (
+                <p key={`f-${i}`} style={{ margin: '0 0 16px' }}>{p}</p>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Philosophy + Immutable Rules (provisioner-seeded) */}
+        {(philosophy || immutableRules) && (
+          <section style={{ marginTop: '40px' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '9px',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                color: 'var(--color-text-muted)',
+                paddingBottom: '8px',
+                borderBottom: '1px solid var(--color-border)',
+                marginBottom: '20px',
+              }}
+            >
+              {philosophySectionHeader}
+            </div>
+            {philosophy && (
+              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '14px', color: '#333', lineHeight: 1.8, marginBottom: 24 }}>
+                {splitParas(philosophy).map((p, i) => (
+                  <p key={`p-${i}`} style={{ margin: '0 0 16px' }}>{p}</p>
+                ))}
+              </div>
+            )}
+            {immutableRules && immutableRules.length > 0 && (
+              <ol style={{ paddingLeft: 20, fontFamily: 'var(--font-heading)', fontSize: '14px', color: '#333', lineHeight: 1.7 }}>
+                {immutableRules.map((rule, i) => (
+                  <li key={`r-${i}`} style={{ marginBottom: 12 }}>
+                    <strong>{rule.title}.</strong> {rule.body}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        )}
 
         {/* Our Writers Section */}
         {authors && authors.length > 0 && (

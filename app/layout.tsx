@@ -21,10 +21,12 @@ const inter = Inter({
 export async function generateMetadata(): Promise<Metadata> {
   const config = getTenantConfig()
   let description = ''
+  let brandSpecs: { logo_url?: string | null } | null = null
 
   try {
     const brand = await getBrandData()
     description = brand.company?.blurb || brand.guidelines?.brand_personality || ''
+    brandSpecs = brand.specs
   } catch {
     // Fall back to empty description if DB is unavailable
   }
@@ -39,13 +41,24 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: '/',
     },
-    icons: {
-      icon: [
-        { url: '/favicon.svg', type: 'image/svg+xml' },
-        { url: '/favicon.ico', sizes: 'any' },
-      ],
-      apple: '/apple-touch-icon.png',
-    },
+    icons: (() => {
+      // Prefer the brand logo as favicon when configured (multi-tenant).
+      // Falls back to the bundled defaults for the base/admin app.
+      const brandFavicon = brandSpecs?.logo_url
+      if (brandFavicon) {
+        return {
+          icon: [{ url: brandFavicon }],
+          apple: brandFavicon,
+        }
+      }
+      return {
+        icon: [
+          { url: '/favicon.svg', type: 'image/svg+xml' },
+          { url: '/favicon.ico', sizes: 'any' },
+        ],
+        apple: '/apple-touch-icon.png',
+      }
+    })(),
     openGraph: {
       type: 'website',
       locale: 'en_US',
