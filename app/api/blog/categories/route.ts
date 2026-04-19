@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { getTenantConfig } from '@/lib/tenant'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -9,11 +10,13 @@ export const revalidate = 0
  */
 export async function GET() {
   try {
+    const config = getTenantConfig()
     const supabase = createServiceClient()
 
     const { data, error } = await supabase
       .from('blog_categories')
       .select('name')
+      .eq('username', config.username)
       .order('name')
 
     if (error) throw error

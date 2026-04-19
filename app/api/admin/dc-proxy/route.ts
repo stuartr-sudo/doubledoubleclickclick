@@ -7,6 +7,15 @@ const SECRET = process.env.PROVISION_SECRET || ''
 export const maxDuration = 120
 
 export async function POST(req: NextRequest) {
+  const provisionSecret = process.env.PROVISION_SECRET
+  if (!provisionSecret) {
+    return NextResponse.json({ error: 'Not configured' }, { status: 500 })
+  }
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader || authHeader !== `Bearer ${provisionSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const { endpoint, ...body } = await req.json()
 
@@ -33,6 +42,15 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const provisionSecret = process.env.PROVISION_SECRET
+  if (!provisionSecret) {
+    return NextResponse.json({ error: 'Not configured' }, { status: 500 })
+  }
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader || authHeader !== `Bearer ${provisionSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const endpoint = req.nextUrl.searchParams.get('endpoint')
     if (!endpoint) {

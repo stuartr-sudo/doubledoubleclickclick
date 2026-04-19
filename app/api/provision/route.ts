@@ -1073,7 +1073,7 @@ export async function POST(request: NextRequest) {
 
     const resend = new Resend(process.env.RESEND_API_KEY)
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@doubleclicker.app'
-    const verifyUrl = `https://${flyAppName}.fly.dev/api/provision/verify-domain?username=${username}&domain=${domain}`
+    const verifyUrl = `https://${flyAppName}.fly.dev/api/provision/verify-domain?secret=${encodeURIComponent(provisionSecret)}&username=${username}&domain=${domain}`
 
     const dnsTable = dnsRecords.map(r =>
       `<tr>

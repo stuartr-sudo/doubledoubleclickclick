@@ -14,6 +14,15 @@ export const revalidate = 0
 export async function POST(request: Request) {
   const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`
 
+  const provisionSecret = process.env.PROVISION_SECRET
+  if (!provisionSecret) {
+    return NextResponse.json({ success: false, error: 'Not configured' }, { status: 500 })
+  }
+  const authHeader = request.headers.get('authorization')
+  if (!authHeader || authHeader !== `Bearer ${provisionSecret}`) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const config = getTenantConfig()
     const supabase = createServiceClient()
@@ -27,7 +36,7 @@ export async function POST(request: Request) {
       title, slug, content, html, content_html, status,
       meta_title, meta_description, focus_keyword, excerpt,
       category, tags, author, featured_image,
-      generated_llm_schema, export_seo_as_tags, user_name
+      generated_llm_schema, export_seo_as_tags,
     } = body
 
     const finalExternalId = postId || post_id || external_id
@@ -52,7 +61,7 @@ export async function POST(request: Request) {
         .from('blog_posts')
         .delete()
         .eq('external_id', finalExternalId)
-        .eq('user_name', user_name || config.username)
+        .eq('user_name', config.username)
 
       if (deleteError) {
         console.error(`[${requestId}] Delete error:`, deleteError)
@@ -82,7 +91,7 @@ export async function POST(request: Request) {
       status: 'published',
       updated_date: new Date().toISOString(),
       published_date: new Date().toISOString(),
-      user_name: user_name || config.username
+      user_name: config.username
     }
 
     if (tags !== undefined) postData.tags = Array.isArray(tags) ? tags : []

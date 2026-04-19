@@ -47,6 +47,15 @@ interface NetworkMember {
  * Each site gets network_partners context so DC can enable cross-linking.
  */
 export async function POST(req: NextRequest) {
+  const provisionSecret = process.env.PROVISION_SECRET
+  if (!provisionSecret) {
+    return NextResponse.json({ error: 'Not configured' }, { status: 500 })
+  }
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader || authHeader !== `Bearer ${provisionSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const body = await req.json()
     const {
@@ -269,6 +278,15 @@ export async function POST(req: NextRequest) {
  * Returns the status of all members in a network.
  */
 export async function GET(req: NextRequest) {
+  const provisionSecret = process.env.PROVISION_SECRET
+  if (!provisionSecret) {
+    return NextResponse.json({ error: 'Not configured' }, { status: 500 })
+  }
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader || authHeader !== `Bearer ${provisionSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const networkId = req.nextUrl.searchParams.get('network_id')
     if (!networkId) {

@@ -18,6 +18,16 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const username = searchParams.get('username')
   const domain = searchParams.get('domain')
+  const secret = searchParams.get('secret')
+
+  const provisionSecret = process.env.PROVISION_SECRET
+  if (!provisionSecret) {
+    return NextResponse.json({ success: false, error: 'Not configured' }, { status: 500 })
+  }
+  const authHeader = request.headers.get('authorization')
+  if ((!secret || secret !== provisionSecret) && (!authHeader || authHeader !== `Bearer ${provisionSecret}`)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+  }
 
   if (!username || !domain) {
     return NextResponse.json(

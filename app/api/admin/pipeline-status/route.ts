@@ -7,6 +7,15 @@ export const dynamic = 'force-dynamic'
  * Proxies a pipeline status request to Doubleclicker so the browser doesn't need CORS.
  */
 export async function GET(request: NextRequest) {
+  const provisionSecret = process.env.PROVISION_SECRET
+  if (!provisionSecret) {
+    return NextResponse.json({ error: 'Not configured' }, { status: 500 })
+  }
+  const authHeader = request.headers.get('authorization')
+  if (!authHeader || authHeader !== `Bearer ${provisionSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const path = request.nextUrl.searchParams.get('path')
   if (!path) {
     return NextResponse.json({ success: false, error: 'Missing path param' }, { status: 400 })
