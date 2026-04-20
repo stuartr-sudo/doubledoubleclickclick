@@ -63,17 +63,19 @@ export default async function Footer() {
         }
         @media (max-width: 767px) {
           .footer-grid-editorial {
-            grid-template-columns: 1fr;
-            gap: 28px;
-            text-align: center;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px 28px;
+            text-align: left;
           }
-          .footer-grid-editorial nav a {
-            line-height: 2.4;
-          }
+          /* Brand block spans the full width above the 2-column nav grid */
           .footer-grid-editorial > div:first-child {
-            padding-bottom: 8px;
+            grid-column: 1 / -1;
+            padding-bottom: 12px;
             border-bottom: 1px solid #333;
             margin-bottom: 4px;
+          }
+          .footer-grid-editorial nav a {
+            line-height: 2.2;
           }
         }
       `}</style>

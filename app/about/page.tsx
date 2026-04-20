@@ -52,8 +52,35 @@ export default async function AboutPage() {
   // Helper: split a long markdown-ish string into paragraphs by blank lines.
   const splitParas = (s: string) => s.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
 
+  // Schema.org AboutPage + Person (per author) for E-E-A-T signals.
+  // Helps AI search (Perplexity, Google AI Overviews) attribute expertise.
+  const aboutPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    '@id': `${config.siteUrl}/about#aboutpage`,
+    url: `${config.siteUrl}/about`,
+    name: `About ${brandName}`,
+    description: missionLong || missionText,
+    isPartOf: { '@id': `${config.siteUrl}/#website` },
+    mainEntity: { '@id': `${config.siteUrl}/#organization` },
+  }
+  const personSchemas = (authors || []).map((a, i) => ({
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    '@id': `${config.siteUrl}/about#person-${a.slug || i}`,
+    name: a.name,
+    description: a.bio || undefined,
+    image: a.profile_image_url || undefined,
+    url: `${config.siteUrl}/about`,
+    worksFor: { '@id': `${config.siteUrl}/#organization` },
+  }))
+
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutPageSchema) }} />
+      {personSchemas.map((s, i) => (
+        <script key={`p-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }} />
+      ))}
       {/* Page Header */}
       <header
         style={{

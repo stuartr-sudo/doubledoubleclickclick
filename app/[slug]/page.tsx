@@ -71,9 +71,50 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function CustomPage({ params }: { params: { slug: string } }) {
   const page = await loadCustomPage(params.slug)
   if (!page) notFound()
+  const config = getTenantConfig()
+
+  // Schema.org WebPage + BreadcrumbList for SEO/AEO
+  const pageUrl = `${config.siteUrl}/${params.slug}`
+  const webPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': `${pageUrl}#webpage`,
+    url: pageUrl,
+    name: page.title || params.slug,
+    ...(page.subtitle && { description: page.subtitle }),
+    ...(page.meta_description && { description: page.meta_description }),
+    ...(page.hero_image_url && {
+      primaryImageOfPage: {
+        '@type': 'ImageObject',
+        url: page.hero_image_url,
+      },
+    }),
+    isPartOf: { '@id': `${config.siteUrl}/#website` },
+    inLanguage: 'en',
+  }
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: config.siteUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: page.title || params.slug,
+        item: pageUrl,
+      },
+    ],
+  }
 
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <article style={{ maxWidth: 720, margin: '0 auto', padding: '32px 16px 64px' }}>
         {page.hero_image_url && (
           <div
