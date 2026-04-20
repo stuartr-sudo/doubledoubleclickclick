@@ -15,6 +15,8 @@
  * Files outside this set are ignored.
  */
 
+import { z } from 'zod'
+
 interface RepoRef {
   owner: string
   name: string
@@ -52,6 +54,41 @@ export interface ExtractedBundle {
   /** Diagnostics: which source files were used. */
   _source_files?: string[]
 }
+
+/**
+ * Zod schema mirroring ExtractedBundle. Used to validate Claude Opus
+ * output before writing to app_settings — catches LLM drift (renamed
+ * fields, type swaps, missing required structure) so we surface a
+ * clean 422 instead of corrupting the DB with malformed data.
+ */
+const CustomPageZ = z.object({
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  meta_description: z.string().optional(),
+  hero_image_url: z.string().optional(),
+  body_html: z.string().optional(),
+}).passthrough()
+
+const MenuItemZ = z.object({
+  label: z.string(),
+  href: z.string(),
+})
+
+const ImmutableRuleZ = z.object({
+  title: z.string().min(1),
+  body: z.string().min(1),
+})
+
+export const ExtractedBundleSchema = z.object({
+  founder_story: z.string().optional(),
+  founder_section_header: z.string().optional(),
+  philosophy: z.string().optional(),
+  philosophy_section_header: z.string().optional(),
+  immutable_rules: z.array(ImmutableRuleZ).optional(),
+  mission_long: z.string().optional(),
+  menu_items: z.array(MenuItemZ).optional(),
+  custom_pages: z.record(z.string(), CustomPageZ).optional(),
+}).passthrough()
 
 /** Parse a GitHub URL into { owner, name, branch }. */
 export function parseRepoUrl(url: string, fallbackBranch = 'main'): RepoRef | null {
@@ -217,13 +254,21 @@ Return the JSON object now.`
   // Tolerate small slips: strip leading ```json fences if present
   const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
 
-  let parsed: ExtractedBundle
+  let raw: unknown
   try {
-    parsed = JSON.parse(cleaned)
+    raw = JSON.parse(cleaned)
   } catch (err) {
     throw new Error(`Failed to parse Opus output as JSON: ${err instanceof Error ? err.message : String(err)}. First 300 chars: ${cleaned.substring(0, 300)}`)
   }
 
+  // Validate shape via zod — catches LLM drift before we persist.
+  const result = ExtractedBundleSchema.safeParse(raw)
+  if (!result.success) {
+    const issues = result.error.issues.slice(0, 5).map(i => `${i.path.join('.')} ${i.message}`).join('; ')
+    throw new Error(`Opus output failed schema validation: ${issues}`)
+  }
+
+  const parsed = result.data as ExtractedBundle
   parsed._source_files = bundle.map(f => f.path)
   return parsed
 }

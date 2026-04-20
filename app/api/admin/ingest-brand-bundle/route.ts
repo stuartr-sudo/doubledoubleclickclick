@@ -49,10 +49,17 @@ export async function POST(req: NextRequest) {
     username,
     bundle_repo_url,
     bundle_branch = 'main',
-    github_token,
+    github_token: bodyGithubToken,
     merge = true,
     dry_run = false,
   } = body || {}
+
+  // Prefer the per-call body token (least privilege, easy to rotate)
+  // but fall back to GITHUB_TOKEN env var so callers don't have to
+  // include a token for private bundle repos when one is already
+  // configured on the provisioner host. Public repos work without
+  // either.
+  const github_token = bodyGithubToken || process.env.GITHUB_TOKEN || undefined
 
   if (!username || typeof username !== 'string') {
     return NextResponse.json({ error: 'username is required' }, { status: 400 })
