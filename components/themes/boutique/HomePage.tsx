@@ -14,35 +14,47 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
   const brandName = brand.guidelines?.name || config.siteName
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 16px' }}>
-      {/* Brand Welcome — always shown when a hero_image_url is configured.
-          Establishes brand identity above the fold, especially important
-          for new sites with little or no content yet. */}
+    <>
+      {/* Brand Welcome — full-width, edge-to-edge.
+          Establishes brand identity above the fold. Always shown when a
+          hero_image_url is configured. Lives OUTSIDE the maxWidth container
+          so the photo spans the full viewport on desktop. */}
       {heroImageUrl && (
         <section style={{ marginBottom: 48 }}>
           <div style={{
             position: 'relative',
-            aspectRatio: '21/9',
             width: '100%',
-            borderRadius: 'var(--border-radius, 16px)',
-            overflow: 'hidden',
-            marginBottom: 24,
-          }}>
+            // Aspect ratio adapts: tall on mobile (4:3 doesn't crop the
+            // subject), wide on desktop (21:9 reads as a magazine masthead).
+            aspectRatio: '4/3',
+          }}
+            className="boutique-hero-banner"
+          >
             <Image
               src={heroImageUrl}
               alt={brandName}
               fill
-              sizes="(max-width: 1200px) 100vw, 1200px"
+              sizes="100vw"
               style={{ objectFit: 'cover' }}
               priority
             />
           </div>
+          <style>{`
+            .boutique-hero-banner {
+              aspect-ratio: 4/3;
+            }
+            @media (min-width: 768px) {
+              .boutique-hero-banner {
+                aspect-ratio: 21/9;
+              }
+            }
+          `}</style>
           {(tagline || blurb) && (
-            <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto', padding: '0 16px' }}>
+            <div style={{ textAlign: 'center', maxWidth: 720, margin: '32px auto 0', padding: '0 16px' }}>
               {tagline && (
                 <h1 style={{
                   fontFamily: 'var(--font-heading, Georgia, serif)',
-                  fontSize: 32,
+                  fontSize: 'clamp(24px, 5vw, 36px)',
                   fontWeight: 400,
                   fontStyle: 'italic',
                   margin: '0 0 16px',
@@ -54,7 +66,7 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
               )}
               {blurb && (
                 <p style={{
-                  fontSize: 16,
+                  fontSize: 'clamp(15px, 2.2vw, 17px)',
                   color: 'var(--color-text-secondary, #666)',
                   margin: 0,
                   lineHeight: 1.7,
@@ -66,6 +78,8 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
           )}
         </section>
       )}
+
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 16px' }}>
 
       {/* Empty state copy when no posts exist yet */}
       {posts.length === 0 && (
@@ -323,6 +337,7 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
         </p>
         <NewsletterBanner username={config.username} />
       </div>
-    </div>
+      </div>
+    </>
   )
 }

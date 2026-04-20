@@ -64,7 +64,16 @@ export default async function Footer() {
         @media (max-width: 767px) {
           .footer-grid-editorial {
             grid-template-columns: 1fr;
-            gap: 32px;
+            gap: 28px;
+            text-align: center;
+          }
+          .footer-grid-editorial nav a {
+            line-height: 2.4;
+          }
+          .footer-grid-editorial > div:first-child {
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 4px;
           }
         }
       `}</style>
