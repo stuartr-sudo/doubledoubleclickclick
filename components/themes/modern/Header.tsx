@@ -10,6 +10,7 @@ export default function ModernHeader({
   logoUrl,
   tagline,
   categories = [],
+  pages = [],
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -156,6 +157,11 @@ export default function ModernHeader({
                 {cat}
               </Link>
             ))}
+            {pages.map((p) => (
+              <Link key={p.href} href={p.href} className="modern-nav-link">
+                {p.label}
+              </Link>
+            ))}
           </nav>
         </div>
 
@@ -290,6 +296,16 @@ export default function ModernHeader({
                 onClick={handleMenuClose}
               >
                 {cat}
+              </Link>
+            ))}
+            {pages.map((p) => (
+              <Link
+                key={p.href}
+                href={p.href}
+                className="modern-panel-link"
+                onClick={handleMenuClose}
+              >
+                {p.label}
               </Link>
             ))}
           </nav>

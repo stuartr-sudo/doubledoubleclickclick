@@ -10,6 +10,7 @@ export default function EditorialHeader({
   logoUrl,
   tagline,
   categories = [],
+  pages = [],
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -266,6 +267,22 @@ export default function EditorialHeader({
                 {cat}
               </Link>
             ))}
+            {pages.map((p) => (
+              <Link
+                key={p.href}
+                href={p.href}
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  fontFamily: 'var(--font-sans)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1.5px',
+                  textDecoration: 'none',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                {p.label}
+              </Link>
+            ))}
           </div>
         </nav>
 
@@ -345,8 +362,8 @@ export default function EditorialHeader({
           </div>
         </div>
 
-        {/* Mobile: Category Pills (horizontal scroll) */}
-        {categories.length > 0 && (
+        {/* Mobile: Category + Page Pills (horizontal scroll) */}
+        {(categories.length > 0 || pages.length > 0) && (
           <div className="editorial-mobile-pills">
             <div className="editorial-mobile-pills-inner">
               <Link href="/" className="editorial-pill">
@@ -359,6 +376,11 @@ export default function EditorialHeader({
                   className="editorial-pill"
                 >
                   {cat}
+                </Link>
+              ))}
+              {pages.map((p) => (
+                <Link key={p.href} href={p.href} className="editorial-pill">
+                  {p.label}
                 </Link>
               ))}
             </div>
@@ -408,6 +430,16 @@ export default function EditorialHeader({
               onClick={handleMenuClose}
             >
               {cat}
+            </Link>
+          ))}
+          {pages.map((p) => (
+            <Link
+              key={p.href}
+              href={p.href}
+              className="editorial-mobile-menu-link"
+              onClick={handleMenuClose}
+            >
+              {p.label}
             </Link>
           ))}
           <Link href="/newsletter" className="editorial-mobile-menu-link" onClick={handleMenuClose}>

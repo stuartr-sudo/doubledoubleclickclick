@@ -10,11 +10,19 @@ export interface HomePageProps {
   config: TenantConfig
 }
 
+export interface PageLink {
+  label: string
+  href: string
+}
+
 export interface HeaderProps {
   brandName: string
   logoUrl?: string
   tagline?: string
   categories: string[]
+  /** Static page links to render in the header nav (Blog, About, Contact, etc.).
+   *  Always rendered after Home and any blog categories. */
+  pages?: PageLink[]
 }
 
 export interface BlogPostPageProps {

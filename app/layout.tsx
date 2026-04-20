@@ -113,6 +113,36 @@ export default async function RootLayout({
     categories = []
   }
 
+  // Header nav pages — sensible defaults (Blog, About, Contact) plus any
+  // tenant-specific overrides from app_settings.static_pages.menu_items.
+  // Provisioner can seed: { menu_items: [{ label: "School", href: "/school" }, ...] }
+  let pages: { label: string; href: string }[] = []
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (supabaseUrl && supabaseKey) {
+      const { createClient } = await import('@supabase/supabase-js')
+      const supa = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
+      const { data } = await supa
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_name', `static_pages:${config.username}`)
+        .maybeSingle()
+      const sv = data?.setting_value as Record<string, unknown> | null
+      const customMenu = sv && Array.isArray(sv.menu_items) ? sv.menu_items as { label: string; href: string }[] : null
+      if (customMenu && customMenu.length > 0) {
+        pages = customMenu.filter(p => p && typeof p.label === 'string' && typeof p.href === 'string')
+      }
+    }
+  } catch {}
+  if (pages.length === 0) {
+    pages = [
+      { label: 'Blog', href: '/blog' },
+      { label: 'About', href: '/about' },
+      { label: 'Contact', href: '/contact' },
+    ]
+  }
+
   return (
     <html lang="en" className={inter.variable} data-theme={themeName}>
       <head>
@@ -148,6 +178,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           logoUrl={logoUrl}
           tagline={tagline}
           categories={categories}
+          pages={pages}
         />
         {children}
         <Footer />

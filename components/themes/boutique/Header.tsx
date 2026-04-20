@@ -10,6 +10,7 @@ export default function BoutiqueHeader({
   logoUrl,
   tagline,
   categories = [],
+  pages = [],
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -215,6 +216,11 @@ export default function BoutiqueHeader({
                   {cat}
                 </Link>
               ))}
+              {pages.map((p) => (
+                <Link key={p.href} href={p.href} className="boutique-pill">
+                  {p.label}
+                </Link>
+              ))}
             </div>
           </nav>
         </div>
@@ -298,8 +304,8 @@ export default function BoutiqueHeader({
           </div>
         </div>
 
-        {/* Mobile: Category Pills (horizontal scroll) */}
-        {categories.length > 0 && (
+        {/* Mobile: Category + Page Pills (horizontal scroll) */}
+        {(categories.length > 0 || pages.length > 0) && (
           <div className="boutique-mobile-pills">
             <div className="boutique-mobile-pills-inner">
               <Link href="/" className="boutique-pill">
@@ -312,6 +318,11 @@ export default function BoutiqueHeader({
                   className="boutique-pill"
                 >
                   {cat}
+                </Link>
+              ))}
+              {pages.map((p) => (
+                <Link key={p.href} href={p.href} className="boutique-pill">
+                  {p.label}
                 </Link>
               ))}
             </div>
@@ -361,6 +372,16 @@ export default function BoutiqueHeader({
               onClick={handleMenuClose}
             >
               {cat}
+            </Link>
+          ))}
+          {pages.map((p) => (
+            <Link
+              key={p.href}
+              href={p.href}
+              className="boutique-mobile-menu-link"
+              onClick={handleMenuClose}
+            >
+              {p.label}
             </Link>
           ))}
         </div>
