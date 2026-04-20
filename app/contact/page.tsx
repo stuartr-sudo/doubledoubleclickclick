@@ -25,8 +25,30 @@ export default async function ContactPage() {
   const contactEmail = config.contactEmail || 'contact@example.com'
   const contactPhone = config.contactPhone || ''
 
+  // Schema.org ContactPage + BreadcrumbList for SEO
+  const contactPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ContactPage',
+    '@id': `${config.siteUrl}/contact#contactpage`,
+    url: `${config.siteUrl}/contact`,
+    name: `Contact ${brandName}`,
+    description: `Get in touch with ${brandName}.`,
+    isPartOf: { '@id': `${config.siteUrl}/#website` },
+    mainEntity: { '@id': `${config.siteUrl}/#organization` },
+  }
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: config.siteUrl },
+      { '@type': 'ListItem', position: 2, name: 'Contact', item: `${config.siteUrl}/contact` },
+    ],
+  }
+
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(contactPageSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {/* Page Header */}
       <header
         style={{

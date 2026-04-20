@@ -21,7 +21,7 @@ const inter = Inter({
 export async function generateMetadata(): Promise<Metadata> {
   const config = getTenantConfig()
   let description = ''
-  let brandSpecs: { logo_url?: string | null } | null = null
+  let brandSpecs: { logo_url?: string | null; hero_image_url?: string | null } | null = null
 
   try {
     const brand = await getBrandData()
@@ -66,11 +66,31 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: config.siteName,
       title: config.siteName,
       description,
+      // Prefer the hero image for social previews — much better than the
+      // tiny logo as a 1200x630 OG card. Falls back to logo when no hero.
+      images: brandSpecs?.hero_image_url
+        ? [{
+            url: brandSpecs.hero_image_url,
+            width: 1200,
+            height: 630,
+            alt: config.siteName,
+          }]
+        : (brandSpecs?.logo_url
+          ? [{
+              url: brandSpecs.logo_url,
+              width: 1200,
+              height: 630,
+              alt: config.siteName,
+            }]
+          : undefined),
     },
     twitter: {
       card: 'summary_large_image',
       title: config.siteName,
       description,
+      images: brandSpecs?.hero_image_url
+        ? [brandSpecs.hero_image_url]
+        : (brandSpecs?.logo_url ? [brandSpecs.logo_url] : undefined),
     },
     robots: {
       index: true,
@@ -113,10 +133,10 @@ export default async function RootLayout({
     categories = []
   }
 
-  // Header nav pages — sensible defaults (Blog, About, Contact) plus any
-  // tenant-specific overrides from app_settings.static_pages.menu_items.
-  // Provisioner can seed: { menu_items: [{ label: "School", href: "/school" }, ...] }
+  // Header nav pages + locale — both pulled from app_settings.static_pages.
+  // Provisioner can seed: { menu_items: [...], locale: "en-US" }
   let pages: { label: string; href: string }[] = []
+  let locale = 'en'
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -133,6 +153,11 @@ export default async function RootLayout({
       if (customMenu && customMenu.length > 0) {
         pages = customMenu.filter(p => p && typeof p.label === 'string' && typeof p.href === 'string')
       }
+      // Locale override: 'en-US', 'en-AU', 'en-GB', etc. Falls back to 'en'.
+      const customLocale = sv?.locale
+      if (typeof customLocale === 'string' && /^[a-z]{2}(-[A-Z]{2})?$/.test(customLocale)) {
+        locale = customLocale
+      }
     }
   } catch {}
   if (pages.length === 0) {
@@ -144,7 +169,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" className={inter.variable} data-theme={themeName}>
+    <html lang={locale} className={inter.variable} data-theme={themeName}>
       <head>
         <BrandStyles />
         {gtmId && (

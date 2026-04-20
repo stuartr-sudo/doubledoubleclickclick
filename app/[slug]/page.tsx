@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { getTenantConfig } from '@/lib/tenant'
 import { createServiceClient } from '@/lib/supabase/service'
 
@@ -68,10 +69,29 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
+async function loadRecentPosts(limit: number): Promise<Array<{ slug: string; title: string; excerpt?: string | null; featured_image?: string | null }>> {
+  const config = getTenantConfig()
+  if (!config.username) return []
+  try {
+    const supabase = createServiceClient()
+    const { data } = await supabase
+      .from('blog_posts')
+      .select('slug, title, excerpt, featured_image')
+      .eq('user_name', config.username)
+      .eq('status', 'published')
+      .order('published_date', { ascending: false, nullsFirst: false })
+      .limit(limit)
+    return data || []
+  } catch {
+    return []
+  }
+}
+
 export default async function CustomPage({ params }: { params: { slug: string } }) {
   const page = await loadCustomPage(params.slug)
   if (!page) notFound()
   const config = getTenantConfig()
+  const relatedPosts = await loadRecentPosts(3)
 
   // Schema.org WebPage + BreadcrumbList for SEO/AEO
   const pageUrl = `${config.siteUrl}/${params.slug}`
@@ -111,10 +131,41 @@ export default async function CustomPage({ params }: { params: { slug: string } 
     ],
   }
 
+  // FAQPage detection — find H2 elements that are questions (end with '?')
+  // followed by their answer block (until next H2/H3 or end). If we find
+  // 2+, emit FAQPage schema for AI / Google rich-results visibility.
+  const faqSchema = (() => {
+    if (!page.body_html) return null
+    const html = page.body_html
+    // Match: <h2>Question?</h2> ...content until next <h2 or <h3 or end
+    const pattern = /<h2[^>]*>\s*([^<]+\?)\s*<\/h2>([\s\S]*?)(?=<h[23]\b|$)/gi
+    const items: Array<{ q: string; a: string }> = []
+    let m: RegExpExecArray | null
+    while ((m = pattern.exec(html)) !== null) {
+      const q = m[1].replace(/&[a-z]+;/g, ' ').trim()
+      // Strip HTML tags from the answer for the schema (keep plain text).
+      const a = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      if (q && a && a.length > 30) items.push({ q, a })
+    }
+    if (items.length < 2) return null
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: items.map(item => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
+    }
+  })()
+
   return (
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      {faqSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
       <article style={{ maxWidth: 720, margin: '0 auto', padding: '32px 16px 64px' }}>
         {page.hero_image_url && (
           <div
@@ -184,6 +235,69 @@ export default async function CustomPage({ params }: { params: { slug: string } 
             // bundle ingester). Tenants don't get user-input here.
             dangerouslySetInnerHTML={{ __html: page.body_html }}
           />
+        )}
+
+        {/* Internal linking — surfaces 3 recent blog posts to drive
+            topical authority + give visitors a next-step on the page.
+            SEO/AEO win: AI engines weight pages with strong internal
+            linking patterns more heavily. */}
+        {relatedPosts.length > 0 && (
+          <aside style={{ marginTop: 64, paddingTop: 32, borderTop: '1px solid var(--color-border, #e5e5e5)' }}>
+            <h2 style={{
+              fontFamily: 'var(--font-sans, system-ui)',
+              fontSize: 11,
+              textTransform: 'uppercase',
+              letterSpacing: '1.5px',
+              color: 'var(--color-text-muted, #999)',
+              marginBottom: 20,
+              fontWeight: 400,
+            }}>
+              Latest from the journal
+            </h2>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {relatedPosts.map((post) => (
+                <li key={post.slug} style={{ marginBottom: 24 }}>
+                  <Link href={`/blog/${post.slug}`} style={{
+                    textDecoration: 'none',
+                    color: 'var(--color-text, #1a1a1a)',
+                    display: 'block',
+                  }}>
+                    <h3 style={{
+                      fontFamily: 'var(--font-heading, Georgia, serif)',
+                      fontSize: 18,
+                      fontWeight: 600,
+                      margin: '0 0 4px',
+                      lineHeight: 1.35,
+                    }}>
+                      {post.title}
+                    </h3>
+                    {post.excerpt && (
+                      <p style={{
+                        fontSize: 14,
+                        color: 'var(--color-text-secondary, #666)',
+                        margin: 0,
+                        lineHeight: 1.6,
+                      }}>
+                        {post.excerpt}
+                      </p>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Link href="/blog" style={{
+              display: 'inline-block',
+              marginTop: 12,
+              fontFamily: 'var(--font-sans, system-ui)',
+              fontSize: 13,
+              color: 'var(--color-accent, #c4a882)',
+              textDecoration: 'none',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}>
+              All articles →
+            </Link>
+          </aside>
         )}
       </article>
     </main>

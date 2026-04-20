@@ -94,27 +94,45 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   }
 
   if (!articleJsonLd) {
+    const authorName = post.author || brand.guidelines?.default_author || brandName
+    // Slugify the author name to link to /authors/{slug}.
+    const authorSlug = authorName
+      .toLowerCase()
+      .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+    // Word count for the body — helps AI engines size the article.
+    const wordCount = post.content
+      ? post.content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length
+      : undefined
+
     articleJsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Article',
+      '@id': `${baseUrl}/blog/${post.slug}#article`,
       headline: post.title,
       description: post.meta_description || post.excerpt || '',
-      image: post.featured_image || '',
+      image: post.featured_image || brand.specs?.hero_image_url || '',
       datePublished: getPostDate(post),
       dateModified: post.updated_date || getPostDate(post),
+      inLanguage: 'en',
+      ...(wordCount && { wordCount }),
+      ...(post.category && { articleSection: post.category }),
       author: {
         '@type': 'Person',
-        name: post.author || brand.guidelines?.default_author || brandName,
-        url: baseUrl,
+        name: authorName,
+        url: `${baseUrl}/authors/${authorSlug}`,
       },
       publisher: {
         '@type': 'Organization',
+        '@id': `${baseUrl}/#organization`,
         name: brandName,
         logo: {
           '@type': 'ImageObject',
           url: brand.specs?.logo_url || `${baseUrl}/favicon.svg`,
         },
       },
+      isPartOf: { '@id': `${baseUrl}/#website` },
       mainEntityOfPage: {
         '@type': 'WebPage',
         '@id': `${baseUrl}/blog/${post.slug}`,

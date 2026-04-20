@@ -28,9 +28,37 @@ export default async function HomePage() {
     getPublishedPosts(20),
   ])
   const theme = brand.specs?.theme || 'editorial'
+  const brandName = brand.guidelines?.name || config.siteName
+
+  // Schema.org CollectionPage — tells search engines + AI engines this is
+  // a content hub. The mainEntity ItemList exposes the top posts so they
+  // are more likely to surface in AI Overviews.
+  const collectionPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': `${config.siteUrl}/#collectionpage`,
+    url: config.siteUrl,
+    name: brandName,
+    description: brand.company?.blurb || brand.guidelines?.brand_personality || '',
+    isPartOf: { '@id': `${config.siteUrl}/#website` },
+    about: { '@id': `${config.siteUrl}/#organization` },
+    ...(posts.length > 0 && {
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: posts.length,
+        itemListElement: posts.slice(0, 10).map((p, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          url: `${config.siteUrl}/blog/${p.slug}`,
+          name: p.title,
+        })),
+      },
+    }),
+  }
 
   return (
     <main style={{ background: 'var(--color-bg)', minHeight: '100vh' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageSchema) }} />
       <ThemeHomePage theme={theme} brand={brand} posts={posts} config={config} />
     </main>
   )

@@ -71,13 +71,22 @@ export default async function AboutPage() {
     name: a.name,
     description: a.bio || undefined,
     image: a.profile_image_url || undefined,
-    url: `${config.siteUrl}/about`,
+    url: a.slug ? `${config.siteUrl}/authors/${a.slug}` : `${config.siteUrl}/about`,
     worksFor: { '@id': `${config.siteUrl}/#organization` },
   }))
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: config.siteUrl },
+      { '@type': 'ListItem', position: 2, name: 'About', item: `${config.siteUrl}/about` },
+    ],
+  }
 
   return (
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutPageSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {personSchemas.map((s, i) => (
         <script key={`p-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }} />
       ))}
@@ -150,7 +159,10 @@ export default async function AboutPage() {
           ) : (
             <>
               <p style={{ margin: '0 0 16px' }}>{missionText}</p>
-              {brand.guidelines?.brand_personality && (
+              {/* Only show brand_personality when there's no richer founder/philosophy
+                  content below. brand_personality is voice-description text
+                  ("Whimsical. Warm. Fun...") and reads weirdly as About copy. */}
+              {brand.guidelines?.brand_personality && !founderStory && !philosophy && (
                 <p style={{ margin: '0 0 16px' }}>{brand.guidelines.brand_personality}</p>
               )}
             </>
