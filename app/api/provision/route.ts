@@ -772,7 +772,21 @@ export async function POST(request: NextRequest) {
         brandName: display_name,
         imageStyle: body.image_style,
       })
-      const heroImageUrl = await generateHeroImage(heroPrompt, username)
+      // Pass brand voice + imagery guidelines so the prompt gets enhanced via
+      // GPT-4.1 before nano-banana-pro generation. This is the difference
+      // between a generic stock-style hero and one that actually looks like
+      // the brand.
+      const imageryGuidelines = typeof body.image_style === 'string'
+        ? body.image_style
+        : (body.image_style && typeof body.image_style === 'object')
+          ? JSON.stringify(body.image_style)
+          : null
+      const heroImageUrl = await generateHeroImage(heroPrompt, username, {
+        brandName: display_name,
+        niche,
+        voiceAndTone: brand_voice_tone || null,
+        imageryGuidelines,
+      })
 
       if (heroImageUrl) {
         await supabase

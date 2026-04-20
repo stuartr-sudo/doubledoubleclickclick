@@ -3,16 +3,25 @@
  * Used during site provisioning for hero banners and logos.
  * Generated images are persisted to Supabase Storage for permanent URLs.
  *
- * Hero banners use fal-ai/nano-banana-2 (Google's photo-realistic model)
- * since flux/schnell produced low-quality lifestyle imagery for brands.
- * Logos still use flux/schnell — fast, cheap, and adequate for line-art
- * marks where photo realism is not required.
+ * Models (fal.ai):
+ *   - Hero:  fal-ai/nano-banana-pro          — Google's flagship photo-realistic
+ *                                              model. $0.15/image (1K), $0.30 at 4K.
+ *                                              No built-in prompt enhancement.
+ *   - Logo:  fal-ai/ideogram/v3/generate-transparent
+ *                                            — Transparent-background logos with
+ *                                              real typography. $0.09/image at QUALITY.
+ *                                              MagicPrompt enhancement built-in
+ *                                              (expand_prompt=true).
+ *
+ * Hero prompts are enhanced via GPT-4.1 from brand voice + niche before
+ * being sent to nano-banana-pro (since nano-banana-pro doesn't enhance).
+ * Logo prompts go raw to Ideogram — its expand_prompt does the work.
  */
 
 import { createClient } from '@supabase/supabase-js'
 
-const FAL_POLL_INTERVAL = 2000 // 2s between polls
-const FAL_TIMEOUT = 90_000      // 90s — nano-banana-2 is slower than schnell
+const FAL_POLL_INTERVAL = 3000 // 3s between polls
+const FAL_TIMEOUT = 180_000     // 3 min — nano-banana-pro takes ~30-60s typical
 const STORAGE_BUCKET = 'brand-assets'
 
 /**
@@ -150,14 +159,92 @@ async function falGenerate(
   return null
 }
 
-export async function generateHeroImage(prompt: string, username?: string): Promise<string | null> {
-  // nano-banana-2 — Google's photo-realistic model. Much higher quality than
-  // flux/schnell for lifestyle/brand hero imagery.
-  const tempUrl = await falGenerate('fal-ai/nano-banana-2', {
-    prompt,
+/**
+ * Enhance a raw hero prompt into a richer, brand-aware photographic brief.
+ * Uses GPT-4.1 (the same model the provisioner already uses for structured
+ * voice extraction). Returns the enhanced prompt, or the original on failure.
+ *
+ * Why: nano-banana-pro is a photo-realistic model that rewards specific,
+ * sensory prompts ("morning light through linen curtains, warm cream and
+ * brown, mother and child at a wooden kitchen table") more than generic
+ * ones ("a hero image for a homeschool brand"). It does NOT have built-in
+ * prompt expansion (unlike Ideogram's MagicPrompt).
+ */
+export async function enhanceHeroPrompt(rawPrompt: string, brand: {
+  brandName?: string
+  niche?: string
+  voiceAndTone?: string | null
+  imageryGuidelines?: string | null
+} = {}): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    console.warn('[IMAGE-GEN] OPENAI_API_KEY not set, returning raw prompt')
+    return rawPrompt
+  }
+
+  const systemPrompt = `You are a senior creative director writing photographic briefs for a state-of-the-art image model (Google nano-banana-pro). The model rewards SENSORY, SPECIFIC, COMPOSITIONAL prompts over abstract descriptions. Output ONLY the enhanced prompt as a single paragraph — no preamble, no quotes, no explanation. The output must be 80-180 words. NEVER include text/words/typography in the image (the brand will overlay text separately). NEVER request logos, watermarks, or UI elements.`
+
+  const userPrompt = `Brand: ${brand.brandName || 'a lifestyle brand'}
+Niche: ${brand.niche || 'lifestyle'}
+${brand.voiceAndTone ? `\nBrand voice & tone:\n${brand.voiceAndTone.substring(0, 1500)}` : ''}
+${brand.imageryGuidelines ? `\nImagery guidelines:\n${brand.imageryGuidelines.substring(0, 1500)}` : ''}
+\nRaw brief from the provisioner:\n${rawPrompt}\n\nEnhance into a single-paragraph photographic prompt for nano-banana-pro: documentary lifestyle, golden-hour preferred, sensory specifics (objects, textures, light), real moment captured (NOT staged/styled), 16:9 horizontal composition with negative space on the left for overlay text, palette and mood aligned with the brand voice. NO text/words/logos/watermarks in the image.`
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 400,
+      }),
+    })
+    if (!res.ok) {
+      console.warn('[IMAGE-GEN] Prompt enhancement failed:', res.status, await res.text().catch(() => ''))
+      return rawPrompt
+    }
+    const data = await res.json()
+    const enhanced: string = data.choices?.[0]?.message?.content?.trim() || ''
+    if (!enhanced) return rawPrompt
+    console.log(`[IMAGE-GEN] Enhanced hero prompt: ${enhanced.substring(0, 120)}...`)
+    return enhanced
+  } catch (err) {
+    console.warn('[IMAGE-GEN] Prompt enhancement exception:', err)
+    return rawPrompt
+  }
+}
+
+export async function generateHeroImage(
+  prompt: string,
+  username?: string,
+  brand?: {
+    brandName?: string
+    niche?: string
+    voiceAndTone?: string | null
+    imageryGuidelines?: string | null
+  },
+): Promise<string | null> {
+  // Enhance the raw prompt with brand voice + imagery guidelines (if provided).
+  const finalPrompt = brand ? await enhanceHeroPrompt(prompt, brand) : prompt
+
+  // nano-banana-pro: Google's flagship photo-realistic model. Pricing $0.15/image
+  // at 1K resolution. Use 1K (default) — the hero gets resized for web display
+  // and 2K/4K is wasted bytes.
+  const tempUrl = await falGenerate('fal-ai/nano-banana-pro', {
+    prompt: finalPrompt,
     aspect_ratio: '16:9',
     num_images: 1,
+    resolution: '1K',
     output_format: 'jpeg',
+    safety_tolerance: '4',
   })
   if (!tempUrl) return null
   const path = username ? `${username}/hero.jpg` : `misc/hero-${Date.now()}.jpg`
@@ -165,15 +252,20 @@ export async function generateHeroImage(prompt: string, username?: string): Prom
 }
 
 export async function generateLogoImage(prompt: string, username?: string): Promise<string | null> {
-  // flux/schnell still fine for logo line-art — fast, cheap, low-stakes.
-  const tempUrl = await falGenerate('fal-ai/flux/schnell', {
+  // Ideogram v3 transparent — produces real, on-brand logos with transparent
+  // backgrounds (no need to manually remove). MagicPrompt (expand_prompt=true)
+  // does prompt enhancement for us. QUALITY rendering is $0.09/image.
+  const tempUrl = await falGenerate('fal-ai/ideogram/v3/generate-transparent', {
     prompt,
-    image_size: 'square',
+    aspect_ratio: '1:1',
+    rendering_speed: 'QUALITY',
+    expand_prompt: true,
     num_images: 1,
-    num_inference_steps: 4,
+    negative_prompt: 'photograph, photorealistic, 3d render, gradient background, busy background, watermark, low quality, blurry',
   })
   if (!tempUrl) return null
-  const path = username ? `${username}/logo.jpg` : `misc/logo-${Date.now()}.jpg`
+  // PNG to preserve transparency.
+  const path = username ? `${username}/logo.png` : `misc/logo-${Date.now()}.png`
   return persistImage(tempUrl, path)
 }
 
