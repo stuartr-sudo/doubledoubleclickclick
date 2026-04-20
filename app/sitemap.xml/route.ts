@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server'
+import { getTenantConfig } from '@/lib/tenant'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600
 
 export async function GET(request: Request) {
-  const baseUrl = new URL(request.url).origin
+  const config = getTenantConfig()
+  // Prefer tenant site URL — Fly load balancer makes request.url's
+  // origin resolve to 0.0.0.0:3000 (the internal bind), not the
+  // public hostname.
+  const baseUrl = config.siteUrl || new URL(request.url).origin
   const lastMod = new Date().toISOString()
 
   const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>

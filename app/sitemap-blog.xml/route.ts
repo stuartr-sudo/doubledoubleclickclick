@@ -6,8 +6,11 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 3600
 
 export async function GET(request: Request) {
-  const baseUrl = new URL(request.url).origin
   const config = getTenantConfig()
+  // Prefer tenant site URL — Fly load balancer makes request.url's
+  // origin resolve to 0.0.0.0:3000 (the internal bind), not the
+  // public hostname. See same fix in sitemap-pages.xml.
+  const baseUrl = config.siteUrl || new URL(request.url).origin
 
   let blogEntries = ''
 

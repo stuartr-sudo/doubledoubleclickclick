@@ -13,7 +13,11 @@ export const revalidate = 3600
  *   {username}.custom_pages — e.g. for TVW: /school /apothecary /gathering /community /resources
  */
 export async function GET(request: Request) {
-  const baseUrl = new URL(request.url).origin
+  // Prefer the tenant-configured site URL over request.url's origin.
+  // Fly's internal load balancer makes request.url resolve to the
+  // bind address (0.0.0.0:3000) instead of the public domain.
+  const config = getTenantConfig()
+  const baseUrl = config.siteUrl || new URL(request.url).origin
   const lastmod = new Date().toISOString()
 
   // Default static routes

@@ -17,7 +17,9 @@ export async function generateMetadata(): Promise<Metadata> {
     title: config.siteName,
     description,
     alternates: { canonical: config.siteUrl },
-    openGraph: { title: config.siteName, description, type: 'website', url: config.siteUrl },
+    // openGraph + twitter are inherited from app/layout.tsx where they
+    // include images (hero photo). Don't override here or images get
+    // wiped (Next.js doesn't deep-merge metadata fields).
   }
 }
 
