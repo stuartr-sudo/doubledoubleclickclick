@@ -24,9 +24,10 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
           <div style={{
             position: 'relative',
             width: '100%',
-            // Capped height: 220px on small mobile, scales up to a max
-            // of 420px on large screens. Image cover-crops to fill.
-            height: 'clamp(220px, 32vw, 420px)',
+            // Capped height: 297px on small mobile, scales up to a max
+            // of 567px on large screens (35% taller than the original
+            // 220/32vw/420 spec, per request).
+            height: 'clamp(297px, 43vw, 567px)',
             overflow: 'hidden',
           }}>
             <Image
