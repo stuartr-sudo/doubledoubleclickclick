@@ -14,45 +14,37 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
   const brandName = brand.guidelines?.name || config.siteName
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 16px' }}>
-      {/* Brand Welcome — full-width WITHIN the site container.
-          The hero spans the container's full width (max 1200px) but
-          stays inside the centered content column, not viewport-edge
-          to viewport-edge. */}
+    <>
+      {/* Brand Welcome — image spans the full viewport width, no side
+          gutters, with a CAPPED height so it doesn't dominate the page.
+          The image cover-crops to fit the box. Lives outside the
+          maxWidth:1200 container so it can bleed to viewport edges. */}
       {heroImageUrl && (
-        <section style={{ marginBottom: 48 }}>
+        <section>
           <div style={{
             position: 'relative',
             width: '100%',
-            borderRadius: 'var(--border-radius, 16px)',
+            // Capped height: 220px on small mobile, scales up to a max
+            // of 420px on large screens. Image cover-crops to fill.
+            height: 'clamp(220px, 32vw, 420px)',
             overflow: 'hidden',
-            // Mobile keeps a more square aspect so the subject isn't a
-            // letterbox sliver; desktop reads as a wide masthead.
-            aspectRatio: '4/3',
-          }}
-            className="boutique-hero-banner"
-          >
+          }}>
             <Image
               src={heroImageUrl}
               alt={brandName}
               fill
-              sizes="(max-width: 1200px) 100vw, 1200px"
-              style={{ objectFit: 'cover' }}
+              sizes="100vw"
+              style={{ objectFit: 'cover', objectPosition: 'center' }}
               priority
             />
           </div>
-          <style>{`
-            .boutique-hero-banner {
-              aspect-ratio: 4/3;
-            }
-            @media (min-width: 768px) {
-              .boutique-hero-banner {
-                aspect-ratio: 21/9;
-              }
-            }
-          `}</style>
           {(tagline || blurb) && (
-            <div style={{ textAlign: 'center', maxWidth: 720, margin: '32px auto 0' }}>
+            <div style={{
+              textAlign: 'center',
+              maxWidth: 720,
+              margin: '32px auto 0',
+              padding: '0 16px',
+            }}>
               {tagline && (
                 <h1 style={{
                   fontFamily: 'var(--font-heading, Georgia, serif)',
@@ -80,6 +72,8 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
           )}
         </section>
       )}
+
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 16px' }}>
 
       {/* Empty state copy when no posts exist yet */}
       {posts.length === 0 && (
@@ -337,6 +331,7 @@ export default function BoutiqueHomePage({ brand, posts, config }: HomePageProps
         </p>
         <NewsletterBanner username={config.username} />
       </div>
-    </div>
+      </div>
+    </>
   )
 }
